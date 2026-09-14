@@ -5,14 +5,11 @@ import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { isImageFile } from '@/utils/files';
 import { createRenderableImageAsset } from '@/utils/imagePreview';
-import { buildComputedJourney } from '@/utils/journeyUtils';
 import { createId } from '@/utils/id';
 import type { ProcessPhotoResult } from '@/utils/photoPlacement';
 import { resolvePhotoPlacement } from '@/utils/photoPlacement';
 import { readPhotoMetadata } from '@/utils/photoMetadata';
-import { findTimestampPlacement } from '@/utils/photoTimelinePlacement';
-import type { RouteMatch } from '@/utils/routeProjection';
-import { projectCoordinateToJourney, projectCoordinateToTracks } from '@/utils/routeProjection';
+import { useMediaPlacement } from '@/hooks/useMediaPlacement';
 import { trackEvent } from '@/utils/analytics';
 
 export function usePhotos() {
@@ -22,31 +19,8 @@ export function usePhotos() {
   const addPicture = useAppStore((state) => state.addPicture);
   const queuePendingPicturePlacement = useAppStore((state) => state.queuePendingPicturePlacement);
   const removePicture = useAppStore((state) => state.removePicture);
-  const tracks = useAppStore((state) => state.tracks);
-  const activeTrackId = useAppStore((state) => state.activeTrackId);
-  const journeySegments = useAppStore((state) => state.journeySegments);
   const playback = useAppStore((state) => state.playback);
-
-  const findPositionOnRoute = useCallback((lat: number, lon: number): RouteMatch | null => {
-    const computedJourney = buildComputedJourney(journeySegments, tracks);
-
-    if (computedJourney && computedJourney.coordinates.length > 0) {
-      return projectCoordinateToJourney(computedJourney, lat, lon, playback.progress, playback.routeTimingMode);
-    }
-
-    const candidateTracks = activeTrackId
-      ? [
-          ...tracks.filter((track) => track.id === activeTrackId),
-          ...tracks.filter((track) => track.id !== activeTrackId),
-        ]
-      : tracks;
-
-    if (candidateTracks.length === 0) {
-      return null;
-    }
-
-    return projectCoordinateToTracks(candidateTracks, lat, lon, playback.progress);
-  }, [activeTrackId, journeySegments, playback.progress, playback.routeTimingMode, tracks]);
+  const { findPositionOnRoute, findPositionAtTime } = useMediaPlacement();
 
   const processPhoto = useCallback(async (file: File): Promise<ProcessPhotoResult> => {
     const renderableAsset = await createRenderableImageAsset(file);
@@ -57,15 +31,7 @@ export function usePhotos() {
       metadata.latitude !== undefined && metadata.longitude !== undefined
         ? findPositionOnRoute(metadata.latitude, metadata.longitude)
         : null;
-    const computedJourney = buildComputedJourney(journeySegments, tracks);
-    const timestampPlacement = findTimestampPlacement({
-      timestamp: metadata.timestamp,
-      tracks,
-      journeySegments,
-      computedJourney,
-      activeTrackId,
-      routeTimingMode: playback.routeTimingMode,
-    });
+    const timestampPlacement = findPositionAtTime(metadata.timestamp);
 
     return resolvePhotoPlacement({
       id,
@@ -79,7 +45,7 @@ export function usePhotos() {
       timestampFailureReason: timestampPlacement.reason,
       fallbackProgress: playback.progress,
     });
-  }, [activeTrackId, findPositionOnRoute, journeySegments, playback.progress, playback.routeTimingMode, tracks]);
+  }, [findPositionAtTime, findPositionOnRoute, playback.progress]);
 
   const addPhotos = useCallback(async (files: FileList | File[] | null) => {
     if (!files || files.length === 0) return;

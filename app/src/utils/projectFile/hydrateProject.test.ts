@@ -37,6 +37,7 @@ describe('hydrateProject', () => {
       title: 'Summit',
     });
     sourceStore.getState().setUnitSystem('imperial');
+    sourceStore.getState().setCameraPosition({ lat: 42.1, lon: 1.2, zoom: 15.75, pitch: 42, bearing: 123 });
 
     const blob = await buildReplayArchive(sourceStore.getState());
     const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
@@ -69,6 +70,7 @@ describe('hydrateProject', () => {
     });
 
     expect(state.settings.unitSystem).toBe('imperial');
+    expect(state.cameraPosition).toEqual({ lat: 42.1, lon: 1.2, zoom: 15.75, pitch: 42, bearing: 123 });
   });
 
   it('carries a photo route anchor through a save and reopen', async () => {

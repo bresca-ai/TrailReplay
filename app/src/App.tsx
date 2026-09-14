@@ -14,10 +14,12 @@ import { PlaybackControls } from '@/components/playback/PlaybackControls';
 import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
+import { VideoPopup } from '@/components/annotations/VideoPopup';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
 import {
+  getTriggeredPlaybackItems,
   getTriggeredPlaybackPictures,
   hasPlaybackProgressRewound,
 } from '@/utils/playbackPictures';
@@ -56,6 +58,9 @@ function chooseStatsColumns(width: number, height: number, statCount: number) {
   return bestColumns;
 }
 
+/** How close to the frame's centre the stats box has to be to snap onto it. */
+const STATS_CENTER_SNAP_PX = 8;
+
 type StatsResizeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 interface StatsResizeStart {
@@ -85,6 +90,9 @@ function App() {
   const statsDragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number } | null>(null);
   const statsResizeStartRef = useRef<StatsResizeStart | null>(null);
   const [isDraggingStats, setIsDraggingStats] = useState(false);
+  // Which centre lines the stats box is currently snapped to, so the guides
+  // can say so while it is being dragged.
+  const [statsCenterSnap, setStatsCenterSnap] = useState<{ x: boolean; y: boolean }>({ x: false, y: false });
   const [isResizingStats, setIsResizingStats] = useState(false);
   const [statsResizeGuide, setStatsResizeGuide] = useState<StatsResizeGuide | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -100,6 +108,10 @@ function App() {
   const lastPlaybackProgressRef = useRef(0);
   const resumePlaybackAfterPictureQueueRef = useRef(false);
   const pendingQueuedPictureOpenRef = useRef<number | null>(null);
+  const shownPlaybackVideoIdsRef = useRef<Set<string>>(new Set());
+  const lastVideoProgressRef = useRef(0);
+  const queuedPlaybackVideoIdsRef = useRef<string[]>([]);
+  const resumePlaybackAfterVideoRef = useRef(false);
 
   const { parseFiles } = useGPX();
   // Installed once for the whole page, not per panel: the click that moves
@@ -118,6 +130,8 @@ function App() {
   const animationPhase = useAppStore((state) => state.animationPhase);
   const exportPictureHoldElapsedMs = useAppStore((state) => state.exportPictureHoldElapsedMs);
   const pictures = useAppStore((state) => state.pictures);
+  const videos = useAppStore((state) => state.videos);
+  const exportVideoHoldTimeSeconds = useAppStore((state) => state.exportVideoHoldTimeSeconds);
   const pendingPicturePlacements = useAppStore((state) => state.pendingPicturePlacements);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
   const playback = useAppStore((state) => state.playback);
@@ -128,6 +142,8 @@ function App() {
   const setError = useAppStore((state) => state.setError);
   const selectedPictureId = useAppStore((state) => state.selectedPictureId);
   const setSelectedPictureId = useAppStore((state) => state.setSelectedPictureId);
+  const selectedVideoId = useAppStore((state) => state.selectedVideoId);
+  const setSelectedVideoId = useAppStore((state) => state.setSelectedVideoId);
   const addPicture = useAppStore((state) => state.addPicture);
   const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
   const clearPendingPicturePlacements = useAppStore((state) => state.clearPendingPicturePlacements);
@@ -352,9 +368,13 @@ function App() {
     shownPlaybackPictureIdsRef.current.clear();
     queuedPlaybackPictureIdsRef.current = [];
     resumePlaybackAfterPictureQueueRef.current = false;
+    shownPlaybackVideoIdsRef.current.clear();
+    queuedPlaybackVideoIdsRef.current = [];
+    resumePlaybackAfterVideoRef.current = false;
+    lastVideoProgressRef.current = useAppStore.getState().playback.progress;
     clearPendingQueuedPictureOpen();
     lastPlaybackProgressRef.current = useAppStore.getState().playback.progress;
-  }, [clearPendingQueuedPictureOpen, pictures, textAnnotations, tracks]);
+  }, [clearPendingQueuedPictureOpen, pictures, textAnnotations, tracks, videos]);
 
   const handleStatsDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -408,18 +428,45 @@ function App() {
       const rect = container.getBoundingClientRect();
       const dx = (e.clientX - statsDragStartRef.current.mouseX) / rect.width;
       const dy = (e.clientY - statsDragStartRef.current.mouseY) / rect.height;
-      setSettings({
-        statsPosition: {
-          x: Math.max(0, Math.min(0.92, statsDragStartRef.current.startX + dx)),
-          y: Math.max(0, Math.min(0.92, statsDragStartRef.current.startY + dy)),
-        },
-      });
+      let x = Math.max(0, Math.min(0.92, statsDragStartRef.current.startX + dx));
+      let y = Math.max(0, Math.min(0.92, statsDragStartRef.current.startY + dy));
+
+      // Centring the stats by eye is guesswork, and in the export it is
+      // guesswork against a frame whose edges are not the window's. The box
+      // therefore snaps to the centre of the *exported* frame when it comes
+      // close, and the guides below show which axis caught.
+      const box = statsScaleWrapperRef.current?.getBoundingClientRect();
+      let snappedX = false;
+      let snappedY = false;
+      if (box) {
+        const frame = activeExportCropMetrics ?? {
+          frameLeft: 0, frameTop: 0, frameWidth: rect.width, frameHeight: rect.height,
+        };
+        const targetLeft = frame.frameLeft + (frame.frameWidth - box.width) / 2;
+        const targetTop = frame.frameTop + (frame.frameHeight - box.height) / 2;
+        if (Math.abs(x * rect.width - targetLeft) <= STATS_CENTER_SNAP_PX) {
+          x = targetLeft / rect.width;
+          snappedX = true;
+        }
+        if (Math.abs(y * rect.height - targetTop) <= STATS_CENTER_SNAP_PX) {
+          y = targetTop / rect.height;
+          snappedY = true;
+        }
+      }
+
+      setStatsCenterSnap((current) => (
+        current.x === snappedX && current.y === snappedY ? current : { x: snappedX, y: snappedY }
+      ));
+      setSettings({ statsPosition: { x, y } });
     };
-    const onUp = () => setIsDraggingStats(false);
+    const onUp = () => {
+      setIsDraggingStats(false);
+      setStatsCenterSnap({ x: false, y: false });
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [isDraggingStats, setSettings]);
+  }, [activeExportCropMetrics, isDraggingStats, setSettings]);
 
   useEffect(() => {
     if (!isResizingStats) return;
@@ -436,7 +483,7 @@ function App() {
       const width = Math.max(72, start.width + (fromLeft ? -dx : dx));
       const height = Math.max(52, start.height + (fromTop ? -dy : dy));
       const areaRatio = (width * height) / Math.max(1, start.width * start.height);
-      const scale = Math.max(0.6, Math.min(2, start.scale * Math.sqrt(areaRatio)));
+      const scale = Math.max(0.6, Math.min(8, start.scale * Math.sqrt(areaRatio)));
       const columns = chooseStatsColumns(width, height, availableStats.length);
       const left = fromLeft ? start.left + start.width - width : start.left;
       const top = fromTop ? start.top + start.height - height : start.top;
@@ -489,7 +536,7 @@ function App() {
     // picture-hold logic (so the export can freeze the route position for
     // the full `displayDuration` instead of just showing the popup over an
     // already-advancing timeline) — this effect must stay out of the way.
-    if (isDeterministicExport || !playback.isPlaying || animationPhase !== 'playing' || selectedPictureId || autoPlaybackPictureId || pictures.length === 0) {
+    if (isDeterministicExport || !playback.isPlaying || animationPhase !== 'playing' || selectedPictureId || autoPlaybackPictureId || selectedVideoId || pictures.length === 0) {
       lastPlaybackProgressRef.current = currentProgress;
     } else {
       const triggeredPictures = getTriggeredPlaybackPictures({
@@ -529,7 +576,78 @@ function App() {
     playback.isPlaying,
     playback.progress,
     selectedPictureId,
+    selectedVideoId,
   ]);
+
+  // Clips are triggered on the same rule as photos, but hold the replay for
+  // as long as the clip itself runs rather than for a fixed display duration.
+  // The two effects keep separate progress refs: they both run on the same
+  // store update, and a shared ref would leave whichever ran second looking at
+  // a window that had already been consumed.
+  useEffect(() => {
+    const currentProgress = playback.progress;
+    const previousProgress = lastVideoProgressRef.current;
+
+    if (hasPlaybackProgressRewound(previousProgress, currentProgress)) {
+      shownPlaybackVideoIdsRef.current.clear();
+      queuedPlaybackVideoIdsRef.current = [];
+      resumePlaybackAfterVideoRef.current = false;
+    }
+
+    const blocked = isDeterministicExport
+      || !playback.isPlaying
+      || animationPhase !== 'playing'
+      || selectedVideoId
+      || selectedPictureId
+      || autoPlaybackPictureId
+      || videos.length === 0;
+
+    if (!blocked) {
+      const triggeredVideos = getTriggeredPlaybackItems({
+        items: videos,
+        previousProgress,
+        currentProgress,
+        shownItemIds: shownPlaybackVideoIdsRef.current,
+        queuedItemIds: queuedPlaybackVideoIdsRef.current,
+      });
+
+      if (triggeredVideos.length > 0) {
+        triggeredVideos.forEach((video) => shownPlaybackVideoIdsRef.current.add(video.id));
+        queuedPlaybackVideoIdsRef.current.push(...triggeredVideos.map((video) => video.id));
+        resumePlaybackAfterVideoRef.current = true;
+        pause();
+        const nextVideoId = queuedPlaybackVideoIdsRef.current.shift();
+        if (nextVideoId) setSelectedVideoId(nextVideoId);
+      }
+    }
+
+    lastVideoProgressRef.current = currentProgress;
+  }, [
+    animationPhase,
+    autoPlaybackPictureId,
+    isDeterministicExport,
+    pause,
+    playback.isPlaying,
+    playback.progress,
+    selectedPictureId,
+    selectedVideoId,
+    setSelectedVideoId,
+    videos,
+  ]);
+
+  const closeActiveVideo = useCallback(() => {
+    const nextVideoId = queuedPlaybackVideoIdsRef.current.shift();
+    if (nextVideoId) {
+      setSelectedVideoId(nextVideoId);
+      return;
+    }
+
+    setSelectedVideoId(null);
+    if (resumePlaybackAfterVideoRef.current) {
+      resumePlaybackAfterVideoRef.current = false;
+      play();
+    }
+  }, [play, setSelectedVideoId]);
 
   const closeActivePicture = useCallback(() => {
     clearPendingQueuedPictureOpen();
@@ -562,6 +680,7 @@ function App() {
     ? pictures.find((p) => p.id === autoPlaybackPictureId)
     : undefined;
   const activePicture = selectedPicture || autoPlaybackPicture;
+  const activeVideo = selectedVideoId ? videos.find((entry) => entry.id === selectedVideoId) : undefined;
   const activeTextAnnotationId = useMemo(() => getActivePlaybackAnnotationId({
     annotations: textAnnotations,
     currentTime: playback.currentTime,
@@ -704,6 +823,33 @@ function App() {
                 </div>
               )}
 
+              {isDraggingStats && (() => {
+                const container = mapContainerRef.current;
+                if (!container) return null;
+                const containerRect = container.getBoundingClientRect();
+                const frame = activeExportCropMetrics ?? {
+                  frameLeft: 0,
+                  frameTop: 0,
+                  frameWidth: containerRect.width,
+                  frameHeight: containerRect.height,
+                };
+                const centerX = frame.frameLeft + frame.frameWidth / 2;
+                const centerY = frame.frameTop + frame.frameHeight / 2;
+
+                return (
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20">
+                    <div
+                      className={`absolute w-px ${statsCenterSnap.x ? 'bg-[var(--trail-orange)]' : 'bg-white/35'}`}
+                      style={{ left: centerX, top: frame.frameTop, height: frame.frameHeight }}
+                    />
+                    <div
+                      className={`absolute h-px ${statsCenterSnap.y ? 'bg-[var(--trail-orange)]' : 'bg-white/35'}`}
+                      style={{ top: centerY, left: frame.frameLeft, width: frame.frameWidth }}
+                    />
+                  </div>
+                );
+              })()}
+
               {isResizingStats && statsResizeGuide && (
                 <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20">
                   {resizeGuideTargets.map((target) => (
@@ -776,6 +922,17 @@ function App() {
                 />
               )}
               
+              {/* Video Popup */}
+              {activeVideo && (
+                <VideoPopup
+                  key={activeVideo.id}
+                  video={activeVideo}
+                  onClose={closeActiveVideo}
+                  exportFrame={activeExportCropMetrics}
+                  exportCurrentTimeSeconds={isDeterministicExport ? exportVideoHoldTimeSeconds : undefined}
+                />
+              )}
+
               {/* Hidden file input */}
               <input
                 ref={fileInputRef}

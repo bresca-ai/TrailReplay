@@ -22,6 +22,7 @@ describe('buildReplayArchive', () => {
     const store = createAppStore();
     const track = parseGPX(sampleGpx, 'ridge-loop.gpx');
     store.getState().addTrack(track);
+    store.getState().setCameraPosition({ lat: 42.1, lon: 1.2, zoom: 15.75, pitch: 42, bearing: 123 });
     store.getState().addPicture({
       id: 'picture-1',
       file: new File(['image'], 'summit.jpg', { type: 'image/jpeg' }),
@@ -48,6 +49,7 @@ describe('buildReplayArchive', () => {
     expect(project.tracks).toHaveLength(1);
     expect(project.tracks[0].id).toBe(track.id);
     expect(project.pictures).toHaveLength(1);
+    expect(project.cameraPosition).toEqual({ lat: 42.1, lon: 1.2, zoom: 15.75, pitch: 42, bearing: 123 });
     expect(project.pictures![0]).toMatchObject({
       id: 'picture-1',
       originalFileName: 'summit.jpg',

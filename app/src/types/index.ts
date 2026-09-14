@@ -134,6 +134,13 @@ export interface VideoAnnotation {
   progress: number;
   title?: string;
   description?: string;
+  /** Clip length in seconds, as the browser that decoded it reports it. */
+  durationSeconds?: number;
+  /** How the clip found its place on the route, mirroring `PictureAnnotation`. */
+  placementSource?: 'gps' | 'timestamp' | 'manual';
+  routeDistance?: number;
+  routeSegmentId?: string;
+  routeSegmentDistance?: number;
 }
 
 export interface IconChange {
@@ -301,7 +308,20 @@ export interface TrailStyleSettings {
   colorZones: TrailColorZone[];
 }
 
-export type StatId = 'distance' | 'duration' | 'pace' | 'elevation' | 'heartRate' | 'speed' | 'altitude';
+/**
+ * `duration` is the total elapsed clock (stops included); `movingDuration` is
+ * the same replay measured on the moving clock. They are two selectable stats
+ * rather than one stat with a preference, so a replay can show both.
+ */
+export type StatId =
+  | 'distance'
+  | 'duration'
+  | 'movingDuration'
+  | 'pace'
+  | 'elevation'
+  | 'heartRate'
+  | 'speed'
+  | 'altitude';
 
 export interface AppSettings {
   unitSystem: UnitSystem;
@@ -322,6 +342,8 @@ export interface AppSettings {
   statsPosition: { x: number; y: number } | null;
   statsScale: number;
   statsLayout: 'auto' | 'horizontal' | 'vertical';
+  /** `panel` is the dark rounded card; `transparent` leaves only the text over the map. */
+  statsBackground: 'panel' | 'transparent';
   statsColumns: number | null;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;

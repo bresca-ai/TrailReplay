@@ -48,6 +48,11 @@ function hydrateVideo(serialized: SerializedVideo): VideoAnnotation {
     progress: serialized.progress,
     title: serialized.title,
     description: serialized.description,
+    durationSeconds: serialized.durationSeconds,
+    placementSource: serialized.placementSource,
+    routeDistance: serialized.routeDistance,
+    routeSegmentId: serialized.routeSegmentId,
+    routeSegmentDistance: serialized.routeSegmentDistance,
   };
 }
 
@@ -135,6 +140,7 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     // defaults rather than `store.playback`, since `store` was captured
     // before `store.reset()` above and still holds the pre-reset value.
     playback: { ...createDefaultPlayback(), routeTimingMode: project.routeTimingMode ?? 'recorded' },
+    cameraPosition: project.cameraPosition ?? null,
     // Merge defaults so projects saved before newer presentation controls
     // (such as statsScale) retain the original 1x appearance. trailStyle and
     // mapOverlays are merged a level deeper too, so a hand-authored project

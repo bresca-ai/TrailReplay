@@ -368,11 +368,12 @@ pushing.
 | `defaultAnimationSpeed` | number, `1` = normal |
 | `trailStyle` | see below |
 | `waybackRelease`, `waybackItemURL` | historical imagery; `null` unless `mapStyle` is `wayback` |
-| `visibleStats` | any of `distance` `duration` `pace` `elevation` `heartRate` `speed` `altitude` |
+| `visibleStats` | any of `distance` `duration` `movingDuration` `pace` `elevation` `heartRate` `speed` `altitude` (`duration` is the total elapsed clock, stops included; `movingDuration` excludes them) |
 | `journeyStatsMode` | `cumulative` \| `per-track` |
 | `statsPosition` | `{ x, y }` or `null` for the default corner |
 | `statsScale` | number, `1` = 100 % |
 | `statsLayout` | `auto` `horizontal` `vertical` |
+| `statsBackground` | `panel` (dark card) \| `transparent` (text only, over the map) |
 | `statsColumns` | number or `null` |
 | `paceMode` | `cumulative` \| `per-km` |
 | `showElevationProfile` | boolean |
@@ -408,6 +409,7 @@ opacity }`), `dataPanelOffsetY`, `routeGlow`.
 
 ### 5.9 Route and playback
 
+- `cameraPosition` — the last live map camera as `{ lat, lon, zoom, pitch, bearing }`, or `null`. Saved projects use it to restore manual pan, zoom and orientation.
 - `routeTimingMode` — `recorded` replays the GPX's own pacing; `uniform` runs at
   constant pace.
 - `showAutomaticLandmarks` — derived pins (highest point, longest climb,

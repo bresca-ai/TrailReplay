@@ -1,7 +1,7 @@
 import type { GPXTrack, StatId } from '@/types';
 
 /** Stats that can only be answered from recorded timestamps. */
-export const TIME_DEPENDENT_STATS: readonly StatId[] = ['duration', 'pace', 'speed'];
+export const TIME_DEPENDENT_STATS: readonly StatId[] = ['duration', 'movingDuration', 'pace', 'speed'];
 
 export interface StatAvailability {
   hasRecordedTime: boolean;

@@ -20,6 +20,16 @@ export type CropRegion = {
   cropH: number;
 };
 
+export type CropFitPadding = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+const MIN_EXPORT_FIT_MARGIN_PX = 24;
+const EXPORT_FIT_MARGIN_RATIO = 0.05;
+
 export function getAspectRatioValue(ratio: CropRatio) {
   if (ratio === '16:9') return 16 / 9;
   if (ratio === '1:1') return 1;
@@ -85,4 +95,25 @@ export function getCropRegion(
   }
 
   return { cropX, cropY, cropW, cropH };
+}
+
+/**
+ * Converts the centered export crop into MapLibre padding. The crop bars are
+ * treated as unavailable map space, while the additional safe margin keeps
+ * the route from touching the exported video's edges.
+ */
+export function getExportFrameFitPadding(
+  exportFrame: CropPreviewMetrics,
+): CropFitPadding {
+  const safeMargin = Math.max(
+    MIN_EXPORT_FIT_MARGIN_PX,
+    Math.min(exportFrame.frameWidth, exportFrame.frameHeight) * EXPORT_FIT_MARGIN_RATIO,
+  );
+
+  return {
+    top: exportFrame.top + safeMargin,
+    right: exportFrame.right + safeMargin,
+    bottom: exportFrame.bottom + safeMargin,
+    left: exportFrame.left + safeMargin,
+  };
 }

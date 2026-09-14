@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getTriggeredPlaybackItems,
   getTriggeredPlaybackPictures,
   hasPlaybackProgressRewound,
 } from './playbackPictures';
@@ -55,5 +56,39 @@ describe('playback picture helpers', () => {
   it('detects when playback has been rewound enough to clear picture history', () => {
     expect(hasPlaybackProgressRewound(0.7, 0.5)).toBe(true);
     expect(hasPlaybackProgressRewound(0.7, 0.6995)).toBe(false);
+  });
+});
+
+describe('getTriggeredPlaybackItems', () => {
+  it('triggers clips on the same rule as photos, in route order', () => {
+    const videos = [
+      { id: 'summit', progress: 0.605 },
+      { id: 'descent', progress: 0.6 },
+      { id: 'finish', progress: 0.99 },
+    ];
+
+    const triggered = getTriggeredPlaybackItems({
+      items: videos,
+      previousProgress: 0.598,
+      currentProgress: 0.61,
+      shownItemIds: new Set<string>(),
+      queuedItemIds: [],
+    });
+
+    expect(triggered.map((video) => video.id)).toEqual(['descent', 'summit']);
+  });
+
+  it('never triggers a clip twice', () => {
+    const videos = [{ id: 'summit', progress: 0.5 }];
+
+    const triggered = getTriggeredPlaybackItems({
+      items: videos,
+      previousProgress: 0.49,
+      currentProgress: 0.51,
+      shownItemIds: new Set(['summit']),
+      queuedItemIds: [],
+    });
+
+    expect(triggered).toEqual([]);
   });
 });

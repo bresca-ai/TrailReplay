@@ -3,6 +3,7 @@ import {
   calculateTerrainAwareAdjustments,
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
+  shouldBypassProceduralCameraSmoothing,
   frameTimeMultiplierFromDeltaMs,
   smoothBearing,
   smoothCoordinate,
@@ -16,6 +17,13 @@ import {
 } from './cameraUtils';
 
 describe('camera utilities', () => {
+  it('stabilizes cinematic fallback poses but preserves authored keyframes exactly', () => {
+    expect(shouldBypassProceduralCameraSmoothing('cinematic', 0)).toBe(false);
+    expect(shouldBypassProceduralCameraSmoothing('cinematic', 1)).toBe(true);
+    expect(shouldBypassProceduralCameraSmoothing('follow-behind', 0)).toBe(false);
+    expect(shouldBypassProceduralCameraSmoothing('follow', 0)).toBe(true);
+  });
+
   it('holds the heading for small route wiggles', () => {
     expect(smoothBearing(90, 93)).toBe(90);
     expect(smoothBearing(359, 1)).toBe(359);

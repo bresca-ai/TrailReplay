@@ -56,6 +56,13 @@ export interface AppState {
   // export hold, decoupled from `playback.currentTime` so the route position
   // (and everything derived from it) stays frozen while the photo is shown.
   exportPictureHoldElapsedMs: number | null;
+  /**
+   * The point in a clip the deterministic export wants shown, in seconds.
+   * Non-null only during a video hold: the popup then seeks instead of
+   * playing, so every encoded frame lands on the frame the timeline asked
+   * for rather than on whatever the browser happened to have decoded.
+   */
+  exportVideoHoldTimeSeconds: number | null;
   settings: AppSettings;
   cameraSettings: CameraSettings;
   videoExportSettings: VideoExportSettings;
@@ -71,6 +78,7 @@ export interface AppState {
   isLoading: boolean;
   error: string | null;
   selectedPictureId: string | null;
+  selectedVideoId: string | null;
   cameraPosition: { lat: number; lon: number; zoom: number; pitch: number; bearing: number } | null;
   addTrack: (track: GPXTrack) => void;
   removeTrack: (trackId: string) => void;
@@ -112,6 +120,12 @@ export interface AppState {
   updatePictureDuration: (pictureId: string, duration: number) => void;
   addVideo: (video: VideoAnnotation) => void;
   removeVideo: (videoId: string) => void;
+  updateVideoPosition: (
+    videoId: string,
+    progress: number,
+    routeAnchor?: { routeDistance: number; routeSegmentId: string; routeSegmentDistance: number },
+  ) => void;
+  setSelectedVideoId: (videoId: string | null) => void;
   addIconChange: (iconChange: IconChange) => void;
   removeIconChange: (iconChangeId: string) => void;
   updateIconChangePosition: (iconChangeId: string, progress: number) => void;
@@ -165,6 +179,7 @@ export interface AppState {
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
   setSelectedPictureId: (pictureId: string | null) => void;
+  setExportVideoHoldTimeSeconds: (seconds: number | null) => void;
   relinkPictureFile: (pictureId: string, file: File) => void;
   relinkVideoFile: (videoId: string, file: File) => void;
   reset: () => void;

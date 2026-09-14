@@ -9,6 +9,7 @@ import { calculateCurrentLiveStats, elapsedTrackTime } from './liveStats';
 import {
   Route,
   Timer,
+  TimerReset,
   Clock,
   Mountain,
   Heart,
@@ -88,7 +89,8 @@ export function StatsOverlay({ compact = false, layout = 'default', variant = 'd
     const fastest = journeyTracks.reduce((highest, track) => Math.max(highest, track.maxSpeed || 0), 0);
 
     return {
-      duration: formatStatsDuration(elapsedTrackTime(segmentTimings, tracks, activeTrack, 1, playback.totalDuration / 1000)),
+      duration: formatStatsDuration(elapsedTrackTime(segmentTimings, tracks, activeTrack, 1, playback.totalDuration / 1000, 'total')),
+      movingDuration: formatStatsDuration(elapsedTrackTime(segmentTimings, tracks, activeTrack, 1, playback.totalDuration / 1000, 'moving')),
       distance: formatDistance(totalDistance, settings.unitSystem),
       elevation: formatElevation(totalElevationGain, settings.unitSystem),
       altitude: formatElevation(highestPoint, settings.unitSystem),
@@ -106,6 +108,12 @@ export function StatsOverlay({ compact = false, layout = 'default', variant = 'd
       icon: <Timer className={iconCls} />,
       label: t('stats.duration'),
       value: formatStatsDuration(currentStats.duration),
+    },
+    {
+      id: 'movingDuration',
+      icon: <TimerReset className={iconCls} />,
+      label: t('stats.movingDuration'),
+      value: formatStatsDuration(currentStats.movingDuration),
     },
     {
       id: 'distance',
@@ -176,7 +184,7 @@ export function StatsOverlay({ compact = false, layout = 'default', variant = 'd
           : isNarrowLayout
             ? 'tr-stats-overlay--compact tr-stats-overlay--narrow'
             : ''
-      }`}
+      } ${settings.statsBackground === 'transparent' ? 'tr-stats-overlay--plain' : ''}`}
     >
       <div
         className={`grid w-max ${isExportVariant || isNarrowLayout ? 'gap-x-1.5 gap-y-1.5 mb-0' : 'gap-2 mb-0'}`}

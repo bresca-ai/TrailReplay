@@ -43,14 +43,14 @@ export function buildSocialShareSummary(
       const track = tracks.find((t) => t.id === seg.trackId);
       if (!track) continue;
       distanceMeters += track.totalDistance;
-      durationSeconds += track.movingTime || track.totalTime;
+      durationSeconds += track.totalTime || track.movingTime;
       elevationGainMeters += track.elevationGain;
     }
   } else {
     primaryTrack = tracks.find((t) => t.id === activeTrackId) ?? tracks[0];
     if (primaryTrack) {
       distanceMeters = primaryTrack.totalDistance;
-      durationSeconds = primaryTrack.movingTime || primaryTrack.totalTime;
+      durationSeconds = primaryTrack.totalTime || primaryTrack.movingTime;
       elevationGainMeters = primaryTrack.elevationGain;
     }
   }

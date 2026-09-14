@@ -63,6 +63,7 @@ export function createAppStore() {
           state.exportStage = '';
           state.error = null;
           state.selectedPictureId = null;
+          state.selectedVideoId = null;
           state.cameraPosition = null;
           state.exploreMode = false;
           state.activePanel = 'tracks';

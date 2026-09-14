@@ -71,3 +71,37 @@ describe('mediaSlice relink actions', () => {
     expect(store.getState().pictures[0].isPlaceholder).toBe(true);
   });
 });
+
+describe('mediaSlice video selection', () => {
+  it('clears the selection when the selected video is removed', () => {
+    const store = createAppStore();
+    store.setState((state) => {
+      state.videos.push(createPlaceholderVideo());
+    });
+
+    store.getState().setSelectedVideoId('video-1');
+    store.getState().removeVideo('video-1');
+
+    expect(store.getState().videos).toHaveLength(0);
+    expect(store.getState().selectedVideoId).toBeNull();
+  });
+
+  it('re-anchors a video when its position on the route is updated', () => {
+    const store = createAppStore();
+    store.setState((state) => {
+      state.videos.push(createPlaceholderVideo());
+    });
+
+    store.getState().updateVideoPosition('video-1', 0.75, {
+      routeDistance: 12_000,
+      routeSegmentId: 'segment-2',
+      routeSegmentDistance: 3_000,
+    });
+
+    const video = store.getState().videos[0];
+    expect(video.progress).toBe(0.75);
+    expect(video.routeDistance).toBe(12_000);
+    expect(video.routeSegmentId).toBe('segment-2');
+    expect(video.routeSegmentDistance).toBe(3_000);
+  });
+});

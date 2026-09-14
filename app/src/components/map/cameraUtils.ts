@@ -11,6 +11,19 @@ export function cameraReactivityFromStability(cameraStability: number): number {
 }
 
 /**
+ * Authored cinematic keyframes already define a smooth pose and must be
+ * followed exactly. Cinematic mode without keyframes uses the procedural,
+ * terrain-aware fallback, whose changing zoom/pitch still needs the same
+ * stabilization as follow-behind.
+ */
+export function shouldBypassProceduralCameraSmoothing(
+  cameraMode: 'overview' | 'follow' | 'follow-behind' | 'cinematic',
+  cinematicKeyframeCount: number,
+): boolean {
+  return cameraMode === 'follow' || (cameraMode === 'cinematic' && cinematicKeyframeCount > 0);
+}
+
+/**
  * Widest the cinematic anchor smoothing window goes, in seconds of video
  * either side. Deliberately generous: a window this wide would lose the
  * marker on its own, and is only safe because the anchor is bounded against

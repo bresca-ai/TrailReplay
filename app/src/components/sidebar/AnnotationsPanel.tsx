@@ -506,7 +506,7 @@ export function AnnotationsPanel() {
           {t('annotations.statsTitle')}
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          {(['distance', 'duration', 'pace', 'elevation', 'heartRate', 'speed', 'altitude'] as const).map((id) => {
+          {(['distance', 'duration', 'movingDuration', 'pace', 'elevation', 'heartRate', 'speed', 'altitude'] as const).map((id) => {
             const unavailable = !isStatAvailable(id, availability);
             const reason = TIME_DEPENDENT_STATS.includes(id)
               ? t('annotations.statsNeedTiming')
@@ -575,6 +575,27 @@ export function AnnotationsPanel() {
             </div>
           </div>
         )}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-[var(--evergreen-60)] uppercase tracking-wide">
+            {t('annotations.statsBackground')}
+          </Label>
+          <div className="flex rounded-lg border border-[var(--evergreen)]/20 overflow-hidden">
+            {(['panel', 'transparent'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setSettings({ statsBackground: mode })}
+                className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                  settings.statsBackground === mode
+                    ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
+                    : 'text-[var(--evergreen-60)] hover:text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5'
+                }`}
+              >
+                {mode === 'panel' ? t('annotations.statsBackgroundPanel') : t('annotations.statsBackgroundTransparent')}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center justify-between">
           <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showElevationProfile')}</Label>
           <Switch

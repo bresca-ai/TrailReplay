@@ -54,6 +54,22 @@ export function getCapturedCanvasDrawSize(
   };
 }
 
+/**
+ * Maps a CSS font size from an element's intrinsic (untransformed) layout
+ * into the final draw rectangle. Static labels captured by html2canvas follow
+ * this same ratio, so manually redrawn values retain their exact proportions.
+ */
+export function getExportedOverlayFontSize(
+  cssFontSize: number,
+  intrinsicElementHeight: number,
+  drawHeight: number,
+) {
+  if (!Number.isFinite(cssFontSize) || cssFontSize <= 0) return 0;
+  if (!Number.isFinite(intrinsicElementHeight) || intrinsicElementHeight <= 0) return cssFontSize;
+  if (!Number.isFinite(drawHeight) || drawHeight <= 0) return 0;
+  return cssFontSize * (drawHeight / intrinsicElementHeight);
+}
+
 export function getStatsOverlayDrawRect(params: {
   captureCanvas: Size;
   /** Scale used only for width/height computation (pass 1 when width is already pre-scaled). */
@@ -72,14 +88,13 @@ export function getStatsOverlayDrawRect(params: {
   sizeScale?: number;
 }) {
   const sizeScale = Number.isFinite(params.sizeScale)
-    ? Math.max(0.6, Math.min(2, params.sizeScale ?? 1))
+    ? Math.max(0.6, Math.min(8, params.sizeScale ?? 1))
     : 1;
   const rawWidth = params.captureCanvas.width * params.scaleToRecording * sizeScale;
-  const isNarrowFrame = params.recordW <= params.recordH;
   const maxWidth = Math.min(
     rawWidth,
     params.recordW - (params.margin * 2),
-    params.recordW * (isNarrowFrame ? 0.56 : 0.28) * Math.max(1, sizeScale),
+    (params.recordH - (params.margin * 2)) * (params.captureCanvas.width / params.captureCanvas.height),
   );
   const drawWidth = Math.max(0, maxWidth);
   const drawHeight = params.captureCanvas.height * (drawWidth / params.captureCanvas.width);
@@ -98,7 +113,7 @@ export function getStatsOverlayDrawRect(params: {
   }
 
   return {
-    drawX: isNarrowFrame ? (params.recordW - drawWidth) / 2 : params.margin,
+    drawX: (params.recordW - drawWidth) / 2,
     drawY: params.margin,
     drawWidth,
     drawHeight,

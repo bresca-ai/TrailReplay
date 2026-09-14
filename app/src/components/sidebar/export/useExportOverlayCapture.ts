@@ -8,6 +8,7 @@ import {
   getCapturedCanvasDrawSize,
   getElevationOverlayDrawRect,
   getExportOverlayMetrics,
+  getExportedOverlayFontSize,
   getObjectContainRect,
   getPopupOverlayDrawRect,
   getStatsOverlayDrawRect,
@@ -223,6 +224,39 @@ export function useExportOverlayCapture({
         } catch { /* Skip popup capture when unavailable. */ }
       }
 
+      // Clips get the same treatment as the photo above: html2canvas cannot
+      // rasterize a <video>, so the chrome is captured without it and the
+      // current decoded frame is drawn in by hand, contain-fitted into the
+      // popup box.
+      const videoPopupElement = document.querySelector('.tr-video-popup') as HTMLElement | null;
+      if (videoPopupElement) {
+        try {
+          const popupRect = videoPopupElement.getBoundingClientRect();
+          const popupDrawRect = getPopupOverlayDrawRect({ popupRect, containerRect, cropX, cropY, scaleToRecording });
+          if (isDrawableRect(popupDrawRect)) {
+            const captureCanvas = await capture(videoPopupElement, {
+              backgroundColor: null,
+              scale: 1,
+              logging: false,
+              useCORS: true,
+              allowTaint: true,
+              ignoreElements: (element) => element.tagName === 'VIDEO',
+            });
+            overlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, popupDrawRect.drawX, popupDrawRect.drawY, popupDrawRect.drawWidth, popupDrawRect.drawHeight);
+            const videoElement = videoPopupElement.querySelector('video') as HTMLVideoElement | null;
+            if (videoElement && videoElement.readyState >= 2 && videoElement.videoWidth > 0) {
+              const containRect = getObjectContainRect(
+                videoElement.getBoundingClientRect(),
+                videoElement.videoWidth,
+                videoElement.videoHeight,
+              );
+              const frameRect = getPopupOverlayDrawRect({ popupRect: containRect, containerRect, cropX, cropY, scaleToRecording });
+              if (isDrawableRect(frameRect)) overlayContext.drawImage(videoElement, frameRect.drawX, frameRect.drawY, frameRect.drawWidth, frameRect.drawHeight);
+            }
+          }
+        } catch { /* Skip popup capture when unavailable. */ }
+      }
+
       if (runId === overlayRunIdRef.current) cachedOverlayRef.current = overlay;
     } finally {
       overlayBusyRef.current = false;
@@ -297,13 +331,31 @@ export function useExportOverlayCapture({
         + (rect.left + rect.width / 2 - statsRect.left) * elementScaleX;
       const centerY = drawRect.drawY
         + (rect.top + rect.height / 2 - statsRect.top) * elementScaleY;
-      const fontSize = (Number.parseFloat(style.fontSize) || 9) * elementScaleY;
+      // The labels in the cached html2canvas bitmap scale from the overlay's
+      // intrinsic layout dimensions into drawRect. Values are excluded from
+      // that bitmap and redrawn here, so they must use the same ratio. Using
+      // statsRect.height would cancel the ancestor statsScale transform and
+      // make the numbers disproportionately small in the exported video.
+      const fontSize = getExportedOverlayFontSize(
+        Number.parseFloat(style.fontSize) || 9,
+        statsElement.offsetHeight,
+        drawRect.drawHeight,
+      );
 
       context.save();
       context.font = `${style.fontWeight || '600'} ${fontSize}px ${style.fontFamily || 'sans-serif'}`;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = style.color || '#ffffff';
+      // With no panel behind them the values sit straight on the map, where a
+      // bright snowfield can swallow white text. The live overlay leans on a
+      // CSS text-shadow, which never reaches these hand-drawn numbers, so the
+      // same shadow is applied to the canvas.
+      if (statsElement.classList.contains('tr-stats-overlay--plain')) {
+        context.shadowColor = 'rgba(0, 0, 0, 0.85)';
+        context.shadowBlur = Math.max(2, fontSize * 0.25);
+        context.shadowOffsetY = Math.max(1, fontSize * 0.06);
+      }
       context.fillText(value, centerX, centerY);
       context.restore();
     });

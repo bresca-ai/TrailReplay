@@ -172,7 +172,7 @@ export function TrackItem({
 
           <dl className="mt-3 grid grid-cols-2 overflow-hidden rounded-lg border border-[var(--evergreen)]/12 bg-[var(--evergreen)]/[0.035] text-xs">
             <TrackMetric icon={<Navigation className="h-3.5 w-3.5" />} label={t('tracks.distance')} value={formatDistance(track.totalDistance, settings.unitSystem)} />
-            <TrackMetric icon={<Clock className="h-3.5 w-3.5" />} label={t('tracks.time')} value={formatDuration(track.movingTime || track.totalTime)} className="border-l border-[var(--evergreen)]/10" />
+            <TrackMetric icon={<Clock className="h-3.5 w-3.5" />} label={t('tracks.time')} value={formatDuration(track.totalTime || track.movingTime)} className="border-l border-[var(--evergreen)]/10" />
             <TrackMetric icon={<TrendingUp className="h-3.5 w-3.5" />} label={t('tracks.speed')} value={formatSpeedFromKmh(track.avgMovingSpeed || track.avgSpeed, settings.unitSystem)} detail={pace > 0 ? `${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2, '0')}/km` : undefined} className="border-t border-[var(--evergreen)]/10" />
             <TrackMetric icon={<Mountain className="h-3.5 w-3.5" />} label={t('tracks.gain')} value={formatElevation(track.elevationGain, settings.unitSystem)} detail={`${formatElevation(track.elevationLoss, settings.unitSystem)} ${t('tracks.loss')}`} className="border-l border-t border-[var(--evergreen)]/10" />
           </dl>
