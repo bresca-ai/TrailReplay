@@ -1,8 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, type FileRejection } from 'react-dropzone';
+import { toast } from 'sonner';
 import { useAppStore } from '@/store/useAppStore';
 import { usePhotos } from '@/hooks/usePhotos';
-import { isImageFile } from '@/utils/files';
+import { useVideos } from '@/hooks/useVideos';
+import { isImageFile, isVideoFile } from '@/utils/files';
+import { formatDuration } from '@/utils/units';
 import { useI18n } from '@/i18n/useI18n';
 import { Switch } from '@/components/ui/switch';
 import { trackEvent } from '@/utils/analytics';
@@ -23,7 +26,11 @@ export function PicturesPanel() {
   const setSelectedPictureId = useAppStore((state) => state.setSelectedPictureId);
   const relinkPictureFile = useAppStore((state) => state.relinkPictureFile);
   const relinkVideoFile = useAppStore((state) => state.relinkVideoFile);
-  const { addPhotos, isProcessing } = usePhotos();
+  const updateVideoPosition = useAppStore((state) => state.updateVideoPosition);
+  const playbackProgress = useAppStore((state) => state.playback.progress);
+  const { addPhotos, isProcessing: isProcessingPhotos } = usePhotos();
+  const { addVideos, isProcessing: isProcessingVideos } = useVideos();
+  const isProcessing = isProcessingPhotos || isProcessingVideos;
 
   const [activeTab, setActiveTab] = useState<'pictures' | 'videos'>('pictures');
   const [editingPicture, setEditingPicture] = useState<string | null>(null);
@@ -50,20 +57,39 @@ export function PicturesPanel() {
     }
   };
   
+  // Both kinds are accepted whichever tab is open, and each file is routed by
+  // what it actually is. Sorting a drop by the open tab meant a video dropped
+  // on the Pictures tab — or on the Videos tab, which had no handler at all —
+  // disappeared without a word.
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (activeTab === 'pictures') {
-      const imageFiles = acceptedFiles.filter((f) => isImageFile(f));
-      if (imageFiles.length > 0) {
-        await addPhotos(imageFiles as unknown as FileList);
-      }
+    const imageFiles = acceptedFiles.filter((file) => isImageFile(file));
+    const videoFiles = acceptedFiles.filter((file) => !isImageFile(file) && isVideoFile(file));
+    const unsupported = acceptedFiles.filter((file) => !isImageFile(file) && !isVideoFile(file));
+
+    unsupported.forEach((file) => toast.error(t('media.unsupportedFile', { name: file.name })));
+
+    if (imageFiles.length > 0) {
+      await addPhotos(imageFiles as unknown as FileList);
     }
-  }, [activeTab, addPhotos]);
-  
+    if (videoFiles.length > 0) {
+      setActiveTab('videos');
+      await addVideos(videoFiles);
+    }
+  }, [addPhotos, addVideos, t]);
+
+  const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    rejections.forEach((rejection) => {
+      toast.error(t('media.unsupportedFile', { name: rejection.file.name }));
+    });
+  }, [t]);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: activeTab === 'pictures'
-      ? { 'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp'] }
-      : { 'video/*': ['.mp4', '.webm', '.mov'] },
+    onDropRejected,
+    accept: {
+      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'],
+      'video/*': ['.mp4', '.m4v', '.webm', '.mov', '.mkv', '.avi'],
+    },
     multiple: true,
   });
 
@@ -180,6 +206,9 @@ export function PicturesPanel() {
         <p className="text-xs text-[var(--evergreen-60)] mt-1">
           {t('media.dropBrowse')}
         </p>
+        {activeTab === 'videos' && (
+          <p className="text-[11px] text-[var(--evergreen-60)] mt-2">{t('media.videoNoSound')}</p>
+        )}
       </div>
       
       {/* Processing */}
@@ -368,7 +397,11 @@ export function PicturesPanel() {
                     </p>
                     <p className="text-xs text-[var(--evergreen-60)]">
                       {t('media.percentOfJourney', { percent: (video.progress * 100).toFixed(0) })}
+                      {video.durationSeconds ? ` · ${formatDuration(Math.round(video.durationSeconds))}` : ''}
                     </p>
+                    {video.placementSource === 'manual' && (
+                      <p className="text-[11px] text-[var(--trail-orange)]">{t('media.videoPlacedAtPlayheadBadge')}</p>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-1">
@@ -382,8 +415,16 @@ export function PicturesPanel() {
                       </button>
                     )}
                     <button
+                      onClick={() => updateVideoPosition(video.id, playbackProgress)}
+                      className="p-1.5 hover:bg-[var(--evergreen)]/10 rounded"
+                      title={t('media.videoMoveToPlayhead')}
+                    >
+                      <MapPin className="w-4 h-4 text-[var(--evergreen-60)]" />
+                    </button>
+                    <button
                       onClick={() => seekToProgress(video.progress)}
                       className="p-1.5 hover:bg-[var(--evergreen)]/10 rounded"
+                      title={t('media.videoSeekTo')}
                     >
                       <Play className="w-4 h-4 text-[var(--evergreen-60)]" />
                     </button>

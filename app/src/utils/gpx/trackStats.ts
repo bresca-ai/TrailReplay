@@ -12,6 +12,63 @@ export interface RawTrackPoint {
   temperature: number | null;
 }
 
+/**
+ * Strava's documented minimum climb threshold for activities without strong
+ * barometric data. This is deliberately conservative: it removes GPS noise
+ * without throwing away a real climb that is sampled sparsely.
+ */
+export const DEFAULT_ELEVATION_THRESHOLD_METERS = 10;
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((left, right) => left - right);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+/**
+ * Smooth short-lived altitude spikes, then only accept a climb/descent after
+ * it has moved at least the configured threshold from the last accepted
+ * elevation. This mirrors the important part of Strava's elevation policy:
+ * small GPS oscillations should not become accumulated ascent.
+ */
+function filterElevations(elevations: number[], windowSize = 5): number[] {
+  if (elevations.length < 3) return elevations;
+
+  const radius = Math.floor(windowSize / 2);
+  return elevations.map((_, index) => {
+    const values: number[] = [];
+    for (let offset = -radius; offset <= radius; offset += 1) {
+      const sourceIndex = Math.max(0, Math.min(elevations.length - 1, index + offset));
+      values.push(elevations[sourceIndex]);
+    }
+    return median(values);
+  });
+}
+
+export function calculateElevationGain(
+  points: Array<{ elevation: number }>,
+  upToIndex = points.length - 1,
+  thresholdMeters = DEFAULT_ELEVATION_THRESHOLD_METERS,
+): number {
+  const endIndex = Math.min(upToIndex, points.length - 1);
+  if (endIndex <= 0) return 0;
+
+  const elevations = filterElevations(points.slice(0, endIndex + 1).map((point) => point.elevation));
+  let gain = 0;
+  let acceptedElevation = elevations[0];
+
+  for (let index = 1; index < elevations.length; index += 1) {
+    const difference = elevations[index] - acceptedElevation;
+    if (difference >= thresholdMeters) {
+      gain += difference;
+      acceptedElevation = elevations[index];
+    } else if (difference <= -thresholdMeters) {
+      acceptedElevation = elevations[index];
+    }
+  }
+
+  return gain;
+}
+
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const earthRadius = 6371000;
   const deltaLat = (lat2 - lat1) * Math.PI / 180;
@@ -75,13 +132,6 @@ export function buildTrackFromRawPoints(params: {
       totalDistance += segmentDistance;
       distance = totalDistance;
 
-      const elevationDiff = rawPoint.elevation - previousTrackPoint.elevation;
-      if (elevationDiff > 0) {
-        elevationGain += elevationDiff;
-      } else {
-        elevationLoss += Math.abs(elevationDiff);
-      }
-
       if (rawPoint.time && previousTrackPoint.time) {
         const timeDiffSeconds = (rawPoint.time.getTime() - previousTrackPoint.time.getTime()) / 1000;
         if (timeDiffSeconds > 0) {
@@ -112,6 +162,11 @@ export function buildTrackFromRawPoints(params: {
       speed,
     });
   }
+
+  elevationGain = calculateElevationGain(rawPoints);
+  elevationLoss = calculateElevationGain(
+    rawPoints.map((point) => ({ elevation: -point.elevation })),
+  );
 
   let totalTime = 0;
   if (trackPoints.length > 1 && trackPoints[0].time && trackPoints[trackPoints.length - 1].time) {

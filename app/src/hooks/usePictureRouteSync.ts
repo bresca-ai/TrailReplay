@@ -8,7 +8,7 @@ import {
 } from '@/utils/journeyUtils';
 
 /**
- * Keeps photo timing in step with the route and the timing mode.
+ * Keeps photo and clip timing in step with the route and the timing mode.
  *
  * A photo's `progress` is computed once, when it is added, using whichever
  * timing mode is active at that moment. Add the photos first and switch to
@@ -31,10 +31,11 @@ export function usePictureRouteSync() {
   const journeySegments = useAppStore((state) => state.journeySegments);
   const routeTimingMode = useAppStore((state) => state.playback.routeTimingMode);
   const pictureCount = useAppStore((state) => state.pictures.length);
+  const videoCount = useAppStore((state) => state.videos.length);
   const isExporting = useAppStore((state) => state.isExporting);
 
   useEffect(() => {
-    if (isExporting || pictureCount === 0) {
+    if (isExporting || (pictureCount === 0 && videoCount === 0)) {
       return;
     }
 
@@ -44,7 +45,28 @@ export function usePictureRouteSync() {
       return;
     }
 
-    for (const picture of store.pictures) {
+    // Clips are anchored the same way as photos and drift the same way when
+    // the timing mode changes, so they are re-anchored in the same pass.
+    const anchoredMedia: Array<{
+      item: {
+        id: string;
+        progress: number;
+        placementSource?: 'gps' | 'timestamp' | 'manual';
+        routeDistance?: number;
+        routeSegmentId?: string;
+        routeSegmentDistance?: number;
+      };
+      apply: (
+        id: string,
+        progress: number,
+        anchor: { routeDistance: number; routeSegmentId: string; routeSegmentDistance: number },
+      ) => void;
+    }> = [
+      ...store.pictures.map((picture) => ({ item: picture, apply: store.updatePicturePosition })),
+      ...store.videos.map((video) => ({ item: video, apply: store.updateVideoPosition })),
+    ];
+
+    for (const { item: picture, apply } of anchoredMedia) {
       let routeSegmentId = picture.routeSegmentId;
       let routeSegmentDistance = picture.routeSegmentDistance;
       const hasStableAnchor = routeSegmentId !== undefined && routeSegmentDistance !== undefined;
@@ -92,11 +114,11 @@ export function usePictureRouteSync() {
         continue;
       }
 
-      store.updatePicturePosition(picture.id, progress, {
+      apply(picture.id, progress, {
         routeDistance: anchoredRouteDistance,
         routeSegmentId,
         routeSegmentDistance,
       });
     }
-  }, [isExporting, journeySegments, pictureCount, routeTimingMode, tracks]);
+  }, [isExporting, journeySegments, pictureCount, routeTimingMode, tracks, videoCount]);
 }

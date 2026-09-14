@@ -9,6 +9,7 @@ type MediaSlice = Pick<
   | 'iconChanges'
   | 'textAnnotations'
   | 'selectedPictureId'
+  | 'selectedVideoId'
   | 'addPicture'
   | 'queuePendingPicturePlacement'
   | 'removePendingPicturePlacement'
@@ -19,6 +20,8 @@ type MediaSlice = Pick<
   | 'updatePictureDuration'
   | 'addVideo'
   | 'removeVideo'
+  | 'updateVideoPosition'
+  | 'setSelectedVideoId'
   | 'addIconChange'
   | 'removeIconChange'
   | 'updateIconChangePosition'
@@ -37,6 +40,7 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   iconChanges: [],
   textAnnotations: [],
   selectedPictureId: null,
+  selectedVideoId: null,
 
   addPicture: (picture) =>
     set((state) => {
@@ -103,6 +107,27 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   removeVideo: (videoId) =>
     set((state) => {
       state.videos = state.videos.filter((video) => video.id !== videoId);
+      if (state.selectedVideoId === videoId) {
+        state.selectedVideoId = null;
+      }
+    }),
+
+  updateVideoPosition: (videoId, progress, routeAnchor) =>
+    set((state) => {
+      const video = state.videos.find((entry) => entry.id === videoId);
+      if (!video) return;
+
+      video.progress = progress;
+      if (routeAnchor) {
+        video.routeDistance = routeAnchor.routeDistance;
+        video.routeSegmentId = routeAnchor.routeSegmentId;
+        video.routeSegmentDistance = routeAnchor.routeSegmentDistance;
+      }
+    }),
+
+  setSelectedVideoId: (videoId) =>
+    set((state) => {
+      state.selectedVideoId = videoId;
     }),
 
   addIconChange: (iconChange) =>

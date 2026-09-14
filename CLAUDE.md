@@ -78,6 +78,8 @@ The map ref is exposed via `app/src/utils/mapRef.ts` for access outside the comp
 
 Video export is orchestrated from the Export panel in the sidebar (`components/sidebar/ExportPanel.tsx`). It captures the MapLibre canvas frame-by-frame and muxes video using `mp4-muxer` (MP4) or the MediaRecorder API (WebM). Social share image export uses `html2canvas` on a dedicated offscreen poster element in `components/sidebar/export/`.
 
+Photos and clips both pause the timeline and are encoded as a hold. A photo's hold advances `exportPictureHoldElapsedMs`; a clip's advances `exportVideoHoldTimeSeconds`, and the popup *seeks* to that point rather than playing, because a playing clip would run far ahead of an encoder that takes longer than real time per frame. `html2canvas` cannot rasterize a `<video>` (or an `object-fit: contain` `<img>`), so both are drawn onto the overlay canvas by hand in `useExportOverlayCapture.ts`.
+
 ### GPX/KML parsing (`app/src/utils/gpx/`)
 
 Parsing is split across dedicated modules:

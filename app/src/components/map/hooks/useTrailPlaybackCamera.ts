@@ -8,6 +8,8 @@ import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
 import type { TrailColorZone } from '@/types';
+import { getExportFrameFitPadding } from '@/utils/crop';
+import type { CropPreviewMetrics } from '@/utils/crop';
 import {
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
@@ -22,6 +24,7 @@ import {
   smoothPitch,
   smoothZoom,
   smoothZoomTarget,
+  shouldBypassProceduralCameraSmoothing,
 } from '@/components/map/cameraUtils';
 import {
   getInterpolatedRouteCoordinate,
@@ -68,6 +71,7 @@ interface UseTrailPlaybackCameraParams {
   currentTrackColor: string | null;
   currentTrackName: string | null;
   elevationData: Array<{ elevation: number; progress?: number }>;
+  exportFrame?: CropPreviewMetrics | null;
   followBehindZoomLevel: number;
   isInTransport: boolean;
   isMapLoaded: boolean;
@@ -163,6 +167,7 @@ export function useTrailPlaybackCamera({
   currentTrackColor,
   currentTrackName,
   elevationData,
+  exportFrame,
   followBehindZoomLevel,
   isExporting,
   isInTransport,
@@ -414,7 +419,10 @@ export function useTrailPlaybackCamera({
       // noise this mode doesn't have, and would turn an authored move into a
       // stepped or laggy one. Bypass it the same way 'follow' already does.
       // CINEMATIC_CAMERA_PLAN.md section 5.
-      const usesRawPose = cameraMode === 'follow' || cameraMode === 'cinematic';
+      const usesRawPose = shouldBypassProceduralCameraSmoothing(
+        cameraMode,
+        cinematicKeyframes?.length ?? 0,
+      );
 
       // Follow the replay plan's evenly sampled forward heading. Raw GPX
       // bearings can jump at uneven samples and make tight turns feel abrupt.
@@ -602,8 +610,8 @@ export function useTrailPlaybackCamera({
     }
 
     setCameraPosition({
-      lat: currentPosition.lat,
-      lon: currentPosition.lon,
+      lat: mapRef.current.getCenter().lat,
+      lon: mapRef.current.getCenter().lng,
       zoom: mapRef.current.getZoom(),
       pitch: mapRef.current.getPitch(),
       bearing: mapRef.current.getBearing(),
@@ -693,7 +701,7 @@ export function useTrailPlaybackCamera({
       const bounds = new maplibregl.LngLatBounds();
       allCoordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
       mapRef.current.fitBounds(bounds, {
-        padding: 100,
+        padding: exportFrame ? getExportFrameFitPadding(exportFrame) : 100,
         pitch: 45,
         bearing: 0,
         duration: OUTRO_DURATION,
@@ -716,6 +724,7 @@ export function useTrailPlaybackCamera({
     cameraCoordinates,
     cinematicKeyframes,
     elevationData,
+    exportFrame,
     followBehindZoomLevel,
     isExporting,
     isMapLoaded,

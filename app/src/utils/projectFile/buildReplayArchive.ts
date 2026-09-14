@@ -77,6 +77,11 @@ function serializeVideo(video: AppState['videos'][number]): SerializedVideo {
     progress: video.progress,
     title: video.title,
     description: video.description,
+    durationSeconds: video.durationSeconds,
+    placementSource: video.placementSource,
+    routeDistance: video.routeDistance,
+    routeSegmentId: video.routeSegmentId,
+    routeSegmentDistance: video.routeSegmentDistance,
   };
 }
 
@@ -115,6 +120,7 @@ export async function buildReplayArchive(state: AppState): Promise<Blob> {
     nearbyPlaceTypes: state.nearbyPlaceTypes,
     showAutomaticLandmarks: state.showAutomaticLandmarks,
     routeTimingMode: state.playback.routeTimingMode,
+    cameraPosition: state.cameraPosition,
     settings: state.settings,
     cameraSettings: state.cameraSettings,
     videoExportSettings: state.videoExportSettings,

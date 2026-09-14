@@ -88,6 +88,12 @@ export interface SerializedVideo {
   progress: number;
   title?: string;
   description?: string;
+  /** Clip length in seconds, so a re-opened project knows the hold before the file is re-linked. */
+  durationSeconds?: number;
+  placementSource?: 'gps' | 'timestamp' | 'manual';
+  routeDistance?: number;
+  routeSegmentId?: string;
+  routeSegmentDistance?: number;
 }
 
 /**
@@ -126,6 +132,14 @@ export interface ReplayProjectFile {
   nearbyPlaceTypes?: LandmarkType[] | null;
   showAutomaticLandmarks?: boolean;
   routeTimingMode?: RouteTimingMode;
+  /** Last live map camera, including a manually selected zoom level. */
+  cameraPosition?: {
+    lat: number;
+    lon: number;
+    zoom: number;
+    pitch: number;
+    bearing: number;
+  } | null;
   settings?: Partial<AppSettings>;
   cameraSettings?: Partial<CameraSettings>;
   videoExportSettings?: Partial<VideoExportSettings>;

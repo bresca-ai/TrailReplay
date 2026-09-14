@@ -14,7 +14,7 @@ import {
   trackEvent,
 } from '@/utils/analytics';
 import { getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
-import { getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
+import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
 import {
   buildJourneyDistanceProfile,
@@ -128,6 +128,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     return configuredStats.filter((id) => isStatAvailable(id, availability));
   }, [configuredStats, tracks]);
   const pictures = useAppStore((state) => state.pictures);
+  const videos = useAppStore((state) => state.videos);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
   const cameraSettings = useAppStore((state) => state.cameraSettings);
@@ -212,6 +213,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       switch (id) {
         case 'duration':
           values[id] = formatStatsDuration(currentStats.duration);
+          break;
+        case 'movingDuration':
+          values[id] = formatStatsDuration(currentStats.movingDuration);
           break;
         case 'distance':
           values[id] = formatDistance(currentStats.distance, state.settings.unitSystem);
@@ -406,7 +410,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     // The photo popup should read as fully in front of everything else
     // (matching the live view's z-index stacking): neither the route
     // position marker nor the small photo-pin markers should paint over it.
-    const pictureHoldActive = Boolean(document.querySelector('.tr-picture-popup'));
+    const pictureHoldActive = Boolean(
+      document.querySelector('.tr-picture-popup') || document.querySelector('.tr-video-popup'),
+    );
 
     // Photo pin markers along the route (`usePictureMarkers.ts`) live as
     // MapLibre DOM markers outside the WebGL canvas, so — like the position
@@ -859,6 +865,74 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     }
   }, [captureFrame, encodeWebCodecsFrame, updateOverlayAsync, videoExportSettings.fps, videoExportSettings.resolution]);
 
+  /** Blocks until the popup's clip has actually decoded the frame asked for. */
+  const waitForVideoSeek = useCallback(async (targetSeconds: number, toleranceSeconds: number) => {
+    const deadline = performance.now() + 2000;
+    for (;;) {
+      const element = document.querySelector('.tr-video-popup video') as HTMLVideoElement | null;
+      if (!element) return;
+      const settled = !element.seeking
+        && element.readyState >= 2
+        && Math.abs(element.currentTime - targetSeconds) <= toleranceSeconds;
+      if (settled || performance.now() > deadline) return;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+  }, []);
+
+  // Holds on a clip for its own length, one encoded frame at a time.
+  //
+  // The clip is never *played* during an export. Frame capture and encoding
+  // take far longer than real time, so a playing clip would have run most of
+  // the way through by the time a handful of frames had been written, and the
+  // exported result would be a few stuttering stills. Instead the popup seeks
+  // to the exact point the timeline is at, and this waits for that seek to land
+  // before rasterizing — the same reason `capturePictureHold` drives the photo
+  // animation from the encoded frame index rather than from wall-clock time.
+  const captureVideoHold = useCallback(async (
+    clipDurationSeconds: number,
+    timestampOffsetMs: number,
+  ) => {
+    const frameDurationMs = 1000 / videoExportSettings.fps;
+    const durationMs = Math.max(frameDurationMs, clipDurationSeconds * 1000);
+    const frameCount = Math.max(1, Math.ceil(durationMs / frameDurationMs));
+    const { width: recordW, height: recordH } = videoExportSettings.resolution;
+    // A seek lands on a decoded frame, which for a variable-frame-rate phone
+    // clip need not be the exact instant asked for.
+    const seekTolerance = Math.max(0.1, (frameDurationMs / 1000) * 2);
+
+    for (let frameIndex = 0; frameIndex <= frameCount; frameIndex += 1) {
+      if (!isRecordingRef.current || recordingCancelledRef.current) break;
+      const targetSeconds = Math.min(clipDurationSeconds, (frameIndex * frameDurationMs) / 1000);
+      useAppStore.getState().setExportVideoHoldTimeSeconds(targetSeconds);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await waitForVideoSeek(targetSeconds, seekTolerance);
+      if (!isRecordingRef.current || recordingCancelledRef.current) break;
+      await updateOverlayAsync(recordW, recordH);
+      captureFrame();
+      await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
+    }
+
+    return frameCount * frameDurationMs;
+  }, [captureFrame, encodeWebCodecsFrame, updateOverlayAsync, videoExportSettings.fps, videoExportSettings.resolution, waitForVideoSeek]);
+
+  /**
+   * Waits for the popup the store just asked for to exist and to have decoded
+   * something, and reports the length the element itself gives — the import may
+   * not have been able to read one.
+   */
+  const waitForVideoPopup = useCallback(async (): Promise<number | null> => {
+    const deadline = performance.now() + 5000;
+    for (;;) {
+      const element = document.querySelector('.tr-video-popup video') as HTMLVideoElement | null;
+      const duration = element?.duration;
+      if (element && element.readyState >= 2) {
+        return Number.isFinite(duration) && (duration ?? 0) > 0 ? duration! : null;
+      }
+      if (performance.now() > deadline) return null;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+  }, []);
+
   // Flush the WebCodecs-encoded MP4 once recording has stopped. Standard
   // exports download immediately; Studio exports are delivered by email.
   const finalizeWebCodecsExport = useCallback(async () => {
@@ -1051,6 +1125,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     // position for the picture's full `displayDuration` instead of just
     // showing the popup over an already-advancing timeline.
     const shownPictureIds = new Set<string>();
+    const shownVideoIds = new Set<string>();
     let previousProgress = 0;
 
     // The intro already contains the progress-zero pose. Begin at the first
@@ -1084,21 +1159,62 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         shownPictureIds,
         queuedPictureIds: [],
       });
+      const triggeredVideos = getTriggeredPlaybackItems({
+        items: videos,
+        previousProgress,
+        currentProgress: progress,
+        shownItemIds: shownVideoIds,
+        queuedItemIds: [],
+      });
       previousProgress = progress;
 
-      for (const picture of triggeredPictures) {
+      // Photos and clips that fall in the same frame are held in route order,
+      // so the export cuts between them the way the live replay does.
+      const triggeredMedia = [
+        ...triggeredPictures.map((picture) => ({ kind: 'picture' as const, picture })),
+        ...triggeredVideos.map((video) => ({ kind: 'video' as const, video })),
+      ].sort((a, b) => (
+        (a.kind === 'picture' ? a.picture.progress : a.video.progress)
+        - (b.kind === 'picture' ? b.picture.progress : b.video.progress)
+      ));
+
+      for (const media of triggeredMedia) {
         if (!isRecordingRef.current || recordingCancelledRef.current) break;
-        shownPictureIds.add(picture.id);
-        store.setSelectedPictureId(picture.id);
+
+        if (media.kind === 'picture') {
+          const picture = media.picture;
+          shownPictureIds.add(picture.id);
+          store.setSelectedPictureId(picture.id);
+          const holdTimestampOffset = encodedDurationMs;
+          const holdDurationMs = picture.displayDuration || 5000;
+          // `progress`/`currentTime` are left untouched for the whole hold, so
+          // the map/marker stay frozen; only `exportPictureHoldElapsedMs`
+          // advances, driving the popup's own zoom/progress-bar animation.
+          await capturePictureHold(holdDurationMs, holdTimestampOffset);
+          encodedDurationMs = holdTimestampOffset + holdDurationMs;
+          store.setSelectedPictureId(null);
+          store.setExportPictureHoldElapsedMs(null);
+          continue;
+        }
+
+        const video = media.video;
+        shownVideoIds.add(video.id);
+        // A clip whose file was never re-linked has nothing to decode; the
+        // export skips it rather than freezing on a placeholder for its whole
+        // length.
+        if (video.isPlaceholder) continue;
+
         const holdTimestampOffset = encodedDurationMs;
-        const holdDurationMs = picture.displayDuration || 5000;
-        // `progress`/`currentTime` are left untouched for the whole hold, so
-        // the map/marker stay frozen; only `exportPictureHoldElapsedMs`
-        // advances, driving the popup's own zoom/progress-bar animation.
-        await capturePictureHold(holdDurationMs, holdTimestampOffset);
-        encodedDurationMs = holdTimestampOffset + holdDurationMs;
-        store.setSelectedPictureId(null);
-        store.setExportPictureHoldElapsedMs(null);
+        store.setExportVideoHoldTimeSeconds(0);
+        store.setSelectedVideoId(video.id);
+        const decodedDuration = await waitForVideoPopup();
+        const clipDuration = decodedDuration ?? video.durationSeconds ?? 0;
+        if (clipDuration > 0) {
+          const heldMs = await captureVideoHold(clipDuration, holdTimestampOffset);
+          encodedDurationMs = holdTimestampOffset + heldMs;
+        }
+        store.setSelectedVideoId(null);
+        store.setExportVideoHoldTimeSeconds(null);
       }
     }
 
@@ -1118,7 +1234,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     }
 
     if (!recordingCancelledRef.current) finishRecording();
-  }, [captureDeterministicPhase, capturePictureHold, captureFrame, describeRecordingStage, encodeWebCodecsFrame, finishRecording, pictures, setExportProgress, setExportStage, setIsDeterministicExport, videoExportSettings, waitForExportFrame, waitForMapFrame]);
+  }, [captureDeterministicPhase, capturePictureHold, captureVideoHold, captureFrame, describeRecordingStage, encodeWebCodecsFrame, finishRecording, pictures, setExportProgress, setExportStage, setIsDeterministicExport, videoExportSettings, videos, waitForExportFrame, waitForMapFrame, waitForVideoPopup]);
 
   useEffect(() => {
     if (!isRecordingRef.current) return;

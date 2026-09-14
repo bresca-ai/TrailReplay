@@ -123,6 +123,12 @@ export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
 
   setCameraPosition: (position) =>
     set((state) => {
+      const current = state.cameraPosition;
+      if (current && current.lat === position.lat && current.lon === position.lon &&
+        current.zoom === position.zoom && current.pitch === position.pitch &&
+        current.bearing === position.bearing) {
+        return;
+      }
       state.cameraPosition = position;
     }),
 });

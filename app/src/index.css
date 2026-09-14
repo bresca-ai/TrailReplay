@@ -205,6 +205,19 @@ html, body {
   padding: 0.45rem 0.55rem 0.62rem;
 }
 
+/* Stats with no card behind them: only the text sits over the map, so it
+   carries its own shadow to stay readable on bright terrain. The exported
+   frames draw the values onto the canvas themselves, and match this shadow —
+   see `drawStatsValues` in export/useExportOverlayCapture.ts. */
+.tr-stats-overlay--plain,
+.tr-stats-overlay--plain.tr-stats-overlay--export,
+.tr-stats-overlay--plain.tr-stats-overlay--narrow {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
 .tr-stat-item {
   display: flex;
   align-items: center;

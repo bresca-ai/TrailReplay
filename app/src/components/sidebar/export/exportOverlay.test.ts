@@ -3,6 +3,7 @@ import {
   getCapturedCanvasDrawSize,
   getElevationOverlayDrawRect,
   getExportOverlayMetrics,
+  getExportedOverlayFontSize,
   getOverlayRefreshIntervalMs,
   getPopupOverlayDrawRect,
   getStatsOverlayDrawRect,
@@ -48,7 +49,7 @@ describe('exportOverlay', () => {
     expect(rect.drawY + rect.drawHeight).toBe(1920 - 27);
   });
 
-  it('centers and constrains the stats overlay for portrait exports', () => {
+  it('centers the stats overlay for portrait exports without an arbitrary width cap', () => {
     const rect = getStatsOverlayDrawRect({
       captureCanvas: { width: 920, height: 220 },
       scaleToRecording: 1,
@@ -57,7 +58,7 @@ describe('exportOverlay', () => {
       margin: 27,
     });
 
-    expect(rect.drawWidth).toBeLessThanOrEqual(1080 * 0.56);
+    expect(rect.drawWidth).toBe(920);
     expect(rect.drawX).toBeCloseTo((1080 - rect.drawWidth) / 2);
     expect(rect.drawY).toBe(27);
   });
@@ -84,7 +85,7 @@ describe('exportOverlay', () => {
     expect(large.drawHeight).toBeCloseTo(normal.drawHeight * 1.5);
   });
 
-  it('keeps the stats overlay pinned to the top-left for landscape exports', () => {
+  it('centers the stats overlay in landscape exports', () => {
     const rect = getStatsOverlayDrawRect({
       captureCanvas: { width: 520, height: 120 },
       scaleToRecording: 1,
@@ -93,9 +94,9 @@ describe('exportOverlay', () => {
       margin: 48,
     });
 
-    expect(rect.drawX).toBe(48);
+    expect(rect.drawX).toBe(700);
     expect(rect.drawY).toBe(48);
-    expect(rect.drawWidth).toBeLessThanOrEqual(1920 * 0.28);
+    expect(rect.drawWidth).toBe(520);
   });
 
   it('maps popup coordinates into the cropped export frame', () => {
@@ -119,5 +120,12 @@ describe('exportOverlay', () => {
 
     expect(size.drawWidth).toBe(540);
     expect(size.drawHeight).toBe(135);
+  });
+
+  it('scales redrawn stat values by the same intrinsic ratio as captured labels', () => {
+    // A 4x preview transform makes the element visually 400px tall, but its
+    // intrinsic DOM layout remains 100px. Drawing it at 800px must make a
+    // 12px value 96px, exactly as it does for the captured label bitmap.
+    expect(getExportedOverlayFontSize(12, 100, 800)).toBe(96);
   });
 });

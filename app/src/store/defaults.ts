@@ -59,6 +59,7 @@ export function createDefaultSettings(): AppSettings {
     statsPosition: null,
     statsScale: 1,
     statsLayout: 'auto',
+    statsBackground: 'panel',
     statsColumns: null,
     paceMode: 'per-km' as const,
     showElevationProfile: true,

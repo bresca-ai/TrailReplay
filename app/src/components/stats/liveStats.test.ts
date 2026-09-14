@@ -45,6 +45,60 @@ function track(id: string, elevations: [number, number, number], hasTime = true)
   };
 }
 
+describe('total and moving duration', () => {
+  function stoppedTrack(): GPXTrack {
+    // 27.5 h on the wall clock, 23:57 of it moving — the shape reported in #104.
+    const entry = track('stopped', [100, 150, 200]);
+    entry.totalTime = 99_000;
+    entry.movingTime = 86_220;
+    return entry;
+  }
+
+  it('reports the total clock and the moving clock side by side', () => {
+    const entry = stoppedTrack();
+    const segments: TrackSegment[] = [
+      { id: 'segment-stopped', type: 'track', trackId: entry.id, duration: 1000 },
+    ];
+    const computedJourney = buildComputedJourney(segments, [entry])!;
+
+    const stats = calculateCurrentLiveStats({
+      activeTrack: entry,
+      computedJourney,
+      currentPosition: {
+        ...entry.points[2],
+        segmentIndex: 0,
+        segmentType: 'track',
+        trackId: entry.id,
+      },
+      playbackProgress: 1,
+      restartPerTrack: false,
+      segmentTimings: computedJourney.segmentTimings,
+      totalDistance: computedJourney.totalDistance,
+      tracks: [entry],
+    });
+
+    expect(stats.duration).toBe(99_000);
+    expect(stats.movingDuration).toBe(86_220);
+  });
+
+  it('falls back to the other clock when a track carries only one of them', () => {
+    const movingOnly = track('moving-only', [0, 0, 0]);
+    movingOnly.totalTime = 0;
+    movingOnly.movingTime = 600;
+
+    expect(elapsedTrackTime([], [movingOnly], movingOnly, 1, 0, 'total')).toBe(600);
+    expect(elapsedTrackTime([], [movingOnly], movingOnly, 1, 0, 'moving')).toBe(600);
+  });
+
+  it('defaults to the total clock', () => {
+    const entry = track('stopped', [0, 0, 0]);
+    entry.totalTime = 1000;
+    entry.movingTime = 400;
+
+    expect(elapsedTrackTime([], [entry], entry, 1)).toBe(1000);
+  });
+});
+
 describe('calculateCurrentLiveStats', () => {
   it('starts elevation gain at zero when the second route begins with default settings', () => {
     const tracks = [track('first', [100, 150, 200]), track('second', [300, 320, 310])];

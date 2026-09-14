@@ -443,7 +443,7 @@ function parseIso6709CoordinatePair(value: unknown): { latitude: number; longitu
   return undefined;
 }
 
-function extractCoordinatesFromText(text: string): { latitude: number; longitude: number } | undefined {
+export function extractCoordinatesFromText(text: string): { latitude: number; longitude: number } | undefined {
   const sanitized = text.replace(/\0+/g, ' ');
   const taggedIso6709Match = sanitized.match(
     /(?:location\.ISO6709|com\.apple\.quicktime\.location(?:\.ISO6709)?|location-eng|location|GPSCoordinates|@xyz)[^+-]{0,80}([+-]\d{2}(?:\.\d+)?[+-]\d{3}(?:\.\d+)?(?:[+-]\d+(?:\.\d+)?)?\/?)/i,

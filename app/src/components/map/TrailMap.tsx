@@ -53,6 +53,7 @@ export function TrailMap(_props: TrailMapProps) {
   const targetBearingRef = useRef<number>(0);
   const loadZoomDoneRef = useRef<boolean>(false);
   const handledZoomButtonPressRef = useRef(false);
+  const restoredCameraKeyRef = useRef<string | null>(null);
 
   const tracks = useAppStore((state) => state.tracks);
   const settings = useAppStore((state) => state.settings);
@@ -210,6 +211,55 @@ export function TrailMap(_props: TrailMapProps) {
     onSetMapLoaded: handleMapLoadedChange,
   });
 
+  // Keep the actual map camera (including manual pan/zoom) in the store so a
+  // saved .replay restores what the user was looking at, not just a preset.
+  useEffect(() => {
+    if (!map.current || !isMapLoaded) return;
+    const currentMap = map.current;
+    // Let the restore effect below apply a saved camera before recording the
+    // map's initial default camera back into the store, while still listening
+    // for the user's later manual pan/zoom.
+    const savedCamera = useAppStore.getState().cameraPosition;
+    const hasSavedCameraToRestore = Boolean(savedCamera && restoredCameraKeyRef.current === null);
+    const updateCameraPosition = () => {
+      const currentMap = map.current;
+      if (!currentMap) return;
+      const center = currentMap.getCenter();
+      setCameraPosition({
+        lat: center.lat,
+        lon: center.lng,
+        zoom: currentMap.getZoom(),
+        pitch: currentMap.getPitch(),
+        bearing: currentMap.getBearing(),
+      });
+    };
+    currentMap.on('moveend', updateCameraPosition);
+    if (!hasSavedCameraToRestore) updateCameraPosition();
+    return () => { currentMap.off('moveend', updateCameraPosition); };
+  }, [isMapLoaded, setCameraPosition]);
+
+  // Restore a saved camera after normal map initialization. Playback takes
+  // ownership again when it starts. Read imperatively instead of subscribing:
+  // the replay camera writes cameraPosition every frame, and subscribing here
+  // turns that bookkeeping into a render/effect feedback loop.
+  useEffect(() => {
+    const savedCamera = useAppStore.getState().cameraPosition;
+    if (!map.current || !isMapLoaded || animationPhase !== 'idle' || !savedCamera) return;
+    const key = [savedCamera.lat, savedCamera.lon, savedCamera.zoom, savedCamera.pitch, savedCamera.bearing].join(':');
+    if (restoredCameraKeyRef.current === key) return;
+    restoredCameraKeyRef.current = key;
+    map.current.jumpTo({
+      center: [savedCamera.lon, savedCamera.lat],
+      zoom: savedCamera.zoom,
+      pitch: savedCamera.pitch,
+      bearing: savedCamera.bearing,
+    });
+  }, [animationPhase, isMapLoaded, tracks]);
+
+  useEffect(() => {
+    if (!useAppStore.getState().cameraPosition) restoredCameraKeyRef.current = null;
+  }, [tracks]);
+
   useTrailLayerData({
     activeTrack,
     allCoordinates,
@@ -241,6 +291,7 @@ export function TrailMap(_props: TrailMapProps) {
     currentTrackColor: currentTrackColor ?? null,
     currentTrackName: currentTrackName ?? null,
     elevationData,
+    exportFrame: _props.exportFrame ?? null,
     followBehindZoomLevel,
     isExporting,
     isInTransport,
