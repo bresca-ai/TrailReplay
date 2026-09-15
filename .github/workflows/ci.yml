@@ -1,0 +1,36 @@
+# Runs the checks that guard the reported regressions on every pull request.
+#
+# `npm test` is both halves: the app suite (which includes the issue #104
+# checks for total-vs-moving duration and for video import reporting a clip it
+# cannot read) and the Pages Function suite.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install
+        run: npm --prefix app ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: app
+        run: npx tsc -b --noEmit
+
+      - name: Test
+        run: npm test

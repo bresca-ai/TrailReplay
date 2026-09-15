@@ -178,3 +178,5 @@ There is no client-side router. The app is a single-page app at `/`. Help pages 
 ### Testing
 
 Tests use Vitest + jsdom + Testing Library. Test files live alongside the source files they test (e.g., `units.test.ts` next to `units.ts`). Setup is in `app/src/test/setup.ts`. Most tested utilities are pure functions in `app/src/utils/`.
+
+`.github/workflows/ci.yml` runs lint, typecheck and `npm test` (the app suite plus the Pages Function suite) on every pull request, so a regression a reporter would have to find in the finished video is caught before merge instead.

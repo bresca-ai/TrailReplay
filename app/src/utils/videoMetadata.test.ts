@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { readVideoMetadata } from './videoMetadata';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readVideoDuration, readVideoMetadata } from './videoMetadata';
 
 const QUICKTIME_EPOCH_OFFSET_SECONDS = 2_082_844_800;
 
@@ -89,5 +89,80 @@ describe('readVideoMetadata', () => {
     const metadata = await readVideoMetadata(file);
 
     expect(metadata.timestamp?.getTime()).toBe(lastModified);
+  });
+});
+
+/**
+ * Issue #104: clips vanished from the Media panel with no error. The probe is
+ * where that is decided, so it has to keep telling the two failures apart —
+ * a file the browser cannot decode (reported to the user) and one it simply
+ * has not looked at yet, which a hidden tab produces for a perfectly good clip.
+ */
+describe('readVideoDuration', () => {
+  interface StubVideo {
+    onloadedmetadata: (() => void) | null;
+    onerror: (() => void) | null;
+    duration: number;
+    preload: string;
+    muted: boolean;
+    src: string;
+    removeAttribute: () => void;
+    load: () => void;
+  }
+
+  function stubVideoElement(): StubVideo {
+    const element: StubVideo = {
+      onloadedmetadata: null,
+      onerror: null,
+      duration: NaN,
+      preload: '',
+      muted: false,
+      src: '',
+      removeAttribute: () => {},
+      load: () => {},
+    };
+    vi.spyOn(document, 'createElement').mockReturnValue(element as unknown as HTMLElement);
+    return element;
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('reports a decode failure as unsupported, so the panel can say so', async () => {
+    const element = stubVideoElement();
+    const probe = readVideoDuration('blob:broken');
+    element.onerror?.();
+
+    await expect(probe).resolves.toEqual({ status: 'unsupported' });
+  });
+
+  it('reads the length of a clip the browser decodes', async () => {
+    const element = stubVideoElement();
+    const probe = readVideoDuration('blob:good');
+    element.duration = 12.5;
+    element.onloadedmetadata?.();
+
+    await expect(probe).resolves.toEqual({ status: 'ok', durationSeconds: 12.5 });
+  });
+
+  it('calls a clip it never got to look at unknown, not broken', async () => {
+    vi.useFakeTimers();
+    stubVideoElement();
+    const probe = readVideoDuration('blob:deferred', 100);
+    vi.advanceTimersByTime(100);
+
+    await expect(probe).resolves.toEqual({ status: 'unknown' });
+  });
+
+  /** A stream with no fixed length decodes fine; it just has no duration. */
+  it('calls an infinite duration unknown rather than unsupported', async () => {
+    const element = stubVideoElement();
+    const probe = readVideoDuration('blob:stream');
+    element.duration = Infinity;
+    element.onloadedmetadata?.();
+
+    await expect(probe).resolves.toEqual({ status: 'unknown' });
   });
 });
