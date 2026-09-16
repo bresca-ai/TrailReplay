@@ -15,6 +15,10 @@ import {
 } from '@/utils/analytics';
 import { getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
 import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
+import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
+import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
+import { localizedAnnotation } from '@/utils/annotationTranslations';
+import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
 import {
   buildJourneyDistanceProfile,
@@ -387,6 +391,120 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       context.drawImage(cachedOverlayRef.current, 0, 0, recordW, recordH);
     }
 
+    // DOM overlays are not part of MapLibre's canvas. Paint the side panel
+    // explicitly for video frames, including the slowed section of the route.
+    const currentState = useAppStore.getState();
+    const activeId = getActivePlaybackAnnotationId({
+      annotations: currentState.textAnnotations,
+      currentTime: currentState.playback.currentTime,
+      totalDuration: currentState.playback.totalDuration,
+      phase: currentState.animationPhase,
+    });
+    const sideAnnotation = currentState.textAnnotations.find((item) => item.id === activeId && item.presentation === 'side-panel');
+    if (sideAnnotation) {
+      const panel = container.querySelector('.tr-annotation-side-panel');
+      const rect = panel?.getBoundingClientRect();
+      if (rect) {
+        const x = (rect.left - containerRect.left - cropX) * (recordW / cropW);
+        const y = (rect.top - containerRect.top - cropY) * (recordH / cropH);
+        const w = rect.width * (recordW / cropW);
+        const h = rect.height * (recordH / cropH);
+        const scale = recordW / cropW;
+        const copy = sideAnnotationContent(localizedAnnotation(sideAnnotation, currentState.settings.language));
+        const inset = 24 * scale;
+        const contentX = x + inset;
+        const maxWidth = w - inset * 2;
+        context.save();
+        context.shadowColor = 'rgba(3,13,16,0.32)';
+        context.shadowBlur = 30 * scale;
+        context.shadowOffsetY = 15 * scale;
+        const background = context.createLinearGradient(x, y, x + w, y + h);
+        background.addColorStop(0, '#1e2b2d');
+        background.addColorStop(1, '#0d1619');
+        context.fillStyle = background;
+        context.beginPath();
+        context.roundRect(x, y, w, h, 20 * scale);
+        context.fill();
+        context.shadowColor = 'transparent';
+        context.strokeStyle = 'rgba(255,255,255,0.18)';
+        context.lineWidth = scale;
+        context.stroke();
+        context.clip();
+        context.fillStyle = sideAnnotation.color;
+        context.fillRect(x, y, w, 4 * scale);
+
+        const logoX = contentX;
+        const logoY = y + 22 * scale;
+        context.fillStyle = 'rgba(255,255,255,0.09)';
+        context.beginPath();
+        context.roundRect(logoX, logoY, 44 * scale, 44 * scale, 13 * scale);
+        context.fill();
+        context.strokeStyle = sideAnnotation.color;
+        context.lineWidth = 1.2 * scale;
+        context.stroke();
+        context.font = `${24 * scale}px sans-serif`;
+        context.textAlign = 'center';
+        context.fillStyle = '#fff';
+        context.fillText(sideAnnotation.logo || '●', logoX + 22 * scale, logoY + 31 * scale);
+        context.textAlign = 'left';
+        context.font = `800 ${10 * scale}px sans-serif`;
+        context.fillStyle = 'rgba(245,246,237,0.58)';
+        context.fillText(t('annotations.sidePanelEyebrow').toLocaleUpperCase(), logoX + 56 * scale, logoY + 16 * scale);
+        if (copy.code) {
+          context.font = `800 ${18 * scale}px sans-serif`;
+          context.fillStyle = sideAnnotation.color;
+          context.fillText(copy.code, logoX + 56 * scale, logoY + 37 * scale);
+        }
+        context.fillStyle = sideAnnotation.color;
+        context.fillRect(x + w - 49 * scale, logoY + 10 * scale, 25 * scale, 2 * scale);
+
+        const drawWrapped = (value: string, font: string, lineHeight: number, baseline: number, maxLines: number) => {
+          context.font = font;
+          const words = value.split(/\s+/).filter(Boolean);
+          let line = '';
+          let drawn = 0;
+          let currentY = baseline;
+          for (const word of words) {
+            const next = line ? `${line} ${word}` : word;
+            if (context.measureText(next).width > maxWidth && line) {
+              context.fillText(line, contentX, currentY);
+              currentY += lineHeight * scale;
+              drawn += 1;
+              if (drawn >= maxLines) return currentY;
+              line = word;
+            } else line = next;
+          }
+          if (line && drawn < maxLines) {
+            context.fillText(line, contentX, currentY);
+            currentY += lineHeight * scale;
+          }
+          return currentY;
+        };
+
+        context.fillStyle = '#f8f8f1';
+        let nextY = drawWrapped(copy.title, `800 ${23 * scale}px sans-serif`, 27, y + 104 * scale, 3);
+        if (copy.meta) {
+          context.fillStyle = sideAnnotation.color;
+          nextY = drawWrapped(copy.meta, `750 ${12 * scale}px sans-serif`, 17, nextY + 5 * scale, 2);
+        }
+        if (copy.description) {
+          const dividerY = nextY + 11 * scale;
+          context.strokeStyle = 'rgba(255,255,255,0.16)';
+          context.lineWidth = scale;
+          context.beginPath();
+          context.moveTo(contentX, dividerY);
+          context.lineTo(x + w - inset, dividerY);
+          context.stroke();
+          context.fillStyle = 'rgba(245,246,237,0.58)';
+          context.font = `800 ${10 * scale}px sans-serif`;
+          context.fillText(t('annotations.sidePanelDetails').toLocaleUpperCase(), contentX, dividerY + 22 * scale);
+          context.fillStyle = 'rgba(251,251,246,0.88)';
+          drawWrapped(copy.description, `500 ${13 * scale}px sans-serif`, 20, dividerY + 45 * scale, 12);
+        }
+        context.restore();
+      }
+    }
+
     const scaleX = recordW / cropW;
     const scaleY = recordH / cropH;
 
@@ -549,7 +667,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     if (Date.now() - overlayLastUpdateRef.current >= overlayRefreshIntervalMs && !overlayBusyRef.current) {
       updateOverlayAsync(recordW, recordH);
     }
-  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, updateOverlayAsync, videoExportSettings.resolution]);
+  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings.resolution]);
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
@@ -1110,9 +1228,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const frameDurationMs = 1000 / fps;
     const store = useAppStore.getState();
     const routeDurationMs = store.playback.totalDuration;
+    const annotations = store.textAnnotations;
+    const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations);
     // Preview speed only affects interactive playback. Export always preserves
     // the configured journey duration on the encoded timeline.
-    const frameCount = Math.ceil(routeDurationMs / frameDurationMs);
+    const frameCount = Math.ceil(outputDurationMs / frameDurationMs);
     const progressUpdateInterval = Math.max(1, Math.round(fps / 5));
 
     setIsDeterministicExport(true);
@@ -1143,7 +1263,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     for (let frameIndex = 1; frameIndex <= frameCount; frameIndex += 1) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
 
-      const currentTime = Math.min(routeDurationMs, frameIndex * frameDurationMs);
+      const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations);
       const progress = routeDurationMs > 0 ? currentTime / routeDurationMs : 1;
       useAppStore.getState().setPlayback({ currentTime, progress });
       await waitForExportFrame();

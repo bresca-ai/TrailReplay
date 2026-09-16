@@ -15,6 +15,7 @@ import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
 import { VideoPopup } from '@/components/annotations/VideoPopup';
+import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
@@ -24,6 +25,7 @@ import {
   hasPlaybackProgressRewound,
 } from '@/utils/playbackPictures';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
+import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
 import { useI18n } from '@/i18n/useI18n';
@@ -83,7 +85,7 @@ interface StatsResizeGuide {
 }
 
 function App() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const statsScaleWrapperRef = useRef<HTMLDivElement>(null);
@@ -685,7 +687,35 @@ function App() {
     annotations: textAnnotations,
     currentTime: playback.currentTime,
     totalDuration: playback.totalDuration,
-  }), [playback.currentTime, playback.totalDuration, textAnnotations]);
+    phase: animationPhase,
+  }), [animationPhase, playback.currentTime, playback.totalDuration, textAnnotations]);
+  const activeSideAnnotation = textAnnotations.find((annotation) =>
+    annotation.id === activeTextAnnotationId && annotation.presentation === 'side-panel');
+  const localizedSideAnnotation = activeSideAnnotation ? localizedAnnotation(activeSideAnnotation, language) : null;
+  const sideAnnotationCopy = localizedSideAnnotation ? sideAnnotationContent(localizedSideAnnotation) : null;
+  const sideAnnotationNarrowFrame = activeExportCropMetrics
+    ? isNarrowFrame(activeExportCropMetrics.frameWidth, activeExportCropMetrics.frameHeight)
+    : false;
+  const sideAnnotationBottom = settings.showElevationProfile
+    ? sideAnnotationNarrowFrame ? 110 : 88
+    : 24;
+  const sideAnnotationStyle: (CSSProperties & { '--annotation-accent'?: string }) | undefined = activeSideAnnotation ? {
+    '--annotation-accent': activeSideAnnotation.color,
+    bottom: (activeExportCropMetrics?.bottom ?? 0) + sideAnnotationBottom,
+    ...(activeExportCropMetrics && sideAnnotationNarrowFrame
+      ? {
+          right: 'auto',
+          left: activeExportCropMetrics.frameLeft + activeExportCropMetrics.frameWidth / 2,
+          width: Math.min(activeExportCropMetrics.frameWidth - 32, 420),
+          transform: 'translateX(-50%)',
+        }
+      : activeExportCropMetrics
+        ? {
+            right: activeExportCropMetrics.right + Math.max(20, activeExportCropMetrics.frameWidth * 0.045),
+            width: Math.min(420, activeExportCropMetrics.frameWidth * 0.42),
+          }
+        : {}),
+  } : undefined;
   const activePendingPicturePlacement = pendingPicturePlacements[0];
   
   const hasTracks = tracks.length > 0;
@@ -743,6 +773,27 @@ function App() {
                   exportFrame={activeExportCropMetrics}
                 />
               </Suspense>
+
+              {activeSideAnnotation && sideAnnotationCopy && (
+                <div className="tr-annotation-side-panel pointer-events-none absolute z-30" style={sideAnnotationStyle}>
+                  <div className="tr-annotation-side-panel__header">
+                    <div className="tr-annotation-side-panel__logo" aria-hidden="true">{activeSideAnnotation.logo || '●'}</div>
+                    <div className="tr-annotation-side-panel__identity">
+                      <span className="tr-annotation-side-panel__eyebrow">{t('annotations.sidePanelEyebrow')}</span>
+                      {sideAnnotationCopy.code && <span className="tr-annotation-side-panel__code">{sideAnnotationCopy.code}</span>}
+                    </div>
+                    <span className="tr-annotation-side-panel__dash" aria-hidden="true" />
+                  </div>
+                  <h2 className="tr-annotation-side-panel__title">{sideAnnotationCopy.title}</h2>
+                  {sideAnnotationCopy.meta && <p className="tr-annotation-side-panel__meta">{sideAnnotationCopy.meta}</p>}
+                  {sideAnnotationCopy.description && (
+                    <div className="tr-annotation-side-panel__details">
+                      <span className="tr-annotation-side-panel__details-label">{t('annotations.sidePanelDetails')}</span>
+                      <p>{sideAnnotationCopy.description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {!isMapReady && <AppLoadingOverlay />}
 
