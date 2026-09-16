@@ -1,6 +1,8 @@
 import type { VideoExportSettings, VideoQualityMode } from '@/types';
 
 export const MAX_STUDIO_DELIVERY_BYTES = 95 * 1024 * 1024;
+/** Local Vite has no Cloudflare D1/R2/email bindings. Keep Studio rendering usable there. */
+export const localStudioDownload = import.meta.env.DEV;
 
 export interface StudioDeliveryRequest {
   email: string;
@@ -46,8 +48,8 @@ export function isValidDeliveryEmail(value: string): boolean {
  * exports use email delivery instead, avoiding a second large-file transfer
  * to the user's device after the upload completes.
  */
-export function shouldAutoDownloadVideo(qualityMode: VideoQualityMode): boolean {
-  return qualityMode === 'standard';
+export function shouldAutoDownloadVideo(qualityMode: VideoQualityMode, localDownload = false): boolean {
+  return qualityMode === 'standard' || (qualityMode === 'studio' && localDownload);
 }
 
 export async function createStudioDeliveryJob(

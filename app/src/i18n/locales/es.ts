@@ -634,6 +634,7 @@ export const es = {
     qualityModeStudioUnavailable: 'La calidad Estudio necesita grabación MP4 nativa, que este navegador no admite.',
     openSettings: 'Ajustes de calidad',
     studioSidebarSummary: 'Máximo detalle del mapa. Entrega por email.',
+    studioLocalSummary: 'Máximo detalle del mapa. En desarrollo local, el MP4 final se descarga en este dispositivo.',
     studioTabWarning: 'Mantén esta pestaña visible mientras se renderiza. La exportación se pausa si cambias de pestaña.',
     studioProgress: 'Fotograma {frame} de {total} · quedan unos {minutes} min',
     studioProgressSoon: 'Fotograma {frame} de {total} · casi listo',

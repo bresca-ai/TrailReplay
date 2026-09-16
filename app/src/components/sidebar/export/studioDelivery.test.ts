@@ -29,6 +29,7 @@ describe('shouldAutoDownloadVideo', () => {
   it('downloads standard exports but leaves Studio exports to email delivery', () => {
     expect(shouldAutoDownloadVideo('standard')).toBe(true);
     expect(shouldAutoDownloadVideo('studio')).toBe(false);
+    expect(shouldAutoDownloadVideo('studio', true)).toBe(true);
   });
 });
 

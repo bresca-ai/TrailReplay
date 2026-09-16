@@ -53,6 +53,7 @@ import {
   createStudioDeliveryJob,
   deliverStudioExport,
   isValidDeliveryEmail,
+  localStudioDownload,
   shouldAutoDownloadVideo,
   type StudioDeliveryJob,
   type StudioDeliveryRequest,
@@ -1099,7 +1100,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           export_studio_timed_out_frames: studioStats.timedOutFrames,
         });
 
-        if (shouldAutoDownloadVideo(wasStudioQuality ? 'studio' : 'standard')) {
+        if (shouldAutoDownloadVideo(wasStudioQuality ? 'studio' : 'standard', localStudioDownload)) {
           const url = URL.createObjectURL(blob);
           const anchor = document.createElement('a');
           anchor.href = url;
@@ -1242,6 +1243,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     // rather than catching the map halfway through a state transition.
     store.setCinematicPlayed(false);
     store.setAnimationPhase('intro');
+    setExportStage(t('export.recordingIntro'));
     await waitForMapFrame();
     await captureDeterministicPhase(INTRO_DURATION, 0);
 
@@ -1249,6 +1251,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
     store.setCinematicPlayed(true);
     store.setAnimationPhase('playing');
+    setExportStage(describeRecordingStage(0, frameCount));
     let encodedDurationMs = INTRO_DURATION;
     // Mirrors App.tsx's live-playback picture trigger (`getTriggeredPlaybackPictures`),
     // but drives its own hold here so the export can freeze the route
@@ -1266,6 +1269,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations);
       const progress = routeDurationMs > 0 ? currentTime / routeDurationMs : 1;
       useAppStore.getState().setPlayback({ currentTime, progress });
+      if (frameIndex % progressUpdateInterval === 0) {
+        setExportStage(describeRecordingStage(frameIndex, frameCount));
+      }
       await waitForExportFrame();
 
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
@@ -1278,7 +1284,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       await encodeWebCodecsFrame(encodedDurationMs * 1000);
 
       if (frameIndex % progressUpdateInterval === 0 || frameIndex === frameCount) {
-        setExportProgress(progress * 100);
+        setExportProgress((frameIndex / frameCount) * 100);
         setExportStage(describeRecordingStage(frameIndex, frameCount));
       }
 
@@ -1360,14 +1366,19 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       if (!isRecordingRef.current || recordingCancelledRef.current) return;
       store.setAnimationPhase('outro');
+      setExportStage(t('export.recordingOutro'));
       await captureDeterministicPhase(OUTRO_DURATION, encodedDurationMs);
     }
 
     if (!recordingCancelledRef.current) finishRecording();
-  }, [captureDeterministicPhase, capturePictureHold, captureVideoHold, captureFrame, describeRecordingStage, encodeWebCodecsFrame, finishRecording, pictures, setExportProgress, setExportStage, setIsDeterministicExport, videoExportSettings, videos, waitForExportFrame, waitForMapFrame, waitForVideoPopup]);
+  }, [captureDeterministicPhase, capturePictureHold, captureVideoHold, captureFrame, describeRecordingStage, encodeWebCodecsFrame, finishRecording, pictures, setExportProgress, setExportStage, setIsDeterministicExport, t, videoExportSettings, videos, waitForExportFrame, waitForMapFrame, waitForVideoPopup]);
 
   useEffect(() => {
     if (!isRecordingRef.current) return;
+
+    // The deterministic renderer reports encoded frames itself. React playback
+    // updates must not overwrite its Studio ETA or reset the phase label.
+    if (useWebCodecsRef.current) return;
 
     if (animationPhase === 'playing') {
       setExportProgress(playback.progress * 100);
@@ -1500,7 +1511,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         alert(t('export.qualityModeStudioUnavailable'));
         return;
       }
-      if (!studioDelivery || !isValidDeliveryEmail(studioDelivery.email)) {
+      if (!localStudioDownload && (!studioDelivery || !isValidDeliveryEmail(studioDelivery.email))) {
         alert(t('export.studioEmailRequired'));
         return;
       }
@@ -1617,6 +1628,10 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         }
       }
 
+      if (videoExportSettings.qualityMode === 'studio' && !useWebCodecsRef.current) {
+        throw new Error(t('export.qualityModeStudioUnavailable'));
+      }
+
       if (!useWebCodecsRef.current) {
         setupMediaRecorderFallback();
       }
@@ -1630,26 +1645,28 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       hiddenMsRef.current = 0;
       hiddenSinceRef.current = document.hidden ? performance.now() : null;
       if (studioQualityRef.current) {
-        setStudioDeliveryStatus('registering');
-        setExportStage(t('export.stageRegisteringDelivery'));
-        try {
-          studioDeliveryJobRef.current = await createStudioDeliveryJob({
-            email: studioDelivery!.email,
-            marketingConsent: studioDelivery!.marketingConsent,
-            locale: language,
-            settings: {
-              quality: videoExportSettings.quality,
-              qualityMode: 'studio',
-              aspectRatio: videoExportSettings.aspectRatio,
-              fps: videoExportSettings.fps,
-              durationMs: playback.totalDuration,
-            },
-          });
-        } catch (deliveryError) {
-          const message = deliveryError instanceof Error ? deliveryError.message : String(deliveryError);
-          setStudioDeliveryStatus('failed');
-          setStudioDeliveryError(message);
-          throw deliveryError;
+        if (!localStudioDownload) {
+          setStudioDeliveryStatus('registering');
+          setExportStage(t('export.stageRegisteringDelivery'));
+          try {
+            studioDeliveryJobRef.current = await createStudioDeliveryJob({
+              email: studioDelivery!.email,
+              marketingConsent: studioDelivery!.marketingConsent,
+              locale: language,
+              settings: {
+                quality: videoExportSettings.quality,
+                qualityMode: 'studio',
+                aspectRatio: videoExportSettings.aspectRatio,
+                fps: videoExportSettings.fps,
+                durationMs: playback.totalDuration,
+              },
+            });
+          } catch (deliveryError) {
+            const message = deliveryError instanceof Error ? deliveryError.message : String(deliveryError);
+            setStudioDeliveryStatus('failed');
+            setStudioDeliveryError(message);
+            throw deliveryError;
+          }
         }
         applyStudioMapSettings();
         await requestScreenWakeLock();

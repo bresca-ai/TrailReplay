@@ -634,6 +634,7 @@ export const de = {
     qualityModeStudioUnavailable: 'Studio-Qualität benötigt native MP4-Aufnahme, die dieser Browser nicht unterstützt.',
     openSettings: 'Qualitätseinstellungen',
     studioSidebarSummary: 'Maximale Kartendetails. Zustellung per E-Mail.',
+    studioLocalSummary: 'Maximale Kartendetails. Bei lokaler Entwicklung wird die fertige MP4-Datei auf dieses Gerät heruntergeladen.',
     studioTabWarning: 'Lass diesen Tab während des Renderns sichtbar. Der Export pausiert, wenn du den Tab wechselst.',
     studioProgress: 'Frame {frame} von {total} · noch etwa {minutes} Min.',
     studioProgressSoon: 'Frame {frame} von {total} · fast fertig',

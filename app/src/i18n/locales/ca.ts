@@ -634,6 +634,7 @@ export const ca = {
     qualityModeStudioUnavailable: 'La qualitat Estudi necessita gravació MP4 nativa, que aquest navegador no admet.',
     openSettings: 'Ajustos de qualitat',
     studioSidebarSummary: 'Màxim detall del mapa. Lliurament per email.',
+    studioLocalSummary: 'Màxim detall del mapa. En desenvolupament local, el MP4 final es descarrega en aquest dispositiu.',
     studioTabWarning: 'Mantén aquesta pestanya visible mentre es renderitza. L\'exportació es posa en pausa si canvies de pestanya.',
     studioProgress: 'Fotograma {frame} de {total} · queden uns {minutes} min',
     studioProgressSoon: 'Fotograma {frame} de {total} · gairebé llest',

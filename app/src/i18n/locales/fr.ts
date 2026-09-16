@@ -634,6 +634,7 @@ export const fr = {
     qualityModeStudioUnavailable: 'La qualité Studio nécessite l\'enregistrement MP4 natif, que ce navigateur ne prend pas en charge.',
     openSettings: 'Réglages de qualité',
     studioSidebarSummary: 'Détail maximal de la carte. Livraison par e-mail.',
+    studioLocalSummary: 'Détail maximal de la carte. En développement local, le MP4 terminé est téléchargé sur cet appareil.',
     studioTabWarning: 'Gardez cet onglet visible pendant le rendu. L\'exportation se met en pause si vous changez d\'onglet.',
     studioProgress: 'Image {frame} sur {total} · environ {minutes} min restantes',
     studioProgressSoon: 'Image {frame} sur {total} · presque terminé',

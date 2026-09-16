@@ -634,6 +634,7 @@ export const en = {
     qualityModeStudioUnavailable: 'Studio quality needs native MP4 recording, which this browser does not support.',
     openSettings: 'Quality settings',
     studioSidebarSummary: 'Maximum map detail. Delivered by email.',
+    studioLocalSummary: 'Maximum map detail. In local development, the finished MP4 downloads to this device.',
     studioTabWarning: 'Keep this tab visible while it renders. The export pauses if you switch tabs.',
     studioProgress: 'Frame {frame} of {total} · about {minutes} min left',
     studioProgressSoon: 'Frame {frame} of {total} · almost done',
