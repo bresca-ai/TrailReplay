@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import type { VideoAnnotation } from '@/types';
+import type { PendingPicturePlacement, VideoAnnotation } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { isVideoFile } from '@/utils/files';
@@ -17,12 +17,16 @@ import { trackEvent } from '@/utils/analytics';
  * The previous Media panel simply dropped every video it was given — no entry,
  * no error, nothing on screen — which is what issue #104 reports as "videos
  * seem not to load".
+ *
+ * Placement is the same as a photo's: GPS first, capture time second, and
+ * failing both, the user is asked to click the spot on the route.
  */
 export function useVideos() {
   const { t } = useI18n();
   const [isProcessing, setIsProcessing] = useState(false);
   const videos = useAppStore((state) => state.videos);
   const addVideo = useAppStore((state) => state.addVideo);
+  const queuePendingPicturePlacement = useAppStore((state) => state.queuePendingPicturePlacement);
   const removeVideo = useAppStore((state) => state.removeVideo);
   const playback = useAppStore((state) => state.playback);
   const { findPositionOnRoute, findPositionAtTime } = useMediaPlacement();
@@ -38,7 +42,7 @@ export function useVideos() {
     trackEvent('video_import_started', { video_received_file_count: videoFiles.length });
 
     let placedByRoute = 0;
-    let placedAtPlayhead = 0;
+    let queuedForPlacement = 0;
     let unreadable = 0;
 
     try {
@@ -69,29 +73,58 @@ export function useVideos() {
             ? { match: timestampPlacement.match, source: 'timestamp' as const }
             : null;
 
+        // A clip the route cannot place is not dropped at the playhead: that
+        // is a position nobody chose, and it happens to be wherever playback
+        // was paused when the file was dropped. It joins the same
+        // click-the-route queue photos use, so both kinds of media are placed
+        // the same way.
+        if (!match) {
+          const pending: PendingPicturePlacement = {
+            id: createId('video'),
+            mediaKind: 'video',
+            file,
+            url,
+            timestamp: metadata.timestamp,
+            displayDuration: 5000,
+            durationSeconds,
+            placementReason: metadata.latitude !== undefined ? 'route-mismatch' : 'missing-gps',
+            originalLat: metadata.latitude,
+            originalLon: metadata.longitude,
+            mismatchDistanceMeters: gpsMatch?.distanceMeters,
+            hasGpsMetadata: metadata.latitude !== undefined,
+            hasTimestampMetadata: metadata.timestamp !== undefined,
+          };
+          queuePendingPicturePlacement(pending);
+          queuedForPlacement += 1;
+
+          trackEvent('video_import_file_processed', {
+            video_placement_result: 'pending',
+            video_has_gps: metadata.latitude !== undefined,
+            video_has_timestamp: metadata.timestamp !== undefined,
+            video_duration_seconds: durationSeconds !== undefined ? Math.round(durationSeconds) : null,
+          });
+          continue;
+        }
+
         const video: VideoAnnotation = {
           id: createId('video'),
           file,
           url,
           isPlaceholder: false,
           originalFileName: file.name,
-          lat: match?.match.lat ?? metadata.latitude,
-          lon: match?.match.lon ?? metadata.longitude,
+          lat: match.match.lat ?? metadata.latitude,
+          lon: match.match.lon ?? metadata.longitude,
           timestamp: metadata.timestamp,
-          // A clip the route cannot place still belongs in the replay: it is
-          // dropped at the playhead, where the user can seek it into place,
-          // rather than being refused.
-          progress: match?.match.progress ?? playback.progress,
+          progress: match.match.progress ?? playback.progress,
           durationSeconds,
-          placementSource: match?.source ?? 'manual',
-          routeDistance: match?.match.routeDistance,
-          routeSegmentId: match?.match.routeSegmentId,
-          routeSegmentDistance: match?.match.routeSegmentDistance,
+          placementSource: match.source,
+          routeDistance: match.match.routeDistance,
+          routeSegmentId: match.match.routeSegmentId,
+          routeSegmentDistance: match.match.routeSegmentDistance,
         };
 
         addVideo(video);
-        if (match) placedByRoute += 1;
-        else placedAtPlayhead += 1;
+        placedByRoute += 1;
 
         trackEvent('video_import_file_processed', {
           video_placement_result: video.placementSource ?? 'unknown',
@@ -101,20 +134,21 @@ export function useVideos() {
         });
       }
 
-      if (placedAtPlayhead === 1) {
-        toast.warning(t('media.videoPlacedAtPlayheadSingle'));
-      } else if (placedAtPlayhead > 1) {
-        toast.warning(t('media.videoPlacedAtPlayheadMultiple', { count: placedAtPlayhead }));
+      if (queuedForPlacement === 1) {
+        toast.warning(t('media.manualPlacementQueuedSingleVideo'));
+      } else if (queuedForPlacement > 1) {
+        toast.warning(t('media.manualPlacementQueuedMultipleVideo', { count: queuedForPlacement }));
       }
 
       trackEvent('video_import_completed', {
-        video_count_added: placedByRoute + placedAtPlayhead,
+        video_count_added: placedByRoute,
+        video_count_queued_for_placement: queuedForPlacement,
         video_count_unreadable: unreadable,
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [addVideo, findPositionAtTime, findPositionOnRoute, playback.progress, t]);
+  }, [addVideo, findPositionAtTime, findPositionOnRoute, playback.progress, queuePendingPicturePlacement, t]);
 
   return { videos, isProcessing, addVideos, removeVideo };
 }

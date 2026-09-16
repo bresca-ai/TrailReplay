@@ -18,26 +18,40 @@ export function PendingPicturePlacementBanner({
   onUseTimestamp,
 }: PendingPicturePlacementBannerProps) {
   const { t } = useI18n();
+  // A clip and a photo are placed by the same click, but the copy has to say
+  // which one is waiting — and a <video> cannot be previewed with an <img>.
+  const isVideo = pendingPlacement.mediaKind === 'video';
+  const suffix = isVideo ? 'Video' : '';
   const hintKey = {
-    'missing-gps': 'media.manualPlacementHintMissingGps',
-    'route-mismatch': 'media.manualPlacementHintRouteMismatch',
-    'no-timed-route': 'media.manualPlacementHintNoTimedRoute',
-    'timestamp-out-of-range': 'media.manualPlacementHintTimestampOutOfRange',
+    'missing-gps': `media.manualPlacementHintMissingGps${suffix}`,
+    'route-mismatch': `media.manualPlacementHintRouteMismatch${suffix}`,
+    'no-timed-route': `media.manualPlacementHintNoTimedRoute${suffix}`,
+    'timestamp-out-of-range': `media.manualPlacementHintTimestampOutOfRange${suffix}`,
   }[pendingPlacement.placementReason];
 
   return (
     <div className="absolute right-4 top-4 z-40 w-[min(24rem,calc(100%-2rem))] rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--canvas)]/95 p-3 shadow-xl backdrop-blur">
       <div className="flex items-start gap-3">
-        <img
-          src={pendingPlacement.url}
-          alt={pendingPlacement.file.name}
-          className="h-16 w-16 flex-shrink-0 rounded-xl border border-[var(--evergreen)]/10 object-cover"
-        />
+        {isVideo ? (
+          <video
+            src={pendingPlacement.url}
+            className="h-16 w-16 flex-shrink-0 rounded-xl border border-[var(--evergreen)]/10 object-cover"
+            muted
+            playsInline
+            preload="metadata"
+          />
+        ) : (
+          <img
+            src={pendingPlacement.url}
+            alt={pendingPlacement.file.name}
+            className="h-16 w-16 flex-shrink-0 rounded-xl border border-[var(--evergreen)]/10 object-cover"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2 text-[var(--trail-orange)]">
             <MapPin className="h-4 w-4" />
             <p className="text-sm font-semibold text-[var(--evergreen)]">
-              {t('media.manualPlacementTitle')}
+              {t(isVideo ? 'media.manualPlacementTitleVideo' : 'media.manualPlacementTitle')}
             </p>
           </div>
           <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">
@@ -70,7 +84,7 @@ export function PendingPicturePlacementBanner({
             </p>
           )}
           <p className="mt-2 text-[11px] uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
-            {t('media.manualPlacementCount', {
+            {t(isVideo ? 'media.manualPlacementCountVideo' : 'media.manualPlacementCount', {
               current: 1,
               total: totalPendingPlacements,
             })}
@@ -90,7 +104,7 @@ export function PendingPicturePlacementBanner({
           onClick={onSkip}
           className="rounded-lg border border-[var(--evergreen)]/15 px-3 py-1.5 text-xs font-medium text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5"
         >
-          {t('media.manualPlacementSkip')}
+          {t(isVideo ? 'media.manualPlacementSkipVideo' : 'media.manualPlacementSkip')}
         </button>
         <button
           onClick={onCancelAll}

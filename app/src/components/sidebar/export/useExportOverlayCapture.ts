@@ -225,9 +225,16 @@ export function useExportOverlayCapture({
       }
 
       // Clips get the same treatment as the photo above: html2canvas cannot
-      // rasterize a <video>, so the chrome is captured without it and the
-      // current decoded frame is drawn in by hand, contain-fitted into the
-      // popup box.
+      // rasterize a <video>, so the chrome is captured without it.
+      //
+      // Only the chrome goes into this cached snapshot. The moving picture is
+      // drawn straight onto every encoded frame by `drawVideoFrame` instead,
+      // for the same reason the elevation progress fill is: this snapshot is
+      // refreshed at most 12 times a second and is reused in between, so a
+      // clip baked into it plays at the *snapshot* rate rather than the
+      // video's — and when html2canvas cannot keep up (it is far more
+      // expensive than a `drawImage`), the same decoded frame is reused for
+      // the whole hold and the clip looks like a still photo.
       const videoPopupElement = document.querySelector('.tr-video-popup') as HTMLElement | null;
       if (videoPopupElement) {
         try {
@@ -243,16 +250,6 @@ export function useExportOverlayCapture({
               ignoreElements: (element) => element.tagName === 'VIDEO',
             });
             overlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, popupDrawRect.drawX, popupDrawRect.drawY, popupDrawRect.drawWidth, popupDrawRect.drawHeight);
-            const videoElement = videoPopupElement.querySelector('video') as HTMLVideoElement | null;
-            if (videoElement && videoElement.readyState >= 2 && videoElement.videoWidth > 0) {
-              const containRect = getObjectContainRect(
-                videoElement.getBoundingClientRect(),
-                videoElement.videoWidth,
-                videoElement.videoHeight,
-              );
-              const frameRect = getPopupOverlayDrawRect({ popupRect: containRect, containerRect, cropX, cropY, scaleToRecording });
-              if (isDrawableRect(frameRect)) overlayContext.drawImage(videoElement, frameRect.drawX, frameRect.drawY, frameRect.drawWidth, frameRect.drawHeight);
-            }
           }
         } catch { /* Skip popup capture when unavailable. */ }
       }
@@ -262,6 +259,45 @@ export function useExportOverlayCapture({
       overlayBusyRef.current = false;
     }
   }, [includeElevation, includeStats]);
+
+  /**
+   * Draws the clip's current decoded frame onto the frame being encoded.
+   *
+   * This runs for every single encoded frame, unlike the html2canvas snapshot
+   * around it, which is why a clip in an exported video moves at all. The
+   * popup's chrome — rounded corners, progress bar, caption — comes from that
+   * snapshot underneath; this only paints the picture, contain-fitted into the
+   * same box the live popup uses.
+   */
+  const drawVideoFrame = useCallback((
+    context: CanvasRenderingContext2D,
+    {
+      containerRect,
+      cropX,
+      cropY,
+      scaleToRecording,
+    }: {
+      containerRect: DOMRect;
+      cropX: number;
+      cropY: number;
+      scaleToRecording: number;
+    },
+  ) => {
+    const videoElement = document.querySelector('.tr-video-popup video') as HTMLVideoElement | null;
+    if (!videoElement || videoElement.readyState < 2 || videoElement.videoWidth === 0) return;
+
+    const containRect = getObjectContainRect(
+      videoElement.getBoundingClientRect(),
+      videoElement.videoWidth,
+      videoElement.videoHeight,
+    );
+    const frameRect = getPopupOverlayDrawRect({ popupRect: containRect, containerRect, cropX, cropY, scaleToRecording });
+    if (!isDrawableRect(frameRect)) return;
+
+    try {
+      context.drawImage(videoElement, frameRect.drawX, frameRect.drawY, frameRect.drawWidth, frameRect.drawHeight);
+    } catch { /* A frame that is not decodable yet leaves the chrome as it is. */ }
+  }, []);
 
   const drawStatsValues = useCallback((
     context: CanvasRenderingContext2D,
@@ -514,6 +550,7 @@ export function useExportOverlayCapture({
     loadHtml2Canvas,
     overlayBusyRef,
     overlayLastUpdateRef,
+    drawVideoFrame,
     resetOverlayCapture,
     updateOverlayAsync,
   };

@@ -70,6 +70,7 @@ export function TrailMap(_props: TrailMapProps) {
   const setCameraSettings = useAppStore((state) => state.setCameraSettings);
   const setSelectedPictureId = useAppStore((state) => state.setSelectedPictureId);
   const addPicture = useAppStore((state) => state.addPicture);
+  const addVideo = useAppStore((state) => state.addVideo);
   const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
   const landmarks = useRouteLandmarks();
@@ -141,6 +142,7 @@ export function TrailMap(_props: TrailMapProps) {
 
   useManualPicturePlacement({
     addPicture,
+    addVideo,
     findNearestRoutePoint,
     isMapLoaded,
     mapRef: map,
