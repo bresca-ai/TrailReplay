@@ -99,6 +99,16 @@ export interface PictureAnnotation {
 
 export interface PendingPicturePlacement {
   id: string;
+  /**
+   * What is waiting to be placed. Clips go through the same click-the-route
+   * flow as photos — a clip carrying no location is no more placeable than a
+   * photo carrying none, and dropping it wherever the playhead happened to be
+   * put it somewhere nobody chose. Absent means `'picture'`, so a saved
+   * project written before clips joined the queue still reads correctly.
+   */
+  mediaKind?: 'picture' | 'video';
+  /** Clip length, carried through so the placed `VideoAnnotation` keeps it. */
+  durationSeconds?: number;
   file: File;
   displayFile?: File;
   url: string;

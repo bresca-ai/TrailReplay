@@ -59,9 +59,16 @@ describe('useVideos', () => {
 
     expect(toastError).toHaveBeenCalledTimes(1);
     expect(useAppStore.getState().videos).toHaveLength(0);
+    expect(useAppStore.getState().pendingPicturePlacements).toHaveLength(0);
   });
 
-  it('keeps a clip the route cannot place, at the playhead, and says so', async () => {
+  /**
+   * A clip the route cannot place must not land at the playhead: that is
+   * wherever playback happened to be paused when the file was dropped, not a
+   * position anyone chose. It waits in the same click-the-route queue photos
+   * use, and does not enter the replay until the user picks the spot.
+   */
+  it('queues a clip the route cannot place instead of dropping it at the playhead', async () => {
     readVideoDuration.mockResolvedValue({ status: 'ok', durationSeconds: 12 });
     useAppStore.setState((state) => {
       state.playback.progress = 0.42;
@@ -72,12 +79,13 @@ describe('useVideos', () => {
       await result.current.addVideos([new File(['x'], 'summit.mp4', { type: 'video/mp4' })]);
     });
 
-    const [video] = useAppStore.getState().videos;
-    expect(video).toMatchObject({
-      progress: 0.42,
-      placementSource: 'manual',
+    expect(useAppStore.getState().videos).toHaveLength(0);
+    const [pending] = useAppStore.getState().pendingPicturePlacements;
+    expect(pending).toMatchObject({
+      mediaKind: 'video',
       durationSeconds: 12,
-      isPlaceholder: false,
+      placementReason: 'missing-gps',
+      hasGpsMetadata: false,
     });
     expect(toastWarning).toHaveBeenCalledTimes(1);
     expect(toastError).not.toHaveBeenCalled();
@@ -96,8 +104,8 @@ describe('useVideos', () => {
       await result.current.addVideos([new File(['x'], 'ridge.mp4', { type: 'video/mp4' })]);
     });
 
-    expect(useAppStore.getState().videos).toHaveLength(1);
-    expect(useAppStore.getState().videos[0].durationSeconds).toBeUndefined();
+    expect(useAppStore.getState().pendingPicturePlacements).toHaveLength(1);
+    expect(useAppStore.getState().pendingPicturePlacements[0].durationSeconds).toBeUndefined();
     expect(toastError).not.toHaveBeenCalled();
   });
 
@@ -110,6 +118,6 @@ describe('useVideos', () => {
       await result.current.addVideos([new File(['x'], 'IMG_4312.MOV', { type: '' })]);
     });
 
-    expect(useAppStore.getState().videos).toHaveLength(1);
+    expect(useAppStore.getState().pendingPicturePlacements).toHaveLength(1);
   });
 });

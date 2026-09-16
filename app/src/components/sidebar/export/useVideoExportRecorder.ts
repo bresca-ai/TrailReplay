@@ -282,6 +282,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     cachedOverlayRef,
     drawElevationProgress,
     drawStatsValues,
+    drawVideoFrame,
     loadHtml2Canvas,
     overlayBusyRef,
     overlayLastUpdateRef,
@@ -388,6 +389,15 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
     const scaleX = recordW / cropW;
     const scaleY = recordH / cropH;
+
+    // Before the stats and markers, so the popup stays behind them exactly as
+    // it did when the clip frame was still baked into the cached snapshot.
+    drawVideoFrame(context, {
+      containerRect,
+      cropX,
+      cropY,
+      scaleToRecording: scaleX,
+    });
 
     // The static elevation profile remains in the cached DOM snapshot, while
     // its progress fill and label are cheap native-canvas primitives. Drawing
@@ -539,7 +549,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     if (Date.now() - overlayLastUpdateRef.current >= overlayRefreshIntervalMs && !overlayBusyRef.current) {
       updateOverlayAsync(recordW, recordH);
     }
-  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, updateOverlayAsync, videoExportSettings.resolution]);
+  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, updateOverlayAsync, videoExportSettings.resolution]);
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
@@ -1405,6 +1415,25 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       map_style: mapStyle,
       terrain_3d_enabled: show3DTerrain,
     });
+    trackEvent('feature_used', {
+      feature_name: 'camera_mode',
+      feature_value: cameraSettings.mode,
+      feature_context: 'video_export',
+    });
+    if (cameraSettings.mode === 'follow-behind') {
+      trackEvent('feature_used', {
+        feature_name: 'follow_behind_distance',
+        feature_value: cameraSettings.followBehindPreset,
+        feature_context: 'video_export',
+      });
+    }
+    visibleStats.forEach((statistic) => {
+      trackEvent('feature_used', {
+        feature_name: 'statistic',
+        feature_value: statistic,
+        feature_context: 'video_export',
+      });
+    });
 
     try {
       const { width, height } = videoExportSettings.resolution;
@@ -1543,7 +1572,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       useWebCodecsRef.current = false;
     }
-  }, [actualFormat, applyStudioMapSettings, cameraSettings.followBehindPreset, cameraSettings.mode, finishRecording, includeElevation, includeStats, journeySegments, language, loadHtml2Canvas, mapStyle, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setSpeed, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioSupported, t, tracks.length, updateOverlayAsync, videoExportSettings]);
+  }, [actualFormat, applyStudioMapSettings, cameraSettings.followBehindPreset, cameraSettings.mode, finishRecording, includeElevation, includeStats, journeySegments, language, loadHtml2Canvas, mapStyle, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setSpeed, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioSupported, t, tracks.length, updateOverlayAsync, videoExportSettings, visibleStats]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.

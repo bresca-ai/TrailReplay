@@ -400,7 +400,7 @@ export function PicturesPanel() {
                       {video.durationSeconds ? ` · ${formatDuration(Math.round(video.durationSeconds))}` : ''}
                     </p>
                     {video.placementSource === 'manual' && (
-                      <p className="text-[11px] text-[var(--trail-orange)]">{t('media.videoPlacedAtPlayheadBadge')}</p>
+                      <p className="text-[11px] text-[var(--trail-orange)]">{t('media.videoPlacedManuallyBadge')}</p>
                     )}
                   </div>
                   

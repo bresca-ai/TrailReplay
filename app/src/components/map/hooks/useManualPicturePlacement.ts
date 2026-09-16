@@ -1,7 +1,7 @@
 import { useEffect, type MutableRefObject } from 'react';
 import maplibregl from 'maplibre-gl';
 import { useAppStore } from '@/store/useAppStore';
-import type { PendingPicturePlacement, PictureAnnotation } from '@/types';
+import type { PendingPicturePlacement, PictureAnnotation, VideoAnnotation } from '@/types';
 
 interface RoutePlacement {
   lat: number;
@@ -11,6 +11,7 @@ interface RoutePlacement {
 
 interface UseManualPicturePlacementParams {
   addPicture: (picture: PictureAnnotation) => void;
+  addVideo: (video: VideoAnnotation) => void;
   findNearestRoutePoint: (lat: number, lon: number) => RoutePlacement | null;
   isMapLoaded: boolean;
   mapRef: MutableRefObject<maplibregl.Map | null>;
@@ -21,6 +22,7 @@ interface UseManualPicturePlacementParams {
 
 export function useManualPicturePlacement({
   addPicture,
+  addVideo,
   findNearestRoutePoint,
   isMapLoaded,
   mapRef,
@@ -51,7 +53,31 @@ export function useManualPicturePlacement({
 
       const placement = findNearestRoutePoint(event.lngLat.lat, event.lngLat.lng);
       if (!placement) {
-        useAppStore.getState().setError(t('media.manualPlacementNoRoute'));
+        useAppStore.getState().setError(t(pendingPicture.mediaKind === 'video'
+          ? 'media.manualPlacementNoRouteVideo'
+          : 'media.manualPlacementNoRoute'));
+        return;
+      }
+
+      // The queue holds both kinds of media, so the click that places them is
+      // shared; only what it produces differs.
+      if (pendingPicture.mediaKind === 'video') {
+        addVideo({
+          id: pendingPicture.id,
+          file: pendingPicture.file,
+          url: pendingPicture.url,
+          isPlaceholder: false,
+          originalFileName: pendingPicture.file.name,
+          lat: placement.lat,
+          lon: placement.lon,
+          timestamp: pendingPicture.timestamp,
+          progress: placement.progress,
+          durationSeconds: pendingPicture.durationSeconds,
+          placementSource: 'manual',
+          title: pendingPicture.title,
+          description: pendingPicture.description,
+        });
+        removePendingPicturePlacement(pendingPicture.id);
         return;
       }
 
@@ -78,5 +104,5 @@ export function useManualPicturePlacement({
     return () => {
       mapInstance.off('click', handleMapClick);
     };
-  }, [addPicture, findNearestRoutePoint, isMapLoaded, mapRef, removePendingPicturePlacement, t]);
+  }, [addPicture, addVideo, findNearestRoutePoint, isMapLoaded, mapRef, removePendingPicturePlacement, t]);
 }
