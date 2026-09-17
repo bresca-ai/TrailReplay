@@ -155,7 +155,7 @@ export function Sidebar() {
             <h4 className="font-bold text-[var(--evergreen)]">{t('sidebar.footerTitle')}</h4>
             <p className="text-xs text-[var(--evergreen-60)]">{t('sidebar.footerSubtitle')}</p>
             <a
-              href="https://github.com/alexalmansa/TrailReplay"
+              href="https://github.com/bresca-ai/TrailReplay"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-[var(--trail-orange)] hover:underline mt-2 inline-block"
