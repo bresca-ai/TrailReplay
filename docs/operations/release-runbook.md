@@ -6,8 +6,8 @@ TrailReplay uses a continuous deployment model: merges to `main` are production 
 
 1. Merge only reviewed pull requests with successful CI and Cloudflare Pages checks.
 2. Test the deployed `main` revision on trailreplay.com: page load, GPX import, map render, replay controls, and the relevant changed workflow.
-3. Update `CHANGELOG.md` and bump the same SemVer value in `package.json`, `app/package.json`, `app/package-lock.json`, and `APP_VERSION`.
-4. Run `npm run lint`, `npm run test`, `npm run build`, and `npm run verify:release` locally or in CI.
+3. Date the current version's `CHANGELOG.md` section and bump the same SemVer value in `package.json`, `app/package.json`, `app/package-lock.json`, and `APP_VERSION`.
+4. Run `npm run lint`, `npm run test`, `npm run build`, and `npm run verify:release -- --publish` locally or in CI.
 5. Merge the release-preparation pull request into `main` and verify the Cloudflare Pages production check for that exact commit.
 
 ## Publish the GitHub Release

@@ -33,5 +33,8 @@ const changelog = await readFile(resolve(root, 'CHANGELOG.md'), 'utf8');
 if (!changelog.includes(`## [${version}]`)) {
   throw new Error(`CHANGELOG.md must contain a section for ${version}.`);
 }
+if (process.argv.includes('--publish') && !new RegExp(`^## \\[${version.replaceAll('.', '\\.')}\\] - \\d{4}-\\d{2}-\\d{2}$`, 'mu').test(changelog)) {
+  throw new Error(`CHANGELOG.md must date the ${version} section before publishing a release.`);
+}
 
 console.log(`Release metadata is consistent for v${version}.`);
