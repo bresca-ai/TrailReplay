@@ -3,7 +3,7 @@
 </p>
 
 [![CI](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![License: attribution required](https://img.shields.io/badge/License-attribution%20required-yellow.svg)](./LICENSE)
 [![Live app](https://img.shields.io/badge/live-trailreplay.com-0B7285)](https://trailreplay.com)
 
 TrailReplay is a browser-based GPX storytelling studio for runners, cyclists, hikers, and outdoor creators. It turns raw route files into polished, shareable replays with map animation, live stats, elevation, media, and export-ready video, all directly in the browser.
@@ -87,7 +87,7 @@ The root scripts delegate to the active frontend in `app/`.
 
 ## Contributing and Releases
 
-TrailReplay is open source under the [MIT License](./LICENSE). Please read the
+TrailReplay's source is public under its [attribution license](./LICENSE). Please read the
 [contribution guide](./CONTRIBUTING.md) before opening an issue or pull request,
 and report security-sensitive issues through the [security policy](./SECURITY.md).
 

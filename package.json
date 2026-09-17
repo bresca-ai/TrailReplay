@@ -24,7 +24,7 @@
     "video-export"
   ],
   "author": "Alex Almansa",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "playwright": "^1.63.0"
   }

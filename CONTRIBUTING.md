@@ -1,6 +1,6 @@
 # Contributing to TrailReplay
 
-Thanks for helping make outdoor stories easier to share. Issues, discussions, documentation improvements, tests, and code contributions are all welcome.
+Thanks for helping make outdoor stories easier to share. Issues, discussions, documentation improvements, tests, and code contributions are all welcome. The repository uses a [custom attribution license](LICENSE), so read its terms before reusing the code.
 
 ## Before opening an issue
 
