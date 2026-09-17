@@ -1,6 +1,6 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 import type { FeatureCollection, Point } from 'geojson';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { TextAnnotation, UnitSystem } from '@/types';
 import { convertElevation } from '@/utils/units';
 import {

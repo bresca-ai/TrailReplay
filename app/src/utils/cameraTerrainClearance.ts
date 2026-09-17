@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 
 /**
  * Keeps the camera above the ground.
@@ -37,9 +37,9 @@ const TIGHTEN_RATE_DEG_PER_S = 45;
 const RELAX_RATE_DEG_PER_S = 12;
 
 /**
- * The transform members this needs. They are typed by MapLibre but sit
- * outside the documented `Map` surface, so the coupling is named here and
- * kept to this one file — a MapLibre upgrade has a single place to break.
+ * The transform members this needs sit outside the documented `Map` surface.
+ * MapLibre v6 moved the transform under `_camera`; keep the coupling in this
+ * one place and fail open if its shape changes in a later version.
  */
 interface CameraTransform {
   getCameraAltitude: () => number;
@@ -47,7 +47,7 @@ interface CameraTransform {
 }
 
 function readCameraTransform(map: maplibregl.Map): CameraTransform | null {
-  const transform = (map as unknown as { transform?: Partial<CameraTransform> }).transform;
+  const transform = (map as unknown as { _camera?: { transform?: Partial<CameraTransform> } })._camera?.transform;
   if (typeof transform?.getCameraAltitude !== 'function') return null;
   if (typeof transform?.getCameraLngLat !== 'function') return null;
   return transform as CameraTransform;

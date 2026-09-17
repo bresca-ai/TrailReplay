@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { registerAspectProtocol, registerSlopeProtocol } from '@/components/map/terrainProtocols';
 import { MAP_STYLE } from '@/components/map/mapStyle';
@@ -25,6 +26,7 @@ export function useMapInitialization({
 
     registerSlopeProtocol();
     registerAspectProtocol();
+    maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
     mapRef.current = new maplibregl.Map({
       container: mapContainer.current,

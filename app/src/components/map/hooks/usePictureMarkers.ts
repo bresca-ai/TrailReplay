@@ -1,5 +1,5 @@
 import { useEffect, type MutableRefObject } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { PictureAnnotation } from '@/types';
 
 // Matches the lucide-react `Image` icon used for the Pictures tab elsewhere

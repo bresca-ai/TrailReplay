@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppState } from '@/store/storeTypes';

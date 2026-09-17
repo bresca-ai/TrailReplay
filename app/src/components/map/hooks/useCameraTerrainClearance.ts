@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import {
   nextPitchLimitDeg,
   readCameraGroundClearanceMeters,
