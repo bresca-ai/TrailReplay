@@ -2,7 +2,7 @@
 
 All notable user-facing changes are recorded here. TrailReplay follows [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-09-17
 
 ### Added
 
@@ -12,3 +12,9 @@ All notable user-facing changes are recorded here. TrailReplay follows [Semantic
 ### Security
 
 - Updated MapLibre and other dependencies to resolve known advisories. MapLibre 6 now requires WebGL2 for map rendering.
+
+### Licensing
+
+- TrailReplay remains available under its existing attribution license. Apps using the software must display the attribution described in `LICENSE`.
+
+[1.0.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.0

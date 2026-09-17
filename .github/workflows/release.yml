@@ -76,4 +76,5 @@ jobs:
           gh release create "v$RELEASE_VERSION" \
             --target "$GITHUB_SHA" \
             --title "TrailReplay v$RELEASE_VERSION" \
+            --notes "$(node ./scripts/release-notes.mjs "$RELEASE_VERSION")" \
             --generate-notes
