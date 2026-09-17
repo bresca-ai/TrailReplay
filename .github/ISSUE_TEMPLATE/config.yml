@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or share an idea
+    url: https://github.com/bresca-ai/TrailReplay/discussions
+    about: Use Discussions for support, ideas, and product exploration.
+  - name: Report a security vulnerability
+    url: https://github.com/bresca-ai/TrailReplay/security/advisories/new
+    about: Please report security-sensitive issues privately.
