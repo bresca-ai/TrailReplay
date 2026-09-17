@@ -55,16 +55,18 @@ jobs:
             exit 1
           fi
 
-      - name: Confirm Cloudflare deployed this commit
+      - name: Confirm CI passed and Cloudflare deployed this commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
-            --jq '.check_runs[] | select(.name == "Cloudflare Pages") | .conclusion' | head -n 1)"
-          test "$state" = "success" || {
-            echo "Cloudflare Pages has not successfully deployed ${GITHUB_SHA}; refusing to tag an undeployed release."
-            exit 1
-          }
+          for check in check 'Cloudflare Pages'; do
+            state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
+              --jq ".check_runs[] | select(.name == \"$check\") | .conclusion" | head -n 1)"
+            test "$state" = "success" || {
+              echo "$check has not succeeded for ${GITHUB_SHA}; refusing to publish."
+              exit 1
+            }
+          done
 
       - name: Create GitHub Release
         env:
