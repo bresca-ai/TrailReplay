@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { AppSettings, TrailStyleSettings } from '@/types';
 import { applyBasemapFilter } from '@/components/map/mapFilters';
 import {

@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 
 function terrariumHeight(r: number, g: number, b: number): number {
   return (r * 256 + g + b / 256) - 32768;

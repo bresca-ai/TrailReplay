@@ -1,4 +1,4 @@
-import type maplibregl from 'maplibre-gl';
+import type * as maplibregl from 'maplibre-gl';
 import type { MapFilter } from '@/types';
 import {
   STATIC_BASEMAP_LAYER_IDS,

@@ -1,5 +1,5 @@
 import { useEffect, type MutableRefObject } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { useAppStore } from '@/store/useAppStore';
 import { createUserLandmark } from '@/utils/createUserLandmark';
 

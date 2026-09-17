@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { Feature, LineString } from 'geojson';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures, buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
 import type { TrailColorZone } from '@/types';

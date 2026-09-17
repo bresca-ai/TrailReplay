@@ -2,10 +2,39 @@ import { describe, expect, it } from 'vitest';
 import {
   MIN_CAMERA_GROUND_CLEARANCE_METERS,
   nextPitchLimitDeg,
+  readCameraGroundClearanceMeters,
 } from './cameraTerrainClearance';
+import type { Map } from 'maplibre-gl';
 
 const CEILING = 85;
 const FRAME_MS = 1000 / 60;
+
+describe('readCameraGroundClearanceMeters', () => {
+  it('reads the v6 camera position and compares it to the terrain directly below', () => {
+    const cameraLngLat = { lng: 2.1, lat: 42.3 };
+    const map = {
+      _camera: { transform: {
+        getCameraLngLat: () => cameraLngLat,
+        getCameraAltitude: () => 500,
+      } },
+      queryTerrainElevation: (point: unknown) => point === cameraLngLat ? 380 : null,
+    } as unknown as Map;
+
+    expect(readCameraGroundClearanceMeters(map)).toBe(120);
+  });
+
+  it('does not invent a clearance when camera internals or terrain are unavailable', () => {
+    expect(readCameraGroundClearanceMeters({ queryTerrainElevation: () => 0 } as unknown as Map)).toBeNull();
+    const map = {
+      _camera: { transform: {
+        getCameraLngLat: () => ({ lng: 2.1, lat: 42.3 }),
+        getCameraAltitude: () => 500,
+      } },
+      queryTerrainElevation: () => null,
+    } as unknown as Map;
+    expect(readCameraGroundClearanceMeters(map)).toBeNull();
+  });
+});
 
 function step(overrides: Partial<Parameters<typeof nextPitchLimitDeg>[0]> = {}) {
   return nextPitchLimitDeg({

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type MutableRefObject } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import type { ComparisonTrack } from '@/types';
 import {
   buildTrackTimeIndex,

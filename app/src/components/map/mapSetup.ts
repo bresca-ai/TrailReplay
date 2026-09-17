@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 
 export function setupTrackSources(map: maplibregl.Map, trailColor: string) {
   if (!map.getSource('trail-line')) {

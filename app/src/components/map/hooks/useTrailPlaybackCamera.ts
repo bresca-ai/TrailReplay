@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon } from '@/utils/activityIcons';
