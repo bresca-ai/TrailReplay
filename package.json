@@ -11,7 +11,8 @@
     "test": "npm --prefix app run test:run && npm run test:functions",
     "preview": "npm --prefix app run preview",
     "test:functions": "npm --prefix app exec -- vitest run --config vitest.functions.config.js",
-    "probe": "node ./scripts/probe-replay.mjs"
+    "probe": "node ./scripts/probe-replay.mjs",
+    "verify:release": "node ./scripts/check-release-metadata.mjs"
   },
   "keywords": [
     "gpx",
@@ -23,7 +24,7 @@
     "video-export"
   ],
   "author": "Alex Almansa",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "playwright": "^1.63.0"
   }

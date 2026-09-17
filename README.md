@@ -2,6 +2,10 @@
   <img src="./docs/branding-assets/SVG/logohorizontalfondo.svg" alt="TrailReplay" width="520">
 </p>
 
+[![CI](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml)
+[![License: attribution required](https://img.shields.io/badge/License-attribution%20required-yellow.svg)](./LICENSE)
+[![Live app](https://img.shields.io/badge/live-trailreplay.com-0B7285)](https://trailreplay.com)
+
 TrailReplay is a browser-based GPX storytelling studio for runners, cyclists, hikers, and outdoor creators. It turns raw route files into polished, shareable replays with map animation, live stats, elevation, media, and export-ready video, all directly in the browser.
 
 The active product lives in [`app/`](./app) and powers [trailreplay.com](https://trailreplay.com).
@@ -81,6 +85,17 @@ npm run preview
 
 The root scripts delegate to the active frontend in `app/`.
 
+## Contributing and Releases
+
+TrailReplay's source is public under its [attribution license](./LICENSE). Please read the
+[contribution guide](./CONTRIBUTING.md) before opening an issue or pull request,
+and report security-sensitive issues through the [security policy](./SECURITY.md).
+
+`main` is continuously deployed to trailreplay.com by Cloudflare Pages. GitHub
+Releases mark intentional public milestones and are tagged from the deployed
+`main` commit. The repository is preparing its first **v1.0.0** release;
+maintainers should follow the [release runbook](./docs/operations/release-runbook.md).
+
 ## Stack
 
 - React 19 + TypeScript + Vite for the frontend application.
@@ -96,6 +111,7 @@ The root scripts delegate to the active frontend in `app/`.
 - `docs/branding-assets/`: logo files and brand assets used by the project
 - `docs/internal/`: maintainer-facing implementation notes and issue writeups
 - `media/`: repository media used in documentation and demos
+- `docs/operations/`: contributor-facing release and operational runbooks
 
 ## Notes
 

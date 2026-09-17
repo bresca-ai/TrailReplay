@@ -10,6 +10,13 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -34,3 +41,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Verify release metadata
+        run: npm run verify:release
+
+      - name: Production build
+        run: npm --prefix app run build && npm run check:pages-assets
