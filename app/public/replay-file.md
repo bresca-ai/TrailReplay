@@ -580,4 +580,4 @@ flat profile. Worth saying so before they wonder why.
 *Recipes and `.replay` format version 1. The offline builder and a worked
 example are served alongside this page: <https://trailreplay.com/make-replay.mjs> and
 <https://trailreplay.com/example-recipe.json>. Source:
-<https://github.com/alexalmansa/TrailReplay> (`app/src/utils/projectFile/`).*
+<https://github.com/bresca-ai/TrailReplay> (`app/src/utils/projectFile/`).*
