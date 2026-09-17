@@ -67,7 +67,7 @@ export function HomeStaticContent() {
         {' · '}
         <a href="/terms" className="underline">Terms</a>
         {' · '}
-        <a href="https://github.com/alexalmansa/TrailReplay" className="underline">Source on GitHub</a>
+        <a href="https://github.com/bresca-ai/TrailReplay" className="underline">Source on GitHub</a>
       </p>
     </main>
   );

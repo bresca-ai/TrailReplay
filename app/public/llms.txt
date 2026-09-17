@@ -52,4 +52,4 @@ by you.
 
 - [TrailReplay](https://trailreplay.com): the app itself.
 - [Tutorial](https://trailreplay.com/tutorial.html): what the app can do.
-- [Source](https://github.com/alexalmansa/TrailReplay)
+- [Source](https://github.com/bresca-ai/TrailReplay)

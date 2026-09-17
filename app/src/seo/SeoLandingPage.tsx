@@ -108,7 +108,7 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
           <div className="hidden items-center gap-6 text-xs font-semibold md:flex">
             <a href="/tutorial" className="text-white/70 transition-colors hover:text-white">{ui.howItWorks}</a>
             <a href="/gpx-download-guide" className="text-white/70 transition-colors hover:text-white">{ui.getGpx}</a>
-            <a href="https://github.com/alexalmansa/TrailReplay" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-white/70 transition-colors hover:text-white">
+            <a href="https://github.com/bresca-ai/TrailReplay" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-white/70 transition-colors hover:text-white">
               <Github className="h-4 w-4" /> {ui.openSource}
             </a>
           </div>
