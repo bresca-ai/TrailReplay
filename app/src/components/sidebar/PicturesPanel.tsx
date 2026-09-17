@@ -7,8 +7,6 @@ import { useVideos } from '@/hooks/useVideos';
 import { isImageFile, isVideoFile } from '@/utils/files';
 import { formatDuration } from '@/utils/units';
 import { useI18n } from '@/i18n/useI18n';
-import { Switch } from '@/components/ui/switch';
-import { trackEvent } from '@/utils/analytics';
 import { RouteAnnotationsEditor } from './RouteAnnotationsEditor';
 import { Play, Trash2, Image as ImageIcon, Video, MapPin, Clock, Settings2, Link2, MessageSquareText } from 'lucide-react';
 
@@ -19,8 +17,6 @@ export function PicturesPanel() {
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
   const annotationCount = useAppStore((state) => state.textAnnotations.length);
-  const showPictures = useAppStore((state) => state.settings.showPictures);
-  const setSettings = useAppStore((state) => state.setSettings);
   const removePicture = useAppStore((state) => state.removePicture);
   const removeVideo = useAppStore((state) => state.removeVideo);
   const updatePictureDuration = useAppStore((state) => state.updatePictureDuration);
@@ -136,26 +132,6 @@ export function PicturesPanel() {
         <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('media.videoMomentsTitle')}</h3>
         <p className="mt-1 text-xs leading-4 text-[var(--evergreen-80)]">{t('media.videoMomentsHint')}</p>
       </div>
-      {activeTab !== 'annotations' && <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-[var(--evergreen)]">{t('settings.showPictures')}</p>
-            <p className="text-xs text-[var(--evergreen-60)] mt-1">{t('media.showPicturesHint')}</p>
-          </div>
-          <Switch
-            checked={showPictures}
-            onCheckedChange={(checked) => {
-              setSettings({ showPictures: checked });
-              trackEvent('feature_enabled', {
-                feature_name: 'pictures',
-                feature_state: checked ? 'enabled' : 'disabled',
-                feature_context: 'media_panel',
-              });
-            }}
-          />
-        </div>
-      </div>}
-
       {/* Tabs */}
       <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/4 p-1.5">
         {mediaTabs.map((tab) => {
