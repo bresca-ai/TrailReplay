@@ -1,0 +1,19 @@
+name: Feature request
+description: Propose a user problem TrailReplay should solve.
+labels: [feature]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the workflow or outcome, not only a preferred implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

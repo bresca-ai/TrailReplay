@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible problem with TrailReplay.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not attach private GPX files, exact locations, or personal media. Use a redacted or synthetic route where possible.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Include the expected result and the actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Import …
+        3. Select …
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: URL or deployment
+      placeholder: https://trailreplay.com
+  - type: textarea
+    id: environment
+    attributes:
+      label: Browser and device
+      placeholder: Chrome 140 on macOS 15, for example
+    validations:
+      required: true

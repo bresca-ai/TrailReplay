@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, without the v prefix (for example 1.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  checks: read
+
+concurrency:
+  group: release-production
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Tag and publish GitHub Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install
+        run: npm --prefix app ci
+
+      - name: Verify requested version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          node -e "const value=process.env.RELEASE_VERSION; if (!/^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$/.test(value)) process.exitCode=1"
+          test "$RELEASE_VERSION" = "$(node -p \"require('./package.json').version\")"
+
+      - name: Verify release metadata and production build
+        run: |
+          npm run verify:release
+          npm run build
+
+      - name: Confirm tag does not already exist
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse "v$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "v$RELEASE_VERSION already exists."
+            exit 1
+          fi
+
+      - name: Confirm Cloudflare deployed this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
+            --jq '.check_runs[] | select(.name == "Cloudflare Pages") | .conclusion' | head -n 1)"
+          test "$state" = "success" || {
+            echo "Cloudflare Pages has not successfully deployed ${GITHUB_SHA}; refusing to tag an undeployed release."
+            exit 1
+          }
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "v$RELEASE_VERSION" \
+            --target "$GITHUB_SHA" \
+            --title "TrailReplay v$RELEASE_VERSION" \
+            --generate-notes

@@ -16,9 +16,9 @@ import type { Recipe } from '@/utils/recipe/types';
 export const CURRENT_FORMAT_VERSION = 1;
 export const SUPPORTED_FORMAT_VERSIONS = [1];
 
-// package.json version is unused elsewhere in the app (still "0.0.0"); kept here purely
-// as diagnostic metadata in saved archives, not relied on for any behavior.
-export const APP_VERSION = '0.0.0';
+// This must match the root and app package versions. It is diagnostic metadata
+// in saved archives rather than a project-format compatibility switch.
+export const APP_VERSION = '1.0.0';
 
 export const MAX_ARCHIVE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
 
