@@ -22,11 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -55,16 +55,18 @@ jobs:
             exit 1
           fi
 
-      - name: Confirm Cloudflare deployed this commit
+      - name: Confirm CI passed and Cloudflare deployed this commit
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
-            --jq '.check_runs[] | select(.name == "Cloudflare Pages") | .conclusion' | head -n 1)"
-          test "$state" = "success" || {
-            echo "Cloudflare Pages has not successfully deployed ${GITHUB_SHA}; refusing to tag an undeployed release."
-            exit 1
-          }
+          for check in check 'Cloudflare Pages'; do
+            state="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
+              --jq ".check_runs[] | select(.name == \"$check\") | .conclusion" | head -n 1)"
+            test "$state" = "success" || {
+              echo "$check has not succeeded for ${GITHUB_SHA}; refusing to publish."
+              exit 1
+            }
+          done
 
       - name: Create GitHub Release
         env:
@@ -74,4 +76,5 @@ jobs:
           gh release create "v$RELEASE_VERSION" \
             --target "$GITHUB_SHA" \
             --title "TrailReplay v$RELEASE_VERSION" \
+            --notes "$(node ./scripts/release-notes.mjs "$RELEASE_VERSION")" \
             --generate-notes
