@@ -262,7 +262,9 @@ export function CinematicCameraEditor() {
   // the listener instead would mean re-binding it on every frame of playback,
   // since the capture closes over the marker.
   const captureRef = useRef(handleCapture);
-  captureRef.current = handleCapture;
+  useEffect(() => {
+    captureRef.current = handleCapture;
+  });
 
   const rows = computedJourney
     ? keyframes

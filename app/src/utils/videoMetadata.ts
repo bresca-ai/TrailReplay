@@ -134,7 +134,7 @@ export async function readVideoMetadata(file: File): Promise<NormalizedPhotoMeta
     ? { timestamp: new Date(file.lastModified), timestampSource: 'fileLastModified' }
     : {};
 
-  let moovLocation: BoxLocation | null = null;
+  let moovLocation: BoxLocation | null;
   try {
     moovLocation = await findMoovBox(file);
   } catch {

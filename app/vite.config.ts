@@ -2,10 +2,9 @@
 import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig, loadEnv } from "vite"
-import { inspectAttr } from 'kimi-plugin-inspect-react'
 
 // https://vite.dev/config/
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ mode }) => {
   // Cloudflare Pages Functions (functions/api/*.js — landmarks, contact) only
   // run when the site is served through Cloudflare itself. Plain `vite dev`
   // has no backend for `/api/*` at all, so those requests hit this dev
@@ -27,27 +26,22 @@ export default defineConfig(({ command, mode }) => {
       },
     } : undefined,
   },
-  // The inspector stamps `code-path` source locations onto every element, so it
-  // is dev-only: in production it leaks source structure and bloats both the
-  // bundles and the prerendered HTML. The prerender script runs a Vite server
-  // (command === 'serve') purely to render, so it opts out explicitly.
   plugins: [
-    ...(command === 'serve' && !process.env.TRAILREPLAY_PRERENDER ? [inspectAttr()] : []),
     react(),
   ],
   build: {
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html'),
-        tutorial: path.resolve(__dirname, 'tutorial.html'),
-        agents: path.resolve(__dirname, 'agents.html'),
-        gpxGuide: path.resolve(__dirname, 'gpx-download-guide.html'),
-        stravaToVideo: path.resolve(__dirname, 'strava-to-video.html'),
-        garminToVideo: path.resolve(__dirname, 'garmin-to-video.html'),
-        gpxAnimation: path.resolve(__dirname, 'gpx-animation.html'),
-        cyclingRouteAnimation: path.resolve(__dirname, 'cycling-route-animation.html'),
-        runningRouteAnimation: path.resolve(__dirname, 'running-route-animation.html'),
-        cinematicCamera: path.resolve(__dirname, 'cinematic-camera.html'),
+        main: path.resolve(import.meta.dirname, 'index.html'),
+        tutorial: path.resolve(import.meta.dirname, 'tutorial.html'),
+        agents: path.resolve(import.meta.dirname, 'agents.html'),
+        gpxGuide: path.resolve(import.meta.dirname, 'gpx-download-guide.html'),
+        stravaToVideo: path.resolve(import.meta.dirname, 'strava-to-video.html'),
+        garminToVideo: path.resolve(import.meta.dirname, 'garmin-to-video.html'),
+        gpxAnimation: path.resolve(import.meta.dirname, 'gpx-animation.html'),
+        cyclingRouteAnimation: path.resolve(import.meta.dirname, 'cycling-route-animation.html'),
+        runningRouteAnimation: path.resolve(import.meta.dirname, 'running-route-animation.html'),
+        cinematicCamera: path.resolve(import.meta.dirname, 'cinematic-camera.html'),
       },
       output: {
         manualChunks(id) {
@@ -69,7 +63,7 @@ export default defineConfig(({ command, mode }) => {
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   test: {

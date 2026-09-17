@@ -95,8 +95,6 @@ export function buildTrackFromRawPoints(params: {
 
   const trackPoints: GPXPoint[] = [];
   let totalDistance = 0;
-  let elevationGain = 0;
-  let elevationLoss = 0;
   let maxElevation = -Infinity;
   let minElevation = Infinity;
   let maxSpeed = 0;
@@ -163,8 +161,8 @@ export function buildTrackFromRawPoints(params: {
     });
   }
 
-  elevationGain = calculateElevationGain(rawPoints);
-  elevationLoss = calculateElevationGain(
+  const elevationGain = calculateElevationGain(rawPoints);
+  const elevationLoss = calculateElevationGain(
     rawPoints.map((point) => ({ elevation: -point.elevation })),
   );
 

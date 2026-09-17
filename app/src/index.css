@@ -1,9 +1,8 @@
 /* TrailReplay - Original Design System */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@config '../tailwind.config.js';
 
 :root {
   /* Brand Colors from Original TrailReplay */
@@ -43,10 +42,14 @@
   --radius: 0.5rem;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Tailwind v4 places utilities in a cascade layer. Keep the legacy reset in
+   the base layer so its universal selector cannot override spacing utilities. */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 html, body {
