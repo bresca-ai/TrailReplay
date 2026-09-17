@@ -34,4 +34,4 @@ Keep commits and pull requests small enough to review. Add or update tests for b
 
 ## Release policy
 
-`main` is the production branch. Cloudflare Pages deploys it to trailreplay.com after CI succeeds. GitHub Releases are deliberate product milestones, tagged from `main` as `vMAJOR.MINOR.PATCH`; see [the release runbook](docs/operations/release-runbook.md).
+`main` is the production branch. Cloudflare Pages deploys it to trailreplay.com; CI and Cloudflare Pages checks must pass before changes can merge. GitHub Releases are deliberate product milestones, tagged from `main` as `vMAJOR.MINOR.PATCH`; see [the release runbook](docs/operations/release-runbook.md).

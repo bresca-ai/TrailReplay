@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
-const packageFiles = ['package.json', 'app/package.json'];
+const packageFiles = ['package.json', 'app/package.json', 'app/package-lock.json'];
 const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 const packages = await Promise.all(packageFiles.map(async (file) => ({
@@ -19,6 +19,11 @@ for (const { file, value } of packages) {
 const versions = new Set(packages.map(({ value }) => value));
 if (versions.size !== 1) {
   throw new Error(`Package versions disagree: ${packages.map(({ file, value }) => `${file}=${value}`).join(', ')}`);
+}
+
+const lock = JSON.parse(await readFile(resolve(root, 'app/package-lock.json'), 'utf8'));
+if (lock.packages?.['']?.version !== lock.version) {
+  throw new Error(`app/package-lock.json root package version must match ${lock.version}.`);
 }
 
 const sourceFile = 'app/src/utils/projectFile/types.ts';
