@@ -17,9 +17,9 @@ const MAYBE_LATER_COOLDOWN = 86400000; // 24 hours
 const MIN_WIDTH_FOR_POPUP = 900;
 const MIN_FEEDBACK_LENGTH = 15;
 const DISCUSSION_URLS = {
-  loveIt: 'https://github.com/alexalmansa/TrailReplay/discussions/new?category=show-and-tell',
-  needsWork: 'https://github.com/alexalmansa/TrailReplay/discussions/new?category=general',
-  featureRequest: 'https://github.com/alexalmansa/TrailReplay/discussions/new?category=ideas',
+  loveIt: 'https://github.com/bresca-ai/TrailReplay/discussions/new?category=show-and-tell',
+  needsWork: 'https://github.com/bresca-ai/TrailReplay/discussions/new?category=general',
+  featureRequest: 'https://github.com/bresca-ai/TrailReplay/discussions/new?category=ideas',
 } as const;
 
 interface ActivityData {
