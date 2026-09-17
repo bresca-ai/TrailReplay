@@ -7,9 +7,8 @@ import { useVideos } from '@/hooks/useVideos';
 import { isImageFile, isVideoFile } from '@/utils/files';
 import { formatDuration } from '@/utils/units';
 import { useI18n } from '@/i18n/useI18n';
-import { Switch } from '@/components/ui/switch';
-import { trackEvent } from '@/utils/analytics';
-import { Play, Trash2, Image as ImageIcon, Video, MapPin, Clock, Settings2, Link2 } from 'lucide-react';
+import { RouteAnnotationsEditor } from './RouteAnnotationsEditor';
+import { Play, Trash2, Image as ImageIcon, Video, MapPin, Clock, Settings2, Link2, MessageSquareText } from 'lucide-react';
 
 const DEFAULT_DISPLAY_DURATION = 5000; // 5 seconds
 
@@ -17,8 +16,7 @@ export function PicturesPanel() {
   const { t } = useI18n();
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
-  const showPictures = useAppStore((state) => state.settings.showPictures);
-  const setSettings = useAppStore((state) => state.setSettings);
+  const annotationCount = useAppStore((state) => state.textAnnotations.length);
   const removePicture = useAppStore((state) => state.removePicture);
   const removeVideo = useAppStore((state) => state.removeVideo);
   const updatePictureDuration = useAppStore((state) => state.updatePictureDuration);
@@ -32,7 +30,9 @@ export function PicturesPanel() {
   const { addVideos, isProcessing: isProcessingVideos } = useVideos();
   const isProcessing = isProcessingPhotos || isProcessingVideos;
 
-  const [activeTab, setActiveTab] = useState<'pictures' | 'videos'>('pictures');
+  const [activeTab, setActiveTab] = useState<'pictures' | 'videos' | 'annotations'>(
+    () => annotationCount > 0 && pictures.length + videos.length === 0 ? 'annotations' : 'pictures',
+  );
   const [editingPicture, setEditingPicture] = useState<string | null>(null);
   const [durationValue, setDurationValue] = useState(5);
   const relinkTargetRef = useRef<{ kind: 'picture' | 'video'; id: string } | null>(null);
@@ -111,6 +111,12 @@ export function PicturesPanel() {
       icon: Video,
       label: t('media.videosTabLabel'),
     },
+    {
+      id: 'annotations' as const,
+      count: annotationCount,
+      icon: MessageSquareText,
+      label: t('media.annotationsTabLabel'),
+    },
   ];
 
   return (
@@ -126,28 +132,8 @@ export function PicturesPanel() {
         <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('media.videoMomentsTitle')}</h3>
         <p className="mt-1 text-xs leading-4 text-[var(--evergreen-80)]">{t('media.videoMomentsHint')}</p>
       </div>
-      <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium text-[var(--evergreen)]">{t('settings.showPictures')}</p>
-            <p className="text-xs text-[var(--evergreen-60)] mt-1">{t('media.showPicturesHint')}</p>
-          </div>
-          <Switch
-            checked={showPictures}
-            onCheckedChange={(checked) => {
-              setSettings({ showPictures: checked });
-              trackEvent('feature_enabled', {
-                feature_name: 'pictures',
-                feature_state: checked ? 'enabled' : 'disabled',
-                feature_context: 'media_panel',
-              });
-            }}
-          />
-        </div>
-      </div>
-
       {/* Tabs */}
-      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/4 p-1.5">
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/4 p-1.5">
         {mediaTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -183,7 +169,7 @@ export function PicturesPanel() {
       </div>
       
       {/* Upload Area */}
-      <div
+      {activeTab !== 'annotations' && <div
         {...getRootProps()}
         className={`
           tr-dropzone p-4
@@ -209,7 +195,7 @@ export function PicturesPanel() {
         {activeTab === 'videos' && (
           <p className="text-[11px] text-[var(--evergreen-60)] mt-2">{t('media.videoNoSound')}</p>
         )}
-      </div>
+      </div>}
       
       {/* Processing */}
       {isProcessing && (
@@ -217,6 +203,15 @@ export function PicturesPanel() {
           <div className="w-5 h-5 border-2 border-[var(--trail-orange)] border-t-transparent rounded-full animate-spin" />
           <span className="text-sm text-[var(--evergreen)]">{t('common.processing')}</span>
         </div>
+      )}
+
+      {activeTab === 'annotations' && (
+        <section className="space-y-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--evergreen)]">
+            {t('annotations.routeAnnotationsTitle')}
+          </h3>
+          <RouteAnnotationsEditor />
+        </section>
       )}
       
       {/* Pictures List */}

@@ -3,14 +3,17 @@ import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { convertElevation } from '@/utils/units';
+import { localizedAnnotation } from '@/utils/annotationTranslations';
+import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
 import { MapPinned, Play, Plus, Trash2 } from 'lucide-react';
+import type { TextAnnotation } from '@/types';
 
 const DEFAULT_ANNOTATION_DURATION = 4000;
 const DEFAULT_ANNOTATION_COLOR = '#f3b133';
 const ANNOTATION_COLORS = ['#f3b133', '#ff7a59', '#53c16d', '#3b82f6', '#8b5cf6', '#ec4899'];
 
 export function RouteAnnotationsEditor() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const playback = useAppStore((state) => state.playback);
   const unitSystem = useAppStore((state) => state.settings.unitSystem);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
@@ -21,7 +24,39 @@ export function RouteAnnotationsEditor() {
 
   const [draftAnnotationTitle, setDraftAnnotationTitle] = useState('');
   const [draftAnnotationSubtitle, setDraftAnnotationSubtitle] = useState('');
+  const [draftCode, setDraftCode] = useState('');
+  const [draftMeta, setDraftMeta] = useState('');
+  const [draftDescription, setDraftDescription] = useState('');
   const [draftAnnotationColor, setDraftAnnotationColor] = useState(DEFAULT_ANNOTATION_COLOR);
+  const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('map-card');
+  const [draftLogo, setDraftLogo] = useState('🚰');
+  const [draftHoldSeconds, setDraftHoldSeconds] = useState(6);
+  const updateWording = (annotation: TextAnnotation, updates: { title?: string; subtitle?: string; meta?: string; description?: string }) => {
+    const existing = annotation.translations?.[language];
+    const shown = localizedAnnotation(annotation, language);
+    const content = sideAnnotationContent(shown);
+    updateTextAnnotation(annotation.id, {
+      translations: {
+        ...annotation.translations,
+        [language]: {
+          title: updates.title ?? existing?.title ?? (annotation.presentation === 'side-panel' ? content.title : shown.title),
+          subtitle: updates.subtitle ?? existing?.subtitle ?? annotation.subtitle,
+          meta: updates.meta ?? existing?.meta ?? content.meta ?? undefined,
+          description: updates.description ?? existing?.description ?? content.description,
+        },
+      },
+    });
+  };
+
+  const moveToPlayhead = (annotation: TextAnnotation) => {
+    if (!currentPosition) return;
+    updateTextAnnotation(annotation.id, {
+      progress: playback.progress,
+      lat: currentPosition.lat,
+      lon: currentPosition.lon,
+      elevation: currentPosition.elevation > 0 ? currentPosition.elevation : undefined,
+    });
+  };
 
   const { currentPosition } = useComputedJourney();
   const canAddAnnotation = Boolean(currentPosition);
@@ -36,22 +71,36 @@ export function RouteAnnotationsEditor() {
       lat: currentPosition.lat,
       lon: currentPosition.lon,
       title: draftAnnotationTitle.trim(),
-      subtitle: draftAnnotationSubtitle.trim() || undefined,
+      ...(draftPresentation === 'map-card' ? { subtitle: draftAnnotationSubtitle.trim() || undefined } : {
+        code: draftCode.trim() || undefined,
+        meta: draftMeta.trim() || undefined,
+        description: draftDescription.trim() || undefined,
+      }),
       color: draftAnnotationColor,
       elevation: currentPosition.elevation > 0 ? currentPosition.elevation : undefined,
       displayDuration: DEFAULT_ANNOTATION_DURATION,
+      translations: { [language]: { title: draftAnnotationTitle.trim(), ...(draftPresentation === 'map-card' ? { subtitle: draftAnnotationSubtitle.trim() || undefined } : { meta: draftMeta.trim() || undefined, description: draftDescription.trim() || undefined }) } },
+      presentation: draftPresentation,
+      ...(draftPresentation === 'side-panel' ? { logo: draftLogo, holdDuration: draftHoldSeconds * 1000 } : {}),
     });
     setDraftAnnotationTitle('');
     setDraftAnnotationSubtitle('');
+    setDraftCode('');
+    setDraftMeta('');
+    setDraftDescription('');
   };
 
   return (
     <div className="space-y-4">
+      <p className="text-[11px] text-[var(--evergreen-60)]">{t('annotations.translationFallback')}</p>
       <div className="space-y-3 rounded-lg border border-[var(--evergreen)]/15 p-3 bg-[var(--evergreen)]/3">
         <p className="text-xs text-[var(--evergreen-60)]">
           {t('annotations.routeAnnotationsHint')}
         </p>
 
+        {draftPresentation === 'side-panel' && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.codeLabel')}
+          <input value={draftCode} onChange={(e) => setDraftCode(e.target.value)} maxLength={12} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+        </label>}
         <input
           value={draftAnnotationTitle}
           onChange={(e) => setDraftAnnotationTitle(e.target.value)}
@@ -60,13 +109,33 @@ export function RouteAnnotationsEditor() {
           maxLength={48}
         />
 
-        <input
+        {draftPresentation === 'side-panel' ? <>
+          <label className="block text-xs text-[var(--evergreen)]">{t('annotations.routeDetailsLabel')}
+            <input value={draftMeta} onChange={(e) => setDraftMeta(e.target.value)} placeholder={t('annotations.routeDetailsPlaceholder')} maxLength={100} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+          </label>
+          <label className="block text-xs text-[var(--evergreen)]">{t('annotations.descriptionLabel')}
+            <textarea value={draftDescription} onChange={(e) => setDraftDescription(e.target.value)} maxLength={600} className="mt-1 w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+          </label>
+        </> : <textarea
           value={draftAnnotationSubtitle}
           onChange={(e) => setDraftAnnotationSubtitle(e.target.value)}
           placeholder={t('annotations.routeAnnotationSubtitlePlaceholder')}
-          className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
-          maxLength={48}
-        />
+          className="w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
+          maxLength={600}
+        />}
+
+        <div className="flex flex-wrap gap-2">
+          <label className="text-xs text-[var(--evergreen)]">{t('annotations.presentationLabel')}
+            <select value={draftPresentation} onChange={(e) => setDraftPresentation(e.target.value as 'map-card' | 'side-panel')}
+              className="ml-2 rounded border bg-[var(--canvas)] p-2">
+              <option value="map-card">{t('annotations.presentationMapCard')}</option><option value="side-panel">{t('annotations.presentationSidePanel')}</option>
+            </select>
+          </label>
+          {draftPresentation === 'side-panel' && <>
+            <label className="text-xs text-[var(--evergreen)]">{t('annotations.logoLabel')} <input value={draftLogo} onChange={(e) => setDraftLogo(e.target.value)} maxLength={8} className="ml-2 w-16 rounded border bg-[var(--canvas)] p-2" /></label>
+            <label className="text-xs text-[var(--evergreen)]">{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={draftHoldSeconds} onChange={(e) => setDraftHoldSeconds(Math.max(0, Math.min(30, Number(e.target.value) || 0)))} className="ml-2 w-16 rounded border bg-[var(--canvas)] p-2" /></label>
+          </>}
+        </div>
 
         <div className="space-y-2">
           <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
@@ -139,6 +208,8 @@ export function RouteAnnotationsEditor() {
             .slice()
             .sort((a, b) => a.progress - b.progress)
             .map((annotation) => {
+              const content = sideAnnotationContent(localizedAnnotation(annotation, language));
+              const isSidePanel = annotation.presentation === 'side-panel';
               const annotationElevation = annotation.elevation !== undefined
                 ? `${Math.round(convertElevation(annotation.elevation, unitSystem)).toLocaleString()} ${unitSystem === 'metric' ? 'm' : 'ft'}`
                 : null;
@@ -148,26 +219,52 @@ export function RouteAnnotationsEditor() {
                   key={annotation.id}
                   className="space-y-3 rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3"
                 >
+                  {isSidePanel && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.codeLabel')}
+                    <input value={content.code ?? ''} onChange={(e) => updateTextAnnotation(annotation.id, { code: e.target.value })} maxLength={12} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                  </label>}
                   <div className="flex items-center gap-2">
                     <span
                       className="h-3 w-3 rounded-full border border-white/40"
                       style={{ backgroundColor: annotation.color }}
                     />
                     <input
-                      value={annotation.title}
-                      onChange={(e) => updateTextAnnotation(annotation.id, { title: e.target.value })}
+                      value={isSidePanel ? content.title : localizedAnnotation(annotation, language).title}
+                      onChange={(e) => updateWording(annotation, { title: e.target.value })}
+                      aria-label={t('annotations.routeAnnotationTitlePlaceholder')}
                       className="flex-1 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
                       maxLength={48}
                     />
                   </div>
 
-                  <input
-                    value={annotation.subtitle ?? ''}
-                    onChange={(e) => updateTextAnnotation(annotation.id, { subtitle: e.target.value || undefined })}
+                  {isSidePanel ? <>
+                    <label className="block text-xs text-[var(--evergreen)]">{t('annotations.routeDetailsLabel')}
+                      <input value={content.meta ?? ''} onChange={(e) => updateWording(annotation, { meta: e.target.value })} maxLength={100} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                    </label>
+                    <label className="block text-xs text-[var(--evergreen)]">{t('annotations.descriptionLabel')}
+                      <textarea value={content.description} onChange={(e) => updateWording(annotation, { description: e.target.value })} maxLength={600} className="mt-1 w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                    </label>
+                  </> : <textarea
+                    value={localizedAnnotation(annotation, language).subtitle ?? ''}
+                    onChange={(e) => updateWording(annotation, { subtitle: e.target.value })}
                     placeholder={t('annotations.routeAnnotationSubtitlePlaceholder')}
-                    className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
-                    maxLength={48}
-                  />
+                    className="w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
+                    maxLength={600}
+                  />}
+                  <div className="flex flex-wrap gap-2 text-xs text-[var(--evergreen)]">
+                    <select aria-label={t('annotations.presentationLabel')} value={annotation.presentation ?? 'map-card'} onChange={(e) => {
+                      const presentation = e.target.value as 'map-card' | 'side-panel';
+                      updateTextAnnotation(annotation.id, {
+                        presentation,
+                        ...(presentation === 'side-panel' ? { logo: annotation.logo || '🚰', holdDuration: annotation.holdDuration ?? 6000 } : {}),
+                      });
+                    }} className="rounded border bg-[var(--canvas)] p-2">
+                      <option value="map-card">{t('annotations.presentationMapCard')}</option><option value="side-panel">{t('annotations.presentationSidePanel')}</option>
+                    </select>
+                    {annotation.presentation === 'side-panel' && <>
+                      <label>{t('annotations.logoLabel')} <input value={annotation.logo ?? '🚰'} onChange={(e) => updateTextAnnotation(annotation.id, { logo: e.target.value })} maxLength={8} className="w-16 rounded border bg-[var(--canvas)] p-2" /></label>
+                      <label>{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={(annotation.holdDuration ?? 0) / 1000} onChange={(e) => updateTextAnnotation(annotation.id, { holdDuration: Math.max(0, Math.min(30, Number(e.target.value) || 0)) * 1000 })} className="w-16 rounded border bg-[var(--canvas)] p-2" /></label>
+                    </>}
+                  </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--evergreen-60)]">
                     <div className="flex items-center gap-2 rounded-full bg-[var(--canvas)]/70 px-2 py-1">
@@ -212,7 +309,13 @@ export function RouteAnnotationsEditor() {
                       {t('annotations.goToAnnotation')}
                     </button>
 
-                    <label className="flex items-center gap-2 rounded-lg border border-[var(--evergreen)]/15 bg-[var(--canvas)]/70 px-3 py-2 text-xs font-medium text-[var(--evergreen-60)]">
+                    <button type="button" onClick={() => moveToPlayhead(annotation)} disabled={!currentPosition || Math.abs(playback.progress - annotation.progress) < 0.00001}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--evergreen)]/15 bg-[var(--canvas)]/70 px-3 py-2 text-sm text-[var(--evergreen)] hover:bg-[var(--evergreen)]/10 disabled:opacity-40"
+                      title={t('annotations.moveToPlayheadHint')}>
+                      <MapPinned className="w-4 h-4" />{t('annotations.moveToPlayhead')}
+                    </button>
+
+                    {annotation.presentation !== 'side-panel' && <label className="flex items-center gap-2 rounded-lg border border-[var(--evergreen)]/15 bg-[var(--canvas)]/70 px-3 py-2 text-xs font-medium text-[var(--evergreen-60)]">
                       <span className="whitespace-nowrap">{t('annotations.annotationLeadTimeShort')}</span>
                       <input
                         type="number"
@@ -226,7 +329,7 @@ export function RouteAnnotationsEditor() {
                         className="min-w-0 flex-1 rounded-md border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-1.5 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
                         title={t('annotations.annotationLeadTime')}
                       />
-                    </label>
+                    </label>}
 
                     <button
                       type="button"

@@ -113,7 +113,12 @@ export function useRouteLandmarks(): RouteLandmark[] {
   }, [activeTrack, journeySegments, tracks]);
 
   useEffect(() => {
-    if (!nearbyPlacesEnabled || isExporting) return;
+    if (!nearbyPlacesEnabled) {
+      setEnrichedLandmarks([]);
+      setNearbyPlacesStatus(false, null, null);
+      return;
+    }
+    if (isExporting) return;
     if (lookupTracks.length === 0) {
       setEnrichedLandmarks([]);
       setNearbyPlacesStatus(false, null, null);
@@ -195,7 +200,9 @@ export function useRouteLandmarks(): RouteLandmark[] {
       timedOut = true;
       controller.abort();
       setNearbyPlacesStatus(false, 'Nearby places took too long to load. Please try again.');
-    }, 12_000);
+    // A cold lookup may have to try more than one Overpass instance. Give the
+    // API time to return its result or own error before cancelling it here.
+    }, 45_000);
 
     return () => {
       window.clearTimeout(timeout);

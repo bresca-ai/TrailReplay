@@ -1,0 +1,249 @@
+{
+  "name": "Matagalls–Montserrat 2026 · Avituallaments",
+  "tracks": [
+    {
+      "file": "Mm26_OFICIAL 003.gpx",
+      "name": "Matagalls–Montserrat 2026",
+      "color": "#0969bf"
+    }
+  ],
+  "totalDuration": 120000,
+  "routeTimingMode": "uniform",
+  "activityIcon": "🏃",
+  "annotations": [
+    {
+      "km": 10.2,
+      "title": "Avituallament d'aigua",
+      "presentation": "side-panel",
+      "logo": "🚰",
+      "color": "#1c8ce4",
+      "holdDuration": 7000,
+      "translations": {
+        "en": {
+          "title": "Water station",
+          "meta": "Km 10.2 · 15:30–19:30",
+          "description": "Aquarius · Nuts · Bananas · Chocolate biscuits · Quince paste"
+        },
+        "es": {
+          "title": "Avituallamiento de agua",
+          "meta": "Km 10,2 · 15:30–19:30",
+          "description": "Aquarius · Frutos secos · Plátanos · Galletas de chocolate · Membrillo"
+        },
+        "de": {
+          "title": "Wasserstation",
+          "meta": "Km 10,2 · 15:30–19:30",
+          "description": "Aquarius · Nüsse · Bananen · Schokokekse · Quittenpaste"
+        },
+        "fr": {
+          "title": "Ravitaillement en eau",
+          "meta": "Km 10,2 · 15:30–19:30",
+          "description": "Aquarius · Fruits secs · Bananes · Biscuits au chocolat · Pâte de coing"
+        }
+      },
+      "code": "A1",
+      "meta": "Km 10,2 · 15:30–19:30",
+      "description": "Aquarius · Fruits secs · Plàtans · Galetes de xocolata · Codonyat"
+    },
+    {
+      "km": 15.7,
+      "title": "Taronges",
+      "presentation": "side-panel",
+      "logo": "🍊",
+      "color": "#f39a26",
+      "holdDuration": 5000,
+      "translations": {
+        "en": {
+          "title": "Oranges",
+          "meta": "Km 15.7 · 16:30–21:30",
+          "description": "Oranges"
+        },
+        "es": {
+          "title": "Naranjas",
+          "meta": "Km 15,7 · 16:30–21:30",
+          "description": "Naranjas"
+        },
+        "de": {
+          "title": "Orangen",
+          "meta": "Km 15,7 · 16:30–21:30",
+          "description": "Orangen"
+        },
+        "fr": {
+          "title": "Oranges",
+          "meta": "Km 15,7 · 16:30–21:30",
+          "description": "Oranges"
+        }
+      },
+      "code": "B1",
+      "meta": "Km 15,7 · 16:30–21:30",
+      "description": "Taronges"
+    },
+    {
+      "km": 26.2,
+      "title": "Avituallament d'aigua",
+      "presentation": "side-panel",
+      "logo": "🚰",
+      "color": "#1c8ce4",
+      "holdDuration": 9000,
+      "translations": {
+        "en": {
+          "title": "Water station",
+          "meta": "Km 26.2 · 17:00–23:15",
+          "description": "Isotonic drink · Tea · Vegetable broth · Dried apricots · Bananas · Energy bars · Turkey sandwich · Quince paste · Nuts"
+        },
+        "es": {
+          "title": "Avituallamiento de agua",
+          "meta": "Km 26,2 · 17:00–23:15",
+          "description": "Bebida isotónica · Té · Caldo vegetal · Orejones · Plátanos · Barritas energéticas · Sándwich de pavo · Membrillo · Frutos secos"
+        },
+        "de": {
+          "title": "Wasserstation",
+          "meta": "Km 26,2 · 17:00–23:15",
+          "description": "Isotonisches Getränk · Tee · Gemüsebrühe · Getrocknete Aprikosen · Bananen · Energieriegel · Putensandwich · Quittenpaste · Nüsse"
+        },
+        "fr": {
+          "title": "Ravitaillement en eau",
+          "meta": "Km 26,2 · 17:00–23:15",
+          "description": "Boisson isotonique · Thé · Bouillon de légumes · Abricots secs · Bananes · Barres énergétiques · Sandwich à la dinde · Pâte de coing · Fruits secs"
+        }
+      },
+      "code": "A2",
+      "meta": "Km 26,2 · 17:00–23:15",
+      "description": "Beguda isotònica · Te · Brou vegetal · Orellanes · Plàtans · Barretes energètiques · Sandvitx de gall dindi · Codonyat · Fruits secs"
+    },
+    {
+      "km": 33.1,
+      "title": "Taronges",
+      "presentation": "side-panel",
+      "logo": "🍊",
+      "color": "#f39a26",
+      "holdDuration": 5000,
+      "translations": {
+        "en": {
+          "title": "Oranges",
+          "meta": "Km 33.1 · 17:50–01:10",
+          "description": "Oranges"
+        },
+        "es": {
+          "title": "Naranjas",
+          "meta": "Km 33,1 · 17:50–01:10",
+          "description": "Naranjas"
+        },
+        "de": {
+          "title": "Orangen",
+          "meta": "Km 33,1 · 17:50–01:10",
+          "description": "Orangen"
+        },
+        "fr": {
+          "title": "Oranges",
+          "meta": "Km 33,1 · 17:50–01:10",
+          "description": "Oranges"
+        }
+      },
+      "code": "B2",
+      "meta": "Km 33,1 · 17:50–01:10",
+      "description": "Taronges"
+    },
+    {
+      "km": 40.4,
+      "title": "Avituallament d'aigua",
+      "presentation": "side-panel",
+      "logo": "🚰",
+      "color": "#1c8ce4",
+      "holdDuration": 9000,
+      "translations": {
+        "en": {
+          "title": "Water station",
+          "meta": "Km 40.4 · 18:00–03:15",
+          "description": "Isotonic drink · Coca-Cola · Vegetable broth · Nuts · Melon · Oranges · Chocolate biscuits · Cheese sandwich · Tuna sandwich · Quince paste"
+        },
+        "es": {
+          "title": "Avituallamiento de agua",
+          "meta": "Km 40,4 · 18:00–03:15",
+          "description": "Bebida isotónica · Coca-Cola · Caldo vegetal · Frutos secos · Melón · Naranjas · Galletas de chocolate · Sándwich de queso · Sándwich de atún · Membrillo"
+        },
+        "de": {
+          "title": "Wasserstation",
+          "meta": "Km 40,4 · 18:00–03:15",
+          "description": "Isotonisches Getränk · Coca-Cola · Gemüsebrühe · Nüsse · Melone · Orangen · Schokokekse · Käsesandwich · Thunfischsandwich · Quittenpaste"
+        },
+        "fr": {
+          "title": "Ravitaillement en eau",
+          "meta": "Km 40,4 · 18:00–03:15",
+          "description": "Boisson isotonique · Coca-Cola · Bouillon de légumes · Fruits secs · Melon · Oranges · Biscuits au chocolat · Sandwich au fromage · Sandwich au thon · Pâte de coing"
+        }
+      },
+      "code": "A3",
+      "meta": "Km 40,4 · 18:00–03:15",
+      "description": "Beguda isotònica · Coca-Cola · Brou vegetal · Fruits secs · Meló · Taronges · Galetes de xocolata · Sandvitx de formatge · Sandvitx de tonyina · Codonyat"
+    },
+    {
+      "km": 48.2,
+      "title": "Síndria",
+      "presentation": "side-panel",
+      "logo": "🍉",
+      "color": "#f39a26",
+      "holdDuration": 5000,
+      "translations": {
+        "en": {
+          "title": "Watermelon",
+          "meta": "Km 48.2 · 19:00–06:00",
+          "description": "Watermelon"
+        },
+        "es": {
+          "title": "Sandía",
+          "meta": "Km 48,2 · 19:00–06:00",
+          "description": "Sandía"
+        },
+        "de": {
+          "title": "Wassermelone",
+          "meta": "Km 48,2 · 19:00–06:00",
+          "description": "Wassermelone"
+        },
+        "fr": {
+          "title": "Pastèque",
+          "meta": "Km 48,2 · 19:00–06:00",
+          "description": "Pastèque"
+        }
+      },
+      "code": "B3",
+      "meta": "Km 48,2 · 19:00–06:00",
+      "description": "Síndria"
+    },
+    {
+      "progress": 1,
+      "title": "Avituallament d'aigua",
+      "presentation": "side-panel",
+      "logo": "🚰",
+      "color": "#1c8ce4",
+      "holdDuration": 10000,
+      "translations": {
+        "en": {
+          "title": "Water station",
+          "meta": "Official km 58 · 20:00–09:00",
+          "description": "Aquarius · Pineapple juice · Vegetable broth · Milk / Coffee · Cocoa drink · Nuts · Bananas · Melon · Chocolate biscuits · Doughnuts · Turkey sandwich"
+        },
+        "es": {
+          "title": "Avituallamiento de agua",
+          "meta": "Km oficial 58 · 20:00–09:00",
+          "description": "Aquarius · Zumo de piña · Caldo vegetal · Leche / Café · Bebida de cacao · Frutos secos · Plátanos · Melón · Galletas de chocolate · Dónuts · Sándwich de pavo"
+        },
+        "de": {
+          "title": "Wasserstation",
+          "meta": "Offiziell km 58 · 20:00–09:00",
+          "description": "Aquarius · Ananassaft · Gemüsebrühe · Milch / Kaffee · Kakaogetränk · Nüsse · Bananen · Melone · Schokokekse · Donuts · Putensandwich"
+        },
+        "fr": {
+          "title": "Ravitaillement en eau",
+          "meta": "Km officiel 58 · 20:00–09:00",
+          "description": "Aquarius · Jus d’ananas · Bouillon de légumes · Lait / Café · Boisson au cacao · Fruits secs · Bananes · Melon · Biscuits au chocolat · Donuts · Sandwich à la dinde"
+        }
+      },
+      "code": "A4",
+      "meta": "Km oficial 58 · 20:00–09:00",
+      "description": "Aquarius · Suc de pinya · Brou vegetal · Llet / Cafè · Beguda de cacau · Fruits secs · Plàtans · Meló · Galetes de xocolata · Donuts · Sandvitx de gall dindi"
+    }
+  ],
+  "settings": {
+    "mapStyle": "outdoor"
+  }
+}

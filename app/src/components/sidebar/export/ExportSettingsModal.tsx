@@ -6,6 +6,7 @@ import {
   getResolution,
   QUALITY_OPTIONS,
 } from './exportConfig';
+import { localStudioDownload } from './studioDelivery';
 
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
@@ -206,7 +207,13 @@ export function ExportSettingsModal({
           )}
         </div>
 
-        {videoExportSettings.qualityMode === 'studio' && (
+        {videoExportSettings.qualityMode === 'studio' && localStudioDownload && (
+          <p className="mb-4 rounded-lg border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-3 text-sm text-[var(--evergreen)]">
+            {t('export.studioLocalSummary')}
+          </p>
+        )}
+
+        {videoExportSettings.qualityMode === 'studio' && !localStudioDownload && (
           <div className="mb-4 rounded-lg border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-3">
             <label
               htmlFor="studio-delivery-email"
