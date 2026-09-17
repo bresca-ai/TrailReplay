@@ -18,9 +18,9 @@ export function WelcomeOverlay({
       <div className="max-w-md rounded-xl border-2 border-[var(--evergreen)] bg-[var(--canvas)] p-8 text-center">
         <div className="mb-4 flex justify-center">
           <img
-            src="/media/images/logo.svg"
+            src="/media/images/logohorizontal.svg"
             alt="TrailReplay"
-            className="h-16 w-16"
+            className="h-12 w-auto"
           />
         </div>
         <h2 className="mb-2 text-xl font-bold text-[var(--evergreen)]">
