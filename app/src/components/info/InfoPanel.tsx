@@ -124,7 +124,7 @@ export function InfoPanel({ onClose }: InfoPanelProps) {
           </h3>
           <div className="space-y-1">
             <InfoLink
-              href="https://github.com/alexalmansa/TrailReplay"
+              href="https://github.com/bresca-ai/TrailReplay"
               icon={<Github className="w-4 h-4" />}
               label={t('info.github')}
               external
@@ -190,7 +190,7 @@ export function InfoPanel({ onClose }: InfoPanelProps) {
             {t('info.feedback')}
           </h3>
           <a
-            href="https://github.com/alexalmansa/TrailReplay/issues"
+            href="https://github.com/bresca-ai/TrailReplay/issues"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 p-3 bg-[var(--evergreen)]/5 hover:bg-[var(--evergreen)]/10 rounded-lg transition-colors group"

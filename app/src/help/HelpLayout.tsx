@@ -75,7 +75,7 @@ export function HelpLayout({ eyebrow, title, description, headerActions = [], ch
                   {t('help.common.openApp')}
                 </a>
                 <a
-                  href="https://github.com/alexalmansa/TrailReplay"
+                  href="https://github.com/bresca-ai/TrailReplay"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="tr-btn tr-btn-secondary inline-flex items-center gap-2"
