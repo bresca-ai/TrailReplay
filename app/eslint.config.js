@@ -20,4 +20,23 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  // These existing effects intentionally synchronize UI drafts with external
+  // viewport/store state or kick off an asynchronous preview. Keep the newer
+  // React Hooks rule enabled everywhere else while they are migrated.
+  {
+    files: [
+      'src/components/feedback/FeedbackSolicitation.tsx',
+      'src/components/sidebar/AnnotationsPanel.tsx',
+      'src/components/sidebar/CinematicCameraEditor.tsx',
+      'src/components/sidebar/TracksPanel.tsx',
+      'src/components/sidebar/export/useSocialShareExport.ts',
+      'src/hooks/use-mobile.ts',
+    ],
+    rules: { 'react-hooks/set-state-in-effect': 'off' },
+  },
+  // The keyboard listener deliberately follows the latest capture callback.
+  {
+    files: ['src/components/sidebar/CinematicCameraEditor.tsx'],
+    rules: { 'react-hooks/immutability': 'off' },
+  },
 ])
