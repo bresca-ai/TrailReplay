@@ -90,6 +90,9 @@ function App() {
   const statsDragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number } | null>(null);
   const statsResizeStartRef = useRef<StatsResizeStart | null>(null);
   const [isDraggingStats, setIsDraggingStats] = useState(false);
+  const [statsDragFrame, setStatsDragFrame] = useState<{
+    frameLeft: number; frameTop: number; frameWidth: number; frameHeight: number;
+  } | null>(null);
   // Which centre lines the stats box is currently snapped to, so the guides
   // can say so while it is being dragged.
   const [statsCenterSnap, setStatsCenterSnap] = useState<{ x: boolean; y: boolean }>({ x: false, y: false });
@@ -378,10 +381,16 @@ function App() {
 
   const handleStatsDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    const container = mapContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    setStatsDragFrame(activeExportCropMetrics ?? {
+      frameLeft: 0, frameTop: 0, frameWidth: rect.width, frameHeight: rect.height,
+    });
     const pos = settings.statsPosition ?? { x: 0.02, y: 0.04 };
     statsDragStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, startX: pos.x, startY: pos.y };
     setIsDraggingStats(true);
-  }, [settings.statsPosition]);
+  }, [activeExportCropMetrics, settings.statsPosition]);
 
   const handleStatsResizeStart = useCallback((e: React.MouseEvent, corner: StatsResizeCorner) => {
     e.preventDefault();
@@ -461,6 +470,7 @@ function App() {
     };
     const onUp = () => {
       setIsDraggingStats(false);
+      setStatsDragFrame(null);
       setStatsCenterSnap({ x: false, y: false });
     };
     window.addEventListener('mousemove', onMove);
@@ -815,6 +825,8 @@ function App() {
                           className={`absolute ${vertical} ${horizontal} ${cursor} z-20 h-3 w-3 rounded-full border-2 border-white bg-[var(--evergreen)] shadow-md transition-opacity ${
                             isResizingStats ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                           }`}
+                          // Refs are read by the handler on mouse-down, never during render.
+                          // eslint-disable-next-line react-hooks/refs
                           onMouseDown={(event) => handleStatsResizeStart(event, corner)}
                         />
                       );
@@ -823,28 +835,18 @@ function App() {
                 </div>
               )}
 
-              {isDraggingStats && (() => {
-                const container = mapContainerRef.current;
-                if (!container) return null;
-                const containerRect = container.getBoundingClientRect();
-                const frame = activeExportCropMetrics ?? {
-                  frameLeft: 0,
-                  frameTop: 0,
-                  frameWidth: containerRect.width,
-                  frameHeight: containerRect.height,
-                };
-                const centerX = frame.frameLeft + frame.frameWidth / 2;
-                const centerY = frame.frameTop + frame.frameHeight / 2;
-
+              {isDraggingStats && statsDragFrame && (() => {
+                const centerX = statsDragFrame.frameLeft + statsDragFrame.frameWidth / 2;
+                const centerY = statsDragFrame.frameTop + statsDragFrame.frameHeight / 2;
                 return (
                   <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20">
                     <div
                       className={`absolute w-px ${statsCenterSnap.x ? 'bg-[var(--trail-orange)]' : 'bg-white/35'}`}
-                      style={{ left: centerX, top: frame.frameTop, height: frame.frameHeight }}
+                      style={{ left: centerX, top: statsDragFrame.frameTop, height: statsDragFrame.frameHeight }}
                     />
                     <div
                       className={`absolute h-px ${statsCenterSnap.y ? 'bg-[var(--trail-orange)]' : 'bg-white/35'}`}
-                      style={{ top: centerY, left: frame.frameLeft, width: frame.frameWidth }}
+                      style={{ top: centerY, left: statsDragFrame.frameLeft, width: statsDragFrame.frameWidth }}
                     />
                   </div>
                 );

@@ -70,7 +70,9 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const latestParamsRef = useRef(params);
   const isWarmupPoseActiveRef = useRef(false);
   const discoveryStepRef = useRef(0);
-  latestParamsRef.current = params;
+  useEffect(() => {
+    latestParamsRef.current = params;
+  });
 
   useEffect(() => {
     if (!params.isMapLoaded || warmupMapRef.current || typeof document === 'undefined') return;
