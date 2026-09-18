@@ -18,7 +18,7 @@ export const SUPPORTED_FORMAT_VERSIONS = [1];
 
 // This must match the root and app package versions. It is diagnostic metadata
 // in saved archives rather than a project-format compatibility switch.
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
 
 export const MAX_ARCHIVE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
 

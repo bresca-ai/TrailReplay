@@ -13,6 +13,7 @@ import {
   getVideoExportAnalyticsParams,
   trackEvent,
 } from '@/utils/analytics';
+import { getCameraUsageAnalyticsParams, trackConfigurationUsage } from '@/utils/configurationAnalytics';
 import { getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
 import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
@@ -1407,6 +1408,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       picture_count: pictures.length,
       journey_segment_count: journeySegments.length,
       camera_mode: cameraSettings.mode,
+      ...getCameraUsageAnalyticsParams(cameraSettings),
+      has_annotations: useAppStore.getState().textAnnotations.length > 0,
       camera_preset: cameraSettings.mode === 'follow-behind' ? cameraSettings.followBehindPreset : 'not_applicable',
       // How much of the cinematic camera was actually authored, so exports
       // can be told apart from ones that only visited the mode.
@@ -1415,25 +1418,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       map_style: mapStyle,
       terrain_3d_enabled: show3DTerrain,
     });
-    trackEvent('feature_used', {
-      feature_name: 'camera_mode',
-      feature_value: cameraSettings.mode,
-      feature_context: 'video_export',
-    });
-    if (cameraSettings.mode === 'follow-behind') {
-      trackEvent('feature_used', {
-        feature_name: 'follow_behind_distance',
-        feature_value: cameraSettings.followBehindPreset,
-        feature_context: 'video_export',
-      });
-    }
-    visibleStats.forEach((statistic) => {
-      trackEvent('feature_used', {
-        feature_name: 'statistic',
-        feature_value: statistic,
-        feature_context: 'video_export',
-      });
-    });
+    trackConfigurationUsage('video_export', useAppStore.getState(), actualFormat);
 
     try {
       const { width, height } = videoExportSettings.resolution;
@@ -1572,7 +1557,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       useWebCodecsRef.current = false;
     }
-  }, [actualFormat, applyStudioMapSettings, cameraSettings.followBehindPreset, cameraSettings.mode, finishRecording, includeElevation, includeStats, journeySegments, language, loadHtml2Canvas, mapStyle, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setSpeed, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioSupported, t, tracks.length, updateOverlayAsync, videoExportSettings, visibleStats]);
+  }, [actualFormat, applyStudioMapSettings, cameraSettings, finishRecording, includeElevation, includeStats, journeySegments, language, loadHtml2Canvas, mapStyle, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setSpeed, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioSupported, t, tracks.length, updateOverlayAsync, videoExportSettings]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.

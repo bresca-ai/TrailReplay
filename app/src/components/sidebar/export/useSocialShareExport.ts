@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { getCropRegion } from '@/utils/crop';
 import { trackEvent } from '@/utils/analytics';
+import { trackSocialExportConfiguration } from '@/utils/configurationAnalytics';
 import { buildSocialShareSummary } from './socialShareData';
 import { translate } from '@/i18n/translations';
 import { getPosterSize, renderSocialPoster, exportSocialPosterBlob } from './socialShareRenderer';
@@ -291,12 +292,13 @@ export function useSocialShareExport() {
         template: settings.template,
         aspect_ratio: settings.aspectRatio,
       });
+      trackSocialExportConfiguration(settings);
     } catch (e) {
       console.error('Social share export failed', e);
     } finally {
       setIsRendering(false);
     }
-  }, [buildInput, settings.aspectRatio, settings.template, tracks.length]);
+  }, [buildInput, settings, tracks.length]);
 
   // Normalized bounding box for the data panel (stats + elevation) in poster coordinates
   const dataPanelBboxNorm: RouteBboxNorm | null = (() => {

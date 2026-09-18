@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { convertElevation } from '@/utils/units';
+import { trackEvent } from '@/utils/analytics';
 import { MapPinned, Play, Plus, Trash2 } from 'lucide-react';
 
 const DEFAULT_ANNOTATION_DURATION = 4000;
@@ -41,6 +42,7 @@ export function RouteAnnotationsEditor() {
       elevation: currentPosition.elevation > 0 ? currentPosition.elevation : undefined,
       displayDuration: DEFAULT_ANNOTATION_DURATION,
     });
+    trackEvent('annotation_created', { annotation_type: 'text' });
     setDraftAnnotationTitle('');
     setDraftAnnotationSubtitle('');
   };
