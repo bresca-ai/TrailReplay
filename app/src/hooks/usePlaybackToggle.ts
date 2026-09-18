@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { getProgressBucket, trackEvent } from '@/utils/analytics';
+import { getCameraUsageAnalyticsParams, trackConfigurationUsage } from '@/utils/configurationAnalytics';
 
 /** How playback was started, for analytics. */
 export type PlaybackSource = 'play_button' | 'keyboard_shortcut' | 'restart_button';
@@ -40,13 +41,14 @@ export function usePlaybackToggle() {
       has_annotations: textAnnotations.length > 0,
       track_count: tracks.length,
       camera_mode: cameraSettings.mode,
+      ...getCameraUsageAnalyticsParams(cameraSettings),
       camera_preset: cameraSettings.mode === 'follow-behind' ? cameraSettings.followBehindPreset : 'not_applicable',
       map_style: mapStyle,
       terrain_3d_enabled: show3DTerrain,
     });
+    trackConfigurationUsage('playback', useAppStore.getState());
   }, [
-    cameraSettings.followBehindPreset,
-    cameraSettings.mode,
+    cameraSettings,
     isPlaying,
     mapStyle,
     pause,

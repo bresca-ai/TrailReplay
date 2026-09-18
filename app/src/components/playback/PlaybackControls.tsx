@@ -12,6 +12,7 @@ import {
 import { useI18n } from '@/i18n/useI18n';
 import { formatDuration } from '@/utils/units';
 import { getProgressBucket, trackEvent } from '@/utils/analytics';
+import { getCameraUsageAnalyticsParams, trackConfigurationUsage } from '@/utils/configurationAnalytics';
 import { usePlaybackToggle } from '@/hooks/usePlaybackToggle';
 import { usePlayPauseShortcut } from '@/hooks/usePlayPauseShortcut';
 
@@ -67,10 +68,12 @@ export function PlaybackControls() {
       has_annotations: textAnnotations.length > 0,
       track_count: tracks.length,
       camera_mode: cameraSettings.mode,
+      ...getCameraUsageAnalyticsParams(cameraSettings),
       camera_preset: cameraSettings.mode === 'follow-behind' ? cameraSettings.followBehindPreset : 'not_applicable',
       map_style: mapStyle,
       terrain_3d_enabled: show3DTerrain,
     });
+    trackConfigurationUsage('playback', useAppStore.getState());
   };
 
   const togglePlayback = usePlaybackToggle();
