@@ -84,9 +84,14 @@ export async function createMp4CanvasEncoder(
       // No frameRate: timestamps are real elapsed time (variable spacing), so we
       // don't want the muxer snapping them to a fixed fps grid.
     },
-    // Place the moov atom at the front so the file is seekable and players know
-    // its duration up front. Keeps chunks in memory until finalize().
-    fastStart: 'in-memory',
+    // The export is delivered as a complete Blob, so progressive-download Fast
+    // Start buys us nothing here. `in-memory` also retains every encoded media
+    // chunk until finalize; annotation slowdowns add hundreds of frames apiece,
+    // which made later annotations increasingly expensive as memory pressure
+    // and garbage collection grew. Writing media into the target immediately
+    // keeps only the output buffer and lightweight sample metadata alive. The
+    // resulting regular MP4 remains seekable once the Blob is complete.
+    fastStart: false,
     firstTimestampBehavior: 'offset',
   });
 
