@@ -34,10 +34,9 @@ describe('annotation slowdown', () => {
     expect(annotationPlaybackRate(arrival - 500, duration, [station])).toBe(1);
     expect(annotationExportFrameStride(arrival - 500, duration, [station])).toBe(1);
     expect(annotationPlaybackRate(arrival, duration, [station])).toBeCloseTo(15);
-    // Preserve the same route-space sampling density as normal playback. A
-    // seven-second hold produces a 15x slowdown at its center, so one encoded
-    // frame can cover 15 nominal frames without making the route look choppier.
-    expect(annotationExportFrameStride(arrival, duration, [station])).toBe(15);
+    // Keep enough intermediate samples for the slowdown easing to remain
+    // visibly smooth while still avoiding most near-identical map renders.
+    expect(annotationExportFrameStride(arrival, duration, [station])).toBe(8);
     expect(annotationExportFrameStride(arrival + 500, duration, [station])).toBe(1);
   });
 
@@ -46,6 +45,6 @@ describe('annotation slowdown', () => {
     const longHold = { ...station, holdDuration: 30_000 };
 
     expect(annotationPlaybackRate(30_000, duration, [longHold])).toBeCloseTo(61);
-    expect(annotationExportFrameStride(30_000, duration, [longHold])).toBe(30);
+    expect(annotationExportFrameStride(30_000, duration, [longHold])).toBe(8);
   });
 });
