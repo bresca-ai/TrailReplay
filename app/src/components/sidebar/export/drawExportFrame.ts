@@ -5,6 +5,7 @@ import { getCropRegion } from '@/utils/crop';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
+import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
 import type { VideoExportSettings } from '@/types';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 
@@ -135,55 +136,28 @@ export function drawExportFrame({
         const x = (rect.left - containerRect.left - cropX) * (recordW / cropW);
         const y = (rect.top - containerRect.top - cropY) * (recordH / cropH);
         const w = rect.width * (recordW / cropW);
-        const h = rect.height * (recordH / cropH);
         const scale = recordW / cropW;
         const copy = sideAnnotationContent(localizedAnnotation(sideAnnotation, currentState.settings.language));
-        const inset = 24 * scale;
+        const inset = 20 * scale;
         const contentX = x + inset;
         const maxWidth = w - inset * 2;
         context.save();
-        context.shadowColor = 'rgba(3,13,16,0.32)';
-        context.shadowBlur = 30 * scale;
-        context.shadowOffsetY = 15 * scale;
-        const background = context.createLinearGradient(x, y, x + w, y + h);
-        background.addColorStop(0, '#1e2b2d');
-        background.addColorStop(1, '#0d1619');
-        context.fillStyle = background;
-        context.beginPath();
-        context.roundRect(x, y, w, h, 20 * scale);
-        context.fill();
-        context.shadowColor = 'transparent';
-        context.strokeStyle = 'rgba(255,255,255,0.18)';
-        context.lineWidth = scale;
-        context.stroke();
-        context.clip();
-        context.fillStyle = sideAnnotation.color;
-        context.fillRect(x, y, w, 4 * scale);
-
-        const logoX = contentX;
-        const logoY = y + 22 * scale;
-        context.fillStyle = 'rgba(255,255,255,0.09)';
-        context.beginPath();
-        context.roundRect(logoX, logoY, 44 * scale, 44 * scale, 13 * scale);
-        context.fill();
-        context.strokeStyle = sideAnnotation.color;
-        context.lineWidth = 1.2 * scale;
-        context.stroke();
-        context.font = `${24 * scale}px sans-serif`;
-        context.textAlign = 'center';
-        context.fillStyle = '#fff';
-        context.fillText(sideAnnotation.logo || '●', logoX + 22 * scale, logoY + 31 * scale);
+        const logoY = y + 18 * scale;
+        drawAnnotationSymbol(context, sideAnnotation.logo || 'map:pin', contentX + 17 * scale, logoY + 17 * scale, 29 * scale, sideAnnotation.color);
+        context.shadowColor = 'rgba(3,13,16,0.9)';
+        context.shadowBlur = 6 * scale;
+        context.shadowOffsetY = 2 * scale;
         context.textAlign = 'left';
-        context.font = `800 ${10 * scale}px sans-serif`;
-        context.fillStyle = 'rgba(245,246,237,0.58)';
-        context.fillText(t('annotations.sidePanelEyebrow').toLocaleUpperCase(), logoX + 56 * scale, logoY + 16 * scale);
+        context.font = `600 ${10 * scale}px "JetBrains Mono", monospace`;
+        context.fillStyle = '#f8f6f0';
+        context.fillText((copy.eyebrow || t('annotations.sidePanelEyebrow')).toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
         if (copy.code) {
-          context.font = `800 ${18 * scale}px sans-serif`;
+          context.font = `700 ${15 * scale}px "JetBrains Mono", monospace`;
           context.fillStyle = sideAnnotation.color;
-          context.fillText(copy.code, logoX + 56 * scale, logoY + 37 * scale);
+          context.fillText(copy.code, contentX + 45 * scale, logoY + 31 * scale);
         }
         context.fillStyle = sideAnnotation.color;
-        context.fillRect(x + w - 49 * scale, logoY + 10 * scale, 25 * scale, 2 * scale);
+        context.fillRect(x + w - 51 * scale, logoY + 10 * scale, 31 * scale, scale);
 
         const drawWrapped = (value: string, font: string, lineHeight: number, baseline: number, maxLines: number) => {
           context.font = font;
@@ -209,24 +183,24 @@ export function drawExportFrame({
         };
 
         context.fillStyle = '#f8f8f1';
-        let nextY = drawWrapped(copy.title, `800 ${23 * scale}px sans-serif`, 27, y + 104 * scale, 3);
+        let nextY = drawWrapped(copy.title, `700 ${23 * scale}px "JetBrains Mono", monospace`, 29, y + 82 * scale, 3);
         if (copy.meta) {
           context.fillStyle = sideAnnotation.color;
-          nextY = drawWrapped(copy.meta, `750 ${12 * scale}px sans-serif`, 17, nextY + 5 * scale, 2);
+          nextY = drawWrapped(copy.meta, `600 ${12 * scale}px "JetBrains Mono", monospace`, 17, nextY + 4 * scale, 2);
         }
         if (copy.description) {
-          const dividerY = nextY + 11 * scale;
-          context.strokeStyle = 'rgba(255,255,255,0.16)';
+          const dividerY = nextY + 8 * scale;
+          context.strokeStyle = sideAnnotation.color;
           context.lineWidth = scale;
           context.beginPath();
           context.moveTo(contentX, dividerY);
           context.lineTo(x + w - inset, dividerY);
           context.stroke();
-          context.fillStyle = 'rgba(245,246,237,0.58)';
-          context.font = `800 ${10 * scale}px sans-serif`;
+          context.fillStyle = '#f8f6f0';
+          context.font = `600 ${10 * scale}px "JetBrains Mono", monospace`;
           context.fillText(t('annotations.sidePanelDetails').toLocaleUpperCase(), contentX, dividerY + 22 * scale);
-          context.fillStyle = 'rgba(251,251,246,0.88)';
-          drawWrapped(copy.description, `500 ${13 * scale}px sans-serif`, 20, dividerY + 45 * scale, 12);
+          context.fillStyle = '#f8f6f0';
+          drawWrapped(copy.description, `500 ${12 * scale}px "JetBrains Mono", monospace`, 19, dividerY + 43 * scale, 12);
         }
         context.restore();
       }

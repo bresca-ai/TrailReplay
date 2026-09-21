@@ -104,6 +104,7 @@ function annotationFrom(
     title,
     ...(spec.subtitle ? { subtitle: spec.subtitle } : {}),
     ...(spec.code ? { code: spec.code } : {}),
+    ...(spec.eyebrow ? { eyebrow: spec.eyebrow } : {}),
     ...(spec.meta ? { meta: spec.meta } : {}),
     ...(spec.description ? { description: spec.description } : {}),
     color: spec.color ?? '#C1652F',

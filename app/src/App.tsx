@@ -17,6 +17,7 @@ import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
 import { VideoPopup } from '@/components/annotations/VideoPopup';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
+import { annotationSymbolPath } from '@/components/annotations/annotationSymbol';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
@@ -559,9 +560,13 @@ function App() {
               {activeSideAnnotation && sideAnnotationCopy && (
                 <div className="tr-annotation-side-panel pointer-events-none absolute z-30" style={sideAnnotationStyle}>
                   <div className="tr-annotation-side-panel__header">
-                    <div className="tr-annotation-side-panel__logo" aria-hidden="true">{activeSideAnnotation.logo || '●'}</div>
+                    <div className="tr-annotation-side-panel__logo" aria-hidden="true">
+                      {annotationSymbolPath(activeSideAnnotation.logo)
+                        ? <svg viewBox="0 0 15 15" fill="currentColor"><path d={annotationSymbolPath(activeSideAnnotation.logo) ?? ''} /></svg>
+                        : activeSideAnnotation.logo || '●'}
+                    </div>
                     <div className="tr-annotation-side-panel__identity">
-                      <span className="tr-annotation-side-panel__eyebrow">{t('annotations.sidePanelEyebrow')}</span>
+                      <span className="tr-annotation-side-panel__eyebrow">{sideAnnotationCopy.eyebrow || t('annotations.sidePanelEyebrow')}</span>
                       {sideAnnotationCopy.code && <span className="tr-annotation-side-panel__code">{sideAnnotationCopy.code}</span>}
                     </div>
                     <span className="tr-annotation-side-panel__dash" aria-hidden="true" />
