@@ -93,7 +93,7 @@ and report security-sensitive issues through the [security policy](./SECURITY.md
 
 `main` is continuously deployed to trailreplay.com by Cloudflare Pages. GitHub
 Releases mark intentional public milestones and are tagged from the deployed
-`main` commit. The repository is preparing its first **v1.0.0** release;
+`main` commit. **v1.0.0** was the first published release;
 maintainers should follow the [release runbook](./docs/operations/release-runbook.md).
 
 ## Stack
