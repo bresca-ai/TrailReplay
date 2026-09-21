@@ -439,6 +439,7 @@ export const ca = {
     routeDetailsPlaceholder: "Km 10,2 · 15:30–19:30",
     descriptionLabel: "Descripció",
     logoLabel: 'Símbol',
+    emojiLabel: 'Emoticona',
     slowdownSeconds: 'Alentiment (segons)',
     textLanguage: 'Idioma del text',
     translationFallback: "El text segueix l’idioma de l’aplicació. Els idiomes sense traducció mostren el text original.",

@@ -59,7 +59,7 @@ describe('resolveRecipe', () => {
     expect(resolved.report.landmarks[0].km).toBeCloseTo(5, 2);
   });
 
-  it('places an annotation as a timed card, not a pin', () => {
+  it('places an annotation as a timed field note, not a pin', () => {
     const resolved = resolveRecipe(
       { annotations: [{ km: 2.5, title: 'Feed station', displayDuration: 4000 }] },
       single.tracks,
@@ -71,6 +71,8 @@ describe('resolveRecipe', () => {
     expect(resolved.textAnnotations[0]).toMatchObject({
       title: 'Feed station',
       displayDuration: 4000,
+      presentation: 'side-panel',
+      holdDuration: 6000,
     });
     expect(resolved.textAnnotations[0].progress).toBeCloseTo(0.25, 2);
   });

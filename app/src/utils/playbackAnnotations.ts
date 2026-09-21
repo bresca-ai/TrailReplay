@@ -21,10 +21,10 @@ export function getActivePlaybackAnnotationId(params: {
       continue;
     }
     const arrivalTime = annotation.progress * totalDuration;
-    const leadTime = Math.max(0, annotation.displayDuration);
-    const windowStart = Math.max(0, arrivalTime - leadTime);
+    const displayTime = Math.max(0, annotation.displayDuration);
+    const windowEnd = Math.min(totalDuration, arrivalTime + displayTime);
 
-    if (currentTime >= windowStart && currentTime <= arrivalTime) {
+    if (currentTime >= arrivalTime && currentTime <= windowEnd) {
       return annotation.id;
     }
   }
