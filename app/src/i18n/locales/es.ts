@@ -380,7 +380,6 @@ export const es = {
   },
   annotations: {
     sidePanelEyebrow: 'Momento de ruta',
-    sidePanelDetails: 'Detalles',
     styleYourRouteTitle: 'Da estilo a tu ruta',
     styleYourRouteHint: 'Elige la ruta, el marcador, las estadísticas y las llamadas que aparecen en el vídeo final.',
     tracksTitle: 'Rutas',

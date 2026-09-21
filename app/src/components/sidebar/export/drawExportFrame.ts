@@ -222,11 +222,8 @@ export function drawExportFrame({
           context.moveTo(contentX, dividerY);
           context.lineTo(x + w - inset, dividerY);
           context.stroke();
-          context.fillStyle = 'rgba(245,246,237,0.58)';
-          context.font = `800 ${10 * scale}px sans-serif`;
-          context.fillText(t('annotations.sidePanelDetails').toLocaleUpperCase(), contentX, dividerY + 22 * scale);
           context.fillStyle = 'rgba(251,251,246,0.88)';
-          drawWrapped(copy.description, `500 ${13 * scale}px sans-serif`, 20, dividerY + 45 * scale, 12);
+          drawWrapped(copy.description, `500 ${13 * scale}px sans-serif`, 20, dividerY + 26 * scale, 12);
         }
         context.restore();
       }

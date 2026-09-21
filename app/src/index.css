@@ -413,8 +413,7 @@ html, body {
   min-width: 0;
 }
 
-.tr-annotation-side-panel__eyebrow,
-.tr-annotation-side-panel__details-label {
+.tr-annotation-side-panel__eyebrow {
   color: rgb(245 246 237 / 58%);
   font-size: 10px;
   font-weight: 800;
@@ -465,7 +464,7 @@ html, body {
 }
 
 .tr-annotation-side-panel__details p {
-  margin: 8px 0 0;
+  margin: 0;
   color: rgb(251 251 246 / 87%);
   font-size: 13px;
   font-weight: 500;
