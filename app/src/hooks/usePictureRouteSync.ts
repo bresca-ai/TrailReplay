@@ -8,7 +8,7 @@ import {
 } from '@/utils/journeyUtils';
 
 /**
- * Keeps photo and clip timing in step with the route and the timing mode.
+ * Keeps route-anchored media and actions in step with the timing mode.
  *
  * A photo's `progress` is computed once, when it is added, using whichever
  * timing mode is active at that moment. Add the photos first and switch to
@@ -32,10 +32,12 @@ export function usePictureRouteSync() {
   const routeTimingMode = useAppStore((state) => state.playback.routeTimingMode);
   const pictureCount = useAppStore((state) => state.pictures.length);
   const videoCount = useAppStore((state) => state.videos.length);
+  const annotationCount = useAppStore((state) => state.textAnnotations.length);
+  const iconChangeCount = useAppStore((state) => state.iconChanges.length);
   const isExporting = useAppStore((state) => state.isExporting);
 
   useEffect(() => {
-    if (isExporting || (pictureCount === 0 && videoCount === 0)) {
+    if (isExporting || (pictureCount === 0 && videoCount === 0 && annotationCount === 0 && iconChangeCount === 0)) {
       return;
     }
 
@@ -120,5 +122,30 @@ export function usePictureRouteSync() {
         routeSegmentDistance,
       });
     }
-  }, [isExporting, journeySegments, pictureCount, routeTimingMode, tracks, videoCount]);
+
+    // Recipe-authored annotations and icon changes are route actions too.
+    // Retain a distance anchor so Constant Pace can move them with the marker.
+    const retimeAction = (
+      item: { id: string; progress: number; routeDistance?: number },
+      apply: (progress: number) => void,
+    ) => {
+      if (item.routeDistance === undefined) return;
+      const progress = progressForRouteDistance(
+        computedJourney.coordinates,
+        computedJourney.segmentTimings,
+        item.routeDistance,
+        routeTimingMode,
+      );
+      if (progress !== null && Math.abs(progress - item.progress) > TOLERANCE) apply(progress);
+    };
+
+    store.textAnnotations.forEach((annotation) => retimeAction(
+      annotation,
+      (progress) => store.updateTextAnnotation(annotation.id, { progress }),
+    ));
+    store.iconChanges.forEach((iconChange) => retimeAction(
+      iconChange,
+      (progress) => store.updateIconChangePosition(iconChange.id, progress),
+    ));
+  }, [annotationCount, iconChangeCount, isExporting, journeySegments, pictureCount, routeTimingMode, tracks, videoCount]);
 }

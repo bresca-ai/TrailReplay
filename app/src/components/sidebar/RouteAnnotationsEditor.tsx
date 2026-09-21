@@ -53,13 +53,14 @@ export function RouteAnnotationsEditor() {
     if (!currentPosition) return;
     updateTextAnnotation(annotation.id, {
       progress: playback.progress,
+      routeDistance,
       lat: currentPosition.lat,
       lon: currentPosition.lon,
       elevation: currentPosition.elevation > 0 ? currentPosition.elevation : undefined,
     });
   };
 
-  const { currentPosition } = useComputedJourney();
+  const { currentPosition, routeDistance } = useComputedJourney();
   const canAddAnnotation = Boolean(currentPosition);
 
   const handleAddAnnotation = () => {
@@ -69,6 +70,7 @@ export function RouteAnnotationsEditor() {
     addTextAnnotation({
       id: annotationId,
       progress: playback.progress,
+      routeDistance,
       lat: currentPosition.lat,
       lon: currentPosition.lon,
       title: draftAnnotationTitle.trim(),
