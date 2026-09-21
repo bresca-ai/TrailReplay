@@ -27,12 +27,12 @@ const EXPORT_MAP_SETTLE_MS = 150;
 export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = {}) {
   const {
     t, language, studioDelivery, videoExportSettings, mapStyle, show3DTerrain, tracks,
-    visibleStats, pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
+    pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
     setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
-    mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef,
+    mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
     applyStudioMapSettings, restoreStudioMapSettings, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
@@ -45,7 +45,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const encoder = mp4EncoderRef.current;
     if (!encoder) return;
     mp4EncoderRef.current = null;
-    useWebCodecsRef.current = false;
+    setUseWebCodecs(false);
 
     if (recordingCancelledRef.current) {
       encoder.close();
@@ -140,7 +140,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       // Restore an idle, replayable timeline once the file has been finalized.
       resetPlayback();
     }
-  }, [mp4EncoderRef, playback.totalDuration, recordingCancelledRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setStudioDeliveryError, setStudioDeliveryStatus, studioDeliveryJobRef, studioQualityRef, studioStatsRef, t, useWebCodecsRef, videoExportSettings]);
+  }, [mp4EncoderRef, playback.totalDuration, recordingCancelledRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, studioDeliveryJobRef, studioQualityRef, studioStatsRef, t, videoExportSettings]);
 
   const finishRecording = useCallback(() => {
     if (!isRecordingRef.current) return;
@@ -504,7 +504,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     recordedChunksRef.current = [];
     recordingCancelledRef.current = false;
     setIsDeterministicExport(false);
-    useWebCodecsRef.current = false;
+    setUseWebCodecs(false);
     mp4EncoderRef.current = null;
     resetOverlayCapture();
     trackEvent('export_started', {
@@ -581,11 +581,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
             fps: videoExportSettings.fps,
             bitrate: getVideoBitrate(videoExportSettings.quality),
           });
-          useWebCodecsRef.current = mp4EncoderRef.current !== null;
+          setUseWebCodecs(mp4EncoderRef.current !== null);
         } catch (encoderError) {
           console.warn('WebCodecs MP4 encoder unavailable, falling back to MediaRecorder', encoderError);
           mp4EncoderRef.current = null;
-          useWebCodecsRef.current = false;
+          setUseWebCodecs(false);
         }
       }
 
@@ -668,9 +668,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         mp4EncoderRef.current.close();
         mp4EncoderRef.current = null;
       }
-      useWebCodecsRef.current = false;
+      setUseWebCodecs(false);
     }
-  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings, visibleStats]);
+  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.
@@ -719,7 +719,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       mp4EncoderRef.current.close();
       mp4EncoderRef.current = null;
     }
-    useWebCodecsRef.current = false;
+    setUseWebCodecs(false);
     setIsDeterministicExport(false);
 
     trackEvent('export_cancelled', {
@@ -731,7 +731,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     setExportProgress(0);
     setExportStage('');
     resetPlayback();
-  }, [actualFormat, exportProgress, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, mp4EncoderRef, recordingCancelledRef, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, studioDeliveryJobRef, studioQualityRef, useWebCodecsRef]);
+  }, [actualFormat, exportProgress, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, mp4EncoderRef, recordingCancelledRef, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setUseWebCodecs, studioDeliveryJobRef, studioQualityRef, useWebCodecsRef]);
 
   const handleDownload = useCallback(() => {
     if (!exportedBlob) return;

@@ -242,6 +242,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const recordingCancelledRef = useRef(false);
   const mp4EncoderRef = useRef<Mp4CanvasEncoder | null>(null);
   const useWebCodecsRef = useRef(false);
+  const setUseWebCodecs = useCallback((enabled: boolean) => {
+    useWebCodecsRef.current = enabled;
+  }, []);
   const frameRequestRef = useRef<number | null>(null);
   const frameCleanupRef = useRef<(() => void) | null>(null);
   const cachedLogoRef = useRef<HTMLImageElement | null>(null);
@@ -710,7 +713,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
     setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
-    mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef,
+    mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
     applyStudioMapSettings, restoreStudioMapSettings, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,

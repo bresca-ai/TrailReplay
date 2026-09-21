@@ -119,7 +119,6 @@ export function usePlaybackMediaPopups() {
         // mounted — most visible for photos anchored right at the start.
         clearPendingQueuedPictureOpen();
         // Opening here preserves the frame timing of the original App effect.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         openNextQueuedPlaybackPicture();
       }
     }
