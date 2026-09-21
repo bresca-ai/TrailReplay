@@ -36,7 +36,7 @@ describe('annotation slowdown', () => {
     expect(annotationPlaybackRate(arrival, duration, [station])).toBeCloseTo(15);
     // Keep enough intermediate samples for the slowdown easing to remain
     // visibly smooth while still avoiding most near-identical map renders.
-    expect(annotationExportFrameStride(arrival, duration, [station])).toBe(8);
+    expect(annotationExportFrameStride(arrival, duration, [station])).toBe(2);
     expect(annotationExportFrameStride(arrival + 500, duration, [station])).toBe(1);
   });
 
@@ -45,6 +45,6 @@ describe('annotation slowdown', () => {
     const longHold = { ...station, holdDuration: 30_000 };
 
     expect(annotationPlaybackRate(30_000, duration, [longHold])).toBeCloseTo(61);
-    expect(annotationExportFrameStride(30_000, duration, [longHold])).toBe(8);
+    expect(annotationExportFrameStride(30_000, duration, [longHold])).toBe(2);
   });
 });
