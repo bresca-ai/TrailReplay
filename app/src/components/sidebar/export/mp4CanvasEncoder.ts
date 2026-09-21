@@ -13,7 +13,7 @@ export interface Mp4CanvasEncoder {
    * (microseconds on the output timeline). Deterministic exports pass the fixed
    * frame timestamp, while the legacy recorder path uses elapsed wall time.
    */
-  encodeCanvas(canvas: HTMLCanvasElement, timestampMicros: number): Promise<void>;
+  encodeCanvas(canvas: HTMLCanvasElement, timestampMicros: number, durationMicros?: number): Promise<void>;
   /** Number of frames still queued in the encoder (for backpressure decisions). */
   pendingFrames(): number;
   /** Flush, mux and return the finished MP4 as a Blob. */
@@ -111,7 +111,7 @@ export async function createMp4CanvasEncoder(
   let finalized = false;
 
   return {
-    async encodeCanvas(canvas, timestampMicros) {
+    async encodeCanvas(canvas, timestampMicros, durationMicros = frameDurationMicros) {
       if (finalized || encoderError || encoder.state !== 'configured') return;
 
       // Timestamps must be strictly increasing; skip any non-advancing frame.
@@ -124,7 +124,7 @@ export async function createMp4CanvasEncoder(
 
       const frame = new VideoFrame(canvas, {
         timestamp,
-        duration: frameDurationMicros,
+        duration: Math.max(1, Math.round(durationMicros)),
       });
       try {
         encoder.encode(frame, { keyFrame });

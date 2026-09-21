@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const muxerState = vi.hoisted(() => ({ options: null as { fastStart?: unknown } | null }));
+const muxerState = vi.hoisted(() => ({
+  options: null as { fastStart?: unknown } | null,
+  videoFrameInit: null as VideoFrameInit | null,
+}));
 
 vi.mock('mp4-muxer', () => {
   class ArrayBufferTarget {
@@ -27,6 +30,7 @@ import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
 describe('createMp4CanvasEncoder', () => {
   beforeEach(() => {
     muxerState.options = null;
+    muxerState.videoFrameInit = null;
 
     class VideoEncoderStub {
       static async isConfigSupported(config: VideoEncoderConfig) {
@@ -42,6 +46,10 @@ describe('createMp4CanvasEncoder', () => {
     }
 
     class VideoFrameStub {
+      constructor(_source: CanvasImageSource, init: VideoFrameInit) {
+        muxerState.videoFrameInit = init;
+      }
+
       close() {}
     }
 
@@ -63,5 +71,8 @@ describe('createMp4CanvasEncoder', () => {
 
     expect(encoder).not.toBeNull();
     expect(muxerState.options?.fastStart).toBe(false);
+
+    await encoder?.encodeCanvas({} as HTMLCanvasElement, 1_000, 200_000);
+    expect(muxerState.videoFrameInit?.duration).toBe(200_000);
   });
 });

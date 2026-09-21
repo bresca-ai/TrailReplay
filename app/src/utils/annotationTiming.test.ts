@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { TextAnnotation } from '@/types';
-import { playbackTimeForRoute, routeTimeForPlayback } from './annotationTiming';
+import {
+  annotationExportFrameStride,
+  annotationPlaybackRate,
+  playbackTimeForRoute,
+  routeTimeForPlayback,
+} from './annotationTiming';
 
 const station: TextAnnotation = {
   id: 'station', progress: 0.5, lat: 0, lon: 0, title: 'Station',
@@ -20,5 +25,16 @@ describe('annotation slowdown', () => {
 
   it('leaves legacy cards on the original timeline', () => {
     expect(playbackTimeForRoute(60_000, 60_000, [{ ...station, presentation: 'map-card' }])).toBe(60_000);
+  });
+
+  it('identifies redundant export frames only inside the annotation slowdown', () => {
+    const duration = 60_000;
+    const arrival = station.progress * duration;
+
+    expect(annotationPlaybackRate(arrival - 500, duration, [station])).toBe(1);
+    expect(annotationExportFrameStride(arrival - 500, duration, [station])).toBe(1);
+    expect(annotationPlaybackRate(arrival, duration, [station])).toBeCloseTo(15);
+    expect(annotationExportFrameStride(arrival, duration, [station])).toBe(6);
+    expect(annotationExportFrameStride(arrival + 500, duration, [station])).toBe(1);
   });
 });
