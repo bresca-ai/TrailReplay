@@ -9,7 +9,6 @@ import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
-import { RouteAnnotationsEditor } from './RouteAnnotationsEditor';
 import { Trash2 } from 'lucide-react';
 
 function parsePercent(raw: string): number | null {
@@ -752,13 +751,6 @@ export function AnnotationsPanel() {
           )}
         </div>
       </div>
-
-      <section className="space-y-3 border-t border-[var(--evergreen)]/15 pt-5">
-        <h3 className="text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide">
-          {t('annotations.routeAnnotationsTitle')}
-        </h3>
-        <RouteAnnotationsEditor />
-      </section>
 
       {/* Icon Picker Modal */}
       {showIconPicker && (

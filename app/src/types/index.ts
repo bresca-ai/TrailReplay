@@ -167,9 +167,19 @@ export interface TextAnnotation {
   lon: number;
   title: string;
   subtitle?: string;
+  code?: string;
+  meta?: string;
+  description?: string;
   color: string;
   elevation?: number;
   displayDuration: number;
+  /** A compact symbol on the map with a readable panel beside it. */
+  presentation?: 'map-card' | 'side-panel';
+  logo?: string;
+  /** Additional playback time spent easing through this point, in ms. */
+  holdDuration?: number;
+  /** Optional authored wording for each UI language. Missing languages use title/subtitle. */
+  translations?: Partial<Record<LanguageCode, { title: string; subtitle?: string; meta?: string; description?: string }>>;
 }
 
 export * from './landmarks';

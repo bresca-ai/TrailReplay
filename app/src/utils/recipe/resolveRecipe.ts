@@ -103,9 +103,16 @@ function annotationFrom(
     lon: at.lon,
     title,
     ...(spec.subtitle ? { subtitle: spec.subtitle } : {}),
+    ...(spec.code ? { code: spec.code } : {}),
+    ...(spec.meta ? { meta: spec.meta } : {}),
+    ...(spec.description ? { description: spec.description } : {}),
     color: spec.color ?? '#C1652F',
     ...(at.elevation !== undefined ? { elevation: Math.round(at.elevation) } : {}),
     displayDuration: spec.displayDuration ?? DEFAULT_ANNOTATION_MS,
+    ...(spec.presentation ? { presentation: spec.presentation } : {}),
+    ...(spec.logo ? { logo: spec.logo } : {}),
+    ...(spec.holdDuration !== undefined ? { holdDuration: spec.holdDuration } : {}),
+    ...(spec.translations ? { translations: spec.translations } : {}),
   };
 }
 
