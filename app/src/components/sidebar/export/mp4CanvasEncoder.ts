@@ -106,8 +106,20 @@ export async function createMp4CanvasEncoder(
 
   const frameDurationMicros = Math.round(1_000_000 / options.fps);
   const keyFrameIntervalMicros = 2_000_000; // Force a keyframe at least every 2s.
+  // `encodeQueueSize` only counts encode requests that the codec has not yet
+  // accepted. It does not count raw frames retained inside the hardware
+  // encoder for quality-mode lookahead. Those frames keep their GPU-backed
+  // canvas copies alive even after our VideoFrame wrapper is closed. Bound
+  // that hidden pipeline by flushing after roughly 64 MiB of submitted RGBA
+  // pixels (and at least every eight frames for smaller exports).
+  const rawFrameBytes = options.width * options.height * 4;
+  const maxFramesBetweenFlushes = Math.max(
+    1,
+    Math.min(8, Math.floor((64 * 1024 * 1024) / rawFrameBytes)),
+  );
   let lastTimestampMicros = -1;
   let lastKeyframeMicros = -keyFrameIntervalMicros;
+  let framesSinceFlush = 0;
   let finalized = false;
 
   return {
@@ -131,11 +143,16 @@ export async function createMp4CanvasEncoder(
       } finally {
         frame.close();
       }
+      framesSinceFlush += 1;
 
       // A fixed-frame export must never turn encoder pressure into a missing
-      // output frame. Apply backpressure here and let export take longer.
-      if (encoder.encodeQueueSize >= 8) {
+      // output frame. `flush()` emits internal pending output as well as queued
+      // requests, releasing the codec's references to the submitted canvases.
+      // The queue-size condition remains useful on unusually slow encoders;
+      // the frame budget handles fast-accepting encoders with deep lookahead.
+      if (encoder.encodeQueueSize >= 8 || framesSinceFlush >= maxFramesBetweenFlushes) {
         await encoder.flush();
+        framesSinceFlush = 0;
         if (encoderError) throw encoderError;
       }
     },
