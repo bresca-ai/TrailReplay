@@ -4,7 +4,8 @@ import * as maplibregl from 'maplibre-gl';
 import type { LanguageCode, TextAnnotation, UnitSystem } from '@/types';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { convertElevation } from '@/utils/units';
-import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
+import { drawAnnotationSymbol, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
 import {
   CARD_MIN_WIDTH,
   cardLayoutForMapWidth,
@@ -111,8 +112,8 @@ function createAnnotationCardImage(
   const measure = document.createElement('canvas').getContext('2d');
   if (!measure) return null;
 
-  const titleFont = `700 ${layout.titleSize}px "JetBrains Mono", monospace`;
-  const detailFont = `500 ${layout.detailSize}px "JetBrains Mono", monospace`;
+  const titleFont = `800 ${layout.titleSize}px Inter, sans-serif`;
+  const detailFont = `700 ${layout.detailSize}px Inter, sans-serif`;
 
   const title = annotation.title.trim() || 'Annotation';
   const detail = annotation.subtitle?.trim()
@@ -127,19 +128,24 @@ function createAnnotationCardImage(
 
   const width = Math.round(Math.max(
     CARD_MIN_WIDTH,
-    Math.min(layout.maxWidth, Math.max(titleWidth + 42, detailWidth) + layout.padding * 2),
+    Math.min(layout.maxWidth, Math.max(titleWidth, detailWidth) + layout.padding * 2),
   ));
-  const textWidth = width - layout.padding * 2 - 42;
+  const textWidth = width - layout.padding * 2;
 
   measure.font = titleFont;
   const titleLines = wrapText(measure, title, textWidth, 2);
   measure.font = detailFont;
   const detailLines = detail ? wrapText(measure, detail, textWidth, 2) : [];
 
-  const headerHeight = Math.round(layout.padding + titleLines.length * layout.titleLineHeight);
-  const height = Math.round(headerHeight
-    + (detailLines.length > 0 ? 9 + detailLines.length * layout.detailLineHeight : 0)
-    + layout.padding);
+  // The header is the coloured band, so it has to be as tall as the title it
+  // holds — a fixed band cuts a two-line title in half, which is what a title
+  // taken from a source usually is.
+  const headerPadding = 14;
+  const detailPadding = 16;
+  const headerHeight = Math.round(headerPadding * 2 + titleLines.length * layout.titleLineHeight);
+  const bodyHeight = Math.round(headerHeight
+    + (detailLines.length > 0 ? detailPadding * 2 + detailLines.length * layout.detailLineHeight : 0));
+  const height = Math.round(bodyHeight + 12);
 
   const scale = 2;
   const canvas = document.createElement('canvas');
@@ -151,29 +157,52 @@ function createAnnotationCardImage(
   context.scale(scale, scale);
   context.clearRect(0, 0, width, height);
 
-  const drawText = (line: string, x: number, y: number) => {
-    context.strokeStyle = 'rgba(4, 16, 15, 0.88)';
-    context.lineWidth = 5;
-    context.lineJoin = 'round';
-    context.strokeText(line, x, y);
-    context.fillText(line, x, y);
-  };
+  const radius = 20;
 
-  drawAnnotationSymbol(context, annotation.logo || 'map:pin', layout.padding + 18, layout.padding + 17, 30, annotation.color);
-  context.textAlign = 'left';
+  context.save();
+  context.shadowColor = 'rgba(0, 0, 0, 0.36)';
+  context.shadowBlur = 24;
+  context.shadowOffsetY = 16;
+  context.fillStyle = 'rgba(11, 15, 17, 0.96)';
+  roundRect(context, 0, 0, width, bodyHeight, radius);
+  context.fill();
+  context.restore();
+
+  // Clipping to the card rather than drawing a second rounded rect keeps the
+  // header's top corners on the card's radius and its bottom edge straight,
+  // whatever height the title needs.
+  context.save();
+  roundRect(context, 0, 0, width, bodyHeight, radius);
+  context.clip();
+  context.fillStyle = annotation.color;
+  context.fillRect(0, 0, width, headerHeight);
+  context.restore();
+
+  context.save();
+  context.fillStyle = annotation.color;
+  context.beginPath();
+  context.moveTo((width / 2) - 18, height - 12);
+  context.lineTo(width / 2, height);
+  context.lineTo((width / 2) + 18, height - 12);
+  context.closePath();
+  context.fill();
+  context.restore();
+
+  context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.fillStyle = '#f8f6f0';
+
+  context.fillStyle = '#ffffff';
   context.font = titleFont;
-  const titleTop = layout.padding + layout.titleLineHeight / 2;
+  const titleTop = headerPadding + layout.titleLineHeight / 2;
   titleLines.forEach((line, index) => {
-    drawText(line, layout.padding + 42, titleTop + index * layout.titleLineHeight);
+    context.fillText(line, width / 2, titleTop + index * layout.titleLineHeight);
   });
 
-  context.fillStyle = annotation.color;
+  context.fillStyle = 'rgba(255, 255, 255, 0.92)';
   context.font = detailFont;
-  const detailTop = headerHeight + 9 + layout.detailLineHeight / 2;
+  const detailTop = headerHeight + detailPadding + layout.detailLineHeight / 2;
   detailLines.forEach((line, index) => {
-    drawText(line, layout.padding + 42, detailTop + index * layout.detailLineHeight);
+    context.fillText(line, width / 2, detailTop + index * layout.detailLineHeight);
   });
 
   return context.getImageData(0, 0, canvas.width, canvas.height);
@@ -186,6 +215,27 @@ function createLogoImage(annotation: TextAnnotation) {
   if (!context) return null;
   drawAnnotationSymbol(context, annotation.logo || 'map:pin', 80, 80, 90, annotation.color);
   return context.getImageData(0, 0, 160, 160);
+}
+
+function roundRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.lineTo(x + width, y + height - radius);
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.lineTo(x + radius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - radius);
+  context.lineTo(x, y + radius);
+  context.quadraticCurveTo(x, y, x + radius, y);
+  context.closePath();
 }
 
 interface UseTextAnnotationsLayerParams {
@@ -207,6 +257,11 @@ export function useTextAnnotationsLayer({
 }: UseTextAnnotationsLayerParams) {
   // The card is sized for the map it sits on, so a resize has to redraw it.
   const [mapWidth, setMapWidth] = useState(0);
+  // A field note's map symbol may come from the Pinhead library, which loads
+  // on demand; redraw once it arrives instead of keeping the fallback pin.
+  const pinheadIcons = usePinheadIcons(needsPinheadIcons(
+    annotations.map((annotation) => (annotation.presentation === 'side-panel' ? annotation.logo : undefined)),
+  ));
 
   useEffect(() => {
     const map = mapRef.current;
@@ -343,6 +398,7 @@ export function useTextAnnotationsLayer({
     isMapLoaded,
     mapRef,
     mapWidth,
+    pinheadIcons,
     unitSystem,
     language,
   ]);

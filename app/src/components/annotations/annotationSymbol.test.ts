@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { LANDMARK_GLYPH_KEYS, PINHEAD_PATHS } from '@/components/map/landmarkGlyphs';
-import { annotationMapGlyph, annotationSymbolPath, mapAnnotationSymbol } from './annotationSymbol';
+import {
+  annotationMapGlyph,
+  annotationPinheadId,
+  annotationSymbolPath,
+  mapAnnotationSymbol,
+  needsPinheadIcons,
+  pinheadAnnotationSymbol,
+} from './annotationSymbol';
 
 describe('annotation symbols', () => {
   it('offers every map glyph through a stable value', () => {
@@ -15,5 +22,21 @@ describe('annotation symbols', () => {
     expect(annotationMapGlyph('🚰')).toBeNull();
     expect(annotationSymbolPath('🚰')).toBeNull();
     expect(annotationMapGlyph('map:unknown')).toBeNull();
+  });
+
+  it('keeps library icons apart from built-in glyphs that share a name', () => {
+    expect(annotationPinheadId(pinheadAnnotationSymbol('pin'))).toBe('pin');
+    expect(annotationMapGlyph(pinheadAnnotationSymbol('pin'))).toBeNull();
+    expect(annotationPinheadId(mapAnnotationSymbol('pin'))).toBeNull();
+  });
+
+  it('draws the pin, not raw text, for an icon it cannot resolve yet', () => {
+    expect(annotationSymbolPath(pinheadAnnotationSymbol('mountain'))).toBe(PINHEAD_PATHS.pin);
+    expect(annotationSymbolPath('map:unknown')).toBe(PINHEAD_PATHS.pin);
+  });
+
+  it('only asks for the library when a library icon is used', () => {
+    expect(needsPinheadIcons([mapAnnotationSymbol('summit'), '🚰', undefined])).toBe(false);
+    expect(needsPinheadIcons([undefined, pinheadAnnotationSymbol('mountain')])).toBe(true);
   });
 });

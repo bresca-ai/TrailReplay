@@ -6,6 +6,7 @@ import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
 import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
+import { drawSidePanelShade } from '@/components/annotations/sidePanelShade';
 import type { VideoExportSettings } from '@/types';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 
@@ -136,12 +137,14 @@ export function drawExportFrame({
         const x = (rect.left - containerRect.left - cropX) * (recordW / cropW);
         const y = (rect.top - containerRect.top - cropY) * (recordH / cropH);
         const w = rect.width * (recordW / cropW);
+        const h = rect.height * (recordH / cropH);
         const scale = recordW / cropW;
         const copy = sideAnnotationContent(localizedAnnotation(sideAnnotation, currentState.settings.language));
         const inset = 20 * scale;
         const contentX = x + inset;
         const maxWidth = w - inset * 2;
         context.save();
+        drawSidePanelShade(context, x, y, w, h, scale);
         const logoY = y + 18 * scale;
         drawAnnotationSymbol(context, sideAnnotation.logo || 'map:pin', contentX + 17 * scale, logoY + 17 * scale, 29 * scale, sideAnnotation.color);
         context.shadowColor = 'rgba(3,13,16,0.9)';

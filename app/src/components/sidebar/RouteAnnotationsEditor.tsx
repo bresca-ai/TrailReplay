@@ -6,41 +6,14 @@ import { convertElevation } from '@/utils/units';
 import { trackEvent } from '@/utils/analytics';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
-import { annotationMapGlyph, mapAnnotationSymbol } from '@/components/annotations/annotationSymbol';
-import { LANDMARK_GLYPH_KEYS, LANDMARK_GLYPH_LABELS, PINHEAD_PATHS } from '@/components/map/landmarkGlyphs';
+import { mapAnnotationSymbol } from '@/components/annotations/annotationSymbol';
+import { AnnotationSymbolPicker } from './AnnotationSymbolPicker';
 import { MapPinned, Play, Plus, Trash2 } from 'lucide-react';
 import type { TextAnnotation } from '@/types';
 
 const DEFAULT_ANNOTATION_DURATION = 4000;
 const DEFAULT_ANNOTATION_COLOR = '#f3b133';
 const ANNOTATION_COLORS = ['#f3b133', '#ff7a59', '#53c16d', '#3b82f6', '#8b5cf6', '#ec4899'];
-
-function AnnotationSymbolPicker({ value, onChange, label, emojiLabel }: {
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  emojiLabel: string;
-}) {
-  const selectedGlyph = annotationMapGlyph(value);
-  return <fieldset className="w-full space-y-2">
-    <legend className="text-xs font-medium text-[var(--evergreen)]">{label}</legend>
-    <div className="flex flex-wrap gap-1.5">
-      {LANDMARK_GLYPH_KEYS.map((glyph) => <button
-        key={glyph}
-        type="button"
-        aria-label={LANDMARK_GLYPH_LABELS[glyph]}
-        aria-pressed={selectedGlyph === glyph}
-        title={LANDMARK_GLYPH_LABELS[glyph]}
-        onClick={() => onChange(mapAnnotationSymbol(glyph))}
-        className={`grid h-9 w-9 place-items-center rounded-md border transition-colors ${selectedGlyph === glyph ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] text-[var(--trail-orange)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)] hover:border-[var(--trail-orange)]'}`}
-      ><svg aria-hidden="true" width="19" height="19" viewBox="0 0 15 15"><path fill="currentColor" d={PINHEAD_PATHS[glyph]} /></svg></button>)}
-      <button type="button" aria-label={emojiLabel} title={emojiLabel} aria-pressed={!selectedGlyph} onClick={() => onChange('🚰')}
-        className={`rounded-md border px-2 text-xs ${!selectedGlyph ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20'}`}>{emojiLabel}</button>
-    </div>
-    {!selectedGlyph && <input aria-label={`${label} ${emojiLabel}`} value={value} onChange={(event) => onChange(event.target.value)} maxLength={8}
-      className="w-20 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-1 text-sm" />}
-  </fieldset>;
-}
 
 export function RouteAnnotationsEditor() {
   const { t, language } = useI18n();
@@ -115,8 +88,7 @@ export function RouteAnnotationsEditor() {
       displayDuration: DEFAULT_ANNOTATION_DURATION,
       translations: { [language]: { title: draftAnnotationTitle.trim(), ...(draftPresentation === 'map-card' ? { subtitle: draftAnnotationSubtitle.trim() || undefined } : { eyebrow: draftEyebrow.trim() || undefined, meta: draftMeta.trim() || undefined, description: draftDescription.trim() || undefined }) } },
       presentation: draftPresentation,
-      logo: draftLogo,
-      ...(draftPresentation === 'side-panel' ? { holdDuration: draftHoldSeconds * 1000 } : {}),
+      ...(draftPresentation === 'side-panel' ? { logo: draftLogo, holdDuration: draftHoldSeconds * 1000 } : {}),
     });
     trackEvent('annotation_created', { annotation_type: 'text' });
     setDraftAnnotationTitle('');
@@ -171,8 +143,8 @@ export function RouteAnnotationsEditor() {
               <option value="map-card">{t('annotations.presentationMapCard')}</option><option value="side-panel">{t('annotations.presentationSidePanel')}</option>
             </select>
           </label>
-          <AnnotationSymbolPicker value={draftLogo} onChange={setDraftLogo} label={t('annotations.logoLabel')} emojiLabel={t('annotations.emojiLabel')} />
           {draftPresentation === 'side-panel' && <>
+            <AnnotationSymbolPicker value={draftLogo} onChange={setDraftLogo} />
             <label className="text-xs text-[var(--evergreen)]">{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={draftHoldSeconds} onChange={(e) => setDraftHoldSeconds(Math.max(0, Math.min(30, Number(e.target.value) || 0)))} className="ml-2 w-16 rounded border bg-[var(--canvas)] p-2" /></label>
           </>}
         </div>
@@ -303,8 +275,8 @@ export function RouteAnnotationsEditor() {
                     }} className="rounded border bg-[var(--canvas)] p-2">
                       <option value="map-card">{t('annotations.presentationMapCard')}</option><option value="side-panel">{t('annotations.presentationSidePanel')}</option>
                     </select>
-                    <AnnotationSymbolPicker value={annotation.logo ?? mapAnnotationSymbol('pin')} onChange={(logo) => updateTextAnnotation(annotation.id, { logo })} label={t('annotations.logoLabel')} emojiLabel={t('annotations.emojiLabel')} />
                     {annotation.presentation === 'side-panel' && <>
+                      <AnnotationSymbolPicker value={annotation.logo ?? mapAnnotationSymbol('pin')} onChange={(logo) => updateTextAnnotation(annotation.id, { logo })} />
                       <label>{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={(annotation.holdDuration ?? 0) / 1000} onChange={(e) => updateTextAnnotation(annotation.id, { holdDuration: Math.max(0, Math.min(30, Number(e.target.value) || 0)) * 1000 })} className="w-16 rounded border bg-[var(--canvas)] p-2" /></label>
                     </>}
                   </div>

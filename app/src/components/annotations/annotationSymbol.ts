@@ -1,10 +1,19 @@
 import { isLandmarkGlyph, PINHEAD_PATHS, type LandmarkGlyph } from '@/components/map/landmarkGlyphs';
+import { pinheadIconPath } from './pinheadIcons';
 
 const MAP_ICON_PREFIX = 'map:';
+// Library icons get their own prefix: Pinhead reuses some built-in glyph names
+// (pin, water, shelter, waterfall) for different drawings, and a saved
+// `map:pin` has to keep drawing the pin it was saved with.
+const PINHEAD_ICON_PREFIX = 'pinhead:';
 
 /** Existing emoji values remain valid; map icons use a namespaced value. */
 export function mapAnnotationSymbol(glyph: LandmarkGlyph) {
   return `${MAP_ICON_PREFIX}${glyph}`;
+}
+
+export function pinheadAnnotationSymbol(id: string) {
+  return `${PINHEAD_ICON_PREFIX}${id}`;
 }
 
 export function annotationMapGlyph(symbol: string | undefined): LandmarkGlyph | null {
@@ -13,9 +22,27 @@ export function annotationMapGlyph(symbol: string | undefined): LandmarkGlyph | 
   return isLandmarkGlyph(glyph) ? glyph : null;
 }
 
+export function annotationPinheadId(symbol: string | undefined): string | null {
+  if (!symbol?.startsWith(PINHEAD_ICON_PREFIX)) return null;
+  return symbol.slice(PINHEAD_ICON_PREFIX.length) || null;
+}
+
+/** Whether drawing any of these symbols needs the Pinhead library loaded. */
+export function needsPinheadIcons(symbols: Array<string | undefined>) {
+  return symbols.some((symbol) => annotationPinheadId(symbol) !== null);
+}
+
+/**
+ * The icon path to draw, or `null` for an emoji. An icon that cannot be drawn
+ * yet (library still loading, or an id this Pinhead version lacks) is drawn as
+ * the pin rather than as its raw `pinhead:…` text.
+ */
 export function annotationSymbolPath(symbol: string | undefined) {
   const glyph = annotationMapGlyph(symbol);
-  return glyph ? PINHEAD_PATHS[glyph] : null;
+  if (glyph) return PINHEAD_PATHS[glyph];
+  const pinheadId = annotationPinheadId(symbol);
+  if (pinheadId) return pinheadIconPath(pinheadId) ?? PINHEAD_PATHS.pin;
+  return symbol?.startsWith(MAP_ICON_PREFIX) ? PINHEAD_PATHS.pin : null;
 }
 
 /** Draw the same Pinhead path used by map landmarks, or retain a legacy emoji. */

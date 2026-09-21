@@ -118,8 +118,9 @@ belongs to.
 Landmark keys: `title`, `subtitle`, `type`, `icon`, `color`, `importance`
 (1–5, default 5), `display`, `id`. An annotation defaults to a readable field
 note, which slows the replay at that kilometre. Use `presentation: "map-card"`
-only when you explicitly want a brief map-only caption; it starts when the
-marker reaches the authored kilometre.
+only when you explicitly want a brief map-only caption: a card with `title`,
+optional `subtitle`, `color`, and `displayDuration` (ms on screen as the marker
+approaches, default 5000). Map cards do not slow the replay or show a `logo`.
 
 For an aid station or other route stop, author a field note like this:
 
@@ -132,7 +133,7 @@ For an aid station or other route stop, author a field note like this:
     "title": "Avituallament d'aigua",
     "meta": "Km 10,2 · 15:30–19:30",
     "description": "Aquarius · Fruits secs · Plàtans",
-    "logo": "🚰",
+    "logo": "pinhead:water_tap",
     "color": "#1c8ce4",
     "holdDuration": 7000,
     "translations": {
@@ -149,7 +150,12 @@ For an aid station or other route stop, author a field note like this:
 `code` labels the station, `title` is its heading, `meta` is the short route
 detail line, and `description` is the longer readable text. Keep those as
 separate JSON fields; the `·` within `meta` or `description` is ordinary text.
-`logo` is the compact symbol on the map. `holdDuration` is additional replay
+`logo` is the field note's symbol, drawn on the map and in the panel. It takes
+one of the built-in trail glyphs as `map:<glyph>` (`pin`, `summit`, `viewpoint`,
+`waypoint`, `town`, `shelter`, `camp`, `water`, `waterfall`), any icon from
+[Pinhead](https://pinhead.ink) as `pinhead:<icon id>` (the id is the name shown
+on pinhead.ink, such as `water_tap` or `mountain`), or an emoji. The default is
+`map:pin`. `holdDuration` is additional replay
 time in milliseconds: the marker eases down and back up around the station
 while the side panel remains visible. `translations` keys are app languages
 (`en`, `es`, `ca`, `de`, `fr`); translate `title`, `meta`, and `description`
