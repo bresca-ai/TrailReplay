@@ -316,10 +316,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
-  const encodeWebCodecsFrame = useCallback(async (timestampMicros?: number) => {
+  const encodeWebCodecsFrame = useCallback(async (timestampMicros?: number, durationMicros?: number) => {
     if (!useWebCodecsRef.current || !mp4EncoderRef.current || !recordingCanvasRef.current) return;
     const elapsedMicros = timestampMicros ?? (performance.now() - recordingStartTimeRef.current) * 1000;
-    await mp4EncoderRef.current.encodeCanvas(recordingCanvasRef.current, elapsedMicros);
+    await mp4EncoderRef.current.encodeCanvas(recordingCanvasRef.current, elapsedMicros, durationMicros);
   }, []);
 
   const startFrameCapture = useCallback(() => {

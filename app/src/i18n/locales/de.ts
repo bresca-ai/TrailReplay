@@ -381,7 +381,6 @@ export const de = {
   annotations: {
     sidePanelEyebrow: 'Routenmoment',
     eyebrowLabel: 'Kleine Überschrift (optional)',
-    sidePanelDetails: 'Details',
     styleYourRouteTitle: 'Route gestalten',
     styleYourRouteHint: 'Wähle Route, Marker, Statistiken und Hinweise für das fertige Video.',
     tracksTitle: 'Spuren',

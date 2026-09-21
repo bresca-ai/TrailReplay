@@ -7,7 +7,11 @@ import {
   trackEvent,
 } from '@/utils/analytics';
 import { getCameraUsageAnalyticsParams, trackConfigurationUsage } from '@/utils/configurationAnalytics';
-import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
+import {
+  annotationExportFrameStride,
+  playbackTimeForRoute,
+  routeTimeForPlayback,
+} from '@/utils/annotationTiming';
 import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
 import fixWebmDuration from 'fix-webm-duration';
 import { useCallback, useEffect } from 'react';
@@ -240,15 +244,19 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
     // The intro already contains the progress-zero pose. Begin at the first
     // advancing route frame so the cut into the route has no duplicate hold.
-    for (let frameIndex = 1; frameIndex <= frameCount; frameIndex += 1) {
+    let frameIndex = 1;
+    let lastProgressUpdateFrame = 0;
+    while (frameIndex <= frameCount) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
 
       const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations);
       const progress = routeDurationMs > 0 ? currentTime / routeDurationMs : 1;
+      const frameStride = Math.min(
+        frameCount - frameIndex + 1,
+        annotationExportFrameStride(currentTime, routeDurationMs, annotations),
+      );
+      const coveredThroughFrame = frameIndex + frameStride - 1;
       useAppStore.getState().setPlayback({ currentTime, progress });
-      if (frameIndex % progressUpdateInterval === 0) {
-        setExportStage(describeRecordingStage(frameIndex, frameCount));
-      }
       await waitForExportFrame();
 
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
@@ -257,12 +265,15 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       // timestamp math exactly: increment before encoding, so frame 1 lands
       // at `INTRO_DURATION + frameDurationMs`, not `INTRO_DURATION` (which
       // would collide with the intro phase's own last encoded timestamp).
-      encodedDurationMs += frameDurationMs;
-      await encodeWebCodecsFrame(encodedDurationMs * 1000);
+      const encodedTimestampMs = encodedDurationMs + frameDurationMs;
+      const encodedFrameDurationMs = frameDurationMs * frameStride;
+      await encodeWebCodecsFrame(encodedTimestampMs * 1000, encodedFrameDurationMs * 1000);
+      encodedDurationMs += encodedFrameDurationMs;
 
-      if (frameIndex % progressUpdateInterval === 0 || frameIndex === frameCount) {
-        setExportProgress((frameIndex / frameCount) * 100);
-        setExportStage(describeRecordingStage(frameIndex, frameCount));
+      if (coveredThroughFrame - lastProgressUpdateFrame >= progressUpdateInterval || coveredThroughFrame === frameCount) {
+        setExportProgress((coveredThroughFrame / frameCount) * 100);
+        setExportStage(describeRecordingStage(coveredThroughFrame, frameCount));
+        lastProgressUpdateFrame = coveredThroughFrame;
       }
 
       const triggeredPictures = getTriggeredPlaybackPictures({
@@ -329,6 +340,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         store.setSelectedVideoId(null);
         store.setExportVideoHoldTimeSeconds(null);
       }
+
+      frameIndex += frameStride;
     }
 
     if (!recordingCancelledRef.current && isRecordingRef.current) {

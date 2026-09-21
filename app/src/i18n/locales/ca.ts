@@ -381,7 +381,6 @@ export const ca = {
   annotations: {
     sidePanelEyebrow: 'Moment de ruta',
     eyebrowLabel: 'Encapçalament petit (opcional)',
-    sidePanelDetails: 'Detalls',
     styleYourRouteTitle: 'Dona estil a la ruta',
     styleYourRouteHint: 'Tria la ruta, el marcador, les estadístiques i les crides que apareixen al vídeo final.',
     tracksTitle: 'Rutes',

@@ -156,6 +156,8 @@ export interface VideoAnnotation {
 export interface IconChange {
   id: string;
   progress: number;
+  /** Stable distance from the journey start, used when timing mode changes. */
+  routeDistance?: number;
   icon: string;
   label?: string;
 }
@@ -163,6 +165,8 @@ export interface IconChange {
 export interface TextAnnotation {
   id: string;
   progress: number;
+  /** Stable distance from the journey start, used when timing mode changes. */
+  routeDistance?: number;
   lat: number;
   lon: number;
   title: string;

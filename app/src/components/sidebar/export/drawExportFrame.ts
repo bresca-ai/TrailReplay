@@ -197,10 +197,7 @@ export function drawExportFrame({
           context.lineTo(x + w - inset, dividerY);
           context.stroke();
           context.fillStyle = '#f8f6f0';
-          context.font = `600 ${10 * scale}px "JetBrains Mono", monospace`;
-          context.fillText(t('annotations.sidePanelDetails').toLocaleUpperCase(), contentX, dividerY + 22 * scale);
-          context.fillStyle = '#f8f6f0';
-          drawWrapped(copy.description, `500 ${12 * scale}px "JetBrains Mono", monospace`, 19, dividerY + 43 * scale, 12);
+          drawWrapped(copy.description, `500 ${12 * scale}px "JetBrains Mono", monospace`, 19, dividerY + 26 * scale, 12);
         }
         context.restore();
       }

@@ -240,7 +240,7 @@ function StatItem({ statId, icon, label, value, reserve, compact = false, export
       className={`min-w-max text-center ${exportCompact ? 'px-0.5 py-0.5' : compact ? 'px-1 py-0.5' : 'px-1 py-0.5'}`}
       style={gridColumnStart ? { gridColumnStart } : undefined}
     >
-      <div className={`flex items-center justify-center min-w-0 ${
+      <div data-export-stat-header className={`flex items-center justify-center min-w-0 ${
         exportCompact ? 'gap-1 mb-0.5' : compact ? 'gap-1 mb-1' : 'gap-1.5 mb-1.5'
       }`}>
         <span className={`flex items-center justify-center ${

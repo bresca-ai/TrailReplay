@@ -75,6 +75,7 @@ describe('resolveRecipe', () => {
       holdDuration: 6000,
     });
     expect(resolved.textAnnotations[0].progress).toBeCloseTo(0.25, 2);
+    expect(resolved.textAnnotations[0].routeDistance).toBeCloseTo(2500, 0);
   });
 
   it('anchors by coordinate and reports how far off the route it was', () => {

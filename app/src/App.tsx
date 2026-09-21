@@ -575,7 +575,6 @@ function App() {
                   {sideAnnotationCopy.meta && <p className="tr-annotation-side-panel__meta">{sideAnnotationCopy.meta}</p>}
                   {sideAnnotationCopy.description && (
                     <div className="tr-annotation-side-panel__details">
-                      <span className="tr-annotation-side-panel__details-label">{t('annotations.sidePanelDetails')}</span>
                       <p>{sideAnnotationCopy.description}</p>
                     </div>
                   )}
