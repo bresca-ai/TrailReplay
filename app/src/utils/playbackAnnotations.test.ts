@@ -15,7 +15,7 @@ function createAnnotation(id: string, progress: number): TextAnnotation {
 }
 
 describe('getActivePlaybackAnnotationId', () => {
-  it('shows an annotation for the configured lead time before arrival', () => {
+  it('shows an annotation when the marker reaches its anchor', () => {
     const annotations = [
       { ...createAnnotation('a', 0.2), displayDuration: 800 },
       { ...createAnnotation('b', 0.45), displayDuration: 900 },
@@ -24,28 +24,28 @@ describe('getActivePlaybackAnnotationId', () => {
 
     const result = getActivePlaybackAnnotationId({
       annotations,
-      currentTime: 4_200,
+      currentTime: 4_500,
       totalDuration: 10_000,
     });
 
     expect(result).toBe('b');
   });
 
-  it('hides the annotation immediately after the marker passes it', () => {
+  it('hides the annotation after its configured display time', () => {
     const annotations = [
       createAnnotation('a', 0.45),
     ];
 
     const result = getActivePlaybackAnnotationId({
       annotations,
-      currentTime: 4_501,
+      currentTime: 8_501,
       totalDuration: 10_000,
     });
 
     expect(result).toBeNull();
   });
 
-  it('clamps the visible window to the start of playback', () => {
+  it('does not show a caption before the marker reaches its anchor', () => {
     const annotations = [
       createAnnotation('a', 0.1),
     ];
@@ -56,7 +56,7 @@ describe('getActivePlaybackAnnotationId', () => {
       totalDuration: 10_000,
     });
 
-    expect(result).toBe('a');
+    expect(result).toBeNull();
   });
 
   it('keeps the earliest active annotation when windows overlap', () => {
@@ -67,7 +67,7 @@ describe('getActivePlaybackAnnotationId', () => {
 
     const result = getActivePlaybackAnnotationId({
       annotations,
-      currentTime: 3_900,
+      currentTime: 4_500,
       totalDuration: 10_000,
     });
 

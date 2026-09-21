@@ -96,6 +96,12 @@ function annotationFrom(
   title: string,
   progress: number,
 ): TextAnnotation {
+  // Route annotations are authored for the finished replay. A field note is
+  // the readable, timed treatment; map captions remain available when the
+  // recipe explicitly asks for the lighter-weight option.
+  const presentation = spec.presentation ?? 'side-panel';
+  const holdDuration = spec.holdDuration ?? (presentation === 'side-panel' ? 6000 : undefined);
+
   return {
     id,
     progress,
@@ -110,9 +116,9 @@ function annotationFrom(
     color: spec.color ?? '#C1652F',
     ...(at.elevation !== undefined ? { elevation: Math.round(at.elevation) } : {}),
     displayDuration: spec.displayDuration ?? DEFAULT_ANNOTATION_MS,
-    ...(spec.presentation ? { presentation: spec.presentation } : {}),
+    presentation,
     ...(spec.logo ? { logo: spec.logo } : {}),
-    ...(spec.holdDuration !== undefined ? { holdDuration: spec.holdDuration } : {}),
+    ...(holdDuration !== undefined ? { holdDuration } : {}),
     ...(spec.translations ? { translations: spec.translations } : {}),
   };
 }

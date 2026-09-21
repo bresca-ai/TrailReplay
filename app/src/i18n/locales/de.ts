@@ -439,6 +439,7 @@ export const de = {
     routeDetailsPlaceholder: "Km 10,2 · 15:30–19:30",
     descriptionLabel: "Beschreibung",
     logoLabel: 'Symbol',
+    emojiLabel: 'Emoji',
     slowdownSeconds: 'Verlangsamung (Sekunden)',
     textLanguage: 'Sprache des Anmerkungstexts',
     translationFallback: "Der Text folgt der App-Sprache. Ohne Übersetzung wird der Originaltext angezeigt.",

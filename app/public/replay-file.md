@@ -116,11 +116,12 @@ belongs to.
 ```
 
 Landmark keys: `title`, `subtitle`, `type`, `icon`, `color`, `importance`
-(1–5, default 5), `display`, `id`. A standard map card annotation uses
-`title`, optional `subtitle`, `color`, `displayDuration` (ms on screen, default
-5000), and optional `id`.
+(1–5, default 5), `display`, `id`. An annotation defaults to a readable field
+note, which slows the replay at that kilometre. Use `presentation: "map-card"`
+only when you explicitly want a brief map-only caption; it starts when the
+marker reaches the authored kilometre.
 
-For a readable aid-station panel beside the map, author one object like this:
+For an aid station or other route stop, author a field note like this:
 
 ```json
 "annotations": [

@@ -15,10 +15,11 @@ const DEFAULT_ANNOTATION_DURATION = 4000;
 const DEFAULT_ANNOTATION_COLOR = '#f3b133';
 const ANNOTATION_COLORS = ['#f3b133', '#ff7a59', '#53c16d', '#3b82f6', '#8b5cf6', '#ec4899'];
 
-function AnnotationSymbolPicker({ value, onChange, label }: {
+function AnnotationSymbolPicker({ value, onChange, label, emojiLabel }: {
   value: string;
   onChange: (value: string) => void;
   label: string;
+  emojiLabel: string;
 }) {
   const selectedGlyph = annotationMapGlyph(value);
   return <fieldset className="w-full space-y-2">
@@ -33,10 +34,10 @@ function AnnotationSymbolPicker({ value, onChange, label }: {
         onClick={() => onChange(mapAnnotationSymbol(glyph))}
         className={`grid h-9 w-9 place-items-center rounded-md border transition-colors ${selectedGlyph === glyph ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] text-[var(--trail-orange)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)] hover:border-[var(--trail-orange)]'}`}
       ><svg aria-hidden="true" width="19" height="19" viewBox="0 0 15 15"><path fill="currentColor" d={PINHEAD_PATHS[glyph]} /></svg></button>)}
-      <button type="button" aria-pressed={!selectedGlyph} onClick={() => onChange('🚰')}
-        className={`rounded-md border px-2 text-xs ${!selectedGlyph ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20'}`}>Emoji</button>
+      <button type="button" aria-label={emojiLabel} title={emojiLabel} aria-pressed={!selectedGlyph} onClick={() => onChange('🚰')}
+        className={`rounded-md border px-2 text-xs ${!selectedGlyph ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20'}`}>{emojiLabel}</button>
     </div>
-    {!selectedGlyph && <input aria-label={`${label} emoji`} value={value} onChange={(event) => onChange(event.target.value)} maxLength={8}
+    {!selectedGlyph && <input aria-label={`${label} ${emojiLabel}`} value={value} onChange={(event) => onChange(event.target.value)} maxLength={8}
       className="w-20 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-1 text-sm" />}
   </fieldset>;
 }
@@ -58,7 +59,7 @@ export function RouteAnnotationsEditor() {
   const [draftMeta, setDraftMeta] = useState('');
   const [draftDescription, setDraftDescription] = useState('');
   const [draftAnnotationColor, setDraftAnnotationColor] = useState(DEFAULT_ANNOTATION_COLOR);
-  const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('map-card');
+  const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('side-panel');
   const [draftLogo, setDraftLogo] = useState(mapAnnotationSymbol('pin'));
   const [draftHoldSeconds, setDraftHoldSeconds] = useState(6);
   const updateWording = (annotation: TextAnnotation, updates: { title?: string; subtitle?: string; eyebrow?: string; meta?: string; description?: string }) => {
@@ -168,7 +169,7 @@ export function RouteAnnotationsEditor() {
               <option value="map-card">{t('annotations.presentationMapCard')}</option><option value="side-panel">{t('annotations.presentationSidePanel')}</option>
             </select>
           </label>
-          <AnnotationSymbolPicker value={draftLogo} onChange={setDraftLogo} label={t('annotations.logoLabel')} />
+          <AnnotationSymbolPicker value={draftLogo} onChange={setDraftLogo} label={t('annotations.logoLabel')} emojiLabel={t('annotations.emojiLabel')} />
           {draftPresentation === 'side-panel' && <>
             <label className="text-xs text-[var(--evergreen)]">{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={draftHoldSeconds} onChange={(e) => setDraftHoldSeconds(Math.max(0, Math.min(30, Number(e.target.value) || 0)))} className="ml-2 w-16 rounded border bg-[var(--canvas)] p-2" /></label>
           </>}
@@ -300,7 +301,7 @@ export function RouteAnnotationsEditor() {
                     }} className="rounded border bg-[var(--canvas)] p-2">
                       <option value="map-card">{t('annotations.presentationMapCard')}</option><option value="side-panel">{t('annotations.presentationSidePanel')}</option>
                     </select>
-                    <AnnotationSymbolPicker value={annotation.logo ?? mapAnnotationSymbol('pin')} onChange={(logo) => updateTextAnnotation(annotation.id, { logo })} label={t('annotations.logoLabel')} />
+                    <AnnotationSymbolPicker value={annotation.logo ?? mapAnnotationSymbol('pin')} onChange={(logo) => updateTextAnnotation(annotation.id, { logo })} label={t('annotations.logoLabel')} emojiLabel={t('annotations.emojiLabel')} />
                     {annotation.presentation === 'side-panel' && <>
                       <label>{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={(annotation.holdDuration ?? 0) / 1000} onChange={(e) => updateTextAnnotation(annotation.id, { holdDuration: Math.max(0, Math.min(30, Number(e.target.value) || 0)) * 1000 })} className="w-16 rounded border bg-[var(--canvas)] p-2" /></label>
                     </>}
