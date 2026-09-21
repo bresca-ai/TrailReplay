@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
 
 interface PlaybackProviderProps {
   children: React.ReactNode;
@@ -135,10 +136,13 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       // Depending on it would tear down and recreate this rAF loop every frame,
       // resetting lastTimeRef and dropping elapsed time — which stretched a 30s
       // animation into ~75s of wall-clock (and recording) time.
-      const { currentTime, speed } = useAppStore.getState().playback;
-      const newTime = currentTime + deltaTime * speed;
+      const state = useAppStore.getState();
+      const { currentTime, speed } = state.playback;
+      const annotations = state.textAnnotations;
+      const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations) + deltaTime * speed;
+      const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations);
 
-      if (newTime >= totalDuration) {
+      if (elapsed >= playbackTimeForRoute(totalDuration, totalDuration, annotations)) {
         // End of playback - start outro sequence
         pause();
         setPlayback({ currentTime: totalDuration, progress: 1 });

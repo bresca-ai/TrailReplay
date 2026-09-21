@@ -1,4 +1,4 @@
-import type { CameraSettings, AppSettings, RouteTimingMode, SocialShareSettings, VideoExportSettings } from '@/types';
+import type { CameraSettings, AppSettings, LanguageCode, RouteTimingMode, SocialShareSettings, VideoExportSettings } from '@/types';
 import type { LandmarkType } from '@/types/landmarks';
 
 /**
@@ -110,9 +110,16 @@ export interface RecipeAnnotation extends RecipeAnchor {
   id?: string;
   title?: string;
   subtitle?: string;
+  code?: string;
+  meta?: string;
+  description?: string;
   color?: string;
   /** How long the card is on screen before the replay reaches the point, in ms. */
   displayDuration?: number;
+  presentation?: 'map-card' | 'side-panel';
+  logo?: string;
+  holdDuration?: number;
+  translations?: Partial<Record<LanguageCode, { title: string; subtitle?: string; meta?: string; description?: string }>>;
   auto?: 'overnight-stops';
 }
 

@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useGPX } from '@/hooks/useGPX';
 import { useUnsavedWorkGuard } from '@/hooks/useUnsavedWorkGuard';
 import { usePictureRouteSync } from '@/hooks/usePictureRouteSync';
+import { usePlaybackMediaPopups } from '@/hooks/usePlaybackMediaPopups';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
 import { installFocusModalityTracking } from '@/utils/focusModality';
 import { AppHeader } from '@/components/app/AppHeader';
@@ -15,15 +16,12 @@ import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
 import { VideoPopup } from '@/components/annotations/VideoPopup';
+import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
-import {
-  getTriggeredPlaybackItems,
-  getTriggeredPlaybackPictures,
-  hasPlaybackProgressRewound,
-} from '@/utils/playbackPictures';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
+import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
 import { useI18n } from '@/i18n/useI18n';
@@ -83,7 +81,7 @@ interface StatsResizeGuide {
 }
 
 function App() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const statsScaleWrapperRef = useRef<HTMLDivElement>(null);
@@ -101,20 +99,10 @@ function App() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [autoPlaybackPictureId, setAutoPlaybackPictureId] = useState<string | null>(null);
   const [isNarrowScreen, setIsNarrowScreen] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
   const [exportCropMetrics, setExportCropMetrics] = useState<CropPreviewMetrics | null>(null);
-  const shownPlaybackPictureIdsRef = useRef<Set<string>>(new Set());
-  const queuedPlaybackPictureIdsRef = useRef<string[]>([]);
-  const lastPlaybackProgressRef = useRef(0);
-  const resumePlaybackAfterPictureQueueRef = useRef(false);
-  const pendingQueuedPictureOpenRef = useRef<number | null>(null);
-  const shownPlaybackVideoIdsRef = useRef<Set<string>>(new Set());
-  const lastVideoProgressRef = useRef(0);
-  const queuedPlaybackVideoIdsRef = useRef<string[]>([]);
-  const resumePlaybackAfterVideoRef = useRef(false);
 
   const { parseFiles } = useGPX();
   // Installed once for the whole page, not per panel: the click that moves
@@ -132,8 +120,6 @@ function App() {
   const setExploreMode = useAppStore((state) => state.setExploreMode);
   const animationPhase = useAppStore((state) => state.animationPhase);
   const exportPictureHoldElapsedMs = useAppStore((state) => state.exportPictureHoldElapsedMs);
-  const pictures = useAppStore((state) => state.pictures);
-  const videos = useAppStore((state) => state.videos);
   const exportVideoHoldTimeSeconds = useAppStore((state) => state.exportVideoHoldTimeSeconds);
   const pendingPicturePlacements = useAppStore((state) => state.pendingPicturePlacements);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
@@ -143,15 +129,9 @@ function App() {
   const setSettings = useAppStore((state) => state.setSettings);
   const error = useAppStore((state) => state.error);
   const setError = useAppStore((state) => state.setError);
-  const selectedPictureId = useAppStore((state) => state.selectedPictureId);
-  const setSelectedPictureId = useAppStore((state) => state.setSelectedPictureId);
-  const selectedVideoId = useAppStore((state) => state.selectedVideoId);
-  const setSelectedVideoId = useAppStore((state) => state.setSelectedVideoId);
   const addPicture = useAppStore((state) => state.addPicture);
   const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
   const clearPendingPicturePlacements = useAppStore((state) => state.clearPendingPicturePlacements);
-  const play = useAppStore((state) => state.play);
-  const pause = useAppStore((state) => state.pause);
   const activePanel = useAppStore((state) => state.activePanel);
   const exportAspectRatio = useAppStore((state) => state.videoExportSettings.aspectRatio);
   const socialShareAspectRatio = useAppStore((state) => state.socialShareSettings.aspectRatio);
@@ -162,32 +142,6 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = settings.language;
   }, [settings.language]);
-
-  const openNextQueuedPlaybackPicture = useCallback(() => {
-    const nextPictureId = queuedPlaybackPictureIdsRef.current.shift();
-    if (!nextPictureId) {
-      setAutoPlaybackPictureId(null);
-      return false;
-    }
-
-    setAutoPlaybackPictureId(nextPictureId);
-    return true;
-  }, []);
-
-  const clearPendingQueuedPictureOpen = useCallback(() => {
-    if (pendingQueuedPictureOpenRef.current !== null) {
-      window.clearTimeout(pendingQueuedPictureOpenRef.current);
-      pendingQueuedPictureOpenRef.current = null;
-    }
-  }, []);
-
-  const scheduleNextQueuedPlaybackPicture = useCallback(() => {
-    clearPendingQueuedPictureOpen();
-    pendingQueuedPictureOpenRef.current = window.setTimeout(() => {
-      pendingQueuedPictureOpenRef.current = null;
-      openNextQueuedPlaybackPicture();
-    }, 0);
-  }, [clearPendingQueuedPictureOpen, openNextQueuedPlaybackPicture]);
 
   // Opt-in handle for measuring a replay from outside the browser; see
   // utils/probeBridge.ts and scripts/probe-replay.mjs.
@@ -367,18 +321,6 @@ function App() {
     } satisfies CSSProperties;
   })();
 
-  useEffect(() => {
-    shownPlaybackPictureIdsRef.current.clear();
-    queuedPlaybackPictureIdsRef.current = [];
-    resumePlaybackAfterPictureQueueRef.current = false;
-    shownPlaybackVideoIdsRef.current.clear();
-    queuedPlaybackVideoIdsRef.current = [];
-    resumePlaybackAfterVideoRef.current = false;
-    lastVideoProgressRef.current = useAppStore.getState().playback.progress;
-    clearPendingQueuedPictureOpen();
-    lastPlaybackProgressRef.current = useAppStore.getState().playback.progress;
-  }, [clearPendingQueuedPictureOpen, pictures, textAnnotations, tracks, videos]);
-
   const handleStatsDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const container = mapContainerRef.current;
@@ -521,181 +463,41 @@ function App() {
     };
   }, [availableStats.length, isResizingStats, setSettings]);
 
-  useEffect(() => {
-    return () => {
-      clearPendingQueuedPictureOpen();
-    };
-  }, [clearPendingQueuedPictureOpen]);
+  const { activePicture, activeVideo, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
 
-  useEffect(() => {
-    const currentProgress = playback.progress;
-    const previousProgress = lastPlaybackProgressRef.current;
-
-    if (hasPlaybackProgressRewound(previousProgress, currentProgress)) {
-      shownPlaybackPictureIdsRef.current.clear();
-      queuedPlaybackPictureIdsRef.current = [];
-      resumePlaybackAfterPictureQueueRef.current = false;
-      clearPendingQueuedPictureOpen();
-    }
-
-    // Wait for the cold-start preload/intro sequence to finish before ever
-    // triggering a picture. Otherwise a photo anchored at/near progress 0
-    // pops up as soon as Play is clicked (isPlaying flips true immediately),
-    // ahead of the intro camera zoom-in and before the marker has moved.
-    // During a deterministic export, `useVideoExportRecorder` drives its own
-    // picture-hold logic (so the export can freeze the route position for
-    // the full `displayDuration` instead of just showing the popup over an
-    // already-advancing timeline) — this effect must stay out of the way.
-    if (isDeterministicExport || !playback.isPlaying || animationPhase !== 'playing' || selectedPictureId || autoPlaybackPictureId || selectedVideoId || pictures.length === 0) {
-      lastPlaybackProgressRef.current = currentProgress;
-    } else {
-      const triggeredPictures = getTriggeredPlaybackPictures({
-        pictures,
-        previousProgress,
-        currentProgress,
-        shownPictureIds: shownPlaybackPictureIdsRef.current,
-        queuedPictureIds: queuedPlaybackPictureIdsRef.current,
-      });
-
-      if (triggeredPictures.length > 0) {
-        triggeredPictures.forEach((picture) => {
-          shownPlaybackPictureIdsRef.current.add(picture.id);
-        });
-        queuedPlaybackPictureIdsRef.current.push(...triggeredPictures.map((picture) => picture.id));
-        resumePlaybackAfterPictureQueueRef.current = true;
-        pause();
-        // Open the popup synchronously in this same effect, rather than via
-        // scheduleNextQueuedPlaybackPicture's setTimeout(0). Deferring by even
-        // one macrotask let the camera/marker (which react to the same
-        // progress update) paint an extra moving frame before the popup
-        // mounted — most visible for photos anchored right at the start.
-        clearPendingQueuedPictureOpen();
-        openNextQueuedPlaybackPicture();
-      }
-    }
-
-    lastPlaybackProgressRef.current = currentProgress;
-  }, [
-    animationPhase,
-    autoPlaybackPictureId,
-    clearPendingQueuedPictureOpen,
-    isDeterministicExport,
-    openNextQueuedPlaybackPicture,
-    pause,
-    pictures,
-    playback.isPlaying,
-    playback.progress,
-    selectedPictureId,
-    selectedVideoId,
-  ]);
-
-  // Clips are triggered on the same rule as photos, but hold the replay for
-  // as long as the clip itself runs rather than for a fixed display duration.
-  // The two effects keep separate progress refs: they both run on the same
-  // store update, and a shared ref would leave whichever ran second looking at
-  // a window that had already been consumed.
-  useEffect(() => {
-    const currentProgress = playback.progress;
-    const previousProgress = lastVideoProgressRef.current;
-
-    if (hasPlaybackProgressRewound(previousProgress, currentProgress)) {
-      shownPlaybackVideoIdsRef.current.clear();
-      queuedPlaybackVideoIdsRef.current = [];
-      resumePlaybackAfterVideoRef.current = false;
-    }
-
-    const blocked = isDeterministicExport
-      || !playback.isPlaying
-      || animationPhase !== 'playing'
-      || selectedVideoId
-      || selectedPictureId
-      || autoPlaybackPictureId
-      || videos.length === 0;
-
-    if (!blocked) {
-      const triggeredVideos = getTriggeredPlaybackItems({
-        items: videos,
-        previousProgress,
-        currentProgress,
-        shownItemIds: shownPlaybackVideoIdsRef.current,
-        queuedItemIds: queuedPlaybackVideoIdsRef.current,
-      });
-
-      if (triggeredVideos.length > 0) {
-        triggeredVideos.forEach((video) => shownPlaybackVideoIdsRef.current.add(video.id));
-        queuedPlaybackVideoIdsRef.current.push(...triggeredVideos.map((video) => video.id));
-        resumePlaybackAfterVideoRef.current = true;
-        pause();
-        const nextVideoId = queuedPlaybackVideoIdsRef.current.shift();
-        if (nextVideoId) setSelectedVideoId(nextVideoId);
-      }
-    }
-
-    lastVideoProgressRef.current = currentProgress;
-  }, [
-    animationPhase,
-    autoPlaybackPictureId,
-    isDeterministicExport,
-    pause,
-    playback.isPlaying,
-    playback.progress,
-    selectedPictureId,
-    selectedVideoId,
-    setSelectedVideoId,
-    videos,
-  ]);
-
-  const closeActiveVideo = useCallback(() => {
-    const nextVideoId = queuedPlaybackVideoIdsRef.current.shift();
-    if (nextVideoId) {
-      setSelectedVideoId(nextVideoId);
-      return;
-    }
-
-    setSelectedVideoId(null);
-    if (resumePlaybackAfterVideoRef.current) {
-      resumePlaybackAfterVideoRef.current = false;
-      play();
-    }
-  }, [play, setSelectedVideoId]);
-
-  const closeActivePicture = useCallback(() => {
-    clearPendingQueuedPictureOpen();
-
-    if (selectedPictureId) {
-      setSelectedPictureId(null);
-      return;
-    }
-
-    if (autoPlaybackPictureId) {
-      setAutoPlaybackPictureId(null);
-    }
-
-    if (queuedPlaybackPictureIdsRef.current.length > 0) {
-      scheduleNextQueuedPlaybackPicture();
-      return;
-    }
-
-    if (resumePlaybackAfterPictureQueueRef.current) {
-      resumePlaybackAfterPictureQueueRef.current = false;
-      play();
-    }
-  }, [autoPlaybackPictureId, clearPendingQueuedPictureOpen, play, scheduleNextQueuedPlaybackPicture, selectedPictureId, setSelectedPictureId]);
-  
-  // Get active picture for current progress
-  const selectedPicture = selectedPictureId
-    ? pictures.find((p) => p.id === selectedPictureId)
-    : undefined;
-  const autoPlaybackPicture = autoPlaybackPictureId
-    ? pictures.find((p) => p.id === autoPlaybackPictureId)
-    : undefined;
-  const activePicture = selectedPicture || autoPlaybackPicture;
-  const activeVideo = selectedVideoId ? videos.find((entry) => entry.id === selectedVideoId) : undefined;
   const activeTextAnnotationId = useMemo(() => getActivePlaybackAnnotationId({
     annotations: textAnnotations,
     currentTime: playback.currentTime,
     totalDuration: playback.totalDuration,
-  }), [playback.currentTime, playback.totalDuration, textAnnotations]);
+    phase: animationPhase,
+  }), [animationPhase, playback.currentTime, playback.totalDuration, textAnnotations]);
+  const activeSideAnnotation = textAnnotations.find((annotation) =>
+    annotation.id === activeTextAnnotationId && annotation.presentation === 'side-panel');
+  const localizedSideAnnotation = activeSideAnnotation ? localizedAnnotation(activeSideAnnotation, language) : null;
+  const sideAnnotationCopy = localizedSideAnnotation ? sideAnnotationContent(localizedSideAnnotation) : null;
+  const sideAnnotationNarrowFrame = activeExportCropMetrics
+    ? isNarrowFrame(activeExportCropMetrics.frameWidth, activeExportCropMetrics.frameHeight)
+    : false;
+  const sideAnnotationBottom = settings.showElevationProfile
+    ? sideAnnotationNarrowFrame ? 110 : 88
+    : 24;
+  const sideAnnotationStyle: (CSSProperties & { '--annotation-accent'?: string }) | undefined = activeSideAnnotation ? {
+    '--annotation-accent': activeSideAnnotation.color,
+    bottom: (activeExportCropMetrics?.bottom ?? 0) + sideAnnotationBottom,
+    ...(activeExportCropMetrics && sideAnnotationNarrowFrame
+      ? {
+          right: 'auto',
+          left: activeExportCropMetrics.frameLeft + activeExportCropMetrics.frameWidth / 2,
+          width: Math.min(activeExportCropMetrics.frameWidth - 32, 420),
+          transform: 'translateX(-50%)',
+        }
+      : activeExportCropMetrics
+        ? {
+            right: activeExportCropMetrics.right + Math.max(20, activeExportCropMetrics.frameWidth * 0.045),
+            width: Math.min(420, activeExportCropMetrics.frameWidth * 0.42),
+          }
+        : {}),
+  } : undefined;
   const activePendingPicturePlacement = pendingPicturePlacements[0];
   
   const hasTracks = tracks.length > 0;
@@ -753,6 +555,27 @@ function App() {
                   exportFrame={activeExportCropMetrics}
                 />
               </Suspense>
+
+              {activeSideAnnotation && sideAnnotationCopy && (
+                <div className="tr-annotation-side-panel pointer-events-none absolute z-30" style={sideAnnotationStyle}>
+                  <div className="tr-annotation-side-panel__header">
+                    <div className="tr-annotation-side-panel__logo" aria-hidden="true">{activeSideAnnotation.logo || '●'}</div>
+                    <div className="tr-annotation-side-panel__identity">
+                      <span className="tr-annotation-side-panel__eyebrow">{t('annotations.sidePanelEyebrow')}</span>
+                      {sideAnnotationCopy.code && <span className="tr-annotation-side-panel__code">{sideAnnotationCopy.code}</span>}
+                    </div>
+                    <span className="tr-annotation-side-panel__dash" aria-hidden="true" />
+                  </div>
+                  <h2 className="tr-annotation-side-panel__title">{sideAnnotationCopy.title}</h2>
+                  {sideAnnotationCopy.meta && <p className="tr-annotation-side-panel__meta">{sideAnnotationCopy.meta}</p>}
+                  {sideAnnotationCopy.description && (
+                    <div className="tr-annotation-side-panel__details">
+                      <span className="tr-annotation-side-panel__details-label">{t('annotations.sidePanelDetails')}</span>
+                      <p>{sideAnnotationCopy.description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {!isMapReady && <AppLoadingOverlay />}
 

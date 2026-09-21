@@ -73,4 +73,10 @@ describe('getActivePlaybackAnnotationId', () => {
 
     expect(result).toBe('a');
   });
+
+  it('hides the finish annotation during the final camera zoom out', () => {
+    const annotations = [{ ...createAnnotation('finish', 1), presentation: 'side-panel' as const, holdDuration: 7000 }];
+    expect(getActivePlaybackAnnotationId({ annotations, currentTime: 10_000, totalDuration: 10_000, phase: 'playing' })).toBe('finish');
+    expect(getActivePlaybackAnnotationId({ annotations, currentTime: 10_000, totalDuration: 10_000, phase: 'outro' })).toBeNull();
+  });
 });

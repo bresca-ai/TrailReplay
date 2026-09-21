@@ -1,7 +1,8 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 import type { FeatureCollection, Point } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
-import type { TextAnnotation, UnitSystem } from '@/types';
+import type { LanguageCode, TextAnnotation, UnitSystem } from '@/types';
+import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { convertElevation } from '@/utils/units';
 import {
   CARD_MIN_WIDTH,
@@ -205,6 +206,29 @@ function createAnnotationCardImage(
   return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
+function createLogoImage(annotation: TextAnnotation) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 160;
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+  context.shadowColor = '#0009';
+  context.shadowBlur = 18;
+  context.fillStyle = '#101417';
+  context.beginPath();
+  context.arc(80, 80, 66, 0, Math.PI * 2);
+  context.fill();
+  context.shadowBlur = 0;
+  context.strokeStyle = annotation.color;
+  context.lineWidth = 9;
+  context.stroke();
+  context.fillStyle = '#fff';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.font = '80px sans-serif';
+  context.fillText(annotation.logo || '●', 80, 83, 105);
+  return context.getImageData(0, 0, 160, 160);
+}
+
 function roundRect(
   context: CanvasRenderingContext2D,
   x: number,
@@ -232,6 +256,7 @@ interface UseTextAnnotationsLayerParams {
   isMapLoaded: boolean;
   mapRef: MutableRefObject<maplibregl.Map | null>;
   unitSystem: UnitSystem;
+  language: LanguageCode;
 }
 
 export function useTextAnnotationsLayer({
@@ -240,6 +265,7 @@ export function useTextAnnotationsLayer({
   isMapLoaded,
   mapRef,
   unitSystem,
+  language,
 }: UseTextAnnotationsLayerParams) {
   // The card is sized for the map it sits on, so a resize has to redraw it.
   const [mapWidth, setMapWidth] = useState(0);
@@ -350,7 +376,9 @@ export function useTextAnnotationsLayer({
 
     if (activeAnnotation) {
       const layout = cardLayoutForMapWidth(mapWidth || map.getCanvas().clientWidth);
-      const imageData = createAnnotationCardImage(activeAnnotation, unitSystem, layout);
+      const imageData = activeAnnotation.presentation === 'side-panel'
+        ? createLogoImage(activeAnnotation)
+        : createAnnotationCardImage(localizedAnnotation(activeAnnotation, language), unitSystem, layout);
       if (imageData) {
         // Cards are sized to their text, so consecutive ones differ. updateImage
         // only accepts identical dimensions, so a resize has to replace the
@@ -378,5 +406,6 @@ export function useTextAnnotationsLayer({
     mapRef,
     mapWidth,
     unitSystem,
+    language,
   ]);
 }

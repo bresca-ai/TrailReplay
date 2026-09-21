@@ -87,6 +87,12 @@ screen time in ms, overriding the automatic share).
 **moments** — a card that rises as the replay approaches and fades once past.
 An aid station is a moment. A hut you slept in is a place.
 
+**Put every timed route annotation in the top-level `annotations` array of
+`recipe.json`.** Do not nest it under `tracks`, `settings`, or `landmarks`.
+Each object needs an anchor such as `km` and a `title`. After import, people
+can find and edit these entries in **Media → Annotations**; the Style panel
+only controls the route's appearance.
+
 Both are positioned the same way, by whichever of these you have:
 
 - `"km": 6.5` — distance along its route. This is what sources publish.
@@ -110,8 +116,46 @@ belongs to.
 ```
 
 Landmark keys: `title`, `subtitle`, `type`, `icon`, `color`, `importance`
-(1–5, default 5), `display`, `id`. Annotation keys: `title`, `subtitle`,
-`color`, `displayDuration` (ms on screen, default 5000), `id`.
+(1–5, default 5), `display`, `id`. A standard map card annotation uses
+`title`, optional `subtitle`, `color`, `displayDuration` (ms on screen, default
+5000), and optional `id`.
+
+For a readable aid-station panel beside the map, author one object like this:
+
+```json
+"annotations": [
+  {
+    "km": 10.2,
+    "presentation": "side-panel",
+    "code": "A1",
+    "title": "Avituallament d'aigua",
+    "meta": "Km 10,2 · 15:30–19:30",
+    "description": "Aquarius · Fruits secs · Plàtans",
+    "logo": "🚰",
+    "color": "#1c8ce4",
+    "holdDuration": 7000,
+    "translations": {
+      "en": {
+        "title": "Water station",
+        "meta": "Km 10.2 · 15:30–19:30",
+        "description": "Aquarius · Nuts · Bananas"
+      }
+    }
+  }
+]
+```
+
+`code` labels the station, `title` is its heading, `meta` is the short route
+detail line, and `description` is the longer readable text. Keep those as
+separate JSON fields; the `·` within `meta` or `description` is ordinary text.
+`logo` is the compact symbol on the map. `holdDuration` is additional replay
+time in milliseconds: the marker eases down and back up around the station
+while the side panel remains visible. `translations` keys are app languages
+(`en`, `es`, `ca`, `de`, `fr`); translate `title`, `meta`, and `description`
+inside each language object. The viewer's app language chooses the wording.
+The top-level text is the fallback when a language is missing. Older annotations
+combining fields in `title` and `subtitle` still display, but new recipes
+should use the separate fields. The panel disappears for the final zoom-out.
 
 `iconChanges` swap the moving marker partway: `{ "km": 20, "icon": "🥾",
 "label": "Walking the col" }`.

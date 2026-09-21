@@ -1,4 +1,10 @@
-const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+// Public global instances listed by OpenStreetMap. The primary can reject
+// otherwise valid POSTs (or be busy), so a cold lookup needs a second source.
+const OVERPASS_ENDPOINTS = [
+  { url: 'https://overpass.openstreetmap.fr/api/interpreter', timeoutMs: 15_000 },
+  { url: 'https://overpass-api.de/api/interpreter', timeoutMs: 6_000 },
+  { url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', timeoutMs: 20_000 },
+];
 const MAX_POINTS = 180;
 const MAX_SPAN_DEGREES = 1.5;
 const ROUTE_PADDING = { lat: 0.015, lon: 0.02 };
@@ -7,7 +13,6 @@ const MAX_CACHE_TILES = 64;
 const CACHE_SECONDS = 60 * 60 * 24;
 const TILE_CACHE_SECONDS = 60 * 60 * 24 * 30;
 const CACHE_VERSION = 1;
-const OVERPASS_REQUEST_TIMEOUT_MS = 15_000;
 
 function json(body, status = 200, headers = {}) {
   return Response.json(body, { status, headers: { 'Cache-Control': `public, max-age=${CACHE_SECONDS}`, ...headers } });
@@ -161,15 +166,25 @@ async function readTiles(cache, tiles) {
 }
 
 async function fetchLandmarks(bounds) {
-  const response = await fetch(OVERPASS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': 'TrailReplay/1.0 (+https://trailreplay.app)' },
-    body: new URLSearchParams({ data: queryFor(bounds) }),
-    signal: AbortSignal.timeout(OVERPASS_REQUEST_TIMEOUT_MS),
-  });
-  if (!response.ok) throw new Error('Nearby-place service is temporarily unavailable');
-  const payload = await response.json();
-  return (payload.elements || []).map(normalizeElement).filter(Boolean);
+  let lastError;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const response = await fetch(endpoint.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': 'TrailReplay/1.0 (+https://trailreplay.app)' },
+        body: new URLSearchParams({ data: queryFor(bounds) }),
+        signal: AbortSignal.timeout(endpoint.timeoutMs),
+      });
+      if (!response.ok) throw new Error(`Overpass returned ${response.status}`);
+      const payload = await response.json();
+      if (!Array.isArray(payload.elements)) throw new Error('Overpass returned invalid data');
+      return payload.elements.map(normalizeElement).filter(Boolean);
+    } catch (error) {
+      lastError = error;
+      console.warn('Nearby-place provider failed; trying another', endpoint.url, error);
+    }
+  }
+  throw new Error(`Nearby-place service is temporarily unavailable: ${lastError instanceof Error ? lastError.message : 'unknown error'}`);
 }
 
 function exactRouteCacheKey(request, points) {
@@ -180,12 +195,13 @@ async function lookupWithRouteCache(context, points, bounds) {
   // This is the final, availability-first fallback. It deliberately does not
   // depend on a D1 or KV binding, so a binding outage still leaves the nearby
   // places feature usable through Overpass.
-  const key = exactRouteCacheKey(context.request, points);
-  const cached = await caches.default.match(key);
+  const cache = globalThis.caches?.default;
+  const key = cache ? exactRouteCacheKey(context.request, points) : null;
+  const cached = key ? await cache.match(key) : null;
   if (cached) return cached;
   const landmarks = await fetchLandmarks(bounds);
   const result = json({ landmarks, attribution: '© OpenStreetMap contributors', coverage: { complete: true, source: 'route-cache', tiles: 1, cacheHits: 0, fetchedTiles: 1 } });
-  context.waitUntil(caches.default.put(key, result.clone()));
+  if (cache && key) context.waitUntil(cache.put(key, result.clone()));
   return result;
 }
 

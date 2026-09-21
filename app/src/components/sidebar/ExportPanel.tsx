@@ -5,7 +5,7 @@ import { useProjectFile } from '@/hooks/useProjectFile';
 import { ExportSettingsModal } from './export/ExportSettingsModal';
 import { QUALITY_OPTIONS } from './export/exportConfig';
 import { useVideoExportRecorder } from './export/useVideoExportRecorder';
-import { isValidDeliveryEmail } from './export/studioDelivery';
+import { isValidDeliveryEmail, localStudioDownload } from './export/studioDelivery';
 import { SocialSharePanel } from './export/SocialSharePanel';
 import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
 
@@ -72,7 +72,7 @@ export function ExportPanel() {
       marketingConsent,
     },
   });
-  const studioEmailValid = isValidDeliveryEmail(studioDeliveryEmail);
+  const studioEmailValid = localStudioDownload || isValidDeliveryEmail(studioDeliveryEmail);
 
   // The Instagram share prompt used to be a small card buried in the
   // scrollable sidebar (easy to miss). Surface it as a centered overlay
@@ -168,7 +168,7 @@ export function ExportPanel() {
                     {t('export.qualityModeStudio')}
                   </p>
                   <p className="mt-0.5 text-[11px] leading-4 text-[var(--canvas)]/70">
-                    {t('export.studioSidebarSummary')}
+                    {t(localStudioDownload ? 'export.studioLocalSummary' : 'export.studioSidebarSummary')}
                   </p>
                 </div>
               </div>

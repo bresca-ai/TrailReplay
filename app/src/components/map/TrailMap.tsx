@@ -165,6 +165,7 @@ export function TrailMap(_props: TrailMapProps) {
     isMapLoaded,
     mapRef: map,
     unitSystem: settings.unitSystem,
+    language: settings.language,
   });
 
   const handleSelectLandmark = useCallback((landmarkId: string) => {
