@@ -2,11 +2,25 @@
 
 All notable user-facing changes are recorded here. TrailReplay follows [Semantic Versioning](https://semver.org/).
 
-## [1.0.1] - 2026-09-18
+## [1.0.2] - 2026-09-21
+
+Version 1.0.1 was prepared but never published as a release; its changes ship here.
+
+### Added
+
+- Route annotations: notes and icon changes anchored to a point on the route, shown on the map or in a side panel, with a playback hold and localized content. Recipes can author them too.
+
+### Fixed
+
+- Annotations and icon changes stay at the right place on the route when switching between Constant Pace and Real Pace, including annotations from older projects.
+- Route-note content is fully editable.
+- Stat icons and labels appear again in exported videos.
+- Local Studio export works and reports frame progress.
 
 ### Improved
 
-- Product analytics now records the camera stability and follow-distance actually used during replay and export, including default values.
+- Video exports with annotations use far less memory and finish faster: redundant slowdown frames are skipped, the background map warm-up is released during export, and encoded video is no longer held in memory until the end.
+- Product analytics records the camera stability and follow-distance actually used during replay and export, including default values.
 - Replay, video export, and poster export report bounded choices for major camera, map, annotation, media, video-format, and presentation options. Disabled choices are explicit; private annotation and poster text is never sent.
 - Annotation creation is counted separately from annotations present in a replay or export.
 
@@ -29,5 +43,5 @@ All notable user-facing changes are recorded here. TrailReplay follows [Semantic
 
 - TrailReplay remains available under its existing attribution license. Apps using the software must display the attribution described in `LICENSE`.
 
-[1.0.1]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.1
+[1.0.2]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.2
 [1.0.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.0
