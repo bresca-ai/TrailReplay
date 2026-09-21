@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { TextAnnotation } from '@/types';
-import { playbackTimeForRoute, routeTimeForPlayback } from './annotationTiming';
+import {
+  annotationExportFrameStride,
+  annotationPlaybackRate,
+  playbackTimeForRoute,
+  routeTimeForPlayback,
+} from './annotationTiming';
 
 const station: TextAnnotation = {
   id: 'station', progress: 0.5, lat: 0, lon: 0, title: 'Station',
@@ -20,5 +25,26 @@ describe('annotation slowdown', () => {
 
   it('leaves legacy cards on the original timeline', () => {
     expect(playbackTimeForRoute(60_000, 60_000, [{ ...station, presentation: 'map-card' }])).toBe(60_000);
+  });
+
+  it('identifies redundant export frames only inside the annotation slowdown', () => {
+    const duration = 60_000;
+    const arrival = station.progress * duration;
+
+    expect(annotationPlaybackRate(arrival - 500, duration, [station])).toBe(1);
+    expect(annotationExportFrameStride(arrival - 500, duration, [station])).toBe(1);
+    expect(annotationPlaybackRate(arrival, duration, [station])).toBeCloseTo(15);
+    // Keep enough intermediate samples for the slowdown easing to remain
+    // visibly smooth while still avoiding most near-identical map renders.
+    expect(annotationExportFrameStride(arrival, duration, [station])).toBe(2);
+    expect(annotationExportFrameStride(arrival + 500, duration, [station])).toBe(1);
+  });
+
+  it('bounds extremely long holds to avoid multi-second video samples', () => {
+    const duration = 60_000;
+    const longHold = { ...station, holdDuration: 30_000 };
+
+    expect(annotationPlaybackRate(30_000, duration, [longHold])).toBeCloseTo(61);
+    expect(annotationExportFrameStride(30_000, duration, [longHold])).toBe(2);
   });
 });

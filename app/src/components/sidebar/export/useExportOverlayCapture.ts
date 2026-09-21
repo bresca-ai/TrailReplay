@@ -4,6 +4,7 @@ import { getElevationAtProgress } from '@/components/map/elevationProfile';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { convertElevation } from '@/utils/units';
 import type { StatId } from '@/types';
+import { drawExportStatIcon } from './drawExportStatIcon';
 import {
   getCapturedCanvasDrawSize,
   getElevationOverlayDrawRect,
@@ -140,7 +141,11 @@ export function useExportOverlayCapture({
               allowTaint: true,
               width: statsElement.offsetWidth,
               height: statsElement.offsetHeight,
-              ignoreElements: (element) => element.hasAttribute('data-export-stat-value'),
+              // Headers and values are composited directly from the DOM below.
+              // SVG icons are unreliable in html2canvas on some Chrome builds;
+              // a failed snapshot used to leave only the numeric values.
+              ignoreElements: (element) => element.hasAttribute('data-export-stat-value')
+                || element.hasAttribute('data-export-stat-header'),
               // Capture the intrinsic 1x overlay, then apply statsScale once
               // in the export layout math below. Otherwise html2canvas may
               // bake the preview's ancestor transform into the bitmap and the
@@ -355,6 +360,58 @@ export function useExportOverlayCapture({
     });
     const elementScaleX = drawRect.drawWidth / statsRect.width;
     const elementScaleY = drawRect.drawHeight / statsRect.height;
+
+    // Draw each stat's icon and label from its live DOM geometry. In particular
+    // this keeps the Route/Mountain glyphs in MP4 even if html2canvas skips an
+    // SVG (or the static overlay snapshot fails entirely).
+    statsElement.querySelectorAll<HTMLElement>('[data-export-stat-header]').forEach((header) => {
+      const icon = header.querySelector('svg');
+      const label = header.querySelector('span:last-child');
+      if (!icon || !label) return;
+
+      const iconRect = icon.getBoundingClientRect();
+      const viewBox = icon.viewBox.baseVal;
+      if (iconRect.width > 0 && iconRect.height > 0 && viewBox.width > 0 && viewBox.height > 0) {
+        context.save();
+        context.translate(
+          drawRect.drawX + (iconRect.left - statsRect.left) * elementScaleX,
+          drawRect.drawY + (iconRect.top - statsRect.top) * elementScaleY,
+        );
+        context.scale(
+          (iconRect.width * elementScaleX) / viewBox.width,
+          (iconRect.height * elementScaleY) / viewBox.height,
+        );
+        context.translate(-viewBox.x, -viewBox.y);
+        context.strokeStyle = getComputedStyle(icon).color || '#ffffff';
+        context.lineWidth = Number(icon.getAttribute('stroke-width')) || 2;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        drawExportStatIcon(context, icon);
+        context.restore();
+      }
+
+      const labelRect = label.getBoundingClientRect();
+      const style = getComputedStyle(label);
+      const fontSize = getExportedOverlayFontSize(
+        Number.parseFloat(style.fontSize) || 9,
+        statsElement.offsetHeight,
+        drawRect.drawHeight,
+      );
+      const centerX = drawRect.drawX + (labelRect.left + labelRect.width / 2 - statsRect.left) * elementScaleX;
+      const centerY = drawRect.drawY + (labelRect.top + labelRect.height / 2 - statsRect.top) * elementScaleY;
+      context.save();
+      context.font = `${style.fontWeight || '600'} ${fontSize}px ${style.fontFamily || 'sans-serif'}`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillStyle = style.color || '#ffffff';
+      if (statsElement.classList.contains('tr-stats-overlay--plain')) {
+        context.shadowColor = 'rgba(0, 0, 0, 0.85)';
+        context.shadowBlur = Math.max(2, fontSize * 0.25);
+        context.shadowOffsetY = Math.max(1, fontSize * 0.06);
+      }
+      context.fillText(label.textContent || '', centerX, centerY);
+      context.restore();
+    });
 
     statsElement.querySelectorAll<HTMLElement>('[data-export-stat-value]').forEach((valueElement) => {
       const id = valueElement.dataset.exportStatValue as StatId | undefined;

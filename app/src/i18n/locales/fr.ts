@@ -380,7 +380,6 @@ export const fr = {
   },
   annotations: {
     sidePanelEyebrow: 'Moment du parcours',
-    sidePanelDetails: 'Détails',
     styleYourRouteTitle: 'Styliser votre itinéraire',
     styleYourRouteHint: 'Choisissez le tracé, le marqueur, les statistiques et les annotations du rendu final.',
     tracksTitle: 'Parcours',

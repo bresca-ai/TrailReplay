@@ -13,7 +13,7 @@ export interface Mp4CanvasEncoder {
    * (microseconds on the output timeline). Deterministic exports pass the fixed
    * frame timestamp, while the legacy recorder path uses elapsed wall time.
    */
-  encodeCanvas(canvas: HTMLCanvasElement, timestampMicros: number): Promise<void>;
+  encodeCanvas(canvas: HTMLCanvasElement, timestampMicros: number, durationMicros?: number): Promise<void>;
   /** Number of frames still queued in the encoder (for backpressure decisions). */
   pendingFrames(): number;
   /** Flush, mux and return the finished MP4 as a Blob. */
@@ -84,9 +84,14 @@ export async function createMp4CanvasEncoder(
       // No frameRate: timestamps are real elapsed time (variable spacing), so we
       // don't want the muxer snapping them to a fixed fps grid.
     },
-    // Place the moov atom at the front so the file is seekable and players know
-    // its duration up front. Keeps chunks in memory until finalize().
-    fastStart: 'in-memory',
+    // The export is delivered as a complete Blob, so progressive-download Fast
+    // Start buys us nothing here. `in-memory` also retains every encoded media
+    // chunk until finalize; annotation slowdowns add hundreds of frames apiece,
+    // which made later annotations increasingly expensive as memory pressure
+    // and garbage collection grew. Writing media into the target immediately
+    // keeps only the output buffer and lightweight sample metadata alive. The
+    // resulting regular MP4 remains seekable once the Blob is complete.
+    fastStart: false,
     firstTimestampBehavior: 'offset',
   });
 
@@ -101,12 +106,24 @@ export async function createMp4CanvasEncoder(
 
   const frameDurationMicros = Math.round(1_000_000 / options.fps);
   const keyFrameIntervalMicros = 2_000_000; // Force a keyframe at least every 2s.
+  // `encodeQueueSize` only counts encode requests that the codec has not yet
+  // accepted. It does not count raw frames retained inside the hardware
+  // encoder for quality-mode lookahead. Those frames keep their GPU-backed
+  // canvas copies alive even after our VideoFrame wrapper is closed. Bound
+  // that hidden pipeline by flushing after roughly 64 MiB of submitted RGBA
+  // pixels (and at least every eight frames for smaller exports).
+  const rawFrameBytes = options.width * options.height * 4;
+  const maxFramesBetweenFlushes = Math.max(
+    1,
+    Math.min(8, Math.floor((64 * 1024 * 1024) / rawFrameBytes)),
+  );
   let lastTimestampMicros = -1;
   let lastKeyframeMicros = -keyFrameIntervalMicros;
+  let framesSinceFlush = 0;
   let finalized = false;
 
   return {
-    async encodeCanvas(canvas, timestampMicros) {
+    async encodeCanvas(canvas, timestampMicros, durationMicros = frameDurationMicros) {
       if (finalized || encoderError || encoder.state !== 'configured') return;
 
       // Timestamps must be strictly increasing; skip any non-advancing frame.
@@ -119,18 +136,23 @@ export async function createMp4CanvasEncoder(
 
       const frame = new VideoFrame(canvas, {
         timestamp,
-        duration: frameDurationMicros,
+        duration: Math.max(1, Math.round(durationMicros)),
       });
       try {
         encoder.encode(frame, { keyFrame });
       } finally {
         frame.close();
       }
+      framesSinceFlush += 1;
 
       // A fixed-frame export must never turn encoder pressure into a missing
-      // output frame. Apply backpressure here and let export take longer.
-      if (encoder.encodeQueueSize >= 8) {
+      // output frame. `flush()` emits internal pending output as well as queued
+      // requests, releasing the codec's references to the submitted canvases.
+      // The queue-size condition remains useful on unusually slow encoders;
+      // the frame budget handles fast-accepting encoders with deep lookahead.
+      if (encoder.encodeQueueSize >= 8 || framesSinceFlush >= maxFramesBetweenFlushes) {
         await encoder.flush();
+        framesSinceFlush = 0;
         if (encoderError) throw encoderError;
       }
     },

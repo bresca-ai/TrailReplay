@@ -99,6 +99,7 @@ function annotationFrom(
   return {
     id,
     progress,
+    routeDistance: at.routeDistanceMeters,
     lat: at.lat,
     lon: at.lon,
     title,
@@ -335,6 +336,7 @@ export function resolveRecipe(
     iconChanges.push({
       id: spec.id ?? createId('recipe-icon'),
       progress,
+      routeDistance: at.routeDistanceMeters,
       icon: spec.icon,
       ...(spec.label ? { label: spec.label } : {}),
     });

@@ -380,7 +380,6 @@ export const en = {
   },
   annotations: {
     sidePanelEyebrow: 'Route moment',
-    sidePanelDetails: 'Details',
     styleYourRouteTitle: 'Style your route',
     styleYourRouteHint: 'Choose the route, marker, stats and map callouts that appear in the finished video.',
     tracksTitle: 'Tracks',

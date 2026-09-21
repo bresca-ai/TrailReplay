@@ -53,13 +53,14 @@ export function RouteAnnotationsEditor() {
     if (!currentPosition) return;
     updateTextAnnotation(annotation.id, {
       progress: playback.progress,
+      routeDistance,
       lat: currentPosition.lat,
       lon: currentPosition.lon,
       elevation: currentPosition.elevation > 0 ? currentPosition.elevation : undefined,
     });
   };
 
-  const { currentPosition } = useComputedJourney();
+  const { currentPosition, routeDistance } = useComputedJourney();
   const canAddAnnotation = Boolean(currentPosition);
 
   const handleAddAnnotation = () => {
@@ -69,6 +70,7 @@ export function RouteAnnotationsEditor() {
     addTextAnnotation({
       id: annotationId,
       progress: playback.progress,
+      routeDistance,
       lat: currentPosition.lat,
       lon: currentPosition.lon,
       title: draftAnnotationTitle.trim(),
@@ -108,7 +110,7 @@ export function RouteAnnotationsEditor() {
           onChange={(e) => setDraftAnnotationTitle(e.target.value)}
           placeholder={t('annotations.routeAnnotationTitlePlaceholder')}
           className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
-          maxLength={48}
+          maxLength={120}
         />
 
         {draftPresentation === 'side-panel' ? <>
@@ -234,7 +236,7 @@ export function RouteAnnotationsEditor() {
                       onChange={(e) => updateWording(annotation, { title: e.target.value })}
                       aria-label={t('annotations.routeAnnotationTitlePlaceholder')}
                       className="flex-1 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
-                      maxLength={48}
+                      maxLength={120}
                     />
                   </div>
 
