@@ -6,6 +6,7 @@ import {
   routeDistanceForSegmentAnchor,
   segmentAnchorForRouteDistance,
 } from '@/utils/journeyUtils';
+import { projectCoordinateToJourney } from '@/utils/routeProjection';
 
 /**
  * Keeps route-anchored media and actions in step with the timing mode.
@@ -139,10 +140,32 @@ export function usePictureRouteSync() {
       if (progress !== null && Math.abs(progress - item.progress) > TOLERANCE) apply(progress);
     };
 
-    store.textAnnotations.forEach((annotation) => retimeAction(
-      annotation,
-      (progress) => store.updateTextAnnotation(annotation.id, { progress }),
-    ));
+    store.textAnnotations.forEach((annotation) => {
+      // Projects saved before route actions had distance anchors still contain
+      // the annotation's map coordinate. Resolve it once and persist the
+      // missing anchor; otherwise switching to Constant Pace silently leaves
+      // the annotation on its old point-counted timeline position.
+      if (annotation.routeDistance === undefined) {
+        const match = projectCoordinateToJourney(
+          computedJourney,
+          annotation.lat,
+          annotation.lon,
+          annotation.progress,
+          routeTimingMode,
+        );
+        if (match?.routeDistance !== undefined) {
+          store.updateTextAnnotation(annotation.id, {
+            progress: match.progress,
+            routeDistance: match.routeDistance,
+          });
+        }
+        return;
+      }
+
+      retimeAction(annotation, (progress) => {
+        store.updateTextAnnotation(annotation.id, { progress });
+      });
+    });
     store.iconChanges.forEach((iconChange) => retimeAction(
       iconChange,
       (progress) => store.updateIconChangePosition(iconChange.id, progress),
