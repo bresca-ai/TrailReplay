@@ -356,6 +356,12 @@ export function TrailMap(_props: TrailMapProps) {
     cameraMode,
     diagnostics: tileDiagnostics,
     elevationData,
+    // Deterministic export already advances the visible map one frame at a
+    // time. Keeping the second, offscreen MapLibre instance alive at the same
+    // time duplicates its tile/GPU cache and caused memory to climb into
+    // gigabytes during annotation slowdowns. Unmount it for the export and let
+    // the recording map own tile loading until the export completes.
+    enabled: !isExporting,
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying: playback.isPlaying,

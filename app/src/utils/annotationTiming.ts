@@ -49,7 +49,7 @@ export function annotationExportFrameStride(
   routeTime: number,
   totalDuration: number,
   annotations: TextAnnotation[],
-  maximum = 6,
+  maximum = 30,
 ): number {
   return Math.max(1, Math.min(maximum, Math.floor(annotationPlaybackRate(routeTime, totalDuration, annotations))));
 }

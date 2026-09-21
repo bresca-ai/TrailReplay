@@ -35,6 +35,7 @@ interface UseReplayTileWarmupParams {
   animationPhase: 'preloading' | 'intro' | 'playing' | 'idle' | 'outro' | 'ended';
   cameraMode: ReplayCameraMode | 'cinematic';
   elevationData: Array<{ elevation: number; progress?: number }>;
+  enabled: boolean;
   followBehindZoomLevel: number;
   isMapLoaded: boolean;
   isPlaying: boolean;
@@ -75,7 +76,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   });
 
   useEffect(() => {
-    if (!params.isMapLoaded || warmupMapRef.current || typeof document === 'undefined') return;
+    if (!params.enabled || !params.isMapLoaded || warmupMapRef.current || typeof document === 'undefined') return;
 
     const container = document.createElement('div');
     container.setAttribute('aria-hidden', 'true');
@@ -138,9 +139,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       container.remove();
       warmupMapRef.current = null;
     };
-  }, [params.diagnostics, params.isMapLoaded, scheduler]);
+  }, [params.diagnostics, params.enabled, params.isMapLoaded, scheduler]);
 
   useEffect(() => {
+    if (!params.enabled) return;
     const map = warmupMapRef.current;
     if (!map) return;
 
@@ -161,10 +163,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     return () => {
       map.off('load', syncActiveBaseMap);
     };
-  }, [params.mapStyle]);
+  }, [params.enabled, params.mapStyle]);
 
   useEffect(() => {
-    if (!params.isMapLoaded) return;
+    if (!params.enabled || !params.isMapLoaded) return;
 
     let cancelled = false;
     let isWarming = false;
@@ -235,5 +237,5 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [params.isMapLoaded, scheduler]);
+  }, [params.enabled, params.isMapLoaded, scheduler]);
 }
