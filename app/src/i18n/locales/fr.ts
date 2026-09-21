@@ -440,7 +440,7 @@ export const fr = {
     logoLabel: 'Symbole',
     emojiLabel: 'Émoji',
     iconSearchLabel: 'Rechercher des icônes de carte',
-    iconSearchPlaceholder: 'Parmi plus de 2 300 icônes (en anglais) : mountain, water, bike…',
+    iconSearchPlaceholder: 'Parmi plus de 2 300 icônes : montagne, eau, vélo…',
     iconSearchLoading: 'Chargement des icônes…',
     iconSearchEmpty: 'Aucune icône ne correspond à « {query} ».',
     iconSearchCount: '{shown} sur {total} affichées. Ajoutez un mot pour affiner.',

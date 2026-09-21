@@ -440,7 +440,7 @@ export const es = {
     logoLabel: 'Símbolo',
     emojiLabel: 'Emoticono',
     iconSearchLabel: 'Buscar iconos de mapa',
-    iconSearchPlaceholder: 'Busca entre más de 2.300 iconos (en inglés): mountain, water, bike…',
+    iconSearchPlaceholder: 'Busca entre más de 2.300 iconos: montaña, agua, bici…',
     iconSearchLoading: 'Cargando iconos…',
     iconSearchEmpty: 'Ningún icono coincide con «{query}».',
     iconSearchCount: 'Se muestran {shown} de {total}. Añade otra palabra para afinar.',

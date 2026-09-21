@@ -8,7 +8,7 @@ import {
   mapAnnotationSymbol,
   pinheadAnnotationSymbol,
 } from '@/components/annotations/annotationSymbol';
-import { loadPinheadIcons, searchPinheadIcons, usePinheadIcons } from '@/components/annotations/pinheadIcons';
+import { loadPinheadIcons, searchPinheadIcons, usePinheadIcons, usePinheadTerms } from '@/components/annotations/pinheadIcons';
 import { LANDMARK_GLYPH_KEYS, LANDMARK_GLYPH_LABELS, PINHEAD_PATHS } from '@/components/map/landmarkGlyphs';
 
 // Enough to scan at a glance without rendering thousands of buttons for "a".
@@ -38,19 +38,22 @@ export function AnnotationSymbolPicker({ value, onChange }: {
   value: string;
   onChange: (value: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [query, setQuery] = useState('');
   const [loadFailed, setLoadFailed] = useState(false);
   const searching = query.trim().length > 0;
   const icons = usePinheadIcons(searching || annotationPinheadId(value) !== null);
+  // Searches match the English names and, when the app is in another
+  // language, the same words in that language.
+  const localTerms = usePinheadTerms(language, searching);
 
   const selectedGlyph = annotationMapGlyph(value);
   const selectedPinheadId = annotationPinheadId(value);
   const isEmoji = !selectedGlyph && !selectedPinheadId;
 
   const { results, total } = useMemo(
-    () => (icons ? searchPinheadIcons(icons, query, RESULT_LIMIT) : { results: [], total: 0 }),
-    [icons, query],
+    () => (icons ? searchPinheadIcons(icons, query, RESULT_LIMIT, localTerms) : { results: [], total: 0 }),
+    [icons, localTerms, query],
   );
 
   const retry = () => {

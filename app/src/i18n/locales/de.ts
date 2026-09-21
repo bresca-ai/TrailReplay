@@ -440,7 +440,7 @@ export const de = {
     logoLabel: 'Symbol',
     emojiLabel: 'Emoji',
     iconSearchLabel: 'Kartensymbole suchen',
-    iconSearchPlaceholder: 'Über 2.300 Symbole durchsuchen (auf Englisch): mountain, water, bike…',
+    iconSearchPlaceholder: 'Über 2.300 Symbole durchsuchen: Berg, Wasser, Fahrrad…',
     iconSearchLoading: 'Symbole werden geladen…',
     iconSearchEmpty: 'Keine Symbole passen zu „{query}“.',
     iconSearchCount: '{shown} von {total} angezeigt. Ein weiteres Wort grenzt die Suche ein.',

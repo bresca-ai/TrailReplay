@@ -440,7 +440,7 @@ export const en = {
     logoLabel: 'Symbol',
     emojiLabel: 'Emoji',
     iconSearchLabel: 'Search map icons',
-    iconSearchPlaceholder: 'Search 2,300+ icons: mountain, water, bike…',
+    iconSearchPlaceholder: 'Search 2,300+ icons: mountain, water, tent…',
     iconSearchLoading: 'Loading icons…',
     iconSearchEmpty: 'No icons match “{query}”.',
     iconSearchCount: 'Showing {shown} of {total}. Add a word to narrow it down.',

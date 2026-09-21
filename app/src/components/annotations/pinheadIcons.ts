@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 // Served as a static asset and fetched on demand: ~2,300 icon paths are far too
 // many to put in the main bundle for a picker most sessions never open.
 import pinheadIndexUrl from '@waysidemapping/pinhead/dist/icons/index.complete.json?url';
@@ -35,32 +35,84 @@ export function parsePinheadIndex(index: PinheadIndex): PinheadIcon[] {
 }
 
 /**
- * Every query word has to appear in the icon's name or category, so "tent"
- * finds the tents and "water tap" narrows to the taps. Name matches rank above
- * category-only ones, and shorter names first: "mountain" before
- * "mountain with greek cross".
+ * English word → the same word in one app language (synonyms space-separated).
+ * Pinhead names are built from ~1,650 English words, so translating the words
+ * rather than the 2,300 names is what makes every icon findable in every
+ * language. Proper names, letters and acronyms that read the same everywhere
+ * are left out and match through the English name.
  */
-export function searchPinheadIcons(icons: PinheadIcon[], query: string, limit: number) {
-  const words = query.toLowerCase().split(/[\s_]+/).filter(Boolean);
+export type PinheadTerms = Record<string, string>;
+
+// Linking words a query can contain in any language; the icon names do not
+// use them in a way that narrows the search.
+const QUERY_STOPWORDS = new Set([
+  'a', 'an', 'and', 'at', 'for', 'from', 'of', 'on', 'the', 'to', 'with',
+  'con', 'de', 'del', 'el', 'en', 'la', 'las', 'los', 'para', 'un', 'una', 'y',
+  'als', 'amb', 'els', 'i', 'les', 'per',
+  'au', 'aux', 'avec', 'des', 'du', 'et', 'le', 'pour', 'une',
+  'auf', 'das', 'der', 'die', 'ein', 'eine', 'im', 'mit', 'und', 'von', 'zu',
+]);
+
+/** Lower case, no accents, apostrophes and hyphens as spaces: "Camí" finds "cami". */
+export function normalizeSearchText(text: string) {
+  return text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/['’\-_]/g, ' ');
+}
+
+const localizedCache = new WeakMap<PinheadTerms, Map<string, { label: string; terms: string }>>();
+
+function localized(icon: PinheadIcon, localTerms: PinheadTerms) {
+  let cache = localizedCache.get(localTerms);
+  if (!cache) {
+    cache = new Map();
+    localizedCache.set(localTerms, cache);
+  }
+  let entry = cache.get(icon.id);
+  if (!entry) {
+    const translate = (words: string) => words.split(' ').map((word) => localTerms[word] ?? word).join(' ');
+    entry = { label: normalizeSearchText(translate(icon.label)), terms: normalizeSearchText(translate(icon.terms)) };
+    cache.set(icon.id, entry);
+  }
+  return entry;
+}
+
+/**
+ * Every query word has to appear in the icon's name or category, in English
+ * or — when `localTerms` is given — in the app's language, so "tent" and
+ * "tenda" both find the tents and "water tap" narrows to the taps. Name
+ * matches rank above category-only ones, and shorter names first: "mountain"
+ * before "mountain with greek cross".
+ */
+export function searchPinheadIcons(icons: PinheadIcon[], query: string, limit: number, localTerms?: PinheadTerms | null) {
+  const words = normalizeSearchText(query).split(/\s+/).filter((word) => word && !QUERY_STOPWORDS.has(word));
   if (words.length === 0) return { results: [], total: 0 };
 
   const phrase = words.join(' ');
-  const rank = (icon: PinheadIcon) => {
-    if (icon.label === phrase) return 0;
-    if (icon.label.startsWith(phrase)) return 1;
-    if (icon.label.split(' ').some((word) => word.startsWith(words[0]))) return 2;
-    if (icon.label.includes(words[0])) return 3;
+  const rankLabel = (label: string) => {
+    if (label === phrase) return 0;
+    if (label.startsWith(phrase)) return 1;
+    if (label.split(' ').some((word) => word.startsWith(words[0]))) return 2;
+    if (label.includes(words[0])) return 3;
     return 4;
   };
 
-  const matches = icons
-    .filter((icon) => words.every((word) => icon.terms.includes(word)))
-    .map((icon) => ({ icon, rank: rank(icon) }))
-    .sort((a, b) => a.rank - b.rank
-      || a.icon.label.length - b.icon.label.length
-      || a.icon.label.localeCompare(b.icon.label));
+  const matches = icons.flatMap((icon) => {
+    const local = localTerms ? localized(icon, localTerms) : null;
+    const found = words.every((word) => icon.terms.includes(word) || (local?.terms.includes(word) ?? false));
+    if (!found) return [];
+    return [{ icon, rank: Math.min(rankLabel(icon.label), local ? rankLabel(local.label) : 4) }];
+  }).sort((a, b) => a.rank - b.rank
+    || a.icon.label.length - b.icon.label.length
+    || a.icon.label.localeCompare(b.icon.label));
 
   return { results: matches.slice(0, limit).map(({ icon }) => icon), total: matches.length };
+}
+
+const termLoaders = import.meta.glob<PinheadTerms>('./pinheadTerms/*.json', { import: 'default' });
+
+/** The app language's word list, or `null` for English and languages without one. */
+export function loadPinheadTerms(language: string): Promise<PinheadTerms | null> {
+  const load = termLoaders[`./pinheadTerms/${language}.json`];
+  return load ? load() : Promise.resolve(null);
 }
 
 let icons: PinheadIcon[] | null = null;
@@ -108,4 +160,18 @@ export function usePinheadIcons(needed: boolean) {
     if (needed && !icons) loadPinheadIcons().catch(() => { /* callers fall back to the pin */ });
   }, [needed]);
   return loaded;
+}
+
+/** The app language's word list once `needed`; English search needs none. */
+export function usePinheadTerms(language: string, needed: boolean) {
+  const [terms, setTerms] = useState<{ language: string; words: PinheadTerms | null } | null>(null);
+  useEffect(() => {
+    if (!needed || terms?.language === language) return;
+    let cancelled = false;
+    loadPinheadTerms(language)
+      .then((words) => { if (!cancelled) setTerms({ language, words }); })
+      .catch(() => { if (!cancelled) setTerms({ language, words: null }); });
+    return () => { cancelled = true; };
+  }, [language, needed, terms?.language]);
+  return terms?.language === language ? terms.words : null;
 }
