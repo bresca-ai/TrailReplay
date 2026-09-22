@@ -155,3 +155,54 @@ ORDER BY batch_page_id, batch_ordering_id, batch_event_index, event_timestamp, e
   successful/failed route imports, and failed video imports without private text.
 - No live GA collection, report configuration, or end-to-end export delivery was
   verified in this change. No deployment or push was performed.
+
+## Live GA4 follow-up
+
+Using Alex's open Chrome profile, inspected property `501626719`
+(`trailreplay-72d80`) under account `192194722`. There were already 36 custom
+dimensions, including feature name/value/context, camera settings, page type,
+export format/encoder/failure scope, and setting name/value. The property was
+therefore not missing all custom definitions.
+
+Registered eight missing event-scoped dimensions and verified the list reached
+44: `panel_name` (Editor panel), `import_source` (Import source),
+`analytics_version` (Analytics version), `previous_panel` (Previous editor panel),
+`has_route` (Project has route), `export_quality_mode` (Export quality mode),
+`download_method` (Download method), and `reason` (Action reason).
+
+Created exploration `TrailReplay | Import to export journey`:
+https://analytics.google.com/analytics/web/#/analysis/a192194722p501626719/edit/EfIoIzAtRZWKCG5Hv8v8AA
+
+Configured indirectly-followed steps route_import_started →
+route_import_completed → export_started → export_completed, with a device
+category breakdown, for existing historical events. Recovered from a GA4
+component-loading failure, reapplied the steps, and verified all four saved
+conditions and the resulting report.
+
+Observed active-user funnel, 25 August–21 September 2026:
+
+| Step | Users | Completion to next step |
+| --- | ---: | ---: |
+| Route import started | 2,302 | 92.62% |
+| Route imported | 2,132 | 57.60% |
+| Export started | 1,228 | 65.47% |
+| Video rendered | 804 | — |
+
+Desktop export starts: 880; rendered: 655 (74.43%). Mobile export starts: 334;
+rendered: 141 (42.22%). Mobile users also moved from imported route to export
+less frequently (46.07%) than desktop users (63.54%). These are user-level
+sequences over the report range, not per-attempt error rates, and exclude
+recipe/project entry paths. Abandonment means no observed next step, not a
+proven encoder failure. Mobile export completion is the clearest investigation
+priority revealed by this report.
+
+The existing product-usage exploration's Camera distance preset tab had no
+filters. Added and verified an event-name regex filter:
+`^(playback_started|export_started|export_settings_snapshot)$`. Its total changed
+from 3,624 to 1,855 active users. The `(not set)` row remains at 1,617 because
+relevant historical events can lack the parameter; the camera dimension was
+registered on 18 September, within the selected range. The rows overlap by user,
+so their counts must not be summed. Other tabs were not changed in this follow-up.
+New branch events still require deployment before populating the new dimensions.
+No BigQuery link, access permissions, consent, retention, or key-event settings
+were changed during this follow-up.
