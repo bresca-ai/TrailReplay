@@ -107,6 +107,21 @@ describe('resolveRecipe', () => {
     expect(resolved.userLandmarks[0].progress).toBe(1);
   });
 
+  it('clamps a modestly over-rounded finish to the GPX endpoint', () => {
+    const twentyPointThreeKm = tracksFrom([
+      { name: 'mitja.gpx', gpx: leg({ name: 'Mitja', startLat: 42, points: 204, spacing: 100 }) },
+    ]);
+
+    const resolved = resolveRecipe(
+      { annotations: [{ km: 21, title: 'Finish' }] },
+      twentyPointThreeKm.tracks,
+      twentyPointThreeKm.names,
+    );
+
+    expect(resolved.textAnnotations[0].progress).toBe(1);
+    expect(resolved.report.annotations[0].km).toBeCloseTo(20.3, 1);
+  });
+
   describe('a week of walks', () => {
     const week = tracksFrom([
       { name: 'day-2.gpx', gpx: leg({ name: 'Day 2', startLat: 43, points: 201, start: '2026-05-02T08:00:00Z' }) },

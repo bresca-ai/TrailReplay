@@ -57,10 +57,12 @@ function pickLeg(anchor: RecipeAnchor, legs: RouteLeg[], label: string): RouteLe
 
 /**
  * A published distance is rounded — a course sold as "15K" measures 14 398 m —
- * so a small overshoot snaps to the end rather than failing the import.
+ * so a modest overshoot snaps to the end rather than failing the import. Five
+ * percent covers the usual difference between a rounded event distance and a
+ * GPX export while still rejecting anchors that are clearly on another route.
  */
 function clampToTrack(meters: number, track: GPXTrack, label: string): number {
-  const tolerance = Math.max(50, track.totalDistance * 0.02);
+  const tolerance = Math.max(100, track.totalDistance * 0.05);
   if (meters < -tolerance || meters > track.totalDistance + tolerance) {
     throw new RecipeError(
       `${label}: km ${(meters / 1000).toFixed(2)} is off this route, `
