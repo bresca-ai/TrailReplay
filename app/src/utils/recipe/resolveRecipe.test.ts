@@ -286,6 +286,26 @@ describe('resolveRecipe', () => {
     expect(resolved.userLandmarks[0].title).toBe('Start / Finish');
   });
 
+  it('places automatic start and finish pins on the requested route', () => {
+    const routes = tracksFrom([
+      { name: 'marathon.gpx', gpx: leg({ name: 'Marathon', startLat: 42, points: 101 }) },
+      { name: 'sprint.gpx', gpx: leg({ name: 'Sprint', startLat: 43, points: 51 }) },
+    ]);
+
+    const resolved = resolveRecipe(
+      {
+        mode: 'alternatives',
+        tracks: [{ file: 'marathon.gpx' }, { file: 'sprint.gpx' }],
+        landmarks: [{ track: 1, auto: 'start-finish', type: 'trailhead' }],
+      },
+      routes.tracks,
+      routes.names,
+    );
+
+    expect(resolved.userLandmarks).toHaveLength(2);
+    expect(resolved.report.landmarks.every((entry) => entry.trackName === 'Sprint')).toBe(true);
+  });
+
   it('warns when a card is on a route that is not the one being played', () => {
     const races = tracksFrom([
       { name: 'long.gpx', gpx: leg({ name: 'Long', startLat: 42, points: 201 }) },

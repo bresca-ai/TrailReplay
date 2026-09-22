@@ -129,15 +129,30 @@ function expandAuto(
   auto: string,
   legs: RouteLeg[],
   warnings: string[],
+  requestedTrack: RecipeLandmark['track'] | undefined,
+  label: string,
 ): Array<{ track: number; km: number; title: string }> {
+  const requestedIndex = requestedTrack === undefined
+    ? undefined
+    : typeof requestedTrack === 'number'
+      ? requestedTrack
+      : legs.findIndex((leg) => leg.name.toLowerCase() === requestedTrack.toLowerCase());
+
+  if (requestedIndex !== undefined && !legs[requestedIndex]) {
+    throw new RecipeError(`${label}: no track matches "${requestedTrack}"`);
+  }
+
   if (auto === 'start') {
-    return [{ track: 0, km: 0, title: 'Start' }];
+    return [{ track: requestedIndex ?? 0, km: 0, title: 'Start' }];
   }
 
   if (auto === 'finish' || auto === 'start-finish') {
-    const last = legs[legs.length - 1];
+    const firstIndex = requestedIndex ?? 0;
+    const lastIndex = requestedIndex ?? (legs.length - 1);
+    const first = legs[firstIndex];
+    const last = legs[lastIndex];
     const finish = {
-      track: legs.length - 1,
+      track: lastIndex,
       km: last.track.totalDistance / 1000,
       title: 'Finish',
     };
@@ -145,13 +160,13 @@ function expandAuto(
 
     // On a loop the two coincide and the app collapses pins within 80 m, so one
     // pin saying both is what the author actually wants.
-    const start = legs[0].track.points[0];
+    const start = first.track.points[0];
     const end = last.track.points[last.track.points.length - 1];
     const sameSpot = start && end
       && Math.abs(start.lat - end.lat) < 0.001 && Math.abs(start.lon - end.lon) < 0.001;
     return sameSpot
-      ? [{ track: 0, km: 0, title: 'Start / Finish' }]
-      : [{ track: 0, km: 0, title: 'Start' }, finish];
+      ? [{ track: firstIndex, km: 0, title: 'Start / Finish' }]
+      : [{ track: firstIndex, km: 0, title: 'Start' }, finish];
   }
 
   if (auto === 'overnight-stops') {
@@ -288,7 +303,7 @@ export function resolveRecipe(
   (recipe.landmarks ?? []).forEach((spec, index) => {
     const label = `landmarks[${index}]${spec.title ? ` "${spec.title}"` : ''}`;
     if (spec.auto) {
-      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings).entries()) {
+      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings, spec.track, label).entries()) {
         const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);
@@ -310,7 +325,7 @@ export function resolveRecipe(
   (recipe.annotations ?? []).forEach((spec, index) => {
     const label = `annotations[${index}]${spec.title ? ` "${spec.title}"` : ''}`;
     if (spec.auto) {
-      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings).entries()) {
+      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings, spec.track, label).entries()) {
         const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);
