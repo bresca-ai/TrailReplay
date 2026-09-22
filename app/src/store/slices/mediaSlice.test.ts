@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createAppStore } from '@/store/createAppStore';
-import type { PictureAnnotation, VideoAnnotation } from '@/types';
+import type { PendingPicturePlacement, PictureAnnotation, VideoAnnotation } from '@/types';
 
 function createPlaceholderPicture(overrides: Partial<PictureAnnotation> = {}): PictureAnnotation {
   return {
@@ -103,5 +103,53 @@ describe('mediaSlice video selection', () => {
     expect(video.routeDistance).toBe(12_000);
     expect(video.routeSegmentId).toBe('segment-2');
     expect(video.routeSegmentDistance).toBe(3_000);
+  });
+
+  it('makes a video moved to the playhead manual so route sync cannot move it back', () => {
+    const store = createAppStore();
+    store.setState((state) => {
+      state.videos.push(createPlaceholderVideo({
+        placementSource: 'gps',
+        routeDistance: 12_000,
+        routeSegmentId: 'segment-2',
+        routeSegmentDistance: 3_000,
+      }));
+    });
+
+    store.getState().updateVideoPosition('video-1', 0.75);
+
+    expect(store.getState().videos[0]).toMatchObject({
+      progress: 0.75,
+      placementSource: 'manual',
+    });
+    expect(store.getState().videos[0].routeDistance).toBeUndefined();
+    expect(store.getState().videos[0].routeSegmentId).toBeUndefined();
+    expect(store.getState().videos[0].routeSegmentDistance).toBeUndefined();
+  });
+});
+
+describe('mediaSlice object URL lifecycle', () => {
+  it('does not revoke a queued file URL after the file has been placed', () => {
+    const store = createAppStore();
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, revokeObjectURL });
+
+    try {
+      const pending: PendingPicturePlacement = {
+        ...createPlaceholderPicture({ id: 'shared-media', url: 'blob:shared-media' }),
+        file: new File(['image'], 'shared-media.jpg', { type: 'image/jpeg' }),
+        placementReason: 'missing-gps' as const,
+      };
+      store.getState().queuePendingPicturePlacement(pending);
+      store.getState().addPicture(createPlaceholderPicture({ id: 'shared-media', url: pending.url }));
+
+      store.getState().removePendingPicturePlacement('shared-media');
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+
+      store.getState().removePicture('shared-media');
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:shared-media');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -42,7 +42,9 @@ function insertTrackIntoJourney(state: AppState, track: GPXTrack, insertIndex?: 
     ...track,
     activityIcon: track.activityIcon || DEFAULT_ACTIVITY_ICON,
     color: trackColor,
-    visible: true,
+    // Imports default to visible, but hydration has already restored a saved
+    // visibility choice before it comes through this shared insertion path.
+    visible: track.visible ?? true,
   };
 
   const atEnd = insertIndex === undefined || insertIndex >= state.tracks.length;

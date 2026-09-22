@@ -54,6 +54,7 @@ export function ExportPanel() {
   const {
     actualFormat,
     estimatedSize,
+    estimatedDurationMs,
     exportProgress,
     exportStage,
     exportedBlob,
@@ -201,7 +202,7 @@ export function ExportPanel() {
               </div>
               <div>
                 <span className="opacity-70">{t('export.duration')}:</span>
-                <span className="ml-2 font-bold">{Math.round(playback.totalDuration / 1000)}s</span>
+                <span className="ml-2 font-bold">≈{Math.round(estimatedDurationMs / 1000)}s</span>
               </div>
             </div>
           </div>

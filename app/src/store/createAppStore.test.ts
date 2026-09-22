@@ -81,6 +81,13 @@ describe('createAppStore', () => {
     );
   });
 
+  it('preserves a restored hidden track instead of forcing it visible', () => {
+    const useStore = createAppStore();
+    useStore.getState().addTrack(createTrack({ visible: false }));
+
+    expect(useStore.getState().tracks[0].visible).toBe(false);
+  });
+
   it('keeps the default follow-behind preset at medium for long tracks', () => {
     const useStore = createAppStore();
     const longTrack = createTrack({

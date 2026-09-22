@@ -1,14 +1,8 @@
 // Outbound email, behind one function so the provider is a single-file swap.
 //
-// Deliberately NOT the `send_email` Worker binding. That binding belongs to
-// Cloudflare Email *Routing*, takes a raw RFC 822 MIME message, and can only
-// deliver to addresses already verified inside your own account — so it cannot
-// mail a customer. (Confirmed empirically: passing the documented Email Service
-// object shape to it fails with "could not parse email".)
-//
-// Primary here is Cloudflare Email *Sending* over its REST API, which does
-// deliver to arbitrary recipients. It is in beta and needs a Workers Paid plan
-// plus a verified sending domain, so Resend stays wired up as a fallback.
+// Cloudflare Email Sending supports both a Workers binding and a REST API.
+// This project uses the REST API with its existing account token integration;
+// Resend remains a fallback for explicit Cloudflare authentication failures.
 
 const DEFAULT_FROM = 'TrailReplay <videos@mail.trailreplay.com>';
 
@@ -21,6 +15,7 @@ export class EmailNotConfiguredError extends Error {
       'No email provider configured: set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_EMAIL_API_TOKEN, or RESEND_API_KEY',
     );
     this.name = 'EmailNotConfiguredError';
+    this.safeToRetry = true;
   }
 }
 
@@ -62,10 +57,11 @@ export async function sendEmail(env, message) {
 }
 
 class CloudflareEmailError extends Error {
-  constructor(detail, authenticationFailure) {
+  constructor(detail, authenticationFailure, safeToRetry) {
     super(`Cloudflare Email Sending rejected the message: ${detail}`.slice(0, 400));
     this.name = 'CloudflareEmailError';
     this.authenticationFailure = authenticationFailure;
+    this.safeToRetry = safeToRetry;
   }
 }
 
@@ -83,13 +79,19 @@ async function sendViaCloudflare(env, payload) {
 
   // Cloudflare answers 200 with `success: false` for some rejections, so the
   // status alone is not enough to call this delivered.
-  if (!response.ok || result?.success === false) {
+  if (!response.ok || result?.success !== true) {
     const detail = result?.errors?.map((error) => error.message).join('; ')
       || `HTTP ${response.status}`;
-    const authenticationFailure = response.status === 401
+    // A structured rejection before a 5xx/429 is known not to be accepted.
+    // A network failure, rate limit, server error, or malformed success reply
+    // might follow acceptance, so the caller must not resend automatically.
+    const safeToRetry = result?.success === false
+      && response.status < 500
+      && ![408, 409, 429].includes(response.status);
+    const authenticationFailure = safeToRetry && (response.status === 401
       || response.status === 403
-      || /authenticat|invalid.*token|token.*invalid/i.test(detail);
-    throw new CloudflareEmailError(detail, authenticationFailure);
+      || /authenticat|invalid.*token|token.*invalid/i.test(detail));
+    throw new CloudflareEmailError(detail, authenticationFailure, safeToRetry);
   }
 
   return { provider: 'cloudflare', messageId: result?.result?.message_id ?? null };
@@ -107,7 +109,12 @@ async function sendViaResend(env, payload) {
 
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
-    throw new Error(`Resend rejected the message (${response.status}): ${detail}`.slice(0, 400));
+    const error = new Error(`Resend rejected the message (${response.status}): ${detail}`.slice(0, 400));
+    // These explicit client/auth/validation responses are pre-acceptance.
+    // Treat 408, 409, 429 and all 5xx as uncertain without provider-side
+    // idempotency, even if the HTTP request itself returned a response.
+    error.safeToRetry = [400, 401, 403, 404, 422].includes(response.status);
+    throw error;
   }
 
   const result = await response.json().catch(() => ({}));

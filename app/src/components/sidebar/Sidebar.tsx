@@ -26,10 +26,11 @@ function SidebarPreferences() {
 
       <div className="mt-3 space-y-3">
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
+          <label htmlFor="sidebar-language" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
             {t('settings.language')}
           </label>
           <select
+            id="sidebar-language"
             value={language}
             onChange={(event) => setLanguage(event.target.value as keyof typeof languageLabels)}
             className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-white/90 px-3 py-2 text-sm text-[var(--evergreen)] focus:outline-none focus:border-[var(--trail-orange)]"

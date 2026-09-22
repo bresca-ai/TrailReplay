@@ -18,6 +18,25 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it.each(['tracks', 'comparisonTracks'] as const)(
+    'keeps the existing session when a later %s route cannot be parsed',
+    async (collection) => {
+      const store = createAppStore();
+      store.getState().addTrack(parseGPX(sampleGpx, 'existing.gpx'));
+      store.getState().setUnitSystem('imperial');
+      const archive = await buildReplayArchive(store.getState());
+      const parsed = await parseReplayArchive(new File([archive], 'broken.replay'));
+      parsed[collection].push({
+        meta: { routeFile: 'routes/broken.gpx' },
+        gpxText: '<gpx><trk><trkseg></gpx>',
+      });
+      const original = store.getState();
+
+      expect(() => hydrateProject({ ...parsed, project: parsed.project! }, original)).toThrow();
+      expect(store.getState()).toBe(original);
+    },
+  );
+
   it('restores tracks, journey, pictures (as placeholders), and settings from a saved archive', async () => {
     const sourceStore = createAppStore();
     const track = parseGPX(sampleGpx, 'ridge-loop.gpx');

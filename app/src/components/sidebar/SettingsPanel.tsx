@@ -175,6 +175,11 @@ export function SettingsPanel() {
     if (cameraSettings.mode === mode) return;
     setCameraMode(mode);
     trackEvent('settings_changed', { setting_name: 'camera_mode', setting_value: mode });
+    trackEvent('feature_used', {
+      feature_name: 'camera_mode',
+      feature_value: mode,
+      feature_context: 'settings',
+    });
 
     // Also reported on its own, so adoption of the cinematic camera can be
     // counted directly rather than filtered out of every settings change.
@@ -398,13 +403,19 @@ export function SettingsPanel() {
               value={getFollowBehindStopIndexForLevel(cameraSettings.followBehindZoomLevel)}
               onChange={(e) => {
                 const level = getFollowBehindLevelForStopIndex(Number(e.target.value));
+                const preset = getNearestFollowBehindPreset(level);
                 setCameraSettings({
                   followBehindZoomLevel: level,
-                  followBehindPreset: getNearestFollowBehindPreset(level),
+                  followBehindPreset: preset,
                 });
                 trackEvent('settings_changed', {
                   setting_name: 'follow_behind_distance',
-                  setting_value: level,
+                  setting_value: preset,
+                });
+                trackEvent('feature_used', {
+                  feature_name: 'follow_behind_distance',
+                  feature_value: preset,
+                  feature_context: 'settings',
                 });
               }}
               className="w-full accent-[var(--trail-orange)]"

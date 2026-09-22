@@ -93,4 +93,22 @@ describe('analytics', () => {
       export_duration_bucket: 'medium',
     });
   });
+
+  it('reports the camera setting actually used, including defaults', async () => {
+    const { getCameraUsageAnalyticsParams } = await import('./analytics');
+    const camera = {
+      mode: 'follow-behind' as const, zoom: 14, pitch: 55, bearing: 0,
+      followBehindPreset: 'medium' as const, followBehindZoomLevel: 50,
+      cameraStability: 0.5,
+    };
+    expect(getCameraUsageAnalyticsParams(camera)).toEqual({
+      camera_stability_bucket: 'balanced', camera_zoom_bucket: 'medium_close',
+    });
+    expect(getCameraUsageAnalyticsParams({ ...camera, cameraStability: 0, followBehindZoomLevel: 0 })).toEqual({
+      camera_stability_bucket: 'stable', camera_zoom_bucket: 'far',
+    });
+    expect(getCameraUsageAnalyticsParams({ ...camera, mode: 'overview' })).toEqual({
+      camera_stability_bucket: 'not_applicable', camera_zoom_bucket: 'not_applicable',
+    });
+  });
 });

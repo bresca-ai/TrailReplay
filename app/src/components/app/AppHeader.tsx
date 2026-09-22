@@ -26,7 +26,10 @@ export function AppHeader({
     <header className="z-50 flex h-14 items-center justify-between bg-[var(--evergreen)] px-2 text-[var(--canvas)] sm:px-4">
       <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-3">
         <button
+          type="button"
           onClick={onToggleSidebar}
+          aria-label={showSidebar ? t('sidebar.close') : t('sidebar.open')}
+          aria-expanded={showSidebar}
           className="rounded-lg p-1.5 transition-colors hover:bg-white/10 sm:p-2"
         >
           {showSidebar ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}

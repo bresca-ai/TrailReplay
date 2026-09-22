@@ -56,6 +56,7 @@ export function useExportOverlayCapture({
   includeStats,
 }: UseExportOverlayCaptureOptions) {
   const cachedOverlayRef = useRef<HTMLCanvasElement | null>(null);
+  const cachedPopupOverlayRef = useRef<HTMLCanvasElement | null>(null);
   const overlayBusyRef = useRef(false);
   const overlayLastUpdateRef = useRef(0);
   const html2CanvasLoaderRef = useRef<Promise<boolean> | null>(null);
@@ -125,6 +126,15 @@ export function useExportOverlayCapture({
       overlay.height = recordH;
       const overlayContext = overlay.getContext('2d');
       if (!overlayContext) return;
+      const popupOverlay = document.querySelector('.tr-picture-popup, .tr-video-popup')
+        ? document.createElement('canvas')
+        : null;
+      if (popupOverlay) {
+        popupOverlay.width = recordW;
+        popupOverlay.height = recordH;
+      }
+      const popupOverlayContext = popupOverlay?.getContext('2d');
+      let hasPopupOverlay = false;
 
       if (includeStats) {
         const statsElement = document.querySelector('.tr-stats-overlay') as HTMLElement | null;
@@ -188,7 +198,7 @@ export function useExportOverlayCapture({
         try {
           const popupRect = picturePopupElement.getBoundingClientRect();
           const popupDrawRect = getPopupOverlayDrawRect({ popupRect, containerRect, cropX, cropY, scaleToRecording });
-          if (isDrawableRect(popupDrawRect)) {
+          if (popupOverlayContext && isDrawableRect(popupDrawRect)) {
             // html2canvas doesn't reliably support `object-fit: contain` —
             // it can tile/repeat the source image to fill the element's box
             // instead of letterboxing it, which showed up as the correctly
@@ -205,7 +215,8 @@ export function useExportOverlayCapture({
               allowTaint: true,
               ignoreElements: (element) => element.tagName === 'IMG',
             });
-            overlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, popupDrawRect.drawX, popupDrawRect.drawY, popupDrawRect.drawWidth, popupDrawRect.drawHeight);
+            popupOverlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, popupDrawRect.drawX, popupDrawRect.drawY, popupDrawRect.drawWidth, popupDrawRect.drawHeight);
+            hasPopupOverlay = true;
             const popupImageElement = picturePopupElement.querySelector('img') as HTMLImageElement | null;
             if (popupImageElement?.complete && popupImageElement.naturalWidth > 0) {
               // The <img> is styled object-fit: contain, so its own bounding
@@ -218,7 +229,7 @@ export function useExportOverlayCapture({
                 popupImageElement.naturalHeight,
               );
               const imageRect = getPopupOverlayDrawRect({ popupRect: containRect, containerRect, cropX, cropY, scaleToRecording });
-              if (isDrawableRect(imageRect)) overlayContext.drawImage(popupImageElement, imageRect.drawX, imageRect.drawY, imageRect.drawWidth, imageRect.drawHeight);
+              if (isDrawableRect(imageRect)) popupOverlayContext.drawImage(popupImageElement, imageRect.drawX, imageRect.drawY, imageRect.drawWidth, imageRect.drawHeight);
             }
           }
         } catch { /* Skip popup capture when unavailable. */ }
@@ -240,7 +251,7 @@ export function useExportOverlayCapture({
         try {
           const popupRect = videoPopupElement.getBoundingClientRect();
           const popupDrawRect = getPopupOverlayDrawRect({ popupRect, containerRect, cropX, cropY, scaleToRecording });
-          if (isDrawableRect(popupDrawRect)) {
+          if (popupOverlayContext && isDrawableRect(popupDrawRect)) {
             const captureCanvas = await capture(videoPopupElement, {
               backgroundColor: null,
               scale: 1,
@@ -249,12 +260,16 @@ export function useExportOverlayCapture({
               allowTaint: true,
               ignoreElements: (element) => element.tagName === 'VIDEO',
             });
-            overlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, popupDrawRect.drawX, popupDrawRect.drawY, popupDrawRect.drawWidth, popupDrawRect.drawHeight);
+            popupOverlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, popupDrawRect.drawX, popupDrawRect.drawY, popupDrawRect.drawWidth, popupDrawRect.drawHeight);
+            hasPopupOverlay = true;
           }
         } catch { /* Skip popup capture when unavailable. */ }
       }
 
-      if (runId === overlayRunIdRef.current) cachedOverlayRef.current = overlay;
+      if (runId === overlayRunIdRef.current) {
+        cachedOverlayRef.current = overlay;
+        cachedPopupOverlayRef.current = hasPopupOverlay ? popupOverlay : null;
+      }
     } finally {
       overlayBusyRef.current = false;
     }
@@ -536,6 +551,7 @@ export function useExportOverlayCapture({
 
   const resetOverlayCapture = useCallback(() => {
     cachedOverlayRef.current = null;
+    cachedPopupOverlayRef.current = null;
     overlayBusyRef.current = false;
     overlayLastUpdateRef.current = 0;
     overlayRunIdRef.current += 1;
@@ -545,6 +561,7 @@ export function useExportOverlayCapture({
 
   return {
     cachedOverlayRef,
+    cachedPopupOverlayRef,
     drawElevationProgress,
     drawStatsValues,
     loadHtml2Canvas,

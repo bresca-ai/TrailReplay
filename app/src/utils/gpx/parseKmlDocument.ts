@@ -2,6 +2,15 @@ import type { RawTrackPoint } from './trackStats';
 
 const GX_NS = 'http://www.google.com/kml/ext/2.2';
 
+function isValidCoordinate(lat: number, lon: number) {
+  return Number.isFinite(lat)
+    && Number.isFinite(lon)
+    && lat >= -90
+    && lat <= 90
+    && lon >= -180
+    && lon <= 180;
+}
+
 export function parseKmlDocument(kmlContent: string, fileName: string) {
   const parser = new DOMParser();
   const document = parser.parseFromString(kmlContent, 'text/xml');
@@ -46,8 +55,8 @@ function extractGxTrackPoints(gxTracks: Element[]) {
     const coordinates = Array.from(gxTrack.getElementsByTagNameNS(GX_NS, 'coord')).map((element) => {
       const [lonText, latText, elevationText] = (element.textContent?.trim() || '').split(/\s+/);
       return {
-        lon: Number.parseFloat(lonText),
-        lat: Number.parseFloat(latText),
+        lon: Number.parseFloat(lonText ?? ''),
+        lat: Number.parseFloat(latText ?? ''),
         elevation: Number.parseFloat(elevationText) || 0,
       };
     });
@@ -57,7 +66,7 @@ function extractGxTrackPoints(gxTracks: Element[]) {
 
     for (let index = 0; index < pointCount; index++) {
       const coordinate = coordinates[index];
-      if (Number.isNaN(coordinate.lat) || Number.isNaN(coordinate.lon)) continue;
+      if (!isValidCoordinate(coordinate.lat, coordinate.lon)) continue;
 
       rawPoints.push({
         lat: coordinate.lat,
@@ -119,11 +128,11 @@ function extractLineStringPoints(document: Document) {
     for (const token of tokens) {
       if (!token.trim()) continue;
       const [lonText, latText, elevationText] = token.split(',');
-      const lon = Number.parseFloat(lonText.trim());
-      const lat = Number.parseFloat(latText.trim());
+      const lon = Number.parseFloat(lonText?.trim() ?? '');
+      const lat = Number.parseFloat(latText?.trim() ?? '');
       const elevation = Number.parseFloat(elevationText?.trim() || '0') || 0;
 
-      if (Number.isNaN(lat) || Number.isNaN(lon)) continue;
+      if (!isValidCoordinate(lat, lon)) continue;
 
       rawPoints.push({
         lat,

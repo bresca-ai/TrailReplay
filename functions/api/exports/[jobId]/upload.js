@@ -25,7 +25,7 @@ export async function onRequest({ request, env, params }) {
   }
 
   const job = await env.LEADS_DB
-    .prepare('SELECT id, status, job_token_hash, expires_at FROM export_jobs WHERE id = ?')
+    .prepare('SELECT id, status, job_token_hash, object_key, size_bytes, expires_at FROM export_jobs WHERE id = ?')
     .bind(params.jobId)
     .first();
 
@@ -40,8 +40,14 @@ export async function onRequest({ request, env, params }) {
     return errorResponse('expired', 'This export expired before it was uploaded', 410);
   }
 
-  // Uploading twice would orphan the first object and re-trigger delivery.
+  // A retry after a completed upload must not stream another body to R2. The
+  // completion endpoint owns delivery; this response only acknowledges the
+  // object already accepted by the job row.
   if (job.status !== 'pending') {
+    if (['uploaded', 'emailing', 'emailed'].includes(job.status)
+      && job.object_key && Number.isFinite(job.size_bytes) && job.size_bytes > 0) {
+      return verifiedUploadedResponse(job, env.EXPORTS_BUCKET);
+    }
     return errorResponse('already_uploaded', 'This export was already uploaded', 409);
   }
 
@@ -62,7 +68,10 @@ export async function onRequest({ request, env, params }) {
     return errorResponse('unsupported_media_type', 'Studio delivery only accepts MP4 video', 415);
   }
 
-  const objectKey = `exports/${job.id}.mp4`;
+  // Every concurrent request writes its own object. D1 chooses one key below;
+  // a failed or losing attempt can then delete its key without touching the
+  // accepted video.
+  const objectKey = `exports/${job.id}/${crypto.randomUUID()}.mp4`;
   await env.EXPORTS_BUCKET.put(objectKey, request.body, {
     httpMetadata: {
       contentType: 'video/mp4',
@@ -78,12 +87,42 @@ export async function onRequest({ request, env, params }) {
     return errorResponse('upload_incomplete', 'The uploaded video could not be verified', 502);
   }
 
-  await env.LEADS_DB
+  const result = await env.LEADS_DB
     .prepare("UPDATE export_jobs SET status = 'uploaded', object_key = ?, size_bytes = ? WHERE id = ? AND status = 'pending'")
     .bind(objectKey, stored.size, job.id)
     .run();
 
-  return json({ jobId: job.id, sizeBytes: stored.size, status: 'uploaded' });
+  if (result.success && result.meta?.changes === 1) {
+    return uploadedResponse({ ...job, object_key: objectKey, size_bytes: stored.size });
+  }
+  // An ambiguous database result is deliberately left for lifecycle cleanup:
+  // deleting this object could erase the accepted upload if D1 committed it.
+  if (!result.success || result.meta?.changes !== 0) {
+    throw new Error('Could not determine whether the export upload was accepted');
+  }
+
+  await env.EXPORTS_BUCKET.delete(objectKey);
+  const accepted = await env.LEADS_DB
+    .prepare('SELECT id, status, object_key, size_bytes FROM export_jobs WHERE id = ?')
+    .bind(job.id)
+    .first();
+  if (['uploaded', 'emailing', 'emailed'].includes(accepted?.status)
+    && accepted.object_key && Number.isFinite(accepted.size_bytes) && accepted.size_bytes > 0) {
+    return verifiedUploadedResponse(accepted, env.EXPORTS_BUCKET);
+  }
+  return errorResponse('already_uploaded', 'This export is no longer pending', 409);
+}
+
+function uploadedResponse(job) {
+  return json({ jobId: job.id, sizeBytes: job.size_bytes, status: 'uploaded' });
+}
+
+async function verifiedUploadedResponse(job, bucket) {
+  const stored = await bucket.head(job.object_key);
+  if (!stored || stored.size !== job.size_bytes) {
+    return errorResponse('object_missing', 'The uploaded video is no longer available', 410);
+  }
+  return uploadedResponse(job);
 }
 
 function bearerToken(request) {

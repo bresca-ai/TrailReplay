@@ -15,6 +15,7 @@ import {
   methodNotAllowed,
   nowIso,
   readJsonBody,
+  RequestBodyTooLargeError,
   requireLeadsDb,
 } from '../../functions-lib/http.js';
 import { createToken, hashToken } from '../../functions-lib/tokens.js';
@@ -32,7 +33,15 @@ export async function onRequest({ request, env }) {
   const notConfigured = requireLeadsDb(env);
   if (notConfigured) return notConfigured;
 
-  const body = await readJsonBody(request);
+  let body;
+  try {
+    body = await readJsonBody(request);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return errorResponse('payload_too_large', 'Request body is too large', 413);
+    }
+    throw error;
+  }
   if (!body) return errorResponse('bad_request', 'Expected a JSON body', 400);
 
   const email = normalizeEmail(body.email);

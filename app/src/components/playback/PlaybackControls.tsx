@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { formatDuration } from '@/utils/units';
-import { getProgressBucket, trackEvent } from '@/utils/analytics';
+import { getCameraUsageAnalyticsParams, getProgressBucket, trackEvent } from '@/utils/analytics';
 import { usePlaybackToggle } from '@/hooks/usePlaybackToggle';
 import { usePlayPauseShortcut } from '@/hooks/usePlayPauseShortcut';
 
@@ -30,6 +30,7 @@ export function PlaybackControls() {
   const cameraSettings = useAppStore((state) => state.cameraSettings);
   const mapStyle = useAppStore((state) => state.settings.mapStyle);
   const show3DTerrain = useAppStore((state) => state.settings.show3DTerrain);
+  const visibleStats = useAppStore((state) => state.settings.visibleStats);
   
   const handleSliderChange = useCallback((value: number[]) => {
     seekToProgress(value[0] / 100);
@@ -67,9 +68,29 @@ export function PlaybackControls() {
       has_annotations: textAnnotations.length > 0,
       track_count: tracks.length,
       camera_mode: cameraSettings.mode,
+      ...getCameraUsageAnalyticsParams(cameraSettings),
       camera_preset: cameraSettings.mode === 'follow-behind' ? cameraSettings.followBehindPreset : 'not_applicable',
       map_style: mapStyle,
       terrain_3d_enabled: show3DTerrain,
+    });
+    trackEvent('feature_used', {
+      feature_name: 'camera_mode',
+      feature_value: cameraSettings.mode,
+      feature_context: 'playback',
+    });
+    if (cameraSettings.mode === 'follow-behind') {
+      trackEvent('feature_used', {
+        feature_name: 'follow_behind_distance',
+        feature_value: cameraSettings.followBehindPreset,
+        feature_context: 'playback',
+      });
+    }
+    visibleStats.forEach((statistic) => {
+      trackEvent('feature_used', {
+        feature_name: 'statistic',
+        feature_value: statistic,
+        feature_context: 'playback',
+      });
     });
   };
 

@@ -104,6 +104,7 @@ function annotationFrom(
     title,
     ...(spec.subtitle ? { subtitle: spec.subtitle } : {}),
     ...(spec.code ? { code: spec.code } : {}),
+    ...(spec.eyebrow ? { eyebrow: spec.eyebrow } : {}),
     ...(spec.meta ? { meta: spec.meta } : {}),
     ...(spec.description ? { description: spec.description } : {}),
     color: spec.color ?? '#C1652F',
@@ -284,7 +285,17 @@ export function resolveRecipe(
         const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);
-        landmarks.push(landmarkFrom(spec, at, spec.id ?? createId('recipe-landmark'), title, true, progress));
+        // One `auto` specification can produce several stops. An authored id
+        // names the set, not every generated member: duplicate ids make the
+        // playback lookup always select the first stop.
+        landmarks.push(landmarkFrom(
+          spec,
+          at,
+          spec.id ? `${spec.id}-${autoIndex + 1}` : createId('recipe-landmark'),
+          title,
+          true,
+          progress,
+        ));
         landmarkEntries.push(entry(title, at, progress, markerOffAt, totalMs, undefined, true));
       }
       return;
@@ -306,7 +317,13 @@ export function resolveRecipe(
         const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);
-        annotations.push(annotationFrom(spec, at, spec.id ?? createId('recipe-note'), title, progress));
+        annotations.push(annotationFrom(
+          spec,
+          at,
+          spec.id ? `${spec.id}-${autoIndex + 1}` : createId('recipe-note'),
+          title,
+          progress,
+        ));
         annotationEntries.push(entry(
           title, at, progress, markerOffAt, totalMs,
           spec.displayDuration ?? DEFAULT_ANNOTATION_MS, true,

@@ -29,6 +29,7 @@ import {
   formatStatsDuration,
 } from '@/utils/units';
 import { estimateFileSize } from '@/utils/videoExport';
+import { estimateExportDurationMs } from '@/utils/exportDuration';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { drawExportFrame } from './drawExportFrame';
 import { MP4_MIME_TYPES } from './exportConfig';
@@ -67,6 +68,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, [configuredStats, tracks]);
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
+  const textAnnotations = useAppStore((state) => state.textAnnotations);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
   const cameraSettings = useAppStore((state) => state.cameraSettings);
@@ -106,7 +108,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     [studioSupported]
   );
   const actualFormat = videoExportSettings.format === 'mp4' && !mp4Supported ? 'webm' : videoExportSettings.format;
-  const estimatedSize = estimateFileSize(playback.totalDuration, videoExportSettings);
+  const estimatedDurationMs = useMemo(() => estimateExportDurationMs({
+    routeDurationMs: playback.totalDuration, annotations: textAnnotations, pictures, videos,
+  }), [playback.totalDuration, textAnnotations, pictures, videos]);
+  const estimatedSize = estimateFileSize(estimatedDurationMs, videoExportSettings);
   const includeStats = visibleStats.length > 0;
   const includeElevation = showElevationProfile;
   const overlayRefreshIntervalMs = useMemo(() => getOverlayRefreshIntervalMs(videoExportSettings.fps), [videoExportSettings.fps]);
@@ -218,6 +223,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, [activeTrack, computedJourney, journeyDistanceProfile, segmentTimings]);
   const {
     cachedOverlayRef,
+    cachedPopupOverlayRef,
     drawElevationProgress,
     drawStatsValues,
     drawVideoFrame,
@@ -296,6 +302,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       recordingContextRef,
       videoExportSettings,
       cachedOverlayRef,
+      cachedPopupOverlayRef,
       drawVideoFrame,
       drawStatsValues,
       drawElevationProgress,
@@ -309,7 +316,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       updateOverlayAsync,
       t,
     });
-  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
+  }, [cachedOverlayRef, cachedPopupOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
@@ -708,7 +715,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     visibleStats, pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
-    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
+    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize, estimatedDurationMs,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,

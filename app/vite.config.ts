@@ -7,6 +7,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { ViteDevServer } from 'vite'
 // @ts-expect-error Cloudflare Pages Function is JavaScript shared with local dev.
 import { onRequestPost as lookupLandmarks } from '../functions/api/landmarks.js'
+// @ts-expect-error Cloudflare Pages Function is JavaScript shared with local dev.
+import { MAX_JSON_BODY_BYTES } from '../functions-lib/http.js'
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
@@ -42,14 +44,33 @@ export default defineConfig(({ command, mode }) => {
   // bundles and the prerendered HTML. The prerender script runs a Vite server
   // (command === 'serve') purely to render, so it opts out explicitly.
   plugins: [
-    ...(command === 'serve' && !process.env.TRAILREPLAY_PRERENDER ? [{
+    ...(command === 'serve' && !process.env.TRAILREPLAY_PRERENDER && !apiProxyTarget ? [{
       name: 'local-landmarks-api',
       configureServer(server: ViteDevServer) {
         server.middlewares.use('/api/landmarks', async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
           if (req.method !== 'POST') return next();
           try {
             const chunks: Buffer[] = [];
-            for await (const chunk of req) chunks.push(Buffer.from(chunk));
+            const declaredLength = Number(req.headers['content-length']);
+            if (Number.isFinite(declaredLength) && declaredLength > MAX_JSON_BODY_BYTES) {
+              res.statusCode = 413;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'payload_too_large', message: 'Request body is too large' }));
+              return;
+            }
+            let totalBytes = 0;
+            for await (const chunk of req) {
+              const buffer = Buffer.from(chunk);
+              totalBytes += buffer.byteLength;
+              if (totalBytes > MAX_JSON_BODY_BYTES) {
+                res.statusCode = 413;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'payload_too_large', message: 'Request body is too large' }));
+                req.resume();
+                return;
+              }
+              chunks.push(buffer);
+            }
             const response = await lookupLandmarks({
               request: new Request('http://localhost/api/landmarks', {
                 method: 'POST',
@@ -92,10 +113,12 @@ export default defineConfig(({ command, mode }) => {
           if (!id.includes('node_modules')) return;
           if (id.includes('maplibre-gl')) return 'maplibre';
           if (id.includes('mp4-muxer') || id.includes('fix-webm-duration')) return 'video-export';
+          // Keep the HEIC decoder behind imagePreview's dynamic import. Grouping
+          // it with EXIF readers downloads it for ordinary JPEG/video metadata.
+          if (id.includes('heic-to')) return 'heic-decoder';
           if (
             id.includes('exifr') ||
             id.includes('exifreader') ||
-            id.includes('heic-to') ||
             id.includes('@xmldom')
           ) return 'media-processing';
           if (id.includes('recharts')) return 'charts';

@@ -1,3 +1,5 @@
+import { readJsonBody, RequestBodyTooLargeError } from '../../functions-lib/http.js';
+
 // Public global instances listed by OpenStreetMap. The primary can reject
 // otherwise valid POSTs (or be busy), so a cold lookup needs a second source.
 const OVERPASS_ENDPOINTS = [
@@ -53,6 +55,17 @@ function routeBounds(points) {
   const lons = points.map((point) => point[0]);
   const lats = points.map((point) => point[1]);
   return [Math.min(...lats) - ROUTE_PADDING.lat, Math.min(...lons) - ROUTE_PADDING.lon, Math.max(...lats) + ROUTE_PADDING.lat, Math.max(...lons) + ROUTE_PADDING.lon];
+}
+
+function isValidRoutePoint(point) {
+  return Array.isArray(point)
+    && point.length === 2
+    && Number.isFinite(point[0])
+    && point[0] >= -180
+    && point[0] <= 180
+    && Number.isFinite(point[1])
+    && point[1] >= -90
+    && point[1] <= 90;
 }
 
 function tileIndex(value) {
@@ -271,9 +284,18 @@ export function onRequestGet() {
 
 export async function onRequestPost(context) {
   let body;
-  try { body = await context.request.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+  try {
+    // Keep accepting local/dev requests without a Content-Type header, as this
+    // handler did before the shared byte-limited reader was added.
+    body = await readJsonBody(context.request, { requireContentType: false });
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json({ error: 'payload_too_large', message: 'Request body is too large' }, 413);
+    }
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
   const points = body?.points;
-  if (!Array.isArray(points) || points.length < 2 || points.length > MAX_POINTS || !points.every((point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite))) return json({ error: 'Expected 2–180 valid [longitude, latitude] points' }, 400);
+  if (!Array.isArray(points) || points.length < 2 || points.length > MAX_POINTS || !points.every(isValidRoutePoint)) return json({ error: 'Expected 2–180 valid [longitude, latitude] points' }, 400);
 
   const bounds = routeBounds(points);
   if (bounds[2] - bounds[0] > MAX_SPAN_DEGREES || bounds[3] - bounds[1] > MAX_SPAN_DEGREES) return json({ error: 'Route corridor is too large for nearby-place lookup' }, 400);

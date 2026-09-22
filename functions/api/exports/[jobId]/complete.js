@@ -1,8 +1,8 @@
 // POST /api/exports/:jobId/complete — email the finished video.
 //
-// Split from the upload so a transient email failure does not force the browser
-// to re-upload 80 MB: the object is already safe in R2 and this call can simply
-// be retried.
+// Split from the upload so a known pre-acceptance email rejection can be
+// retried without re-uploading the video. An uncertain provider outcome must
+// instead be reconciled before another send.
 
 import {
   EXPORT_LINK_TTL_DAYS,
@@ -16,6 +16,8 @@ import {
 import { createToken, hashToken, verifyToken } from '../../../../functions-lib/tokens.js';
 import { sendEmail } from '../../../../functions-lib/email.js';
 import { renderExportReadyEmail } from '../../../../functions-lib/emailTemplates.js';
+
+const DELIVERY_UNKNOWN_MESSAGE = 'Email delivery could not be confirmed. Your video is saved and can still be downloaded. Contact support before trying to send it again.';
 
 export async function onRequest({ request, env, params }) {
   if (request.method !== 'POST') return methodNotAllowed('POST');
@@ -45,7 +47,13 @@ export async function onRequest({ request, env, params }) {
     return json({ jobId: job.id, status: 'emailed', alreadySent: true });
   }
   if (job.status === 'emailing') {
-    return errorResponse('delivery_in_progress', 'Email delivery is already in progress', 409);
+    // A worker may have died after claiming the job. There is no provider-side
+    // deduplication on the Cloudflare path, so an old claim needs reconciliation
+    // rather than a timer that blindly submits the email again.
+    return errorResponse('delivery_in_progress', 'Email delivery is in progress or needs review. Your video is saved and can still be downloaded.', 409);
+  }
+  if (job.status === 'delivery_unknown') {
+    return errorResponse('delivery_unknown', DELIVERY_UNKNOWN_MESSAGE, 409);
   }
   if (job.status !== 'uploaded') {
     return errorResponse('not_uploaded', 'Upload the video before completing the job', 409);
@@ -93,10 +101,12 @@ export async function onRequest({ request, env, params }) {
     .prepare("UPDATE export_jobs SET status = 'emailing', error = NULL WHERE id = ? AND status = 'uploaded'")
     .bind(job.id)
     .run();
-  if (claim.meta.changes !== 1) {
+  if (!claim.success || claim.meta?.changes !== 1) {
     return errorResponse('delivery_in_progress', 'Email delivery is already in progress', 409);
   }
 
+  let providerSubmissionStarted = false;
+  let providerAccepted = false;
   try {
     const tokenUpdates = [];
     if (confirmToken) {
@@ -109,22 +119,46 @@ export async function onRequest({ request, env, params }) {
         .prepare('UPDATE leads SET unsubscribe_token_hash = ? WHERE email = ?')
         .bind(await hashToken(unsubscribeToken), job.email));
     }
-    if (tokenUpdates.length > 0) await env.LEADS_DB.batch(tokenUpdates);
+    if (tokenUpdates.length > 0) {
+      const updates = await env.LEADS_DB.batch(tokenUpdates);
+      if (updates.some((update) => !update.success)) {
+        throw new Error('Could not save the email action links');
+      }
+    }
 
+    providerSubmissionStarted = true;
     const result = await sendEmail(env, { to: job.email, ...message });
-    await env.LEADS_DB
-      .prepare("UPDATE export_jobs SET status = 'emailed', completed_at = ?, error = NULL WHERE id = ?")
+    providerAccepted = true;
+    const completed = await env.LEADS_DB
+      .prepare("UPDATE export_jobs SET status = 'emailed', completed_at = ?, error = NULL WHERE id = ? AND status = 'emailing'")
       .bind(nowIso(), job.id)
       .run();
+    if (!completed.success || completed.meta?.changes !== 1) {
+      throw new Error('Could not confirm the email delivery state');
+    }
     return json({ jobId: job.id, status: 'emailed', provider: result.provider });
   } catch (error) {
-    // Restore `uploaded`: the video is intact and the caller can retry this
-    // endpoint without re-uploading.
-    await env.LEADS_DB
-      .prepare("UPDATE export_jobs SET status = 'uploaded', error = ? WHERE id = ? AND status = 'emailing'")
-      .bind(String(error?.message ?? error).slice(0, 500), job.id)
-      .run();
-    return errorResponse('email_failed', 'The video was saved but the email could not be sent', 502);
+    // Only a failure before submission or an explicit provider rejection may
+    // return to `uploaded`. A lost response or failed D1 write after acceptance
+    // has an unknown outcome; retrying it could send a second email and rotate
+    // the confirmation/unsubscribe hashes out from under the first message.
+    const safeToRetry = !providerAccepted
+      && (!providerSubmissionStarted || error?.safeToRetry === true);
+    const nextStatus = safeToRetry ? 'uploaded' : 'delivery_unknown';
+    let stateUpdated = false;
+    try {
+      const update = await env.LEADS_DB
+        .prepare(`UPDATE export_jobs SET status = '${nextStatus}', error = ? WHERE id = ? AND status = 'emailing'`)
+        .bind(String(error?.message ?? error).slice(0, 500), job.id)
+        .run();
+      stateUpdated = update.success && update.meta?.changes === 1;
+    } catch {
+      // The row remains `emailing` if D1 is unavailable. That state also blocks
+      // automatic resend and is explicitly reported as needing review above.
+    }
+    return safeToRetry && stateUpdated
+      ? errorResponse('email_failed', 'The video was saved but the email could not be sent', 502)
+      : errorResponse('delivery_unknown', DELIVERY_UNKNOWN_MESSAGE, 503);
   }
 }
 

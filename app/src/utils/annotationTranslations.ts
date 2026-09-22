@@ -7,6 +7,7 @@ export function localizedAnnotation(annotation: TextAnnotation, language: Langua
     ...annotation,
     title: wording.title.trim() || annotation.title,
     subtitle: wording.subtitle?.trim() || annotation.subtitle,
+    eyebrow: wording.eyebrow === undefined ? annotation.eyebrow : wording.eyebrow.trim() || undefined,
     meta: wording.meta?.trim() ?? annotation.meta,
     description: wording.description?.trim() ?? annotation.description,
   };

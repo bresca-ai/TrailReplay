@@ -72,11 +72,9 @@ function mergeSettings(saved: ReplayProjectFile['settings']): AppSettings {
 }
 
 export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): void {
-  store.reset();
-
-  const trackIds: string[] = [];
-
-  for (const { meta, gpxText } of parsed.tracks) {
+  // Prepare everything that can fail before replacing the current session.
+  // An archive can be valid ZIP/JSON while containing a broken route file.
+  const tracks = parsed.tracks.map(({ meta, gpxText }) => {
     const track = parseGPX(gpxText, nameFromRouteFile(meta.routeFile));
     // Every field but the route file is optional, so a hand-authored project
     // can omit it: an absent id keeps the one parseGPX generated, and an absent
@@ -88,11 +86,10 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     if (meta.color) track.color = meta.color;
     if (meta.activityIcon) track.activityIcon = meta.activityIcon;
     track.visible = meta.visible ?? true;
-    trackIds.push(track.id);
-    store.addTrack(track);
-  }
+    return track;
+  });
 
-  for (const { meta, gpxText } of parsed.comparisonTracks) {
+  const comparisonTracks = parsed.comparisonTracks.map(({ meta, gpxText }) => {
     const track = parseGPX(gpxText, nameFromRouteFile(meta.routeFile));
     if (meta.id) track.id = meta.id;
     if (meta.name) track.name = meta.name;
@@ -107,15 +104,15 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
       visible: track.visible,
       offset: meta.offset ?? 0,
     };
-    store.addComparisonTrack(comparisonTrack);
-  }
+    return comparisonTrack;
+  });
 
   const { project } = parsed;
 
-  store.hydrateState({
+  const restoredState: Partial<AppState> = {
     // An absent activeTrackId means "whatever a plain GPX upload would pick",
     // which is the first track.
-    activeTrackId: project.activeTrackId ?? trackIds[0] ?? null,
+    activeTrackId: project.activeTrackId ?? tracks[0]?.id ?? null,
     // addTrack already built a journey and one segment per track, which is
     // exactly what dropping those GPX files on the page produces. Only
     // overwrite that when the project actually says otherwise — an omitted
@@ -137,8 +134,7 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     showAutomaticLandmarks: project.showAutomaticLandmarks ?? false,
     // Older saved projects predate routeTimingMode; fall back to 'recorded'
     // (the app default) rather than leaving it undefined. Built from the
-    // defaults rather than `store.playback`, since `store` was captured
-    // before `store.reset()` above and still holds the pre-reset value.
+    // defaults rather than the playback state of the project being replaced.
     playback: { ...createDefaultPlayback(), routeTimingMode: project.routeTimingMode ?? 'recorded' },
     cameraPosition: project.cameraPosition ?? null,
     // Merge defaults so projects saved before newer presentation controls
@@ -152,5 +148,10 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     videoExportSettings: { ...createDefaultVideoExportSettings(), ...project.videoExportSettings },
     socialShareSettings: { ...createDefaultSocialShareSettings(), ...project.socialShareSettings },
     activePanel: 'tracks',
-  });
+  };
+
+  store.reset();
+  tracks.forEach((track) => store.addTrack(track));
+  comparisonTracks.forEach((track) => store.addComparisonTrack(track));
+  store.hydrateState(restoredState);
 }

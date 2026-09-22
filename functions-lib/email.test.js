@@ -50,7 +50,32 @@ describe('sendEmail', () => {
       CLOUDFLARE_ACCOUNT_ID: 'account-id',
       CLOUDFLARE_EMAIL_API_TOKEN: 'email-token',
       RESEND_API_KEY: 'fallback-token',
-    }, message)).rejects.toThrow('Sender domain not verified');
+    }, message)).rejects.toMatchObject({ safeToRetry: true });
+  });
+
+  it('treats an uncertain Cloudflare server response as unsafe to resend or fall back', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({
+      success: false, errors: [{ message: 'Temporary upstream error' }],
+    }, { status: 503 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(sendEmail({
+      CLOUDFLARE_ACCOUNT_ID: 'account-id',
+      CLOUDFLARE_EMAIL_API_TOKEN: 'email-token',
+      RESEND_API_KEY: 'fallback-token',
+    }, message)).rejects.toMatchObject({ safeToRetry: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats an ambiguous Cloudflare timeout response as unsafe to resend', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({
+      success: false, errors: [{ message: 'Request timed out' }],
+    }, { status: 408 })));
+
+    await expect(sendEmail({
+      CLOUDFLARE_ACCOUNT_ID: 'account-id',
+      CLOUDFLARE_EMAIL_API_TOKEN: 'email-token',
+    }, message)).rejects.toMatchObject({ safeToRetry: false });
   });
 
   it('falls back to Resend when Cloudflare rejects its credentials', async () => {

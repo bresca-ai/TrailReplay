@@ -151,6 +151,27 @@ describe('resolveRecipe', () => {
       expect(resolved.userLandmarks[1].routeDistanceMeters).toBeCloseTo(30_000, -2);
     });
 
+    it('assigns distinct IDs to every generated item with an authored auto ID', () => {
+      const resolved = resolveRecipe(
+        {
+          tracks: { files: '*.gpx' },
+          landmarks: [{ auto: 'overnight-stops', id: 'night-stop' }],
+          annotations: [{ auto: 'overnight-stops', id: 'night-note' }],
+        },
+        week.tracks,
+        week.names,
+      );
+
+      expect(resolved.userLandmarks.map((landmark) => landmark.id)).toEqual([
+        'night-stop-1',
+        'night-stop-2',
+      ]);
+      expect(resolved.textAnnotations.map((annotation) => annotation.id)).toEqual([
+        'night-note-1',
+        'night-note-2',
+      ]);
+    });
+
     it('warns when consecutive days do not join up', () => {
       const resolved = resolveRecipe(
         { tracks: { files: '*.gpx' }, landmarks: [{ auto: 'overnight-stops' }] },

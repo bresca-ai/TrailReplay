@@ -236,6 +236,7 @@ export function PicturesPanel() {
                       onClick={() => setSelectedPictureId(picture.id)}
                       className="w-20 h-20 rounded-xl overflow-hidden border border-[var(--evergreen)]/20 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--trail-orange)]"
                       title={t('media.previewPicture')}
+                      aria-label={t('media.previewPicture')}
                     >
                       {picture.isPlaceholder ? (
                         <div
@@ -303,6 +304,7 @@ export function PicturesPanel() {
                         onClick={() => startRelink('picture', picture.id)}
                         className="flex items-center justify-center rounded-lg border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] px-3 py-2 hover:bg-[var(--trail-orange)]/20"
                         title={t('media.relinkFile')}
+                        aria-label={t('media.relinkFile')}
                       >
                         <Link2 className="w-4 h-4 text-[var(--trail-orange)]" />
                       </button>
@@ -314,18 +316,21 @@ export function PicturesPanel() {
                       }}
                       className="flex items-center justify-center rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/5 px-3 py-2 hover:bg-[var(--evergreen)]/10"
                       title={t('media.editDuration')}
+                      aria-label={t('media.editDuration')}
                     >
                       <Settings2 className="w-4 h-4 text-[var(--evergreen-60)]" />
                     </button>
                     <button
                       onClick={() => seekToProgress(picture.progress)}
                       className="flex items-center justify-center rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/5 px-3 py-2 hover:bg-[var(--evergreen)]/10"
+                      aria-label={t('media.pictureSeekTo')}
                     >
                       <Play className="w-4 h-4 text-[var(--evergreen-60)]" />
                     </button>
                     <button
                       onClick={() => removePicture(picture.id)}
                       className="flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-2 hover:bg-red-100"
+                      aria-label={t('common.remove')}
                     >
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </button>
@@ -405,6 +410,7 @@ export function PicturesPanel() {
                         onClick={() => startRelink('video', video.id)}
                         className="p-1.5 hover:bg-[var(--trail-orange)]/20 text-[var(--trail-orange)] rounded"
                         title={t('media.relinkFile')}
+                        aria-label={t('media.relinkFile')}
                       >
                         <Link2 className="w-4 h-4" />
                       </button>
@@ -413,6 +419,7 @@ export function PicturesPanel() {
                       onClick={() => updateVideoPosition(video.id, playbackProgress)}
                       className="p-1.5 hover:bg-[var(--evergreen)]/10 rounded"
                       title={t('media.videoMoveToPlayhead')}
+                      aria-label={t('media.videoMoveToPlayhead')}
                     >
                       <MapPin className="w-4 h-4 text-[var(--evergreen-60)]" />
                     </button>
@@ -420,12 +427,14 @@ export function PicturesPanel() {
                       onClick={() => seekToProgress(video.progress)}
                       className="p-1.5 hover:bg-[var(--evergreen)]/10 rounded"
                       title={t('media.videoSeekTo')}
+                      aria-label={t('media.videoSeekTo')}
                     >
                       <Play className="w-4 h-4 text-[var(--evergreen-60)]" />
                     </button>
                     <button
                       onClick={() => removeVideo(video.id)}
                       className="p-1.5 hover:bg-red-100 text-red-500 rounded"
+                      aria-label={t('common.remove')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

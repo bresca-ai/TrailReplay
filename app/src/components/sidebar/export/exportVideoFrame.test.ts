@@ -129,6 +129,11 @@ describe('drawVideoFrame', () => {
     await result.current.updateOverlayAsync(1920, 1080);
 
     expect(ignoredTags).toContain('VIDEO');
+    expect(result.current.cachedPopupOverlayRef.current).not.toBeNull();
+    expect(result.current.cachedPopupOverlayRef.current).not.toBe(result.current.cachedOverlayRef.current);
+    popup.remove();
+    await result.current.updateOverlayAsync(1920, 1080);
+    expect(result.current.cachedPopupOverlayRef.current).toBeNull();
     container.remove();
     vi.unstubAllGlobals();
   });

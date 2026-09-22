@@ -1,15 +1,13 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
+import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/utils/playbackTiming';
 
 interface PlaybackProviderProps {
   children: React.ReactNode;
 }
 
 // Animation timing constants
-const INTRO_DURATION = 1500; // Quick cinematic zoom-in without a dead hold
-const OUTRO_DELAY = 0; // Start the final fly-out as soon as the route ends
-const OUTRO_DURATION = 3000; // 3 seconds for zoom-out
 const AUTO_RESET_DELAY = 3000; // 3 seconds after outro before auto-reset
 
 // Duration limits (in milliseconds)

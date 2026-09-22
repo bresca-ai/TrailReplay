@@ -40,7 +40,7 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
           node -e "const value=process.env.RELEASE_VERSION; if (!/^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$/.test(value)) process.exitCode=1"
-          test "$RELEASE_VERSION" = "$(node -p \"require('./package.json').version\")"
+          test "$RELEASE_VERSION" = "$(node -p 'require("./package.json").version')"
 
       - name: Verify release metadata and production build
         run: |

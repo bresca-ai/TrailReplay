@@ -2,6 +2,7 @@ import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/components/playba
 import { useAppStore } from '@/store/useAppStore';
 import {
   getBlobSizeBucket,
+  getCameraUsageAnalyticsParams,
   getProgressBucket,
   getVideoExportAnalyticsParams,
   trackEvent,
@@ -29,7 +30,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     visibleStats, pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
-    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
+    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize, estimatedDurationMs,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
@@ -514,6 +515,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       picture_count: pictures.length,
       journey_segment_count: journeySegments.length,
       camera_mode: cameraSettings.mode,
+      ...getCameraUsageAnalyticsParams(cameraSettings),
+      has_annotations: useAppStore.getState().textAnnotations.length > 0,
       camera_preset: cameraSettings.mode === 'follow-behind' ? cameraSettings.followBehindPreset : 'not_applicable',
       // How much of the cinematic camera was actually authored, so exports
       // can be told apart from ones that only visited the mode.
@@ -634,7 +637,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
                 qualityMode: 'studio',
                 aspectRatio: videoExportSettings.aspectRatio,
                 fps: videoExportSettings.fps,
-                durationMs: playback.totalDuration,
+                durationMs: Math.ceil(estimatedDurationMs),
               },
             });
           } catch (deliveryError) {
@@ -685,7 +688,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       useWebCodecsRef.current = false;
     }
-  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings.followBehindPreset, cameraSettings.mode, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings, visibleStats]);
+  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, estimatedDurationMs, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings, visibleStats]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.
@@ -772,6 +775,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   return {
     actualFormat,
     estimatedSize,
+    estimatedDurationMs,
     exportProgress,
     exportStage,
     exportedBlob,

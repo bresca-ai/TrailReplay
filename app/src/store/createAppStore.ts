@@ -29,6 +29,16 @@ export function createAppStore() {
 
       reset: () =>
         set((state) => {
+          // Object URLs retain their whole file until explicitly released.
+          // Resetting is the normal path when opening a different project.
+          if (typeof URL !== 'undefined') {
+            new Set([
+              ...state.pictures,
+              ...state.pendingPicturePlacements,
+              ...state.videos,
+            ].filter((media) => media.url.startsWith('blob:')).map((media) => media.url))
+              .forEach((url) => URL.revokeObjectURL(url));
+          }
           state.tracks = [];
           state.activeTrackId = null;
           state.recipeReport = null;

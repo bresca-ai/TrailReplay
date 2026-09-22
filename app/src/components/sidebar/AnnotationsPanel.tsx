@@ -522,6 +522,13 @@ export function AnnotationsPanel() {
                     ? settings.visibleStats.filter((s) => s !== id)
                     : [...settings.visibleStats, id];
                   setSettings({ visibleStats: next });
+                  if (!checked) {
+                    trackEvent('feature_used', {
+                      feature_name: 'statistic',
+                      feature_value: id,
+                      feature_context: 'annotations_panel',
+                    });
+                  }
                 }}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors text-left ${
                   unavailable

@@ -1,6 +1,21 @@
 import type { AppState } from '@/store/storeTypes';
 import type { AppSliceCreator } from './types';
 
+function revokeBlobUrlIfUnused(
+  state: Pick<AppState, 'pictures' | 'pendingPicturePlacements' | 'videos'>,
+  url: string,
+) {
+  const stillReferenced = [
+    ...state.pictures,
+    ...state.pendingPicturePlacements,
+    ...state.videos,
+  ].some((media) => media.url === url);
+
+  if (!stillReferenced && url.startsWith('blob:') && typeof URL !== 'undefined') {
+    URL.revokeObjectURL(url);
+  }
+}
+
 type MediaSlice = Pick<
   AppState,
   | 'pictures'
@@ -54,17 +69,23 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
 
   removePendingPicturePlacement: (pictureId) =>
     set((state) => {
+      const pending = state.pendingPicturePlacements.find((picture) => picture.id === pictureId);
       state.pendingPicturePlacements = state.pendingPicturePlacements.filter((picture) => picture.id !== pictureId);
+      if (pending) revokeBlobUrlIfUnused(state, pending.url);
     }),
 
   clearPendingPicturePlacements: () =>
     set((state) => {
+      const urls = new Set(state.pendingPicturePlacements.map((picture) => picture.url));
       state.pendingPicturePlacements = [];
+      urls.forEach((url) => revokeBlobUrlIfUnused(state, url));
     }),
 
   removePicture: (pictureId) =>
     set((state) => {
+      const picture = state.pictures.find((entry) => entry.id === pictureId);
       state.pictures = state.pictures.filter((picture) => picture.id !== pictureId);
+      if (picture) revokeBlobUrlIfUnused(state, picture.url);
       if (state.selectedPictureId === pictureId) {
         state.selectedPictureId = null;
       }
@@ -106,7 +127,9 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
 
   removeVideo: (videoId) =>
     set((state) => {
+      const video = state.videos.find((entry) => entry.id === videoId);
       state.videos = state.videos.filter((video) => video.id !== videoId);
+      if (video) revokeBlobUrlIfUnused(state, video.url);
       if (state.selectedVideoId === videoId) {
         state.selectedVideoId = null;
       }
@@ -122,6 +145,14 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
         video.routeDistance = routeAnchor.routeDistance;
         video.routeSegmentId = routeAnchor.routeSegmentId;
         video.routeSegmentDistance = routeAnchor.routeSegmentDistance;
+      } else {
+        // Moving a clip to the playhead is a manual placement. Retaining its
+        // old GPS/timestamp anchor makes the route-sync effect move it back on
+        // the next timing-mode change.
+        video.placementSource = 'manual';
+        video.routeDistance = undefined;
+        video.routeSegmentId = undefined;
+        video.routeSegmentDistance = undefined;
       }
     }),
 
@@ -174,9 +205,11 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       const picture = state.pictures.find((entry) => entry.id === pictureId);
       if (!picture) return;
 
+      const oldUrl = picture.url;
       picture.file = file;
       picture.url = URL.createObjectURL(file);
       picture.isPlaceholder = false;
+      revokeBlobUrlIfUnused(state, oldUrl);
     }),
 
   relinkVideoFile: (videoId, file) =>
@@ -184,8 +217,10 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       const video = state.videos.find((entry) => entry.id === videoId);
       if (!video) return;
 
+      const oldUrl = video.url;
       video.file = file;
       video.url = URL.createObjectURL(file);
       video.isPlaceholder = false;
+      revokeBlobUrlIfUnused(state, oldUrl);
     }),
 });

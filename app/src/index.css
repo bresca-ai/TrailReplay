@@ -358,50 +358,38 @@ html, body {
   stroke-width: 2;
 }
 
-/* Route notes sit just above the elevation profile, like a compact chapter
-   marker in the video rather than a tooltip floating over the route. */
+/* Transparent field notes: the map remains the canvas, not a card backdrop. */
 .tr-annotation-side-panel {
   right: max(20px, 4%);
   width: min(420px, calc(100% - 32px));
-  padding: 22px 24px 23px;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #f8f8f1;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 20px;
-  background: linear-gradient(145deg, rgb(30 43 45 / 97%), rgb(13 22 25 / 97%) 72%);
-  box-shadow: 0 18px 44px rgb(3 13 16 / 30%), 0 2px 8px rgb(3 13 16 / 18%);
-  backdrop-filter: blur(12px);
-  overflow: hidden;
-  animation: tr-annotation-arrive 320ms ease-out both;
-}
-
-.tr-annotation-side-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 4px;
-  background: var(--annotation-accent, #f3b133);
+  padding: 18px 20px;
+  font-family: var(--font-family-primary);
+  color: #f8f6f0;
+  background: transparent;
+  text-align: left;
+  text-shadow: 0 2px 5px rgb(3 13 16 / 90%), 0 0 15px rgb(3 13 16 / 75%);
+  animation: tr-annotation-arrive 280ms ease-out both;
 }
 
 .tr-annotation-side-panel__header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .tr-annotation-side-panel__logo {
   display: grid;
   place-items: center;
   flex: none;
-  width: 44px;
-  height: 44px;
-  border: 1px solid color-mix(in srgb, var(--annotation-accent, #f3b133) 58%, transparent);
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--annotation-accent, #f3b133) 15%, transparent);
+  width: 35px;
+  height: 35px;
+  color: var(--annotation-accent, #f3b133);
   font-family: sans-serif;
-  font-size: 24px;
+  font-size: 28px;
   line-height: 1;
 }
+
+.tr-annotation-side-panel__logo svg { width: 29px; height: 29px; filter: drop-shadow(0 2px 4px rgb(3 13 16 / 80%)); }
 
 .tr-annotation-side-panel__identity {
   display: flex;
@@ -412,25 +400,25 @@ html, body {
 
 .tr-annotation-side-panel__eyebrow,
 .tr-annotation-side-panel__details-label {
-  color: rgb(245 246 237 / 58%);
+  color: #f8f6f0;
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .18em;
+  font-weight: 600;
+  letter-spacing: .14em;
   line-height: 1.3;
   text-transform: uppercase;
 }
 
 .tr-annotation-side-panel__code {
   color: var(--annotation-accent, #f3b133);
-  font-size: 18px;
-  font-weight: 850;
-  letter-spacing: .025em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .06em;
   line-height: 1.1;
 }
 
 .tr-annotation-side-panel__dash {
-  width: 25px;
-  height: 2px;
+  width: 31px;
+  height: 1px;
   margin-left: auto;
   align-self: flex-start;
   margin-top: 11px;
@@ -439,11 +427,11 @@ html, body {
 }
 
 .tr-annotation-side-panel__title {
-  margin: 19px 0 0;
-  font-size: clamp(19px, 2vw, 24px);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -.025em;
+  margin: 12px 0 0;
+  font-size: clamp(18px, 2vw, 23px);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -.035em;
   text-wrap: balance;
 }
 
@@ -451,27 +439,27 @@ html, body {
   margin: 10px 0 0;
   color: var(--annotation-accent, #f3b133);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 600;
   letter-spacing: .015em;
 }
 
 .tr-annotation-side-panel__details {
-  margin-top: 18px;
-  padding-top: 15px;
-  border-top: 1px solid rgb(255 255 255 / 16%);
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid var(--annotation-accent, #f3b133);
 }
 
 .tr-annotation-side-panel__details p {
   margin: 8px 0 0;
-  color: rgb(251 251 246 / 87%);
-  font-size: 13px;
+  color: #f8f6f0;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
 
 @keyframes tr-annotation-arrive {
-  from { opacity: 0; translate: 0 12px; }
+  from { opacity: 0; translate: 0 8px; }
   to { opacity: 1; translate: 0 0; }
 }
 

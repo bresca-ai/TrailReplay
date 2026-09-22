@@ -57,6 +57,71 @@ describe('parseReplayArchive', () => {
     await expect(parseReplayArchive(corrupt)).rejects.toMatchObject({ code: 'corrupt' });
   });
 
+  it('rejects an entry whose declared uncompressed size exceeds the extraction limit', async () => {
+    const zipped = zipSync({ 'project.json': strToU8(JSON.stringify({ tracks: [] })) });
+    // The local ZIP header stores the original size at byte 22. This stays a
+    // tiny test archive while exercising the pre-extraction size guard.
+    new DataView(zipped.buffer, zipped.byteOffset, zipped.byteLength)
+      .setUint32(22, MAX_ARCHIVE_SIZE_BYTES + 1, true);
+
+    await expect(parseReplayArchive(blobToFile(new Blob([zipped as BlobPart])))).rejects.toMatchObject({
+      code: 'too-large',
+    } satisfies Partial<ReplayArchiveError>);
+  });
+
+  it('stops a highly-compressible entry as soon as its forged size is exceeded', async () => {
+    const zipped = zipSync({
+      // This expands to several 1 KiB extraction pushes but stays tiny on disk.
+      'project.json': new Uint8Array(4 * 1024 * 1024).fill(65),
+    });
+    new DataView(zipped.buffer, zipped.byteOffset, zipped.byteLength).setUint32(22, 1, true);
+
+    await expect(parseReplayArchive(blobToFile(new Blob([zipped as BlobPart])))).rejects.toMatchObject({
+      code: 'corrupt',
+    } satisfies Partial<ReplayArchiveError>);
+  });
+
+  it('rejects a selected entry that is truncated before its stream completes', async () => {
+    const zipped = zipSync({
+      'project.json': strToU8(JSON.stringify({ tracks: [], padding: 'x'.repeat(10_000) })),
+    });
+    const header = new DataView(zipped.buffer, zipped.byteOffset, zipped.byteLength);
+    const compressedSize = header.getUint32(18, true);
+    const fileNameLength = header.getUint16(26, true);
+    const extraLength = header.getUint16(28, true);
+    const entryEnd = 30 + fileNameLength + extraLength + compressedSize;
+    const truncated = zipped.slice(0, entryEnd - 1);
+
+    await expect(parseReplayArchive(blobToFile(new Blob([truncated as BlobPart])))).rejects.toMatchObject({
+      code: 'corrupt',
+    } satisfies Partial<ReplayArchiveError>);
+  });
+
+  it('skips unused archive entries instead of extracting their payloads', async () => {
+    const zipped = zipSync({
+      'project.json': strToU8(JSON.stringify({ tracks: [] })),
+      'preview.bin': strToU8('unused preview data'),
+    });
+
+    await expect(parseReplayArchive(blobToFile(new Blob([zipped as BlobPart])))).resolves.toMatchObject({
+      project: { tracks: [] },
+    });
+  });
+
+  it('rejects archives with more than the supported entry count', async () => {
+    const unusedEntries = Object.fromEntries(
+      Array.from({ length: 1_000 }, (_, index) => [`unused/${index}.txt`, strToU8('')]),
+    );
+    const zipped = zipSync({
+      'project.json': strToU8(JSON.stringify({ tracks: [] })),
+      ...unusedEntries,
+    });
+
+    await expect(parseReplayArchive(blobToFile(new Blob([zipped as BlobPart])))).rejects.toMatchObject({
+      code: 'too-large',
+    } satisfies Partial<ReplayArchiveError>);
+  });
+
   it('rejects an archive missing project.json', async () => {
     const zipped = zipSync({ 'manifest.json': strToU8('{}') });
     const file = blobToFile(new Blob([zipped as BlobPart]));

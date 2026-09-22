@@ -50,6 +50,40 @@ describe('gpxParser', () => {
     expect(track.elevationGain).toBe(15);
   });
 
+  it('accepts KML coordinates at geographic boundaries and ignores malformed tuples', () => {
+    const track = parseKML(`<?xml version="1.0"?>
+      <kml><Placemark><LineString><coordinates>
+        180,90,1 invalid 1 181,0 -180,-90,2
+      </coordinates></LineString></Placemark></kml>`, 'bounds.kml');
+
+    expect(track.points).toHaveLength(2);
+    expect(track.points.map((point) => [point.lat, point.lon])).toEqual([
+      [90, 180],
+      [-90, -180],
+    ]);
+  });
+
+  it('rejects a KML route when all LineString coordinates are non-finite or out of range', () => {
+    expect(() => parseKML(`<?xml version="1.0"?>
+      <kml><Placemark><LineString><coordinates>
+        Infinity,0 0,Infinity 181,0 0,91
+      </coordinates></LineString></Placemark></kml>`, 'invalid.kml'))
+      .toThrow('at least two valid coordinates');
+  });
+
+  it('filters invalid GX Track coordinates without throwing on missing coordinate fields', () => {
+    const track = parseKML(`<?xml version="1.0"?>
+      <kml xmlns:gx="http://www.google.com/kml/ext/2.2"><Placemark><gx:Track>
+        <when>2026-01-01T00:00:00Z</when><when>2026-01-01T00:01:00Z</when>
+        <when>2026-01-01T00:02:00Z</when><when>2026-01-01T00:03:00Z</when>
+        <gx:coord>1 42 10</gx:coord><gx:coord>181 42 10</gx:coord>
+        <gx:coord>2</gx:coord><gx:coord>2 43 11</gx:coord>
+      </gx:Track></Placemark></kml>`, 'gx-validation.kml');
+
+    expect(track.points).toHaveLength(2);
+    expect(track.points.map((point) => [point.lat, point.lon])).toEqual([[42, 1], [43, 2]]);
+  });
+
   it('interpolates a point by distance along a track', () => {
     const track = parseGPX(sampleGpx, 'sample.gpx');
     const midpoint = getPointAtDistance(track, track.totalDistance / 2);

@@ -1,5 +1,5 @@
 import { GA4_DEBUG_MODE, GA4_MEASUREMENT_ID, shouldEnableAnalytics } from '@/config/analytics';
-import type { VideoExportSettings, VideoFormat } from '@/types';
+import type { CameraSettings, VideoExportSettings, VideoFormat } from '@/types';
 
 let isInitialized = false;
 let pendingInitialization = false;
@@ -116,6 +116,21 @@ export function getProgressBucket(progressPercent: number) {
   if (progressPercent < 50) return '25_50';
   if (progressPercent < 75) return '50_75';
   return '75_100';
+}
+
+/** A snapshot of settings actually used, including defaults that were never changed. */
+export function getCameraUsageAnalyticsParams(camera: CameraSettings) {
+  const stability = Math.max(0, Math.min(1, camera.cameraStability));
+  const zoom = Math.max(0, Math.min(100, camera.followBehindZoomLevel));
+
+  return {
+    camera_stability_bucket: camera.mode === 'overview' ? 'not_applicable'
+      : stability < 0.35 ? 'stable' : stability > 0.65 ? 'reactive' : 'balanced',
+    // This is the follow-behind distance slider, not the map's transient zoom.
+    camera_zoom_bucket: camera.mode === 'follow-behind'
+      ? zoom < 25 ? 'far' : zoom < 50 ? 'medium_far' : zoom < 75 ? 'medium_close' : 'close'
+      : 'not_applicable',
+  };
 }
 
 function installAnalyticsQueue() {

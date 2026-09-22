@@ -14,6 +14,16 @@ export const MAX_UPLOAD_BYTES = 95 * 1024 * 1024;
 /** Jobs one IP may create per rolling day. */
 export const MAX_JOBS_PER_IP_PER_DAY = 5;
 
+/** Maximum JSON request size for endpoints that only accept small metadata bodies. */
+export const MAX_JSON_BODY_BYTES = 64 * 1024;
+
+export class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super('Request body is too large');
+    this.name = 'RequestBodyTooLargeError';
+  }
+}
+
 export function json(body, status = 200, headers = {}) {
   return Response.json(body, {
     status,
@@ -60,14 +70,47 @@ export function isoDaysFromNow(days) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
-export async function readJsonBody(request) {
+export async function readJsonBody(request, { requireContentType = true } = {}) {
   const contentType = request.headers.get('Content-Type') || '';
-  if (!contentType.includes('application/json')) return null;
+  if (requireContentType && !contentType.includes('application/json')) return null;
+
+  const declaredLength = Number(request.headers.get('Content-Length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_JSON_BODY_BYTES) {
+    throw new RequestBodyTooLargeError();
+  }
+
+  if (!request.body) return null;
+
+  const reader = request.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
   try {
-    const body = await request.json();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+      totalBytes += chunk.byteLength;
+      if (totalBytes > MAX_JSON_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new RequestBodyTooLargeError();
+      }
+      chunks.push(chunk);
+    }
+
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+
+    const body = JSON.parse(new TextDecoder().decode(bytes));
     return body && typeof body === 'object' ? body : null;
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) throw error;
     return null;
+  } finally {
+    reader.releaseLock();
   }
 }
 

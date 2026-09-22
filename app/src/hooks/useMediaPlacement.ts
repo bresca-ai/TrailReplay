@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { buildComputedJourney } from '@/utils/journeyUtils';
 import { findTimestampPlacement } from '@/utils/photoTimelinePlacement';
@@ -19,9 +19,14 @@ export function useMediaPlacement() {
   const activeTrackId = useAppStore((state) => state.activeTrackId);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const playback = useAppStore((state) => state.playback);
+  // Every file in an import batch uses the same geometry. Rebuild only when
+  // routes change, rather than once for GPS and again for each timestamp.
+  const computedJourney = useMemo(
+    () => buildComputedJourney(journeySegments, tracks),
+    [journeySegments, tracks],
+  );
 
   const findPositionOnRoute = useCallback((lat: number, lon: number): RouteMatch | null => {
-    const computedJourney = buildComputedJourney(journeySegments, tracks);
 
     if (computedJourney && computedJourney.coordinates.length > 0) {
       return projectCoordinateToJourney(computedJourney, lat, lon, playback.progress, playback.routeTimingMode);
@@ -39,13 +44,12 @@ export function useMediaPlacement() {
     }
 
     return projectCoordinateToTracks(candidateTracks, lat, lon, playback.progress);
-  }, [activeTrackId, journeySegments, playback.progress, playback.routeTimingMode, tracks]);
+  }, [activeTrackId, computedJourney, playback.progress, playback.routeTimingMode, tracks]);
 
   const findPositionAtTime = useCallback((timestamp: Date | undefined): {
     match: TimestampPlacementMatch | null;
     reason: TimestampPlacementFailureReason | null;
   } => {
-    const computedJourney = buildComputedJourney(journeySegments, tracks);
     return findTimestampPlacement({
       timestamp,
       tracks,
@@ -54,7 +58,7 @@ export function useMediaPlacement() {
       activeTrackId,
       routeTimingMode: playback.routeTimingMode,
     });
-  }, [activeTrackId, journeySegments, playback.routeTimingMode, tracks]);
+  }, [activeTrackId, computedJourney, journeySegments, playback.routeTimingMode, tracks]);
 
   return { findPositionOnRoute, findPositionAtTime };
 }
