@@ -164,6 +164,12 @@ The top-level text is the fallback when a language is missing. Older annotations
 combining fields in `title` and `subtitle` still display, but new recipes
 should use the separate fields. The panel disappears for the final zoom-out.
 
+Pinhead is a CC0 library already bundled by TrailReplay. Agents do not need to
+add a new icon asset or ask for a limited icon list: any non-sensitive ID in
+the bundled Pinhead index can be used as `pinhead:<icon id>`. Choose the ID by
+meaning (for example `water_tap` for an aid station and `flag_checkered` for a
+finish), and keep the source's language in the surrounding title and copy.
+
 `iconChanges` swap the moving marker partway: `{ "km": 20, "icon": "🥾",
 "label": "Walking the col" }`.
 
