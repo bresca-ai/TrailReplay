@@ -227,6 +227,7 @@ describe('resolveRecipe', () => {
     // Each is halfway along its own course, not along a combined one.
     expect(resolved.textAnnotations[0].progress).toBeCloseTo(0.5, 2);
     expect(resolved.textAnnotations[1].progress).toBeCloseTo(0.5, 2);
+    expect(resolved.report.warnings[0]).toContain('Use mode "stitch" for one multi-file journey');
   });
 
   it('warns about pins the map would collapse into one', () => {

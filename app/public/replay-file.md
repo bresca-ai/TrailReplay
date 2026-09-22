@@ -76,7 +76,7 @@ screen time in ms, overriding the automatic share).
 
 | Key | Meaning |
 |---|---|
-| `mode` | `stitch` (default) plays them one after another as one journey. `alternatives` loads them all but puts only the active one in the timeline, so the others are there to switch to. |
+| `mode` | `stitch` (default) plays them one after another as one journey. `alternatives` loads them all but puts only the active one in the timeline, so the others are there to switch to. If several files are one journey, use `stitch`; otherwise annotations on the non-active routes cannot have a meaningful playback time. |
 | `legDuration` | `by-distance` (default) shares screen time by how far each leg is, so a 35 km day is not given the same seconds as an 8 km one. `equal`, or a number of ms per leg. |
 | `totalDuration` | Total replay length in ms. Default 60000. |
 | `activeTrack` | Which route starts active: index or name. |

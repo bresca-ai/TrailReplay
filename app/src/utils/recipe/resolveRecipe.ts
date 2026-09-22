@@ -242,6 +242,14 @@ export function resolveRecipe(
 
   const warnings: string[] = [];
 
+  if (!stitched && named.length > 1 && recipe.mode === 'alternatives') {
+    warnings.push(
+      `This recipe has ${named.length} alternative routes, but only "${activeTrack.name}" `
+      + 'plays in the timeline. Use mode "stitch" for one multi-file journey, or make '
+      + 'one recipe per course when each route should produce its own video.',
+    );
+  }
+
   /**
    * The progress the app itself would give this position.
    *
