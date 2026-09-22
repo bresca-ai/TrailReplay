@@ -226,7 +226,7 @@ export function trackEvent(eventName: string, parameters: Record<string, unknown
   const commonParams = {
     app_name: 'TrailReplay',
     page_type: activePageContext.page_type,
-    analytics_version: 2,
+    analytics_version: 3,
     event_sequence: ++eventSequence,
   };
   const params = sanitizeAnalyticsParams({ ...commonParams, ...parameters, ...commonParams });

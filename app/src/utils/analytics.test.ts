@@ -45,7 +45,7 @@ describe('analytics', () => {
     trackEvent('later_action');
     const events = (window.dataLayer as IArguments[]).filter((call) => call[0] === 'event');
     expect(events.map((call) => call[1])).toEqual(['page_view', 'early_action', 'later_action']);
-    expect(events[1][2]).toMatchObject({ page_type: 'tutorial', analytics_version: 2, event_sequence: 1 });
+    expect(events[1][2]).toMatchObject({ page_type: 'tutorial', analytics_version: 3, event_sequence: 1 });
     expect(events[2][2]).toMatchObject({ event_sequence: 2 });
   });
 
@@ -62,7 +62,7 @@ describe('analytics', () => {
     trackEvent('large_event', { operation_id: 'attempt', ...Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`field_${i}`, i])) });
     const call = (window.dataLayer as IArguments[]).at(-1)!;
     expect(Object.keys(call[2])).toHaveLength(25);
-    expect(call[2]).toMatchObject({ app_name: 'TrailReplay', operation_id: 'attempt', analytics_version: 2 });
+    expect(call[2]).toMatchObject({ app_name: 'TrailReplay', operation_id: 'attempt', analytics_version: 3 });
   });
 
   it('sanitizes event parameters and omits unsupported values', async () => {

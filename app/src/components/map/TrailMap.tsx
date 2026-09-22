@@ -1,3 +1,4 @@
+import { reportCameraSettingChange } from '@/utils/cameraSettingAnalytics';
 import { useRef, useCallback, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -391,6 +392,7 @@ export function TrailMap(_props: TrailMapProps) {
       const currentIndex = getFollowBehindStopIndexForLevel(followBehindZoomLevel);
       const nextLevel = getFollowBehindLevelForStopIndex(currentIndex + direction);
       if (nextLevel === followBehindZoomLevel) return true;
+      reportCameraSettingChange({ setting: 'follow_behind_distance_level', before: followBehindZoomLevel, after: nextLevel, mode: cameraMode, source: 'map_zoom_control' });
 
       setCameraSettings({
         followBehindPreset: getNearestFollowBehindPreset(nextLevel),

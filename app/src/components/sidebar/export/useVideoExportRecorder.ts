@@ -1,3 +1,4 @@
+import { replayUsageAnalytics } from '@/utils/replayUsageAnalytics';
 import { createAnalyticsOperation } from '@/utils/analyticsOperation';
 import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { useAppStore } from '@/store/useAppStore';
@@ -28,7 +29,7 @@ const EXPORT_MAP_SETTLE_MS = 150;
 export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = {}) {
   const {
     t, language, studioDelivery, videoExportSettings, mapStyle, show3DTerrain, tracks,
-    visibleStats, pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
+    pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
     setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize, estimatedDurationMs,
@@ -543,25 +544,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       map_style: mapStyle,
       terrain_3d_enabled: show3DTerrain,
     });
-    trackEvent('feature_used', {
-      feature_name: 'camera_mode',
-      feature_value: cameraSettings.mode,
-      feature_context: 'video_export',
-    });
-    if (cameraSettings.mode === 'follow-behind') {
-      trackEvent('feature_used', {
-        feature_name: 'follow_behind_distance',
-        feature_value: cameraSettings.followBehindPreset,
-        feature_context: 'video_export',
-      });
-    }
-    visibleStats.forEach((statistic) => {
-      trackEvent('feature_used', {
-        feature_name: 'statistic',
-        feature_value: statistic,
-        feature_context: 'video_export',
-      });
-    });
+    replayUsageAnalytics.start(useAppStore.getState(), 'video_export', reportExport);
 
     try {
       const { width, height } = videoExportSettings.resolution;
@@ -706,7 +689,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       useWebCodecsRef.current = false;
     }
-  }, [reportExport, actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, estimatedDurationMs, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings, visibleStats]);
+  }, [reportExport, actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, estimatedDurationMs, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.

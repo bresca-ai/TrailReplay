@@ -1,3 +1,4 @@
+import { replayUsageAnalytics } from './replayUsageAnalytics';
 import type { AppState } from '@/store/storeTypes';
 import { trackEvent } from './analytics';
 
@@ -10,6 +11,7 @@ export function startProductAnalytics(store: Store, emit = trackEvent) {
   const initial = store.getState();
   if (initial.isSidebarOpen) emit('editor_panel_viewed', { panel_name: initial.activePanel, previous_panel: 'none', has_route: initial.tracks.length > 0 });
   return store.subscribe((state, previous) => {
+    replayUsageAnalytics.observe(state, previous);
     if (state.isSidebarOpen && (!previous.isSidebarOpen || state.activePanel !== previous.activePanel)) {
       emit('editor_panel_viewed', { panel_name: state.activePanel, previous_panel: previous.isSidebarOpen ? previous.activePanel : 'closed', has_route: state.tracks.length > 0 });
     }

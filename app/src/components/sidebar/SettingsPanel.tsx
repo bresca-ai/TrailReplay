@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { createCameraSettingBatch, reportCameraSettingChange } from '@/utils/cameraSettingAnalytics';
+import { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { MapStyle, MapFilter, CameraMode, MapOverlays, CameraSettings } from '@/types';
 import { useI18n } from '@/i18n/useI18n';
@@ -171,9 +172,19 @@ export function SettingsPanel() {
     trackEvent('settings_changed', { setting_name: 'map_filter', setting_value: filter });
   };
 
+  const cameraChanges = useRef(createCameraSettingBatch());
+  const flushCameraChanges = () => cameraChanges.current.flush();
+  useEffect(() => {
+    const batch = cameraChanges.current;
+    const flush = () => batch.flush();
+    window.addEventListener('pagehide', flush);
+    return () => { window.removeEventListener('pagehide', flush); flush(); };
+  }, []);
+
   const selectCameraMode = (mode: CameraMode) => {
     if (cameraSettings.mode === mode) return;
     setCameraMode(mode);
+    reportCameraSettingChange({ setting: 'camera_mode', before: cameraSettings.mode, after: mode, mode, source: 'settings_panel' });
     trackEvent('settings_changed', { setting_name: 'camera_mode', setting_value: mode });
     trackEvent('feature_used', {
       feature_name: 'camera_mode',
@@ -400,6 +411,9 @@ export function SettingsPanel() {
               min={0}
               max={FOLLOW_BEHIND_STOP_COUNT - 1}
               step={1}
+              onPointerUp={flushCameraChanges}
+              onKeyUp={flushCameraChanges}
+              onBlur={flushCameraChanges}
               value={getFollowBehindStopIndexForLevel(cameraSettings.followBehindZoomLevel)}
               onChange={(e) => {
                 const level = getFollowBehindLevelForStopIndex(Number(e.target.value));
@@ -408,10 +422,7 @@ export function SettingsPanel() {
                   followBehindZoomLevel: level,
                   followBehindPreset: preset,
                 });
-                trackEvent('settings_changed', {
-                  setting_name: 'follow_behind_distance',
-                  setting_value: preset,
-                });
+                cameraChanges.current.change({ setting: 'follow_behind_distance_level', before: cameraSettings.followBehindZoomLevel, after: level, mode: cameraSettings.mode, source: 'settings_panel' });
                 trackEvent('feature_used', {
                   feature_name: 'follow_behind_distance',
                   feature_value: preset,
@@ -439,11 +450,14 @@ export function SettingsPanel() {
               min={0}
               max={1}
               step={0.05}
+              onPointerUp={flushCameraChanges}
+              onKeyUp={flushCameraChanges}
+              onBlur={flushCameraChanges}
               value={cameraSettings.cameraStability}
               onChange={(e) => {
                 const value = Number(e.target.value);
                 setCameraSettings({ cameraStability: value });
-                trackEvent('settings_changed', { setting_name: 'camera_stability', setting_value: value });
+                cameraChanges.current.change({ setting: 'camera_stability', before: cameraSettings.cameraStability, after: value, mode: cameraSettings.mode, source: 'settings_panel' });
               }}
               className="w-full accent-[var(--trail-orange)]"
             />

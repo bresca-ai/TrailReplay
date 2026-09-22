@@ -253,6 +253,9 @@ export function CinematicCameraEditor() {
     trackEvent('cinematic_keyframe_saved', {
       keyframe_action: existingId ? 'updated' : 'added',
       capture_source: source,
+      camera_zoom_level: draftPose.zoom,
+      camera_pitch_deg: draftPose.pitchDeg,
+      camera_bearing_deg: draftPose.bearingDeg,
       keyframe_count: existingId ? keyframes.length : keyframes.length + 1,
     });
   };
