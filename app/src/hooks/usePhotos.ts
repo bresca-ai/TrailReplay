@@ -10,7 +10,7 @@ import type { ProcessPhotoResult } from '@/utils/photoPlacement';
 import { resolvePhotoPlacement } from '@/utils/photoPlacement';
 import { readPhotoMetadata } from '@/utils/photoMetadata';
 import { useMediaPlacement } from '@/hooks/useMediaPlacement';
-import { trackEvent } from '@/utils/analytics';
+import { createAnalyticsOperation } from '@/utils/analyticsOperation';
 
 export function usePhotos() {
   const { t } = useI18n();
@@ -50,12 +50,13 @@ export function usePhotos() {
   const addPhotos = useCallback(async (files: FileList | File[] | null) => {
     if (!files || files.length === 0) return;
     
+    const report = createAnalyticsOperation();
     setIsProcessing(true);
     
     try {
       const allFiles = Array.from(files);
       const imageFiles = allFiles.filter((file) => isImageFile(file));
-      trackEvent('photo_import_started', {
+      report('photo_import_started', {
         photo_received_file_count: allFiles.length,
         photo_image_file_count: imageFiles.length,
       });
@@ -63,7 +64,7 @@ export function usePhotos() {
 
       for (const file of imageFiles) {
         const result = await processPhoto(file);
-        trackEvent('photo_import_file_processed', {
+        report('photo_import_file_processed', {
           photo_has_gps: result.kind === 'picture'
             ? result.picture.placementSource === 'gps'
             : result.pendingPlacement.hasGpsMetadata ?? false,
@@ -90,7 +91,7 @@ export function usePhotos() {
         queuePendingPicturePlacement(pendingPlacement);
       });
 
-      trackEvent('photo_import_completed', {
+      report('photo_import_completed', {
         photo_picture_count_added: imageFiles.length - queuedPlacements.length,
         photo_queued_for_manual_placement: queuedPlacements.length,
       });
@@ -100,6 +101,9 @@ export function usePhotos() {
       } else if (queuedPlacements.length > 1) {
         toast.warning(t('media.manualPlacementQueuedMultiple', { count: queuedPlacements.length }));
       }
+    } catch (error) {
+      report('photo_import_failed', { error_type: 'processing_error' });
+      throw error;
     } finally {
       setIsProcessing(false);
     }

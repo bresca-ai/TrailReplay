@@ -1,3 +1,4 @@
+import { createAnalyticsOperation } from '@/utils/analyticsOperation';
 import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { useAppStore } from '@/store/useAppStore';
 import {
@@ -10,7 +11,7 @@ import {
 import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
 import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
 import fixWebmDuration from 'fix-webm-duration';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { getSupportedMimeType, getVideoBitrate } from './exportConfig';
 import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
 import {
@@ -38,6 +39,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     applyStudioMapSettings, restoreStudioMapSettings, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   } = useVideoExportRecorderCore(options);
+
+  const operationRef = useRef<ReturnType<typeof createAnalyticsOperation> | null>(null);
+  const reportExport = useCallback((name: string, params: Record<string, unknown> = {}) => {
+    (operationRef.current ?? trackEvent)(name, params);
+  }, []);
 
   // Flush the WebCodecs-encoded MP4 once recording has stopped. Standard
   // exports download immediately; Studio exports are delivered by email.
@@ -69,8 +75,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           ? t('export.stageCompleteStudioPartial', { frames: studioStats.timedOutFrames })
           : t('export.stageComplete'));
         setExportProgress(100);
-        trackEvent('export_completed', {
-          ...getVideoExportAnalyticsParams(videoExportSettings, 'mp4', playback.totalDuration),
+        reportExport('export_completed', {
+          ...getVideoExportAnalyticsParams(videoExportSettings, 'mp4', estimatedDurationMs),
           export_blob_size_bucket: getBlobSizeBucket(blob.size),
           export_encoder_path: 'webcodecs',
           export_quality_mode: wasStudioQuality ? 'studio' : 'standard',
@@ -83,13 +89,16 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           anchor.href = url;
           anchor.download = `trail-replay-${Date.now()}.mp4`;
           anchor.click();
+          reportExport('export_download_initiated', { download_method: 'automatic', export_format: 'mp4' });
           URL.revokeObjectURL(url);
         }
 
         const deliveryJob = studioDeliveryJobRef.current;
         if (wasStudioQuality && deliveryJob) {
           try {
+            reportExport('studio_export_delivery_started');
             const deliveryResult = await deliverStudioExport(deliveryJob, blob, (phase) => {
+              if (phase === 'emailing') reportExport('studio_export_upload_completed');
               setStudioDeliveryStatus(phase);
               setExportStage(phase === 'uploading'
                 ? t('export.stageUploadingVideo')
@@ -98,7 +107,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
             setStudioDeliveryStatus('sent');
             setStudioDeliveryError(null);
             setExportStage(t('export.stageEmailSent'));
-            trackEvent('studio_export_delivery_completed', {
+            reportExport('studio_export_delivery_completed', {
               provider: deliveryResult.provider ?? 'unknown',
             });
           } catch (deliveryError) {
@@ -107,7 +116,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
             setStudioDeliveryStatus('failed');
             setStudioDeliveryError(message);
             setExportStage(t('export.stageDeliveryFailed'));
-            trackEvent('export_failed', {
+            reportExport('studio_export_delivery_failed', {
               export_failure_scope: 'studio_delivery',
               export_format: 'mp4',
               export_encoder_path: 'webcodecs',
@@ -116,7 +125,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         }
       } else {
         setExportStage(t('export.stageFailedNoData'));
-        trackEvent('export_failed', {
+        reportExport('export_failed', {
           export_failure_scope: 'no_data',
           export_format: 'mp4',
           export_encoder_path: 'webcodecs',
@@ -125,7 +134,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     } catch (error) {
       console.error('WebCodecs export failed', error);
       setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
-      trackEvent('export_failed', {
+      reportExport('export_failed', {
         export_failure_scope: 'encoder_finalize',
         export_format: 'mp4',
         export_encoder_path: 'webcodecs',
@@ -140,7 +149,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       // Restore an idle, replayable timeline once the file has been finalized.
       resetPlayback();
     }
-  }, [mp4EncoderRef, playback.totalDuration, recordingCancelledRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setStudioDeliveryError, setStudioDeliveryStatus, studioDeliveryJobRef, studioQualityRef, studioStatsRef, t, useWebCodecsRef, videoExportSettings]);
+  }, [reportExport, estimatedDurationMs, mp4EncoderRef, recordingCancelledRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setStudioDeliveryError, setStudioDeliveryStatus, studioDeliveryJobRef, studioQualityRef, studioStatsRef, t, useWebCodecsRef, videoExportSettings]);
 
   const finishRecording = useCallback(() => {
     if (!isRecordingRef.current) return;
@@ -395,6 +404,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     };
 
+    let recorderFailed = false;
     recorder.onstop = async () => {
       // A cancelled export still fires onstop; don't save or download it.
       if (recordingCancelledRef.current) {
@@ -424,8 +434,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         setExportedBlob(blob);
         setExportStage(t('export.stageComplete'));
         setExportProgress(100);
-        trackEvent('export_completed', {
-          ...getVideoExportAnalyticsParams(videoExportSettings, extension, playback.totalDuration),
+        reportExport(recorderFailed ? 'export_partial_result_available' : 'export_completed', {
+          ...getVideoExportAnalyticsParams(videoExportSettings, extension, estimatedDurationMs),
           export_blob_size_bucket: getBlobSizeBucket(blob.size),
           export_encoder_path: 'mediarecorder',
         });
@@ -435,10 +445,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         anchor.href = url;
         anchor.download = `trail-replay-${Date.now()}.${extension}`;
         anchor.click();
+        reportExport('export_download_initiated', { download_method: 'automatic', export_format: extension });
         URL.revokeObjectURL(url);
       } else {
         setExportStage(t('export.stageFailedNoData'));
-        trackEvent('export_failed', {
+        if (!recorderFailed) reportExport('export_failed', {
           export_failure_scope: 'no_data',
           export_format: extension,
           export_encoder_path: 'mediarecorder',
@@ -451,11 +462,12 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     };
 
     recorder.onerror = (event) => {
+      recorderFailed = true;
       // On weaker hardware the encoder can stall or error partway through a
       // high-resolution recording. Stop the capture loop and let onstop
       // finalize whatever was captured so the user still gets a video.
       console.error('MediaRecorder error during export', event);
-      trackEvent('export_failed', {
+      reportExport('export_failed', {
         export_failure_scope: 'recorder_error',
         export_format: recordedFormat,
         export_encoder_path: 'mediarecorder',
@@ -475,20 +487,23 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     };
 
     recorder.start(100);
-  }, [frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
+  }, [reportExport, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, estimatedDurationMs, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
 
   const handleStartExport = useCallback(async () => {
     const mapCanvas = document.querySelector('.maplibregl-canvas') as HTMLCanvasElement | null;
     if (!mapCanvas) {
+      trackEvent('export_blocked', { reason: 'canvas_unavailable' });
       alert(t('export.noCanvas'));
       return;
     }
     if (videoExportSettings.qualityMode === 'studio') {
       if (!studioSupported) {
+        trackEvent('export_blocked', { reason: 'studio_unsupported' });
         alert(t('export.qualityModeStudioUnavailable'));
         return;
       }
       if (!localStudioDownload && (!studioDelivery || !isValidDeliveryEmail(studioDelivery.email))) {
+        trackEvent('export_blocked', { reason: 'delivery_email_required' });
         alert(t('export.studioEmailRequired'));
         return;
       }
@@ -507,8 +522,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     useWebCodecsRef.current = false;
     mp4EncoderRef.current = null;
     resetOverlayCapture();
-    trackEvent('export_started', {
-      ...getVideoExportAnalyticsParams(videoExportSettings, actualFormat, playback.totalDuration),
+    operationRef.current = createAnalyticsOperation();
+    reportExport('export_started', {
+      ...getVideoExportAnalyticsParams(videoExportSettings, actualFormat, estimatedDurationMs),
+    });
+    reportExport('export_settings_snapshot', {
       export_include_stats: includeStats,
       export_include_elevation: includeElevation,
       track_count: tracks.length,
@@ -669,7 +687,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     } catch (error) {
       console.error('Export failed:', error);
-      trackEvent('export_failed', {
+      reportExport('export_failed', {
         export_failure_scope: 'setup',
         export_format: actualFormat,
         export_encoder_path: useWebCodecsRef.current ? 'webcodecs' : 'unknown',
@@ -688,7 +706,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       useWebCodecsRef.current = false;
     }
-  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, estimatedDurationMs, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings, visibleStats]);
+  }, [reportExport, actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, estimatedDurationMs, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings, visibleStats]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.
@@ -740,7 +758,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     useWebCodecsRef.current = false;
     setIsDeterministicExport(false);
 
-    trackEvent('export_cancelled', {
+    reportExport('export_cancelled', {
       export_progress_bucket: getProgressBucket(exportProgress),
       export_format: actualFormat,
       export_encoder_path: exportEncoderPath,
@@ -749,7 +767,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     setExportProgress(0);
     setExportStage('');
     resetPlayback();
-  }, [actualFormat, exportProgress, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, mp4EncoderRef, recordingCancelledRef, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, studioDeliveryJobRef, studioQualityRef, useWebCodecsRef]);
+  }, [reportExport, actualFormat, exportProgress, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, mp4EncoderRef, recordingCancelledRef, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, studioDeliveryJobRef, studioQualityRef, useWebCodecsRef]);
 
   const handleDownload = useCallback(() => {
     if (!exportedBlob) return;
@@ -761,8 +779,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     anchor.download = `trail-replay-${Date.now()}.${extension}`;
     anchor.click();
     URL.revokeObjectURL(url);
-    trackEvent('export_downloaded_again', { export_format: extension });
-  }, [exportedBlob]);
+    reportExport('export_download_initiated', { download_method: 'manual', export_format: extension });
+    reportExport('export_downloaded_again', { export_format: extension });
+  }, [reportExport, exportedBlob]);
 
   const resetExportResult = useCallback(() => {
     setExportedBlob(null);

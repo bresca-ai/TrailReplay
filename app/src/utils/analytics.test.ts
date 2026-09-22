@@ -37,6 +37,34 @@ describe('analytics', () => {
     expect(pageViewCalls[0]?.[2]).not.toHaveProperty('timestamp');
   });
 
+  it('buffers early events after the pageview with ordered contextual parameters', async () => {
+    const { initAnalytics, trackEvent } = await import('./analytics');
+    trackEvent('early_action');
+    initAnalytics({ page_type: 'tutorial', page_group: 'help' });
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    trackEvent('later_action');
+    const events = (window.dataLayer as IArguments[]).filter((call) => call[0] === 'event');
+    expect(events.map((call) => call[1])).toEqual(['page_view', 'early_action', 'later_action']);
+    expect(events[1][2]).toMatchObject({ page_type: 'tutorial', analytics_version: 2, event_sequence: 1 });
+    expect(events[2][2]).toMatchObject({ event_sequence: 2 });
+  });
+
+  it('strips app query data and fragments while retaining campaign attribution', async () => {
+    const { safeAnalyticsUrl } = await import('./analytics');
+    expect(safeAnalyticsUrl('https://trailreplay.com/?token=secret&utm_source=newsletter&email=private#location'))
+      .toBe('https://trailreplay.com/?utm_source=newsletter');
+  });
+
+  it('caps parameter counts while preserving operation and common context', async () => {
+    const { initAnalytics, trackEvent } = await import('./analytics');
+    initAnalytics();
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    trackEvent('large_event', { operation_id: 'attempt', ...Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`field_${i}`, i])) });
+    const call = (window.dataLayer as IArguments[]).at(-1)!;
+    expect(Object.keys(call[2])).toHaveLength(25);
+    expect(call[2]).toMatchObject({ app_name: 'TrailReplay', operation_id: 'attempt', analytics_version: 2 });
+  });
+
   it('sanitizes event parameters and omits unsupported values', async () => {
     const { sanitizeAnalyticsParams } = await import('./analytics');
 

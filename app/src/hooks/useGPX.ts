@@ -1,3 +1,5 @@
+import { createAnalyticsOperation } from '@/utils/analyticsOperation';
+import { trackProjectReady } from '@/utils/productAnalytics';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { parseGPXFiles, parseRouteFiles } from '@/utils/gpxParser';
@@ -33,7 +35,8 @@ export function useGPX() {
   ) => {
     setIsParsing(true);
     setParseError(null);
-    trackEvent('recipe_import_started', { route_input_method: routeInputMethod });
+    const report = createAnalyticsOperation();
+    report('recipe_import_started', { route_input_method: routeInputMethod });
 
     try {
       const recipe = await parseRecipeFile(recipeFile);
@@ -52,7 +55,7 @@ export function useGPX() {
       applyRecipe(recipe, resolved, useAppStore.getState());
       useAppStore.getState().setRecipeReport(resolved.report);
 
-      trackEvent('recipe_import_completed', {
+      report('recipe_import_completed', {
         recipe_track_count: resolved.report.trackCount,
         recipe_landmark_count: resolved.report.landmarks.length,
         recipe_annotation_count: resolved.report.annotations.length,
@@ -60,6 +63,7 @@ export function useGPX() {
         recipe_stitched: resolved.report.stitched,
       });
 
+      trackProjectReady(useAppStore.getState(), 'recipe', report);
       const placed = resolved.report.landmarks.length + resolved.report.annotations.length;
       toast.success(t('recipe.applied', {
         tracks: String(resolved.report.trackCount),
@@ -72,7 +76,7 @@ export function useGPX() {
       const message = error instanceof RecipeError
         ? error.message
         : t('recipe.errors.failed');
-      trackEvent('recipe_import_failed', {
+      report('recipe_import_failed', {
         recipe_error_type: error instanceof RecipeError ? 'recipe' : 'unknown',
       });
       setParseError(message);
@@ -103,6 +107,7 @@ export function useGPX() {
       // Silently picking one of several would produce a replay nobody asked
       // for, and the difference between two recipes is the whole point of them.
       if (recipeFiles.length > 1) {
+        trackEvent('recipe_import_failed', { recipe_error_type: 'multiple_recipes' });
         const message = t('recipe.errors.multiple', {
           files: recipeFiles.map((file) => file.name).join(', '),
         });
@@ -115,7 +120,8 @@ export function useGPX() {
 
     setIsParsing(true);
     setParseError(null);
-    trackEvent('route_import_started', {
+    const report = createAnalyticsOperation();
+    report('route_import_started', {
       route_file_count: fileArray.length,
       route_input_method: routeInputMethod,
     });
@@ -197,7 +203,7 @@ export function useGPX() {
         toast.success(t('tracks.autoGroupedRouteToast', { count: String(groupedByRouteCount) }));
       }
 
-      trackEvent('route_import_completed', {
+      report('route_import_completed', {
         route_file_count: fileArray.length,
         route_imported_track_count: tracks.length,
         route_import_is_multi_file: fileArray.length > 1,
@@ -211,7 +217,7 @@ export function useGPX() {
       });
 
       if (groupedByTimeCount > 0 || groupedByRouteCount > 0) {
-        trackEvent('tracks_auto_grouped', {
+        report('tracks_auto_grouped', {
           route_grouped_track_count: groupedByTimeCount + groupedByRouteCount,
           route_group_count: clusters.filter((cluster) => cluster.length > 1).length,
           route_time_grouped_count: groupedByTimeCount,
@@ -219,9 +225,10 @@ export function useGPX() {
         });
       }
 
+      trackProjectReady(useAppStore.getState(), 'route_files', report);
       return tracks;
     } catch (error) {
-      trackEvent('route_import_failed', {
+      report('route_import_failed', {
         route_file_count: fileArray.length,
         route_input_method: routeInputMethod,
         route_error_type: error instanceof Error && error.message === t('errors.noValidGpx')

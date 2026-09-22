@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { trackEvent } from '@/utils/analytics';
 import type { VideoProbeResult } from '@/utils/videoMetadata';
 import type { NormalizedPhotoMetadata } from '@/utils/photoMetadata';
 
@@ -33,6 +34,7 @@ describe('useVideos', () => {
 
   beforeEach(() => {
     useAppStore.setState(initialState, true);
+    vi.mocked(trackEvent).mockClear();
     toastError.mockClear();
     toastWarning.mockClear();
     readVideoDuration.mockReset();
@@ -47,6 +49,19 @@ describe('useVideos', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('correlates failed imports without sending file names or error messages', async () => {
+    readVideoDuration.mockRejectedValue(new Error('private filename and details'));
+    const { result } = renderHook(() => useVideos());
+    await act(async () => {
+      await expect(result.current.addVideos([new File(['x'], 'private.mp4', { type: 'video/mp4' })])).rejects.toThrow();
+    });
+    const calls = vi.mocked(trackEvent).mock.calls;
+    expect(calls.map(([name]) => name)).toEqual(['video_import_started', 'video_import_failed']);
+    expect(calls[1][1]).toMatchObject({ operation_id: calls[0][1]?.operation_id, error_type: 'processing_error' });
+    expect(JSON.stringify(calls)).not.toContain('private');
+    expect(result.current.isProcessing).toBe(false);
   });
 
   it('reports a clip the browser cannot decode instead of dropping it silently', async () => {

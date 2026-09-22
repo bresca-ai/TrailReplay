@@ -1,3 +1,5 @@
+import { createAnalyticsOperation } from '@/utils/analyticsOperation';
+import { trackProjectReady } from '@/utils/productAnalytics';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/useAppStore';
@@ -52,7 +54,8 @@ export function useProjectFile() {
     }
 
     setIsOpening(true);
-    trackEvent('project_open_started', {});
+    const report = createAnalyticsOperation();
+    report('project_open_started', {});
     try {
       const parsed = await parseReplayArchive(file);
 
@@ -73,25 +76,26 @@ export function useProjectFile() {
         useAppStore.getState().setRecipeReport(resolved.report);
       }
 
-      trackEvent('project_open_completed', {
+      report('project_open_completed', {
         format_version: parsed.manifest.formatVersion,
         track_count: parsed.tracks.length || parsed.routes.length,
         picture_count: parsed.project?.pictures?.length ?? 0,
         video_count: parsed.project?.videos?.length ?? 0,
         project_from_recipe: parsed.recipe !== null,
       });
+      trackProjectReady(useAppStore.getState(), 'project', report);
       toast.success(t('projectFile.opened'));
     } catch (error) {
       console.error('Failed to open project:', error);
       if (error instanceof RecipeError) {
         setError(error.message);
-        trackEvent('project_open_failed', { error_code: 'recipe' });
+        report('project_open_failed', { error_code: 'recipe' });
         return;
       }
       const key = error instanceof ReplayArchiveError
         ? errorCodeToTranslationKey(error.code)
         : 'projectFile.errors.corrupt';
-      trackEvent('project_open_failed', {
+      report('project_open_failed', {
         error_code: error instanceof ReplayArchiveError ? error.code : 'unknown',
       });
       setError(t(key));

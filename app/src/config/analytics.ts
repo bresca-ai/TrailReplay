@@ -12,10 +12,11 @@ export function shouldEnableAnalytics() {
   const isNonProductionHost =
     hostname === 'localhost' ||
     hostname === '127.0.0.1' ||
+    hostname === '[::1]' ||
     hostname.endsWith('.vercel.app') ||
     hostname.endsWith('.pages.dev');
 
-  if (isNonProductionHost && !import.meta.env.VITE_ENABLE_ANALYTICS_IN_DEVELOPMENT) {
+  if (isNonProductionHost && import.meta.env.VITE_ENABLE_ANALYTICS_IN_DEVELOPMENT !== 'true') {
     return false;
   }
 

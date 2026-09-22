@@ -3,6 +3,9 @@ import type { CameraSettings, VideoExportSettings, VideoFormat } from '@/types';
 
 let isInitialized = false;
 let pendingInitialization = false;
+let eventSequence = 0;
+let activePageContext: AnalyticsPageContext;
+const pendingEvents: Array<[string, Record<string, unknown>]> = [];
 
 type AnalyticsPrimitive = string | number | boolean;
 type AnalyticsParams = Record<string, AnalyticsPrimitive>;
@@ -155,9 +158,20 @@ function loadAnalyticsScript(measurementId: string) {
   document.head.appendChild(script);
 }
 
+export function safeAnalyticsUrl(value: string) {
+  const url = new URL(value);
+  url.hash = '';
+  // Retain acquisition attribution, never application query strings or tokens.
+  for (const key of [...url.searchParams.keys()]) {
+    if (!['utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content', 'gclid', 'dclid'].includes(key)) url.searchParams.delete(key);
+  }
+  return url.href;
+}
+
 function bootAnalytics(pageContext: AnalyticsPageContext) {
   if (isInitialized) return true;
 
+  activePageContext = pageContext;
   installAnalyticsQueue();
   loadAnalyticsScript(GA4_MEASUREMENT_ID);
 
@@ -167,18 +181,21 @@ function bootAnalytics(pageContext: AnalyticsPageContext) {
     allow_google_signals: false,
     debug_mode: GA4_DEBUG_MODE,
     send_page_view: false,
+    page_location: safeAnalyticsUrl(window.location.href),
+    page_referrer: document.referrer ? safeAnalyticsUrl(document.referrer) : '',
   });
 
   window.gtag?.('event', 'page_view', {
     page_title: document.title,
-    page_location: window.location.href,
-    page_path: `${window.location.pathname}${window.location.search}`,
+    page_location: safeAnalyticsUrl(window.location.href),
+    page_path: window.location.pathname,
     app_name: 'TrailReplay',
     ...pageContext,
   });
 
   window.__TRAILREPLAY_ANALYTICS_ENABLED__ = true;
   isInitialized = true;
+  for (const [name, params] of pendingEvents.splice(0)) trackEvent(name, params);
   return true;
 }
 
@@ -201,11 +218,21 @@ export function initAnalytics(pageContext: AnalyticsPageContext = DEFAULT_PAGE_C
 }
 
 export function trackEvent(eventName: string, parameters: Record<string, unknown> = {}) {
-  if (typeof window === 'undefined') return;
-  if (!shouldEnableAnalytics() || typeof window.gtag !== 'function') return;
-
-  window.gtag('event', eventName, {
-    ...sanitizeAnalyticsParams(parameters),
+  if (typeof window === 'undefined' || !shouldEnableAnalytics()) return;
+  if (!isInitialized) {
+    if (pendingEvents.length < 100) pendingEvents.push([eventName, { ...parameters }]);
+    return;
+  }
+  const commonParams = {
     app_name: 'TrailReplay',
-  });
+    page_type: activePageContext.page_type,
+    analytics_version: 2,
+    event_sequence: ++eventSequence,
+  };
+  const params = sanitizeAnalyticsParams({ ...commonParams, ...parameters, ...commonParams });
+  // GA4 accepts 25 parameters per event. Reserve common fields first.
+  if (Object.keys(params).length > 25 && GA4_DEBUG_MODE) {
+    console.warn(`Analytics parameter budget exceeded: ${eventName}`);
+  }
+  window.gtag?.('event', eventName, Object.fromEntries(Object.entries(params).slice(0, 25)));
 }

@@ -1,3 +1,4 @@
+import { trackEvent } from '@/utils/analytics';
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
@@ -141,6 +142,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations);
 
       if (elapsed >= playbackTimeForRoute(totalDuration, totalDuration, annotations)) {
+        if (!state.isExporting) trackEvent('playback_completed');
         // End of playback - start outro sequence
         pause();
         setPlayback({ currentTime: totalDuration, progress: 1 });

@@ -8,7 +8,7 @@ import { createId } from '@/utils/id';
 import { useMediaPlacement } from '@/hooks/useMediaPlacement';
 import { GPS_ROUTE_MATCH_THRESHOLD_METERS } from '@/utils/photoPlacement';
 import { readVideoDuration, readVideoMetadata } from '@/utils/videoMetadata';
-import { trackEvent } from '@/utils/analytics';
+import { createAnalyticsOperation } from '@/utils/analyticsOperation';
 
 /**
  * Imports clips into the replay.
@@ -38,8 +38,9 @@ export function useVideos() {
     const videoFiles = allFiles.filter((file) => isVideoFile(file));
     if (videoFiles.length === 0) return;
 
+    const report = createAnalyticsOperation();
     setIsProcessing(true);
-    trackEvent('video_import_started', { video_received_file_count: videoFiles.length });
+    report('video_import_started', { video_received_file_count: videoFiles.length });
 
     let placedByRoute = 0;
     let queuedForPlacement = 0;
@@ -97,7 +98,7 @@ export function useVideos() {
           queuePendingPicturePlacement(pending);
           queuedForPlacement += 1;
 
-          trackEvent('video_import_file_processed', {
+          report('video_import_file_processed', {
             video_placement_result: 'pending',
             video_has_gps: metadata.latitude !== undefined,
             video_has_timestamp: metadata.timestamp !== undefined,
@@ -126,7 +127,7 @@ export function useVideos() {
         addVideo(video);
         placedByRoute += 1;
 
-        trackEvent('video_import_file_processed', {
+        report('video_import_file_processed', {
           video_placement_result: video.placementSource ?? 'unknown',
           video_has_gps: metadata.latitude !== undefined,
           video_has_timestamp: metadata.timestamp !== undefined,
@@ -140,11 +141,14 @@ export function useVideos() {
         toast.warning(t('media.manualPlacementQueuedMultipleVideo', { count: queuedForPlacement }));
       }
 
-      trackEvent('video_import_completed', {
+      report('video_import_completed', {
         video_count_added: placedByRoute,
         video_count_queued_for_placement: queuedForPlacement,
         video_count_unreadable: unreadable,
       });
+    } catch (error) {
+      report('video_import_failed', { error_type: 'processing_error' });
+      throw error;
     } finally {
       setIsProcessing(false);
     }
