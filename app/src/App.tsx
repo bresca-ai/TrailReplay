@@ -17,6 +17,9 @@ import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
 import { VideoPopup } from '@/components/annotations/VideoPopup';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
+import { annotationSymbolLabel, annotationSymbolPath, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
+import { sidePanelShadeStyle } from '@/components/annotations/sidePanelShade';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
@@ -481,8 +484,12 @@ function App() {
   const sideAnnotationBottom = settings.showElevationProfile
     ? sideAnnotationNarrowFrame ? 110 : 88
     : 24;
+  // Subscribing re-renders the panel once a Pinhead library icon has loaded.
+  usePinheadIcons(needsPinheadIcons([activeSideAnnotation?.logo]));
+  const sideAnnotationSymbolPath = activeSideAnnotation ? annotationSymbolPath(activeSideAnnotation.logo) : null;
   const sideAnnotationStyle: (CSSProperties & { '--annotation-accent'?: string }) | undefined = activeSideAnnotation ? {
     '--annotation-accent': activeSideAnnotation.color,
+    ...sidePanelShadeStyle,
     bottom: (activeExportCropMetrics?.bottom ?? 0) + sideAnnotationBottom,
     ...(activeExportCropMetrics && sideAnnotationNarrowFrame
       ? {
@@ -559,9 +566,13 @@ function App() {
               {activeSideAnnotation && sideAnnotationCopy && (
                 <div className="tr-annotation-side-panel pointer-events-none absolute z-30" style={sideAnnotationStyle}>
                   <div className="tr-annotation-side-panel__header">
-                    <div className="tr-annotation-side-panel__logo" aria-hidden="true">{activeSideAnnotation.logo || '●'}</div>
+                    <div className="tr-annotation-side-panel__logo" aria-label={annotationSymbolLabel(activeSideAnnotation.logo)} title={annotationSymbolLabel(activeSideAnnotation.logo)}>
+                      {sideAnnotationSymbolPath
+                        ? <svg viewBox="0 0 15 15" fill="currentColor"><path d={sideAnnotationSymbolPath} /></svg>
+                        : activeSideAnnotation.logo || '●'}
+                    </div>
                     <div className="tr-annotation-side-panel__identity">
-                      <span className="tr-annotation-side-panel__eyebrow">{t('annotations.sidePanelEyebrow')}</span>
+                      <span className="tr-annotation-side-panel__eyebrow">{sideAnnotationCopy.eyebrow || t('annotations.sidePanelEyebrow')}</span>
                       {sideAnnotationCopy.code && <span className="tr-annotation-side-panel__code">{sideAnnotationCopy.code}</span>}
                     </div>
                     <span className="tr-annotation-side-panel__dash" aria-hidden="true" />

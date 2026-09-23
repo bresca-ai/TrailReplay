@@ -96,6 +96,12 @@ function annotationFrom(
   title: string,
   progress: number,
 ): TextAnnotation {
+  // Route annotations are authored for the finished replay. A field note is
+  // the readable, timed treatment; map captions remain available when the
+  // recipe explicitly asks for the lighter-weight option.
+  const presentation = spec.presentation ?? 'side-panel';
+  const holdDuration = spec.holdDuration ?? (presentation === 'side-panel' ? 6000 : undefined);
+
   return {
     id,
     progress,
@@ -105,14 +111,15 @@ function annotationFrom(
     title,
     ...(spec.subtitle ? { subtitle: spec.subtitle } : {}),
     ...(spec.code ? { code: spec.code } : {}),
+    ...(spec.eyebrow ? { eyebrow: spec.eyebrow } : {}),
     ...(spec.meta ? { meta: spec.meta } : {}),
     ...(spec.description ? { description: spec.description } : {}),
     color: spec.color ?? '#C1652F',
     ...(at.elevation !== undefined ? { elevation: Math.round(at.elevation) } : {}),
     displayDuration: spec.displayDuration ?? DEFAULT_ANNOTATION_MS,
-    ...(spec.presentation ? { presentation: spec.presentation } : {}),
+    presentation,
     ...(spec.logo ? { logo: spec.logo } : {}),
-    ...(spec.holdDuration !== undefined ? { holdDuration: spec.holdDuration } : {}),
+    ...(holdDuration !== undefined ? { holdDuration } : {}),
     ...(spec.translations ? { translations: spec.translations } : {}),
   };
 }
@@ -122,15 +129,30 @@ function expandAuto(
   auto: string,
   legs: RouteLeg[],
   warnings: string[],
+  requestedTrack: RecipeLandmark['track'] | undefined,
+  label: string,
 ): Array<{ track: number; km: number; title: string }> {
+  const requestedIndex = requestedTrack === undefined
+    ? undefined
+    : typeof requestedTrack === 'number'
+      ? requestedTrack
+      : legs.findIndex((leg) => leg.name.toLowerCase() === requestedTrack.toLowerCase());
+
+  if (requestedIndex !== undefined && !legs[requestedIndex]) {
+    throw new RecipeError(`${label}: no track matches "${requestedTrack}"`);
+  }
+
   if (auto === 'start') {
-    return [{ track: 0, km: 0, title: 'Start' }];
+    return [{ track: requestedIndex ?? 0, km: 0, title: 'Start' }];
   }
 
   if (auto === 'finish' || auto === 'start-finish') {
-    const last = legs[legs.length - 1];
+    const firstIndex = requestedIndex ?? 0;
+    const lastIndex = requestedIndex ?? (legs.length - 1);
+    const first = legs[firstIndex];
+    const last = legs[lastIndex];
     const finish = {
-      track: legs.length - 1,
+      track: lastIndex,
       km: last.track.totalDistance / 1000,
       title: 'Finish',
     };
@@ -138,13 +160,13 @@ function expandAuto(
 
     // On a loop the two coincide and the app collapses pins within 80 m, so one
     // pin saying both is what the author actually wants.
-    const start = legs[0].track.points[0];
+    const start = first.track.points[0];
     const end = last.track.points[last.track.points.length - 1];
     const sameSpot = start && end
       && Math.abs(start.lat - end.lat) < 0.001 && Math.abs(start.lon - end.lon) < 0.001;
     return sameSpot
-      ? [{ track: 0, km: 0, title: 'Start / Finish' }]
-      : [{ track: 0, km: 0, title: 'Start' }, finish];
+      ? [{ track: firstIndex, km: 0, title: 'Start / Finish' }]
+      : [{ track: firstIndex, km: 0, title: 'Start' }, finish];
   }
 
   if (auto === 'overnight-stops') {
@@ -220,6 +242,14 @@ export function resolveRecipe(
 
   const warnings: string[] = [];
 
+  if (!stitched && named.length > 1 && recipe.mode === 'alternatives') {
+    warnings.push(
+      `This recipe has ${named.length} alternative routes, but only "${activeTrack.name}" `
+      + 'plays in the timeline. Use mode "stitch" for one multi-file journey, or make '
+      + 'one recipe per course when each route should produce its own video.',
+    );
+  }
+
   /**
    * The progress the app itself would give this position.
    *
@@ -281,7 +311,7 @@ export function resolveRecipe(
   (recipe.landmarks ?? []).forEach((spec, index) => {
     const label = `landmarks[${index}]${spec.title ? ` "${spec.title}"` : ''}`;
     if (spec.auto) {
-      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings).entries()) {
+      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings, spec.track, label).entries()) {
         const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);
@@ -303,7 +333,7 @@ export function resolveRecipe(
   (recipe.annotations ?? []).forEach((spec, index) => {
     const label = `annotations[${index}]${spec.title ? ` "${spec.title}"` : ''}`;
     if (spec.auto) {
-      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings).entries()) {
+      for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings, spec.track, label).entries()) {
         const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);

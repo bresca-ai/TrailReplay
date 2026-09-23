@@ -59,7 +59,7 @@ describe('resolveRecipe', () => {
     expect(resolved.report.landmarks[0].km).toBeCloseTo(5, 2);
   });
 
-  it('places an annotation as a timed card, not a pin', () => {
+  it('places an annotation as a timed field note, not a pin', () => {
     const resolved = resolveRecipe(
       { annotations: [{ km: 2.5, title: 'Feed station', displayDuration: 4000 }] },
       single.tracks,
@@ -71,6 +71,8 @@ describe('resolveRecipe', () => {
     expect(resolved.textAnnotations[0]).toMatchObject({
       title: 'Feed station',
       displayDuration: 4000,
+      presentation: 'side-panel',
+      holdDuration: 6000,
     });
     expect(resolved.textAnnotations[0].progress).toBeCloseTo(0.25, 2);
     expect(resolved.textAnnotations[0].routeDistance).toBeCloseTo(2500, 0);
@@ -103,6 +105,21 @@ describe('resolveRecipe', () => {
       single.names,
     );
     expect(resolved.userLandmarks[0].progress).toBe(1);
+  });
+
+  it('clamps a modestly over-rounded finish to the GPX endpoint', () => {
+    const twentyPointThreeKm = tracksFrom([
+      { name: 'mitja.gpx', gpx: leg({ name: 'Mitja', startLat: 42, points: 204, spacing: 100 }) },
+    ]);
+
+    const resolved = resolveRecipe(
+      { annotations: [{ km: 21, title: 'Finish' }] },
+      twentyPointThreeKm.tracks,
+      twentyPointThreeKm.names,
+    );
+
+    expect(resolved.textAnnotations[0].progress).toBe(1);
+    expect(resolved.report.annotations[0].km).toBeCloseTo(20.3, 1);
   });
 
   describe('a week of walks', () => {
@@ -210,6 +227,7 @@ describe('resolveRecipe', () => {
     // Each is halfway along its own course, not along a combined one.
     expect(resolved.textAnnotations[0].progress).toBeCloseTo(0.5, 2);
     expect(resolved.textAnnotations[1].progress).toBeCloseTo(0.5, 2);
+    expect(resolved.report.warnings[0]).toContain('Use mode "stitch" for one multi-file journey');
   });
 
   it('warns about pins the map would collapse into one', () => {
@@ -267,6 +285,26 @@ describe('resolveRecipe', () => {
 
     expect(resolved.userLandmarks).toHaveLength(1);
     expect(resolved.userLandmarks[0].title).toBe('Start / Finish');
+  });
+
+  it('places automatic start and finish pins on the requested route', () => {
+    const routes = tracksFrom([
+      { name: 'marathon.gpx', gpx: leg({ name: 'Marathon', startLat: 42, points: 101 }) },
+      { name: 'sprint.gpx', gpx: leg({ name: 'Sprint', startLat: 43, points: 51 }) },
+    ]);
+
+    const resolved = resolveRecipe(
+      {
+        mode: 'alternatives',
+        tracks: [{ file: 'marathon.gpx' }, { file: 'sprint.gpx' }],
+        landmarks: [{ track: 1, auto: 'start-finish', type: 'trailhead' }],
+      },
+      routes.tracks,
+      routes.names,
+    );
+
+    expect(resolved.userLandmarks).toHaveLength(2);
+    expect(resolved.report.landmarks.every((entry) => entry.trackName === 'Sprint')).toBe(true);
   });
 
   it('warns when a card is on a route that is not the one being played', () => {

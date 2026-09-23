@@ -4,6 +4,8 @@ import * as maplibregl from 'maplibre-gl';
 import type { LanguageCode, TextAnnotation, UnitSystem } from '@/types';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { convertElevation } from '@/utils/units';
+import { drawAnnotationSymbol, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
 import {
   CARD_MIN_WIDTH,
   cardLayoutForMapWidth,
@@ -211,21 +213,7 @@ function createLogoImage(annotation: TextAnnotation) {
   canvas.width = canvas.height = 160;
   const context = canvas.getContext('2d');
   if (!context) return null;
-  context.shadowColor = '#0009';
-  context.shadowBlur = 18;
-  context.fillStyle = '#101417';
-  context.beginPath();
-  context.arc(80, 80, 66, 0, Math.PI * 2);
-  context.fill();
-  context.shadowBlur = 0;
-  context.strokeStyle = annotation.color;
-  context.lineWidth = 9;
-  context.stroke();
-  context.fillStyle = '#fff';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.font = '80px sans-serif';
-  context.fillText(annotation.logo || '●', 80, 83, 105);
+  drawAnnotationSymbol(context, annotation.logo || 'map:pin', 80, 80, 90, annotation.color);
   return context.getImageData(0, 0, 160, 160);
 }
 
@@ -269,6 +257,11 @@ export function useTextAnnotationsLayer({
 }: UseTextAnnotationsLayerParams) {
   // The card is sized for the map it sits on, so a resize has to redraw it.
   const [mapWidth, setMapWidth] = useState(0);
+  // A field note's map symbol may come from the Pinhead library, which loads
+  // on demand; redraw once it arrives instead of keeping the fallback pin.
+  const pinheadIcons = usePinheadIcons(needsPinheadIcons(
+    annotations.map((annotation) => (annotation.presentation === 'side-panel' ? annotation.logo : undefined)),
+  ));
 
   useEffect(() => {
     const map = mapRef.current;
@@ -405,6 +398,7 @@ export function useTextAnnotationsLayer({
     isMapLoaded,
     mapRef,
     mapWidth,
+    pinheadIcons,
     unitSystem,
     language,
   ]);

@@ -24,6 +24,12 @@ it placed.
 - [example-recipe.json](https://trailreplay.com/example-recipe.json): a real
   race, start to finish, as a recipe.
 
+For aid stations, cut-offs, and other route stops, write an `annotations`
+entry as a **field note**: use `"presentation": "side-panel"` and a
+`"holdDuration"` (6000 ms is the default). Do not choose `"map-card"` unless
+the person explicitly asks for a brief map-only caption; field notes are the
+readable stop treatment and slow the replay at the anchored kilometre.
+
 If the person has no GPX files yet, §7 of the spec covers where routes come from:
 what you can fetch yourself (a race organiser's public GPX URL, a folder they
 already have, an archive they request) and what to ask them to click. Never ask

@@ -17,6 +17,8 @@ import fixWebmDuration from 'fix-webm-duration';
 import { useCallback, useEffect } from 'react';
 import { getSupportedMimeType, getVideoBitrate } from './exportConfig';
 import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
+import { needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { loadPinheadIcons } from '@/components/annotations/pinheadIcons';
 import {
   createStudioDeliveryJob,
   deliverStudioExport,
@@ -553,6 +555,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
+      // Field-note symbols from the Pinhead library are drawn into every frame;
+      // without the library they would export as the fallback pin.
+      const fieldNoteSymbols = useAppStore.getState().textAnnotations
+        .map((annotation) => (annotation.presentation === 'side-panel' ? annotation.logo : undefined));
+      if (needsPinheadIcons(fieldNoteSymbols)) await loadPinheadIcons().catch(() => undefined);
 
       cachedLogoRef.current = null;
       await new Promise<void>((resolve) => {

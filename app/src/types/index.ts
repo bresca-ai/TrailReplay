@@ -172,18 +172,21 @@ export interface TextAnnotation {
   title: string;
   subtitle?: string;
   code?: string;
+  /** Optional small heading above the note; falls back to the localized default. */
+  eyebrow?: string;
   meta?: string;
   description?: string;
   color: string;
   elevation?: number;
   displayDuration: number;
-  /** A compact symbol on the map with a readable panel beside it. */
+  /** A transparent map caption or a longer field note with a route symbol. */
   presentation?: 'map-card' | 'side-panel';
+  /** `map:<glyph>` selects a shared map icon; other values remain emoji. */
   logo?: string;
   /** Additional playback time spent easing through this point, in ms. */
   holdDuration?: number;
   /** Optional authored wording for each UI language. Missing languages use title/subtitle. */
-  translations?: Partial<Record<LanguageCode, { title: string; subtitle?: string; meta?: string; description?: string }>>;
+  translations?: Partial<Record<LanguageCode, { title: string; subtitle?: string; eyebrow?: string; meta?: string; description?: string }>>;
 }
 
 export * from './landmarks';

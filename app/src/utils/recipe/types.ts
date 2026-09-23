@@ -111,6 +111,7 @@ export interface RecipeAnnotation extends RecipeAnchor {
   title?: string;
   subtitle?: string;
   code?: string;
+  eyebrow?: string;
   meta?: string;
   description?: string;
   color?: string;
@@ -119,7 +120,7 @@ export interface RecipeAnnotation extends RecipeAnchor {
   presentation?: 'map-card' | 'side-panel';
   logo?: string;
   holdDuration?: number;
-  translations?: Partial<Record<LanguageCode, { title: string; subtitle?: string; meta?: string; description?: string }>>;
+  translations?: Partial<Record<LanguageCode, { title: string; subtitle?: string; eyebrow?: string; meta?: string; description?: string }>>;
   auto?: 'overnight-stops';
 }
 

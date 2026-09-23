@@ -6,6 +6,8 @@ import { convertElevation } from '@/utils/units';
 import { trackEvent } from '@/utils/analytics';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
+import { mapAnnotationSymbol, pinheadAnnotationSymbol } from '@/components/annotations/annotationSymbol';
+import { AnnotationSymbolPicker } from './AnnotationSymbolPicker';
 import { MapPinned, Play, Plus, Trash2 } from 'lucide-react';
 import type { TextAnnotation } from '@/types';
 
@@ -25,14 +27,15 @@ export function RouteAnnotationsEditor() {
 
   const [draftAnnotationTitle, setDraftAnnotationTitle] = useState('');
   const [draftAnnotationSubtitle, setDraftAnnotationSubtitle] = useState('');
+  const [draftEyebrow, setDraftEyebrow] = useState('');
   const [draftCode, setDraftCode] = useState('');
   const [draftMeta, setDraftMeta] = useState('');
   const [draftDescription, setDraftDescription] = useState('');
   const [draftAnnotationColor, setDraftAnnotationColor] = useState(DEFAULT_ANNOTATION_COLOR);
-  const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('map-card');
-  const [draftLogo, setDraftLogo] = useState('🚰');
+  const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('side-panel');
+  const [draftLogo, setDraftLogo] = useState(pinheadAnnotationSymbol('jug_and_apple'));
   const [draftHoldSeconds, setDraftHoldSeconds] = useState(6);
-  const updateWording = (annotation: TextAnnotation, updates: { title?: string; subtitle?: string; meta?: string; description?: string }) => {
+  const updateWording = (annotation: TextAnnotation, updates: { title?: string; subtitle?: string; eyebrow?: string; meta?: string; description?: string }) => {
     const existing = annotation.translations?.[language];
     const shown = localizedAnnotation(annotation, language);
     const content = sideAnnotationContent(shown);
@@ -42,6 +45,7 @@ export function RouteAnnotationsEditor() {
         [language]: {
           title: updates.title ?? existing?.title ?? (annotation.presentation === 'side-panel' ? content.title : shown.title),
           subtitle: updates.subtitle ?? existing?.subtitle ?? annotation.subtitle,
+          eyebrow: updates.eyebrow ?? existing?.eyebrow ?? annotation.eyebrow,
           meta: updates.meta ?? existing?.meta ?? content.meta ?? undefined,
           description: updates.description ?? existing?.description ?? content.description,
         },
@@ -82,13 +86,14 @@ export function RouteAnnotationsEditor() {
       color: draftAnnotationColor,
       elevation: currentPosition.elevation > 0 ? currentPosition.elevation : undefined,
       displayDuration: DEFAULT_ANNOTATION_DURATION,
-      translations: { [language]: { title: draftAnnotationTitle.trim(), ...(draftPresentation === 'map-card' ? { subtitle: draftAnnotationSubtitle.trim() || undefined } : { meta: draftMeta.trim() || undefined, description: draftDescription.trim() || undefined }) } },
+      translations: { [language]: { title: draftAnnotationTitle.trim(), ...(draftPresentation === 'map-card' ? { subtitle: draftAnnotationSubtitle.trim() || undefined } : { eyebrow: draftEyebrow.trim() || undefined, meta: draftMeta.trim() || undefined, description: draftDescription.trim() || undefined }) } },
       presentation: draftPresentation,
       ...(draftPresentation === 'side-panel' ? { logo: draftLogo, holdDuration: draftHoldSeconds * 1000 } : {}),
     });
     trackEvent('annotation_created', { annotation_type: 'text' });
     setDraftAnnotationTitle('');
     setDraftAnnotationSubtitle('');
+    setDraftEyebrow('');
     setDraftCode('');
     setDraftMeta('');
     setDraftDescription('');
@@ -102,6 +107,9 @@ export function RouteAnnotationsEditor() {
           {t('annotations.routeAnnotationsHint')}
         </p>
 
+        {draftPresentation === 'side-panel' && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.eyebrowLabel')}
+          <input value={draftEyebrow} onChange={(e) => setDraftEyebrow(e.target.value)} placeholder={t('annotations.sidePanelEyebrow')} maxLength={36} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+        </label>}
         {draftPresentation === 'side-panel' && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.codeLabel')}
           <input value={draftCode} onChange={(e) => setDraftCode(e.target.value)} maxLength={12} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
         </label>}
@@ -136,7 +144,7 @@ export function RouteAnnotationsEditor() {
             </select>
           </label>
           {draftPresentation === 'side-panel' && <>
-            <label className="text-xs text-[var(--evergreen)]">{t('annotations.logoLabel')} <input value={draftLogo} onChange={(e) => setDraftLogo(e.target.value)} maxLength={8} className="ml-2 w-16 rounded border bg-[var(--canvas)] p-2" /></label>
+            <AnnotationSymbolPicker value={draftLogo} onChange={setDraftLogo} />
             <label className="text-xs text-[var(--evergreen)]">{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={draftHoldSeconds} onChange={(e) => setDraftHoldSeconds(Math.max(0, Math.min(30, Number(e.target.value) || 0)))} className="ml-2 w-16 rounded border bg-[var(--canvas)] p-2" /></label>
           </>}
         </div>
@@ -223,6 +231,9 @@ export function RouteAnnotationsEditor() {
                   key={annotation.id}
                   className="space-y-3 rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3"
                 >
+                  {isSidePanel && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.eyebrowLabel')}
+                    <input value={content.eyebrow ?? ''} onChange={(e) => updateWording(annotation, { eyebrow: e.target.value })} placeholder={t('annotations.sidePanelEyebrow')} maxLength={36} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                  </label>}
                   {isSidePanel && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.codeLabel')}
                     <input value={content.code ?? ''} onChange={(e) => updateTextAnnotation(annotation.id, { code: e.target.value })} maxLength={12} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
                   </label>}
@@ -259,13 +270,13 @@ export function RouteAnnotationsEditor() {
                       const presentation = e.target.value as 'map-card' | 'side-panel';
                       updateTextAnnotation(annotation.id, {
                         presentation,
-                        ...(presentation === 'side-panel' ? { logo: annotation.logo || '🚰', holdDuration: annotation.holdDuration ?? 6000 } : {}),
+                        ...(presentation === 'side-panel' ? { logo: annotation.logo || mapAnnotationSymbol('pin'), holdDuration: annotation.holdDuration ?? 6000 } : {}),
                       });
                     }} className="rounded border bg-[var(--canvas)] p-2">
                       <option value="map-card">{t('annotations.presentationMapCard')}</option><option value="side-panel">{t('annotations.presentationSidePanel')}</option>
                     </select>
                     {annotation.presentation === 'side-panel' && <>
-                      <label>{t('annotations.logoLabel')} <input value={annotation.logo ?? '🚰'} onChange={(e) => updateTextAnnotation(annotation.id, { logo: e.target.value })} maxLength={8} className="w-16 rounded border bg-[var(--canvas)] p-2" /></label>
+                      <AnnotationSymbolPicker value={annotation.logo ?? mapAnnotationSymbol('pin')} onChange={(logo) => updateTextAnnotation(annotation.id, { logo })} />
                       <label>{t('annotations.slowdownSeconds')} <input type="number" min="0" max="30" value={(annotation.holdDuration ?? 0) / 1000} onChange={(e) => updateTextAnnotation(annotation.id, { holdDuration: Math.max(0, Math.min(30, Number(e.target.value) || 0)) * 1000 })} className="w-16 rounded border bg-[var(--canvas)] p-2" /></label>
                     </>}
                   </div>

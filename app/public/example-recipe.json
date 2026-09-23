@@ -22,24 +22,32 @@
   "annotations": [
     {
       "km": 6.5,
+      "presentation": "side-panel",
+      "holdDuration": 6000,
       "title": "Avituallament 1 — Collet de Barraques",
       "subtitle": "Km 6,5 · Aigua · Cola · Isotònic · Fruita · Fruits secs",
       "color": "#3C9DCC"
     },
     {
       "km": 13,
+      "presentation": "side-panel",
+      "holdDuration": 6000,
       "title": "Avituallament 2 — Torrent Gros",
       "subtitle": "Km 13 · Aigua · Cola · Isotònic · Fruita · Fruits secs",
       "color": "#3C9DCC"
     },
     {
       "km": 17,
+      "presentation": "side-panel",
+      "holdDuration": 6000,
       "title": "Avituallament 3 — Dòrria",
       "subtitle": "Km 17 · Aigua · Cola · Isotònic · Fruita · Fruits secs",
       "color": "#3C9DCC"
     },
     {
       "km": 25,
+      "presentation": "side-panel",
+      "holdDuration": 6000,
       "title": "Avituallament 4 — Les Casetes",
       "subtitle": "Km 25 · Aigua · Cola · Isotònic · Fruita · Fruits secs",
       "color": "#3C9DCC"

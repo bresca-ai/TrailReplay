@@ -12,6 +12,7 @@ export function sideAnnotationContent(annotation: TextAnnotation) {
     && subtitleLines[0].includes(' · ');
 
   return {
+    eyebrow: annotation.eyebrow?.trim() || null,
     code: annotation.code?.trim() || (hasCode ? titleParts[0] : null),
     title: hasCode ? titleParts[1] : title,
     meta: annotation.meta ?? (hasMeta ? subtitleLines[0] : null),

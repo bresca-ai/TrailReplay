@@ -76,7 +76,7 @@ screen time in ms, overriding the automatic share).
 
 | Key | Meaning |
 |---|---|
-| `mode` | `stitch` (default) plays them one after another as one journey. `alternatives` loads them all but puts only the active one in the timeline, so the others are there to switch to. |
+| `mode` | `stitch` (default) plays them one after another as one journey. `alternatives` loads them all but puts only the active one in the timeline, so the others are there to switch to. If several files are one journey, use `stitch`; otherwise annotations on the non-active routes cannot have a meaningful playback time. |
 | `legDuration` | `by-distance` (default) shares screen time by how far each leg is, so a 35 km day is not given the same seconds as an 8 km one. `equal`, or a number of ms per leg. |
 | `totalDuration` | Total replay length in ms. Default 60000. |
 | `activeTrack` | Which route starts active: index or name. |
@@ -116,11 +116,13 @@ belongs to.
 ```
 
 Landmark keys: `title`, `subtitle`, `type`, `icon`, `color`, `importance`
-(1–5, default 5), `display`, `id`. A standard map card annotation uses
-`title`, optional `subtitle`, `color`, `displayDuration` (ms on screen, default
-5000), and optional `id`.
+(1–5, default 5), `display`, `id`. An annotation defaults to a readable field
+note, which slows the replay at that kilometre. Use `presentation: "map-card"`
+only when you explicitly want a brief map-only caption: a card with `title`,
+optional `subtitle`, `color`, and `displayDuration` (ms on screen as the marker
+approaches, default 5000). Map cards do not slow the replay or show a `logo`.
 
-For a readable aid-station panel beside the map, author one object like this:
+For an aid station or other route stop, author a field note like this:
 
 ```json
 "annotations": [
@@ -131,7 +133,7 @@ For a readable aid-station panel beside the map, author one object like this:
     "title": "Avituallament d'aigua",
     "meta": "Km 10,2 · 15:30–19:30",
     "description": "Aquarius · Fruits secs · Plàtans",
-    "logo": "🚰",
+    "logo": "pinhead:jug_and_apple",
     "color": "#1c8ce4",
     "holdDuration": 7000,
     "translations": {
@@ -148,7 +150,12 @@ For a readable aid-station panel beside the map, author one object like this:
 `code` labels the station, `title` is its heading, `meta` is the short route
 detail line, and `description` is the longer readable text. Keep those as
 separate JSON fields; the `·` within `meta` or `description` is ordinary text.
-`logo` is the compact symbol on the map. `holdDuration` is additional replay
+`logo` is the field note's symbol, drawn on the map and in the panel. It takes
+one of the built-in trail glyphs as `map:<glyph>` (`pin`, `summit`, `viewpoint`,
+`waypoint`, `town`, `shelter`, `camp`, `water`, `waterfall`), any icon from
+[Pinhead](https://pinhead.ink) as `pinhead:<icon id>` (the id is the name shown
+on pinhead.ink, such as `water_tap` or `mountain`), or an emoji. The default is
+`map:pin`. `holdDuration` is additional replay
 time in milliseconds: the marker eases down and back up around the station
 while the side panel remains visible. `translations` keys are app languages
 (`en`, `es`, `ca`, `de`, `fr`); translate `title`, `meta`, and `description`
@@ -156,6 +163,13 @@ inside each language object. The viewer's app language chooses the wording.
 The top-level text is the fallback when a language is missing. Older annotations
 combining fields in `title` and `subtitle` still display, but new recipes
 should use the separate fields. The panel disappears for the final zoom-out.
+
+Pinhead is a CC0 library already bundled by TrailReplay. Agents do not need to
+add a new icon asset or ask for a limited icon list: any non-sensitive ID in
+the bundled Pinhead index can be used as `pinhead:<icon id>`. Choose the ID by
+meaning: use `jug_and_apple` for a broad aid/service station that provides food
+and drink, `water_tap` for a water-only stop, and `flag_checkered` for a finish.
+Keep the source's language in the surrounding title and copy.
 
 `iconChanges` swap the moving marker partway: `{ "km": 20, "icon": "🥾",
 "label": "Walking the col" }`.
