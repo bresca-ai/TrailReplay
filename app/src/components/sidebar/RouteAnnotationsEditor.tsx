@@ -6,7 +6,7 @@ import { convertElevation } from '@/utils/units';
 import { trackEvent } from '@/utils/analytics';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
-import { mapAnnotationSymbol } from '@/components/annotations/annotationSymbol';
+import { mapAnnotationSymbol, pinheadAnnotationSymbol } from '@/components/annotations/annotationSymbol';
 import { AnnotationSymbolPicker } from './AnnotationSymbolPicker';
 import { MapPinned, Play, Plus, Trash2 } from 'lucide-react';
 import type { TextAnnotation } from '@/types';
@@ -33,7 +33,7 @@ export function RouteAnnotationsEditor() {
   const [draftDescription, setDraftDescription] = useState('');
   const [draftAnnotationColor, setDraftAnnotationColor] = useState(DEFAULT_ANNOTATION_COLOR);
   const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('side-panel');
-  const [draftLogo, setDraftLogo] = useState(mapAnnotationSymbol('pin'));
+  const [draftLogo, setDraftLogo] = useState(pinheadAnnotationSymbol('jug_and_apple'));
   const [draftHoldSeconds, setDraftHoldSeconds] = useState(6);
   const updateWording = (annotation: TextAnnotation, updates: { title?: string; subtitle?: string; eyebrow?: string; meta?: string; description?: string }) => {
     const existing = annotation.translations?.[language];

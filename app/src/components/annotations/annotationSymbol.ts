@@ -27,6 +27,14 @@ export function annotationPinheadId(symbol: string | undefined): string | null {
   return symbol.slice(PINHEAD_ICON_PREFIX.length) || null;
 }
 
+/** Human-readable icon name used by hover tooltips and accessible labels. */
+export function annotationSymbolLabel(symbol: string | undefined) {
+  const glyph = annotationMapGlyph(symbol);
+  if (glyph) return glyph;
+  const pinheadId = annotationPinheadId(symbol);
+  return pinheadId ? pinheadId.replace(/_/g, ' ') : symbol || 'annotation';
+}
+
 /** Whether drawing any of these symbols needs the Pinhead library loaded. */
 export function needsPinheadIcons(symbols: Array<string | undefined>) {
   return symbols.some((symbol) => annotationPinheadId(symbol) !== null);

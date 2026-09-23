@@ -3,6 +3,7 @@ import { LANDMARK_GLYPH_KEYS, PINHEAD_PATHS } from '@/components/map/landmarkGly
 import {
   annotationMapGlyph,
   annotationPinheadId,
+  annotationSymbolLabel,
   annotationSymbolPath,
   mapAnnotationSymbol,
   needsPinheadIcons,
@@ -38,5 +39,9 @@ describe('annotation symbols', () => {
   it('only asks for the library when a library icon is used', () => {
     expect(needsPinheadIcons([mapAnnotationSymbol('summit'), '🚰', undefined])).toBe(false);
     expect(needsPinheadIcons([undefined, pinheadAnnotationSymbol('mountain')])).toBe(true);
+  });
+
+  it('names Pinhead icons for hover text', () => {
+    expect(annotationSymbolLabel(pinheadAnnotationSymbol('jug_and_apple'))).toBe('jug and apple');
   });
 });

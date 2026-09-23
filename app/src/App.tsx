@@ -17,7 +17,7 @@ import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
 import { VideoPopup } from '@/components/annotations/VideoPopup';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
-import { annotationSymbolPath, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { annotationSymbolLabel, annotationSymbolPath, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
 import { sidePanelShadeStyle } from '@/components/annotations/sidePanelShade';
 import { toast } from 'sonner';
@@ -566,7 +566,7 @@ function App() {
               {activeSideAnnotation && sideAnnotationCopy && (
                 <div className="tr-annotation-side-panel pointer-events-none absolute z-30" style={sideAnnotationStyle}>
                   <div className="tr-annotation-side-panel__header">
-                    <div className="tr-annotation-side-panel__logo" aria-hidden="true">
+                    <div className="tr-annotation-side-panel__logo" aria-label={annotationSymbolLabel(activeSideAnnotation.logo)} title={annotationSymbolLabel(activeSideAnnotation.logo)}>
                       {sideAnnotationSymbolPath
                         ? <svg viewBox="0 0 15 15" fill="currentColor"><path d={sideAnnotationSymbolPath} /></svg>
                         : activeSideAnnotation.logo || '●'}

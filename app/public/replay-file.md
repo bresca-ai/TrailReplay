@@ -133,7 +133,7 @@ For an aid station or other route stop, author a field note like this:
     "title": "Avituallament d'aigua",
     "meta": "Km 10,2 · 15:30–19:30",
     "description": "Aquarius · Fruits secs · Plàtans",
-    "logo": "pinhead:charging_station",
+    "logo": "pinhead:jug_and_apple",
     "color": "#1c8ce4",
     "holdDuration": 7000,
     "translations": {
@@ -167,9 +167,9 @@ should use the separate fields. The panel disappears for the final zoom-out.
 Pinhead is a CC0 library already bundled by TrailReplay. Agents do not need to
 add a new icon asset or ask for a limited icon list: any non-sensitive ID in
 the bundled Pinhead index can be used as `pinhead:<icon id>`. Choose the ID by
-meaning: use `charging_station` for a broad aid/service station that provides
-food and drink, `water_tap` for a water-only stop, and `flag_checkered` for a
-finish. Keep the source's language in the surrounding title and copy.
+meaning: use `jug_and_apple` for a broad aid/service station that provides food
+and drink, `water_tap` for a water-only stop, and `flag_checkered` for a finish.
+Keep the source's language in the surrounding title and copy.
 
 `iconChanges` swap the moving marker partway: `{ "km": 20, "icon": "🥾",
 "label": "Walking the col" }`.
