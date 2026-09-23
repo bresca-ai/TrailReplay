@@ -58,7 +58,7 @@ export function RouteAnnotationsEditor() {
   const [draftDescription, setDraftDescription] = useState('');
   const [draftAnnotationColor, setDraftAnnotationColor] = useState(DEFAULT_ANNOTATION_COLOR);
   const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('map-card');
-  const [draftLogo, setDraftLogo] = useState(mapAnnotationSymbol('pin'));
+  const [draftLogo, setDraftLogo] = useState(mapAnnotationSymbol('aid-station'));
   const [draftHoldSeconds, setDraftHoldSeconds] = useState(6);
   const updateWording = (annotation: TextAnnotation, updates: { title?: string; subtitle?: string; eyebrow?: string; meta?: string; description?: string }) => {
     const existing = annotation.translations?.[language];

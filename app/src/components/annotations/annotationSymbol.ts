@@ -1,4 +1,4 @@
-import { isLandmarkGlyph, PINHEAD_PATHS, type LandmarkGlyph } from '@/components/map/landmarkGlyphs';
+import { isLandmarkGlyph, LANDMARK_GLYPH_LABELS, PINHEAD_PATHS, type LandmarkGlyph } from '@/components/map/landmarkGlyphs';
 
 const MAP_ICON_PREFIX = 'map:';
 
@@ -16,6 +16,12 @@ export function annotationMapGlyph(symbol: string | undefined): LandmarkGlyph | 
 export function annotationSymbolPath(symbol: string | undefined) {
   const glyph = annotationMapGlyph(symbol);
   return glyph ? PINHEAD_PATHS[glyph] : null;
+}
+
+/** Human-readable label used by icon hover tooltips and accessible names. */
+export function annotationSymbolLabel(symbol: string | undefined) {
+  const glyph = annotationMapGlyph(symbol);
+  return glyph ? LANDMARK_GLYPH_LABELS[glyph] : symbol || 'Annotation';
 }
 
 /** Draw the same Pinhead path used by map landmarks, or retain a legacy emoji. */

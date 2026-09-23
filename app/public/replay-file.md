@@ -369,8 +369,9 @@ visible), `title`, `type`, `source` (use `"user"`). Optional: `display`
 `longest-climb` `major-descent` `halfway`
 
 **`icon`** (overrides the type's glyph) — `pin` `summit` `viewpoint` `waypoint`
-`town` `shelter` `camp` `water` `waterfall`. An aid station defaults to `town`;
-`water` usually reads better.
+`town` `shelter` `camp` `aid-station` `water` `waterfall`. An aid station defaults
+to `aid-station`, an apple-and-water symbol; `water` usually reads better for a
+water-only stop.
 
 **Palette** — `#E86F51` `#F7F2E8` `#6D7E96` `#3C9DCC` `#63C5D9` `#B85E3C`
 `#3E9DB0` `#536B65`. Any hex works.
