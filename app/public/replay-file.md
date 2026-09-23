@@ -131,7 +131,7 @@ For a readable aid-station panel beside the map, author one object like this:
     "title": "Avituallament d'aigua",
     "meta": "Km 10,2 · 15:30–19:30",
     "description": "Aquarius · Fruits secs · Plàtans",
-    "logo": "🚰",
+    "logo": "pinhead:jug_and_apple",
     "color": "#1c8ce4",
     "holdDuration": 7000,
     "translations": {
@@ -148,7 +148,8 @@ For a readable aid-station panel beside the map, author one object like this:
 `code` labels the station, `title` is its heading, `meta` is the short route
 detail line, and `description` is the longer readable text. Keep those as
 separate JSON fields; the `·` within `meta` or `description` is ordinary text.
-`logo` is the compact symbol on the map. `holdDuration` is additional replay
+`logo` is the compact symbol on the map. For a food-and-drink aid station, use
+`pinhead:jug_and_apple`; for a water-only stop, use `map:water`. `holdDuration` is additional replay
 time in milliseconds: the marker eases down and back up around the station
 while the side panel remains visible. `translations` keys are app languages
 (`en`, `es`, `ca`, `de`, `fr`); translate `title`, `meta`, and `description`

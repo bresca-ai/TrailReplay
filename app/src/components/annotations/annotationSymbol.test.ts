@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LANDMARK_GLYPH_KEYS, PINHEAD_PATHS } from '@/components/map/landmarkGlyphs';
-import { annotationMapGlyph, annotationSymbolPath, mapAnnotationSymbol } from './annotationSymbol';
+import { annotationMapGlyph, annotationSymbolLabel, annotationSymbolPath, mapAnnotationSymbol } from './annotationSymbol';
 
 describe('annotation symbols', () => {
   it('offers every map glyph through a stable value', () => {
@@ -15,5 +15,10 @@ describe('annotation symbols', () => {
     expect(annotationMapGlyph('🚰')).toBeNull();
     expect(annotationSymbolPath('🚰')).toBeNull();
     expect(annotationMapGlyph('map:unknown')).toBeNull();
+  });
+
+  it('resolves the Pinhead jug and apple icon and names it for hover text', () => {
+    expect(annotationSymbolPath('pinhead:jug_and_apple')).toBe(PINHEAD_PATHS.jug_and_apple);
+    expect(annotationSymbolLabel('pinhead:jug_and_apple')).toBe('Jug and apple · aid station');
   });
 });

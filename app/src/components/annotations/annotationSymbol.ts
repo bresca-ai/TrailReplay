@@ -1,6 +1,7 @@
 import { isLandmarkGlyph, LANDMARK_GLYPH_LABELS, PINHEAD_PATHS, type LandmarkGlyph } from '@/components/map/landmarkGlyphs';
 
 const MAP_ICON_PREFIX = 'map:';
+const PINHEAD_ICON_PREFIX = 'pinhead:';
 
 /** Existing emoji values remain valid; map icons use a namespaced value. */
 export function mapAnnotationSymbol(glyph: LandmarkGlyph) {
@@ -13,15 +14,23 @@ export function annotationMapGlyph(symbol: string | undefined): LandmarkGlyph | 
   return isLandmarkGlyph(glyph) ? glyph : null;
 }
 
+function annotationPinheadPath(symbol: string | undefined) {
+  if (!symbol?.startsWith(PINHEAD_ICON_PREFIX)) return null;
+  const icon = symbol.slice(PINHEAD_ICON_PREFIX.length);
+  return icon === 'jug_and_apple' ? PINHEAD_PATHS.jug_and_apple : null;
+}
+
 export function annotationSymbolPath(symbol: string | undefined) {
   const glyph = annotationMapGlyph(symbol);
-  return glyph ? PINHEAD_PATHS[glyph] : null;
+  return glyph ? PINHEAD_PATHS[glyph] : annotationPinheadPath(symbol);
 }
 
 /** Human-readable label used by icon hover tooltips and accessible names. */
 export function annotationSymbolLabel(symbol: string | undefined) {
   const glyph = annotationMapGlyph(symbol);
-  return glyph ? LANDMARK_GLYPH_LABELS[glyph] : symbol || 'Annotation';
+  if (glyph) return LANDMARK_GLYPH_LABELS[glyph];
+  if (symbol === 'pinhead:jug_and_apple') return 'Jug and apple · aid station';
+  return symbol || 'Annotation';
 }
 
 /** Draw the same Pinhead path used by map landmarks, or retain a legacy emoji. */
