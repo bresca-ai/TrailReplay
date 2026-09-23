@@ -401,16 +401,20 @@ html, body {
 .tr-annotation-side-panel__eyebrow,
 .tr-annotation-side-panel__details-label {
   color: #f8f6f0;
-  font-size: 10px;
+  font-size: var(--annotation-eyebrow-size, 10px);
   font-weight: 600;
   letter-spacing: .14em;
   line-height: 1.3;
   text-transform: uppercase;
 }
 
+.tr-annotation-side-panel__details-label {
+  font-size: var(--annotation-details-label-size, 10px);
+}
+
 .tr-annotation-side-panel__code {
   color: var(--annotation-accent, #f3b133);
-  font-size: 15px;
+  font-size: var(--annotation-code-size, 15px);
   font-weight: 700;
   letter-spacing: .06em;
   line-height: 1.1;
@@ -428,7 +432,7 @@ html, body {
 
 .tr-annotation-side-panel__title {
   margin: 12px 0 0;
-  font-size: clamp(18px, 2vw, 23px);
+  font-size: var(--annotation-title-size, clamp(18px, 2vw, 23px));
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -.035em;
@@ -438,7 +442,7 @@ html, body {
 .tr-annotation-side-panel__meta {
   margin: 10px 0 0;
   color: var(--annotation-accent, #f3b133);
-  font-size: 12px;
+  font-size: var(--annotation-meta-size, 12px);
   font-weight: 600;
   letter-spacing: .015em;
 }
@@ -452,7 +456,7 @@ html, body {
 .tr-annotation-side-panel__details p {
   margin: 8px 0 0;
   color: #f8f6f0;
-  font-size: 12px;
+  font-size: var(--annotation-details-size, 12px);
   font-weight: 500;
   line-height: 1.55;
   overflow-wrap: anywhere;
@@ -469,8 +473,8 @@ html, body {
     padding: 18px 18px 19px;
   }
 
-  .tr-annotation-side-panel__title { font-size: 19px; }
-  .tr-annotation-side-panel__details p { font-size: 12px; }
+  .tr-annotation-side-panel__title { font-size: var(--annotation-title-size, 19px); }
+  .tr-annotation-side-panel__details p { font-size: var(--annotation-details-size, 12px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

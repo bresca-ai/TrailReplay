@@ -26,6 +26,7 @@ import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
 import { useI18n } from '@/i18n/useI18n';
+import { getSideAnnotationTypography } from '@/components/annotations/sideAnnotationTypography';
 
 const Sidebar = lazy(() => import('@/components/sidebar/Sidebar').then((module) => ({ default: module.Sidebar })));
 const InfoPanel = lazy(() => import('@/components/info/InfoPanel').then((module) => ({ default: module.InfoPanel })));
@@ -466,14 +467,31 @@ function App() {
     annotation.id === activeTextAnnotationId && annotation.presentation === 'side-panel');
   const localizedSideAnnotation = activeSideAnnotation ? localizedAnnotation(activeSideAnnotation, language) : null;
   const sideAnnotationCopy = localizedSideAnnotation ? sideAnnotationContent(localizedSideAnnotation) : null;
+  const sideAnnotationTypography = getSideAnnotationTypography(
+    activeExportCropMetrics ? exportAspectRatio : undefined,
+  );
   const sideAnnotationNarrowFrame = activeExportCropMetrics
     ? isNarrowFrame(activeExportCropMetrics.frameWidth, activeExportCropMetrics.frameHeight)
     : false;
   const sideAnnotationBottom = settings.showElevationProfile
     ? sideAnnotationNarrowFrame ? 110 : 88
     : 24;
-  const sideAnnotationStyle: (CSSProperties & { '--annotation-accent'?: string }) | undefined = activeSideAnnotation ? {
+  const sideAnnotationStyle: (CSSProperties & {
+    '--annotation-accent'?: string;
+    '--annotation-eyebrow-size'?: string;
+    '--annotation-code-size'?: string;
+    '--annotation-title-size'?: string;
+    '--annotation-meta-size'?: string;
+    '--annotation-details-label-size'?: string;
+    '--annotation-details-size'?: string;
+  }) | undefined = activeSideAnnotation ? {
     '--annotation-accent': activeSideAnnotation.color,
+    '--annotation-eyebrow-size': `${sideAnnotationTypography.eyebrowSize}px`,
+    '--annotation-code-size': `${sideAnnotationTypography.codeSize}px`,
+    '--annotation-title-size': `${sideAnnotationTypography.titleSize}px`,
+    '--annotation-meta-size': `${sideAnnotationTypography.metaSize}px`,
+    '--annotation-details-label-size': `${sideAnnotationTypography.detailsLabelSize}px`,
+    '--annotation-details-size': `${sideAnnotationTypography.detailsSize}px`,
     bottom: (activeExportCropMetrics?.bottom ?? 0) + sideAnnotationBottom,
     ...(activeExportCropMetrics && sideAnnotationNarrowFrame
       ? {

@@ -6,6 +6,7 @@ import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
 import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
+import { getSideAnnotationTypography } from '@/components/annotations/sideAnnotationTypography';
 import type { VideoExportSettings } from '@/types';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 
@@ -154,6 +155,7 @@ export function drawExportFrame({
         const w = rect.width * (recordW / cropW);
         const scale = recordW / cropW;
         const copy = sideAnnotationContent(localizedAnnotation(sideAnnotation, currentState.settings.language));
+        const typography = getSideAnnotationTypography(videoExportSettings.aspectRatio);
         const inset = 20 * scale;
         const contentX = x + inset;
         const maxWidth = w - inset * 2;
@@ -164,11 +166,11 @@ export function drawExportFrame({
         context.shadowBlur = 6 * scale;
         context.shadowOffsetY = 2 * scale;
         context.textAlign = 'left';
-        context.font = `600 ${10 * scale}px "JetBrains Mono", monospace`;
+        context.font = `600 ${typography.eyebrowSize * scale}px "JetBrains Mono", monospace`;
         context.fillStyle = '#f8f6f0';
         context.fillText((copy.eyebrow || t('annotations.sidePanelEyebrow')).toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
         if (copy.code) {
-          context.font = `700 ${15 * scale}px "JetBrains Mono", monospace`;
+          context.font = `700 ${typography.codeSize * scale}px "JetBrains Mono", monospace`;
           context.fillStyle = sideAnnotation.color;
           context.fillText(copy.code, contentX + 45 * scale, logoY + 31 * scale);
         }
@@ -199,10 +201,10 @@ export function drawExportFrame({
         };
 
         context.fillStyle = '#f8f8f1';
-        let nextY = drawWrapped(copy.title, `700 ${23 * scale}px "JetBrains Mono", monospace`, 29, y + 82 * scale, 3);
+        let nextY = drawWrapped(copy.title, `700 ${typography.titleSize * scale}px "JetBrains Mono", monospace`, 36, y + 82 * scale, 3);
         if (copy.meta) {
           context.fillStyle = sideAnnotation.color;
-          nextY = drawWrapped(copy.meta, `600 ${12 * scale}px "JetBrains Mono", monospace`, 17, nextY + 4 * scale, 2);
+          nextY = drawWrapped(copy.meta, `600 ${typography.metaSize * scale}px "JetBrains Mono", monospace`, 22, nextY + 4 * scale, 2);
         }
         if (copy.description) {
           const dividerY = nextY + 8 * scale;
@@ -213,10 +215,10 @@ export function drawExportFrame({
           context.lineTo(x + w - inset, dividerY);
           context.stroke();
           context.fillStyle = '#f8f6f0';
-          context.font = `600 ${10 * scale}px "JetBrains Mono", monospace`;
+          context.font = `600 ${typography.detailsLabelSize * scale}px "JetBrains Mono", monospace`;
           context.fillText(t('annotations.sidePanelDetails').toLocaleUpperCase(), contentX, dividerY + 22 * scale);
           context.fillStyle = '#f8f6f0';
-          drawWrapped(copy.description, `500 ${12 * scale}px "JetBrains Mono", monospace`, 19, dividerY + 43 * scale, 12);
+          drawWrapped(copy.description, `500 ${typography.detailsSize * scale}px "JetBrains Mono", monospace`, 25, dividerY + 43 * scale, 12);
         }
         context.restore();
       }
