@@ -48,6 +48,15 @@ const STUDIO_FRAME_SETTLE_TIMEOUT_MS = 10_000;
 
 export type StudioDeliveryStatus = 'idle' | 'registering' | 'uploading' | 'emailing' | 'sent' | 'failed';
 
+// During picture/video holds the popup overlay was re-captured
+// with html2canvas on every single frame (90+ page clones per 3s photo).
+// Re-capture every N frames instead (default 6 = 5x per second at 30fps),
+// tune with ?holdOverlayEvery=<frames>; 1 restores the old behaviour.
+function getHoldOverlayEvery(): number {
+  const value = Number(new URLSearchParams(window.location.search).get('holdOverlayEvery'));
+  return Number.isFinite(value) && value >= 1 ? Math.round(value) : 6;
+}
+
 export interface UseVideoExportRecorderOptions {
   studioDelivery?: StudioDeliveryRequest;
 }
@@ -625,7 +634,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       // transition tick forward in the DOM) before rasterizing it.
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      await updateOverlayAsync(recordW, recordH);
+      // Popup snapshot every N frames only (see getHoldOverlayEvery).
+      if (frameIndex % getHoldOverlayEvery() === 0 || frameIndex === frameCount) {
+        await updateOverlayAsync(recordW, recordH);
+      }
       captureFrame();
       await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
       if (frameIndex < frameCount) {
@@ -680,7 +692,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForVideoSeek(targetSeconds, seekTolerance);
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      await updateOverlayAsync(recordW, recordH);
+      // The clip itself is drawn every frame; its chrome is not.
+      if (frameIndex % getHoldOverlayEvery() === 0) {
+        await updateOverlayAsync(recordW, recordH);
+      }
       captureFrame();
       await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
     }
