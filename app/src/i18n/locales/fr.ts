@@ -563,6 +563,8 @@ export const fr = {
     manualPlacementMetadataMissing: 'introuvables',
     manualPlacementQueuedSingle: '1 image n\'a pas pu être positionnée automatiquement. Cliquez sur la carte pour la placer.',
     manualPlacementQueuedMultiple: '{count} images n\'ont pas pu être positionnées automatiquement. Cliquez sur la carte pour les placer.',
+    picturesRelinkedSingle: '1 image a été reliée à son entrée existante.',
+    picturesRelinkedMultiple: '{count} images ont été reliées à leurs entrées existantes.',
     manualPlacementCount: 'Image {current} sur {total}',
     manualPlacementDistance: '{distance} m du parcours',
     manualPlacementUseTimestamp: 'Utiliser l\'horodatage',

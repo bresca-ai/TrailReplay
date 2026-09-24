@@ -66,7 +66,7 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
   const hasClosedRef = useRef(false);
   const relinkInputRef = useRef<HTMLInputElement>(null);
 
-  const displayDuration = picture.displayDuration || 5000;
+  const displayDuration = picture.displayDuration || 3000;
   const { imageBoxWidth, imageBoxHeight, isExportSafe, popupStyle } = getPicturePopupLayout(exportFrame);
 
   const clearProgressInterval = useCallback(() => {

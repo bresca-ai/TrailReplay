@@ -10,7 +10,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { RouteAnnotationsEditor } from './RouteAnnotationsEditor';
 import { Play, Trash2, Image as ImageIcon, Video, MapPin, Clock, Settings2, Link2, MessageSquareText } from 'lucide-react';
 
-const DEFAULT_DISPLAY_DURATION = 5000; // 5 seconds
+const DEFAULT_DISPLAY_DURATION = 3000; // 3 seconds
 
 export function PicturesPanel() {
   const { t } = useI18n();
@@ -34,7 +34,7 @@ export function PicturesPanel() {
     () => annotationCount > 0 && pictures.length + videos.length === 0 ? 'annotations' : 'pictures',
   );
   const [editingPicture, setEditingPicture] = useState<string | null>(null);
-  const [durationValue, setDurationValue] = useState(5);
+  const [durationValue, setDurationValue] = useState(3);
   const relinkTargetRef = useRef<{ kind: 'picture' | 'video'; id: string } | null>(null);
   const relinkInputRef = useRef<HTMLInputElement>(null);
 

@@ -169,13 +169,16 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       state.selectedPictureId = pictureId;
     }),
 
-  relinkPictureFile: (pictureId, file) =>
+  relinkPictureFile: (pictureId, file, asset) =>
     set((state) => {
       const picture = state.pictures.find((entry) => entry.id === pictureId);
       if (!picture) return;
 
       picture.file = file;
-      picture.url = URL.createObjectURL(file);
+      // Accept a pre-built renderable asset (e.g. HEIC converted to JPEG).
+      picture.displayFile = asset?.displayFile;
+      picture.url = asset?.url ?? URL.createObjectURL(file);
+      picture.originalFileName = file.name;
       picture.isPlaceholder = false;
     }),
 
