@@ -34,7 +34,8 @@ describe('playback picture helpers', () => {
       queuedPictureIds: [],
     });
 
-    expect(triggered.map((picture) => picture.id)).toEqual(['first', 'middle', 'late']);
+    // 'late' (0.303) has not been reached yet at 0.302.
+    expect(triggered.map((picture) => picture.id)).toEqual(['first', 'middle']);
   });
 
   it('skips pictures that are already shown or already queued', () => {
