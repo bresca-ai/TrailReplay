@@ -36,7 +36,7 @@
     "react-dom": "^19.2.0",
     "react-dropzone": "^20.1.2",
     "sonner": "^2.0.8",
-    "tailwind-merge": "^3.4.0",
+    "tailwind-merge": "^3.7.0",
     "web-vitals": "^5.1.0",
     "zustand": "^5.0.10"
   },
