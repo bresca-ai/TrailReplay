@@ -553,6 +553,8 @@ export const de = {
     manualPlacementMetadataMissing: 'nicht gefunden',
     manualPlacementQueuedSingle: '1 Bild konnte nicht automatisch positioniert werden. Klicken Sie auf die Karte, um sie zu platzieren.',
     manualPlacementQueuedMultiple: '{count} Bilder konnten nicht automatisch positioniert werden. Klicken Sie auf die Karte, um sie zu platzieren.',
+    picturesRelinkedSingle: '1 Bild wurde mit seinem vorhandenen Eintrag verknüpft.',
+    picturesRelinkedMultiple: '{count} Bilder wurden mit ihren vorhandenen Einträgen verknüpft.',
     manualPlacementCount: 'Bild {current} von {total}',
     manualPlacementDistance: '{distance}m von der Route entfernt',
     manualPlacementUseTimestamp: 'Zeitstempel verwenden',

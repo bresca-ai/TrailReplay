@@ -553,6 +553,8 @@ export const ca = {
     manualPlacementMetadataMissing: 'no trobades',
     manualPlacementQueuedSingle: '1 imatge no s\'ha pogut posicionar automàticament. Fes clic al mapa per ubicar-la.',
     manualPlacementQueuedMultiple: '{count} imatges no s\'han pogut posicionar automàticament. Fes clic al mapa per ubicar-les.',
+    picturesRelinkedSingle: '1 imatge s\'ha tornat a vincular amb la seva entrada existent.',
+    picturesRelinkedMultiple: '{count} imatges s\'han tornat a vincular amb les seves entrades existents.',
     manualPlacementCount: 'Imatge {current} de {total}',
     manualPlacementDistance: 'A {distance}m de la ruta',
     manualPlacementUseTimestamp: 'Usa timestamp',

@@ -553,6 +553,8 @@ export const es = {
     manualPlacementMetadataMissing: 'no encontrados',
     manualPlacementQueuedSingle: '1 imagen no se ha podido posicionar automáticamente. Haz clic en el mapa para ubicarla.',
     manualPlacementQueuedMultiple: '{count} imágenes no se han podido posicionar automáticamente. Haz clic en el mapa para ubicarlas.',
+    picturesRelinkedSingle: '1 imagen se ha vuelto a vincular con su entrada existente.',
+    picturesRelinkedMultiple: '{count} imágenes se han vuelto a vincular con sus entradas existentes.',
     manualPlacementCount: 'Imagen {current} de {total}',
     manualPlacementDistance: 'A {distance}m de la ruta',
     manualPlacementUseTimestamp: 'Usar timestamp',

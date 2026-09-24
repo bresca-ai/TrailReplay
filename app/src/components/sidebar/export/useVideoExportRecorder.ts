@@ -310,7 +310,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           shownPictureIds.add(picture.id);
           store.setSelectedPictureId(picture.id);
           const holdTimestampOffset = encodedDurationMs;
-          const holdDurationMs = picture.displayDuration || 5000;
+          const holdDurationMs = picture.displayDuration || 3000;
           // `progress`/`currentTime` are left untouched for the whole hold, so
           // the map/marker stay frozen; only `exportPictureHoldElapsedMs`
           // advances, driving the popup's own zoom/progress-bar animation.
