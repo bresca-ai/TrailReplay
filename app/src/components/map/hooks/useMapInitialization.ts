@@ -36,7 +36,12 @@ export function useMapInitialization({
       pitch: 0,
       bearing: 0,
       maxPitch: 85,
-      preserveDrawingBuffer: true,
+      // MapLibre 5+ ignores the top-level `preserveDrawingBuffer`
+      // option; it must be passed as a WebGL context attribute. Without it the
+      // map canvas reads back as transparent outside MapLibre's own render
+      // callback, so exported frames showed black/stale map areas and
+      // successive popup snapshots piled up on top of each other.
+      canvasContextAttributes: { preserveDrawingBuffer: true },
       attributionControl: false,
       // Keep more tiles in memory than the viewport-based default so the tiles
       // warmed during the `preloading` phase (and along the route) aren't evicted
