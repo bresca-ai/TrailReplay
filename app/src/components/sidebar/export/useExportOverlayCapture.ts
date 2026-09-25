@@ -27,6 +27,7 @@ type Html2Canvas = (
     allowTaint?: boolean;
     ignoreElements?: (element: Element) => boolean;
     onclone?: (documentClone: Document) => void;
+    removeContainer?: boolean;
     width?: number;
     height?: number;
   }
@@ -36,6 +37,182 @@ declare global {
   interface Window {
     html2canvas?: Html2Canvas;
   }
+}
+
+// html2canvas clones the *entire* document for every capture,
+// and Chrome kept those clones alive - gigabytes of DOM/CSS objects during a
+// long export. In each clone, replace the heavy media elements *outside* the
+// captured element (sidebar SVG icons, photo thumbnails, map canvas, videos)
+// by empty boxes of exactly the same size, so the page layout - and therefore
+// the position and size of the captured overlay - stays identical.
+// Disable with ?lightClone=0.
+const LIGHT_CLONE = new URLSearchParams(window.location.search).get('lightClone') !== '0';
+const HEAVY_SELECTOR = 'svg, img, canvas, video, picture, iframe';
+
+// html2canvas 1.4.1 only detaches its clone <iframe>, which
+// leaves "detached window" objects (the whole cloned document with all its
+// stylesheets) alive - html2canvas issue #1609, fix proposed in PR #2949
+// (never merged). Do that cleanup here: keep the container, then blank,
+// clear and close the iframe's document before removing it.
+// Disable with ?iframeCleanup=0.
+const IFRAME_CLEANUP = new URLSearchParams(window.location.search).get('iframeCleanup') !== '0';
+
+function destroyCloneContainers() {
+  document.querySelectorAll<HTMLIFrameElement>('iframe.html2canvas-container').forEach((container) => {
+    try {
+      const frameWindow = container.contentWindow;
+      container.src = 'about:blank';
+      if (frameWindow) {
+        frameWindow.document.write('');
+        frameWindow.document.clear();
+        frameWindow.close();
+      }
+    } catch { /* Cross-origin or already gone. */ }
+    container.parentNode?.removeChild(container);
+  });
+}
+
+function withIframeCleanup(capture: Html2Canvas): Html2Canvas {
+  if (!IFRAME_CLEANUP) return capture;
+  return async (target, options) => {
+    try {
+      return await capture(target, { ...options, removeContainer: false });
+    } finally {
+      destroyCloneContainers();
+    }
+  };
+}
+
+// html2canvas 1.4.1 throws "Attempting to parse an unsupported
+// color function "oklab"" for modern CSS colours (Tailwind v4 opacity
+// modifiers like bg-black/50 compute to oklab()). The photo popup uses them,
+// so its snapshot failed and - because the photo is drawn in the same block -
+// no photo appeared in the video at all. Convert such colours in the clone to
+// plain rgba() before html2canvas parses them.
+const MODERN_COLOR = /(oklab|oklch|lab|lch|color)\([^()]*\)/g;
+let colorProbe: CanvasRenderingContext2D | null = null;
+const colorCache = new Map<string, string>();
+
+function toRgba(color: string): string {
+  const cached = colorCache.get(color);
+  if (cached) return cached;
+  if (!colorProbe) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    colorProbe = canvas.getContext('2d', { willReadFrequently: true });
+  }
+  let result = 'rgba(0, 0, 0, 0)';
+  if (colorProbe) {
+    colorProbe.clearRect(0, 0, 1, 1);
+    colorProbe.fillStyle = '#000';
+    colorProbe.fillStyle = color;
+    colorProbe.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = colorProbe.getImageData(0, 0, 1, 1).data;
+    result = `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+  }
+  colorCache.set(color, result);
+  return result;
+}
+
+function convertModernColors(root: Element) {
+  const view = root.ownerDocument.defaultView;
+  if (!view) return;
+  const elements = [root, ...Array.from(root.querySelectorAll('*'))];
+  for (const element of elements) {
+    const style = view.getComputedStyle(element);
+    // Every computed property (html2canvas also reads e.g. -webkit-text-stroke-color);
+    // custom properties (--*) are never parsed by html2canvas.
+    for (let index = 0; index < style.length; index += 1) {
+      const property = style[index];
+      if (property.startsWith('--')) continue;
+      const value = style.getPropertyValue(property);
+      if (!value || !/(oklab|oklch|lab|lch|color)\(/.test(value)) continue;
+      (element as HTMLElement).style.setProperty(property, value.replace(MODERN_COLOR, (match) => toRgba(match)), 'important');
+    }
+  }
+}
+
+function withColorFix(capture: Html2Canvas): Html2Canvas {
+  return async (target, options) => {
+    target.setAttribute('data-h2c-target', '1');
+    try {
+      return await capture(target, {
+        ...options,
+        onclone: (documentClone) => {
+          options.onclone?.(documentClone);
+          try {
+            const clonedTarget = documentClone.querySelector('[data-h2c-target]');
+            if (clonedTarget) convertModernColors(clonedTarget);
+          } catch { /* Leave colours untouched. */ }
+        },
+      });
+    } finally {
+      target.removeAttribute('data-h2c-target');
+    }
+  };
+}
+
+function withLightClone(baseCapture: Html2Canvas): Html2Canvas {
+  const capture = withColorFix(withIframeCleanup(baseCapture));
+  if (!LIGHT_CLONE) return capture;
+  return (target, options) => {
+    // Measure the originals before cloning; html2canvas keeps document order
+    // and drops whatever `options.ignoreElements` rejects (and its subtree).
+    const isIgnored = (element: Element) => {
+      for (let node: Element | null = element; node && node !== document.body; node = node.parentElement) {
+        if (options.ignoreElements?.(node)) return true;
+      }
+      return false;
+    };
+    const originals = Array.from(document.body.querySelectorAll(HEAVY_SELECTOR))
+      .filter((element) => !element.parentElement?.closest(HEAVY_SELECTOR) && !isIgnored(element));
+    const boxes = originals.map((element) => {
+      const outside = !target.contains(element) && !element.contains(target);
+      if (!outside) return null;
+      const style = window.getComputedStyle(element);
+      return {
+        className: element.getAttribute('class'),
+        display: style.display === 'inline' ? 'inline-block' : style.display,
+        width: (element as HTMLElement).offsetWidth ?? element.getBoundingClientRect().width,
+        height: (element as HTMLElement).offsetHeight ?? element.getBoundingClientRect().height,
+        rectWidth: element.getBoundingClientRect().width,
+        rectHeight: element.getBoundingClientRect().height,
+        position: style.position,
+        left: style.left, top: style.top, right: style.right, bottom: style.bottom,
+        margin: style.margin, flex: style.flex, verticalAlign: style.verticalAlign,
+        hidden: style.display === 'none',
+      };
+    });
+
+    return capture(target, {
+      ...options,
+      onclone: (documentClone) => {
+        try {
+          const clones = Array.from(documentClone.body.querySelectorAll(HEAVY_SELECTOR))
+            .filter((element) => !element.parentElement?.closest(HEAVY_SELECTOR));
+          // Only swap when the clone lines up with the original element list.
+          if (clones.length === originals.length) {
+            clones.forEach((clone, index) => {
+              const box = boxes[index];
+              if (!box || box.hidden || clone.tagName !== originals[index].tagName) return;
+              const placeholder = documentClone.createElement('div');
+              if (box.className) placeholder.setAttribute('class', box.className);
+              Object.assign(placeholder.style, {
+                display: box.display, boxSizing: 'border-box',
+                width: `${box.width || box.rectWidth}px`, height: `${box.height || box.rectHeight}px`,
+                minWidth: '0', minHeight: '0', padding: '0', border: '0', background: 'none',
+                position: box.position, left: box.left, top: box.top, right: box.right, bottom: box.bottom,
+                margin: box.margin, flex: box.flex, verticalAlign: box.verticalAlign,
+              });
+              clone.replaceWith(placeholder);
+            });
+          }
+        } catch { /* Fall back to the full clone. */ }
+        options.onclone?.(documentClone);
+      },
+    });
+  };
 }
 
 interface UseExportOverlayCaptureOptions {
@@ -109,8 +286,9 @@ export function useExportOverlayCapture({
   }, []);
 
   const updateOverlayAsync = useCallback(async (recordW: number, recordH: number) => {
-    const capture = window.html2canvas;
-    if (overlayBusyRef.current || !capture) return;
+    const rawCapture = window.html2canvas;
+    if (overlayBusyRef.current || !rawCapture) return;
+    const capture = withLightClone(rawCapture);
     const runId = overlayRunIdRef.current;
     overlayBusyRef.current = true;
     overlayLastUpdateRef.current = Date.now();
@@ -144,8 +322,10 @@ export function useExportOverlayCapture({
               // Headers and values are composited directly from the DOM below.
               // SVG icons are unreliable in html2canvas on some Chrome builds;
               // a failed snapshot used to leave only the numeric values.
-              ignoreElements: (element) => element.hasAttribute('data-export-stat-value')
-                || element.hasAttribute('data-export-stat-header'),
+              // hide them in the clone instead of removing them
+              // (`ignoreElements`). The panel is sized by its content, so
+              // removing them shrank the rounded frame in the snapshot while
+              // the values were still drawn at their full-size positions.
               // Capture the intrinsic 1x overlay, then apply statsScale once
               // in the export layout math below. Otherwise html2canvas may
               // bake the preview's ancestor transform into the bitmap and the
@@ -153,6 +333,8 @@ export function useExportOverlayCapture({
               onclone: (documentClone) => {
                 const scaleWrapper = documentClone.querySelector('[data-stats-scale-wrapper]') as HTMLElement | null;
                 if (scaleWrapper) scaleWrapper.style.transform = 'none';
+                documentClone.querySelectorAll<HTMLElement>('[data-export-stat-value], [data-export-stat-header]')
+                  .forEach((element) => { element.style.visibility = 'hidden'; });
               },
             });
             const { drawWidth, drawHeight } = getCapturedCanvasDrawSize(captureCanvas, scaleToRecording, statsCaptureScale);
