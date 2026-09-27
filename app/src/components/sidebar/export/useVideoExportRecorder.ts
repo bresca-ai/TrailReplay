@@ -16,6 +16,7 @@ import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils
 import fixWebmDuration from 'fix-webm-duration';
 import { useCallback, useEffect } from 'react';
 import { getSupportedMimeType, getVideoBitrate } from './exportConfig';
+import { finishExportProfile, startExportProfile } from './exportProfiler';
 import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
 import { needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { loadPinheadIcons } from '@/components/annotations/pinheadIcons';
@@ -45,6 +46,17 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     waitForVideoPopup,
   } = useVideoExportRecorderCore(options);
 
+  const exportProfileMetadata = useCallback((encoderPath: string, blobSize = 0) => ({
+    encoderPath,
+    blobSize,
+    width: videoExportSettings.resolution.width,
+    height: videoExportSettings.resolution.height,
+    fps: videoExportSettings.fps,
+    terrain: show3DTerrain,
+    qualityMode: videoExportSettings.qualityMode,
+    routeDurationMs: playback.totalDuration,
+  }), [playback.totalDuration, show3DTerrain, videoExportSettings.fps, videoExportSettings.qualityMode, videoExportSettings.resolution.height, videoExportSettings.resolution.width]);
+
   // Flush the WebCodecs-encoded MP4 once recording has stopped. Standard
   // exports download immediately; Studio exports are delivered by email.
   const finalizeWebCodecsExport = useCallback(async () => {
@@ -63,6 +75,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     try {
       const blob = await encoder.finalize();
       if (blob.size > 0) {
+        finishExportProfile('completed', exportProfileMetadata('webcodecs', blob.size));
         const studioStats = studioStatsRef.current;
         const wasStudioQuality = studioQualityRef.current;
         const studioTimedOut = wasStudioQuality && studioStats.timedOutFrames > 0;
@@ -121,6 +134,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           }
         }
       } else {
+        finishExportProfile('failed', exportProfileMetadata('webcodecs'));
         setExportStage(t('export.stageFailedNoData'));
         trackEvent('export_failed', {
           export_failure_scope: 'no_data',
@@ -129,6 +143,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         });
       }
     } catch (error) {
+      finishExportProfile('failed', exportProfileMetadata('webcodecs'));
       console.error('WebCodecs export failed', error);
       setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
       trackEvent('export_failed', {
@@ -146,7 +161,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       // Restore an idle, replayable timeline once the file has been finalized.
       resetPlayback();
     }
-  }, [mp4EncoderRef, playback.totalDuration, recordingCancelledRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, studioDeliveryJobRef, studioQualityRef, studioStatsRef, t, videoExportSettings]);
+  }, [exportProfileMetadata, mp4EncoderRef, playback.totalDuration, recordingCancelledRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, studioDeliveryJobRef, studioQualityRef, studioStatsRef, t, videoExportSettings]);
 
   const finishRecording = useCallback(() => {
     if (!isRecordingRef.current) return;
@@ -413,12 +428,14 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     recorder.onstop = async () => {
       // A cancelled export still fires onstop; don't save or download it.
       if (recordingCancelledRef.current) {
+        finishExportProfile('cancelled', exportProfileMetadata('mediarecorder'));
         setIsExporting(false);
         resetPlayback();
         return;
       }
       let blob = new Blob(recordedChunksRef.current, { type: mimeType });
       if (blob.size > 0) {
+        finishExportProfile('completed', exportProfileMetadata('mediarecorder', blob.size));
         // MediaRecorder writes WebM without a Duration/Cues header, so many
         // players (QuickTime, Windows, social uploads, editors) freeze after
         // the first cluster. Patch in the real measured duration so the file
@@ -452,6 +469,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         anchor.click();
         URL.revokeObjectURL(url);
       } else {
+        finishExportProfile('failed', exportProfileMetadata('mediarecorder'));
         setExportStage(t('export.stageFailedNoData'));
         trackEvent('export_failed', {
           export_failure_scope: 'no_data',
@@ -490,7 +508,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     };
 
     recorder.start(100);
-  }, [frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
+  }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
 
   const handleStartExport = useCallback(async () => {
     const mapCanvas = document.querySelector('.maplibregl-canvas') as HTMLCanvasElement | null;
@@ -509,6 +527,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     }
 
+    startExportProfile();
     setIsExporting(true);
     setExportProgress(0);
     setExportStage(t('export.stagePreparing'));
@@ -670,6 +689,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         play();
       }
     } catch (error) {
+      finishExportProfile('failed', exportProfileMetadata(useWebCodecsRef.current ? 'webcodecs' : 'setup'));
       console.error('Export failed:', error);
       trackEvent('export_failed', {
         export_failure_scope: 'setup',
@@ -690,7 +710,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       setUseWebCodecs(false);
     }
-  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
+  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, exportProfileMetadata, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.
@@ -741,6 +761,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     }
     setUseWebCodecs(false);
     setIsDeterministicExport(false);
+    finishExportProfile('cancelled', exportProfileMetadata(exportEncoderPath));
 
     trackEvent('export_cancelled', {
       export_progress_bucket: getProgressBucket(exportProgress),
@@ -751,7 +772,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     setExportProgress(0);
     setExportStage('');
     resetPlayback();
-  }, [actualFormat, exportProgress, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, mp4EncoderRef, recordingCancelledRef, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setUseWebCodecs, studioDeliveryJobRef, studioQualityRef, useWebCodecsRef]);
+  }, [actualFormat, exportProfileMetadata, exportProgress, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, mp4EncoderRef, recordingCancelledRef, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setUseWebCodecs, studioDeliveryJobRef, studioQualityRef, useWebCodecsRef]);
 
   const handleDownload = useCallback(() => {
     if (!exportedBlob) return;

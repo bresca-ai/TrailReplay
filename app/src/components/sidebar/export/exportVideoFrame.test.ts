@@ -55,7 +55,9 @@ describe('drawVideoFrame', () => {
 
   afterEach(() => {
     document.querySelectorAll('.tr-video-popup').forEach((element) => element.remove());
+    document.querySelectorAll('iframe.html2canvas-container').forEach((element) => element.remove());
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('draws the clip element itself, so every encoded frame gets the current picture', () => {
@@ -130,6 +132,82 @@ describe('drawVideoFrame', () => {
 
     expect(ignoredTags).toContain('VIDEO');
     container.remove();
-    vi.unstubAllGlobals();
+  });
+
+  it('cleans up only the iframe created by its own html2canvas capture', async () => {
+    mountVideoPopup();
+    const unrelated = document.createElement('iframe');
+    unrelated.className = 'html2canvas-container';
+    document.body.appendChild(unrelated);
+
+    let owned: HTMLIFrameElement | null = null;
+    const capture = vi.fn(async (_element: HTMLElement, options: { removeContainer?: boolean }) => {
+      expect(options.removeContainer).toBe(false);
+      owned = document.createElement('iframe');
+      owned.className = 'html2canvas-container';
+      document.body.appendChild(owned);
+      const canvas = document.createElement('canvas');
+      canvas.width = 10;
+      canvas.height = 10;
+      return canvas;
+    });
+    vi.stubGlobal('html2canvas', capture);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      { drawImage: () => {} } as unknown as CanvasRenderingContext2D,
+    );
+
+    const container = document.createElement('div');
+    container.id = 'map-capture-container';
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 800);
+    document.body.appendChild(container);
+
+    const { result } = renderCapture();
+    await result.current.updateOverlayAsync(1920, 1080);
+
+    expect(unrelated.isConnected).toBe(true);
+    expect(owned).not.toBeNull();
+    expect((owned as HTMLIFrameElement | null)?.isConnected).toBe(false);
+    expect(result.current.overlayFramesSinceRefreshRef.current).toBe(0);
+    result.current.resetOverlayCapture();
+    expect(result.current.overlayFramesSinceRefreshRef.current).toBe(Number.POSITIVE_INFINITY);
+    container.remove();
+    unrelated.remove();
+  });
+
+  it('keeps ignored popup media aligned while lightening media outside the capture target', async () => {
+    mountVideoPopup();
+    const outsideImage = document.createElement('img');
+    outsideImage.className = 'outside-heavy-image';
+    document.body.appendChild(outsideImage);
+
+    let clonedOutsideTag = '';
+    const capture = vi.fn(async (_element: HTMLElement, options: {
+      onclone?: (documentClone: Document) => void;
+    }) => {
+      const clone = document.implementation.createHTMLDocument();
+      clone.body.innerHTML = document.body.innerHTML;
+      options.onclone?.(clone);
+      clonedOutsideTag = clone.querySelector('.outside-heavy-image')?.tagName ?? '';
+      const canvas = document.createElement('canvas');
+      canvas.width = 10;
+      canvas.height = 10;
+      return canvas;
+    });
+    vi.stubGlobal('html2canvas', capture);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      { drawImage: () => {} } as unknown as CanvasRenderingContext2D,
+    );
+
+    const container = document.createElement('div');
+    container.id = 'map-capture-container';
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 800);
+    document.body.appendChild(container);
+
+    const { result } = renderCapture();
+    await result.current.updateOverlayAsync(1920, 1080);
+
+    expect(clonedOutsideTag).toBe('DIV');
+    outsideImage.remove();
+    container.remove();
   });
 });

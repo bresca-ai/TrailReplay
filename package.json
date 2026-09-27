@@ -12,6 +12,7 @@
     "preview": "npm --prefix app run preview",
     "test:functions": "npm --prefix app exec -- vitest run --config vitest.functions.config.js",
     "probe": "node ./scripts/probe-replay.mjs",
+    "bench:export": "node ./scripts/bench-export.mjs",
     "verify:release": "node ./scripts/check-release-metadata.mjs"
   },
   "keywords": [

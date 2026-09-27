@@ -5,6 +5,7 @@ import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { convertElevation } from '@/utils/units';
 import type { StatId } from '@/types';
 import { drawExportStatIcon } from './drawExportStatIcon';
+import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
 import {
   getCapturedCanvasDrawSize,
   getElevationOverlayDrawRect,
@@ -57,28 +58,44 @@ const HEAVY_SELECTOR = 'svg, img, canvas, video, picture, iframe';
 // Disable with ?iframeCleanup=0.
 const IFRAME_CLEANUP = new URLSearchParams(window.location.search).get('iframeCleanup') !== '0';
 
-function destroyCloneContainers() {
-  document.querySelectorAll<HTMLIFrameElement>('iframe.html2canvas-container').forEach((container) => {
-    try {
-      const frameWindow = container.contentWindow;
-      container.src = 'about:blank';
-      if (frameWindow) {
-        frameWindow.document.write('');
-        frameWindow.document.clear();
-        frameWindow.close();
-      }
-    } catch { /* Cross-origin or already gone. */ }
-    container.parentNode?.removeChild(container);
-  });
+function destroyCloneContainer(container: HTMLIFrameElement) {
+  try {
+    const frameWindow = container.contentWindow;
+    container.src = 'about:blank';
+    if (frameWindow) {
+      frameWindow.document.write('');
+      frameWindow.document.clear();
+      frameWindow.close();
+    }
+  } catch { /* Cross-origin or already gone. */ }
+  container.parentNode?.removeChild(container);
 }
 
 function withIframeCleanup(capture: Html2Canvas): Html2Canvas {
   if (!IFRAME_CLEANUP) return capture;
   return async (target, options) => {
+    const existingContainers = new Set(
+      document.querySelectorAll<HTMLIFrameElement>('iframe.html2canvas-container'),
+    );
+    const capturePromise = capture(target, { ...options, removeContainer: false });
+    // html2canvas normally inserts its iframe synchronously before returning
+    // its promise. Holding that exact node prevents one overlay capture from
+    // deleting another capture's container.
+    let ownedContainer = Array.from(
+      document.querySelectorAll<HTMLIFrameElement>('iframe.html2canvas-container'),
+    ).find((container) => !existingContainers.has(container));
     try {
-      return await capture(target, { ...options, removeContainer: false });
+      return await capturePromise;
     } finally {
-      destroyCloneContainers();
+      if (!ownedContainer) {
+        const remaining = Array.from(
+          document.querySelectorAll<HTMLIFrameElement>('iframe.html2canvas-container'),
+        ).filter((container) => !existingContainers.has(container));
+        // Only claim a late-created container when ownership is unambiguous.
+        // Leaving one iframe is safer than tearing down an unrelated capture.
+        if (remaining.length === 1) [ownedContainer] = remaining;
+      }
+      if (ownedContainer) destroyCloneContainer(ownedContainer);
     }
   };
 }
@@ -159,14 +176,15 @@ function withLightClone(baseCapture: Html2Canvas): Html2Canvas {
   return (target, options) => {
     // Measure the originals before cloning; html2canvas keeps document order
     // and drops whatever `options.ignoreElements` rejects (and its subtree).
-    const isIgnored = (element: Element) => {
-      for (let node: Element | null = element; node && node !== document.body; node = node.parentElement) {
+    const isIgnored = (element: Element, body: HTMLElement) => {
+      for (let node: Element | null = element; node && node !== body; node = node.parentElement) {
         if (options.ignoreElements?.(node)) return true;
       }
       return false;
     };
     const originals = Array.from(document.body.querySelectorAll(HEAVY_SELECTOR))
-      .filter((element) => !element.parentElement?.closest(HEAVY_SELECTOR) && !isIgnored(element));
+      .filter((element) => !element.parentElement?.closest(HEAVY_SELECTOR)
+        && !isIgnored(element, document.body));
     const boxes = originals.map((element) => {
       const outside = !target.contains(element) && !element.contains(target);
       if (!outside) return null;
@@ -190,7 +208,8 @@ function withLightClone(baseCapture: Html2Canvas): Html2Canvas {
       onclone: (documentClone) => {
         try {
           const clones = Array.from(documentClone.body.querySelectorAll(HEAVY_SELECTOR))
-            .filter((element) => !element.parentElement?.closest(HEAVY_SELECTOR));
+            .filter((element) => !element.parentElement?.closest(HEAVY_SELECTOR)
+              && !isIgnored(element, documentClone.body));
           // Only swap when the clone lines up with the original element list.
           if (clones.length === originals.length) {
             clones.forEach((clone, index) => {
@@ -236,6 +255,7 @@ export function useExportOverlayCapture({
   const cachedOverlayRef = useRef<HTMLCanvasElement | null>(null);
   const overlayBusyRef = useRef(false);
   const overlayLastUpdateRef = useRef(0);
+  const overlayFramesSinceRefreshRef = useRef(Number.POSITIVE_INFINITY);
   const html2CanvasLoaderRef = useRef<Promise<boolean> | null>(null);
   const overlayRunIdRef = useRef(0);
   const elevationPathCacheRef = useRef(new Map<string, Path2D>());
@@ -288,6 +308,7 @@ export function useExportOverlayCapture({
   const updateOverlayAsync = useCallback(async (recordW: number, recordH: number) => {
     const rawCapture = window.html2canvas;
     if (overlayBusyRef.current || !rawCapture) return;
+    const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     const capture = withLightClone(rawCapture);
     const runId = overlayRunIdRef.current;
     overlayBusyRef.current = true;
@@ -441,9 +462,15 @@ export function useExportOverlayCapture({
         } catch { /* Skip popup capture when unavailable. */ }
       }
 
-      if (runId === overlayRunIdRef.current) cachedOverlayRef.current = overlay;
+      if (runId === overlayRunIdRef.current) {
+        cachedOverlayRef.current = overlay;
+        overlayFramesSinceRefreshRef.current = 0;
+      }
     } finally {
       overlayBusyRef.current = false;
+      if (profileStartedAt > 0) {
+        markExportProfileStage('overlayCapture', performance.now() - profileStartedAt);
+      }
     }
   }, [includeElevation, includeStats]);
 
@@ -777,6 +804,7 @@ export function useExportOverlayCapture({
     cachedOverlayRef.current = null;
     overlayBusyRef.current = false;
     overlayLastUpdateRef.current = 0;
+    overlayFramesSinceRefreshRef.current = Number.POSITIVE_INFINITY;
     overlayRunIdRef.current += 1;
     elevationPathCacheRef.current.clear();
     statsValuesCacheRef.current = { timelineBucket: -1, values: {} };
@@ -788,6 +816,7 @@ export function useExportOverlayCapture({
     drawStatsValues,
     loadHtml2Canvas,
     overlayBusyRef,
+    overlayFramesSinceRefreshRef,
     overlayLastUpdateRef,
     drawVideoFrame,
     resetOverlayCapture,

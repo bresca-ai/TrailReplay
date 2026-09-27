@@ -34,6 +34,7 @@ import { drawExportFrame } from './drawExportFrame';
 import { MP4_MIME_TYPES } from './exportConfig';
 import { waitForSettledFrame } from './exportMapSettle';
 import { getOverlayRefreshIntervalMs } from './exportOverlay';
+import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
 import { isWebCodecsMp4Supported, type Mp4CanvasEncoder } from './mp4CanvasEncoder';
 import type { StudioDeliveryJob, StudioDeliveryRequest } from './studioDelivery';
 import { useExportOverlayCapture } from './useExportOverlayCapture';
@@ -232,6 +233,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     drawVideoFrame,
     loadHtml2Canvas,
     overlayBusyRef,
+    overlayFramesSinceRefreshRef,
     overlayLastUpdateRef,
     resetOverlayCapture,
     updateOverlayAsync,
@@ -303,6 +305,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, [preloadSvgMarkerIcon, tracks, trailStyle.currentIcon]);
 
   const captureFrame = useCallback(() => {
+    const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     drawExportFrame({
       recordingCanvasRef,
       recordingContextRef,
@@ -317,18 +320,29 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       cachedLogoRef,
       overlayLastUpdateRef,
       overlayBusyRef,
+      overlayFramesSinceRefreshRef,
       overlayRefreshIntervalMs,
       updateOverlayAsync,
       t,
     });
-  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
+    if (profileStartedAt > 0) {
+      markExportProfileStage('frameComposite', performance.now() - profileStartedAt);
+    }
+  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayFramesSinceRefreshRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
   const encodeWebCodecsFrame = useCallback(async (timestampMicros?: number, durationMicros?: number) => {
     if (!useWebCodecsRef.current || !mp4EncoderRef.current || !recordingCanvasRef.current) return;
     const elapsedMicros = timestampMicros ?? (performance.now() - recordingStartTimeRef.current) * 1000;
-    await mp4EncoderRef.current.encodeCanvas(recordingCanvasRef.current, elapsedMicros, durationMicros);
+    const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
+    try {
+      await mp4EncoderRef.current.encodeCanvas(recordingCanvasRef.current, elapsedMicros, durationMicros);
+    } finally {
+      if (profileStartedAt > 0) {
+        markExportProfileStage('encode', performance.now() - profileStartedAt);
+      }
+    }
   }, []);
 
   const startFrameCapture = useCallback(() => {
@@ -373,24 +387,31 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, [captureFrame, encodeWebCodecsFrame, videoExportSettings.fps]);
 
   const waitForMapFrame = useCallback(async () => {
-    // Let React commit the new replay state, then wait for MapLibre to draw it.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const map = mapGlobalRef.current;
-    if (!map) return;
+    const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
+    try {
+      // Let React commit the new replay state, then wait for MapLibre to draw it.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const map = mapGlobalRef.current;
+      if (!map) return;
 
-    await new Promise<void>((resolve) => {
-      let resolved = false;
-      const finish = () => {
-        if (resolved) return;
-        resolved = true;
-        resolve();
-      };
-      map.once('render', finish);
-      map.triggerRepaint();
-      // A render event is normally immediate. Keep export cancellable if a map
-      // implementation declines to render while its style is changing.
-      requestAnimationFrame(() => requestAnimationFrame(finish));
-    });
+      await new Promise<void>((resolve) => {
+        let resolved = false;
+        const finish = () => {
+          if (resolved) return;
+          resolved = true;
+          resolve();
+        };
+        map.once('render', finish);
+        map.triggerRepaint();
+        // A render event is normally immediate. Keep export cancellable if a map
+        // implementation declines to render while its style is changing.
+        requestAnimationFrame(() => requestAnimationFrame(finish));
+      });
+    } finally {
+      if (profileStartedAt > 0) {
+        markExportProfileStage('mapFrameWait', performance.now() - profileStartedAt);
+      }
+    }
   }, []);
 
   // Advances the map by exactly one rendered frame. The paired rAF fallback

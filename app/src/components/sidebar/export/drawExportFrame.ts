@@ -63,6 +63,7 @@ interface DrawExportFrameOptions {
   cachedLogoRef: RefObject<HTMLImageElement | null>;
   overlayLastUpdateRef: OverlayCapture['overlayLastUpdateRef'];
   overlayBusyRef: OverlayCapture['overlayBusyRef'];
+  overlayFramesSinceRefreshRef: OverlayCapture['overlayFramesSinceRefreshRef'];
   overlayRefreshIntervalMs: number;
   updateOverlayAsync: OverlayCapture['updateOverlayAsync'];
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -77,7 +78,6 @@ const OVERLAY_EVERY_FRAMES = (() => {
   const value = Number(new URLSearchParams(window.location.search).get('overlayEvery'));
   return Number.isFinite(value) && value >= 1 ? Math.round(value) : 30;
 })();
-let framesSinceOverlayRefresh = Number.POSITIVE_INFINITY;
 
 export function drawExportFrame({
   recordingCanvasRef,
@@ -93,6 +93,7 @@ export function drawExportFrame({
   cachedLogoRef,
   overlayLastUpdateRef,
   overlayBusyRef,
+  overlayFramesSinceRefreshRef,
   overlayRefreshIntervalMs,
   updateOverlayAsync,
   t,
@@ -376,11 +377,11 @@ export function drawExportFrame({
       context.restore();
     }
 
-    framesSinceOverlayRefresh += 1;
-    const overlayDue = overlayLastUpdateRef.current === 0 || framesSinceOverlayRefresh >= OVERLAY_EVERY_FRAMES;
+    overlayFramesSinceRefreshRef.current += 1;
+    const overlayDue = overlayLastUpdateRef.current === 0
+      || overlayFramesSinceRefreshRef.current >= OVERLAY_EVERY_FRAMES;
     // Keep the wall-clock minimum as well, for the real-time WebM recorder.
     if (overlayDue && Date.now() - overlayLastUpdateRef.current >= overlayRefreshIntervalMs && !overlayBusyRef.current) {
-      framesSinceOverlayRefresh = 0;
       updateOverlayAsync(recordW, recordH);
     }
 }
