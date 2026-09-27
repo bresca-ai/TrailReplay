@@ -174,12 +174,17 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       const picture = state.pictures.find((entry) => entry.id === pictureId);
       if (!picture) return;
 
+      const previousUrl = picture.url;
+      const nextUrl = asset?.url ?? URL.createObjectURL(file);
       picture.file = file;
       // Accept a pre-built renderable asset (e.g. HEIC converted to JPEG).
       picture.displayFile = asset?.displayFile;
-      picture.url = asset?.url ?? URL.createObjectURL(file);
+      picture.url = nextUrl;
       picture.originalFileName = file.name;
       picture.isPlaceholder = false;
+      if (previousUrl !== nextUrl && previousUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previousUrl);
+      }
     }),
 
   relinkVideoFile: (videoId, file) =>

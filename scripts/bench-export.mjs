@@ -5,6 +5,7 @@
  *
  * Start the app first (`npm run dev`), then run:
  *   npm run bench:export -- --duration 15 --json /tmp/export-profile.json
+ *   npm run bench:export -- --duration 15 --output /tmp/trailreplay-export.mp4
  *   npm run bench:export -- --duration 15 --terrain
  */
 
@@ -25,6 +26,7 @@ function parseArgs(argv) {
     if (value === '--duration') args.duration = Number(argv[++index]);
     else if (value === '--headed') args.headed = true;
     else if (value === '--json') args.json = argv[++index];
+    else if (value === '--output') args.output = argv[++index];
     else if (value === '--terrain') args.terrain = true;
     else if (value === '--timeout') args.timeout = Number(argv[++index]);
     else if (value === '--url') args.url = argv[++index];
@@ -50,7 +52,7 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ acceptDownloads: true, viewport: { width: 1280, height: 800 } });
 const pageErrors = [];
 page.on('pageerror', (error) => pageErrors.push(String(error)));
-page.on('download', (download) => download.cancel().catch(() => undefined));
+if (!args.output) page.on('download', (download) => download.cancel().catch(() => undefined));
 
 try {
   const url = new URL(args.url);
@@ -90,13 +92,22 @@ try {
 
   const generate = page.getByRole('button', { name: 'Generate Video' });
   await generate.waitFor({ state: 'visible', timeout: 30_000 });
+  const downloadPromise = args.output
+    ? page.waitForEvent('download', { timeout: args.timeout })
+    : null;
   await generate.click();
   await page.waitForFunction(() => window.__trailreplayExportProfile !== undefined, null, {
     timeout: args.timeout,
   });
 
   const profile = await page.evaluate(() => window.__trailreplayExportProfile);
-  const result = { ...profile, pageErrors };
+  let output;
+  if (downloadPromise && args.output) {
+    const download = await downloadPromise;
+    output = resolve(args.output);
+    await download.saveAs(output);
+  }
+  const result = { ...profile, pageErrors, ...(output && { output }) };
   console.log(JSON.stringify(result, null, 2));
   if (args.json) writeFileSync(args.json, JSON.stringify(result, null, 2));
   if (profile?.outcome !== 'completed' || pageErrors.length > 0) process.exitCode = 1;

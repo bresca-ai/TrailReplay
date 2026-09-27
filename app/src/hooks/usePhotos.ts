@@ -12,12 +12,13 @@ import { readPhotoMetadata } from '@/utils/photoMetadata';
 import { useMediaPlacement } from '@/hooks/useMediaPlacement';
 import { trackEvent } from '@/utils/analytics';
 
-// Match an uploaded file to an existing picture by file name.
+// Match an uploaded file to a missing project asset by file name. Already
+// loaded pictures must remain distinct: camera rolls commonly contain the
+// same basename in different folders.
 export function findPictureByFileName(pictures: PictureAnnotation[], fileName: string): PictureAnnotation | undefined {
   const name = fileName.toLowerCase();
-  const matches = pictures.filter((picture) =>
-    (picture.file?.name ?? picture.originalFileName ?? '').toLowerCase() === name);
-  return matches.find((picture) => picture.isPlaceholder) ?? matches[0];
+  return pictures.find((picture) => picture.isPlaceholder
+    && (picture.originalFileName ?? '').toLowerCase() === name);
 }
 
 export function usePhotos() {
@@ -75,8 +76,8 @@ export function usePhotos() {
         // A file whose name matches a picture already in the list
         // (e.g. a placeholder restored from a .replay project) is re-linked to
         // that picture - keeping its position, duration and texts - instead of
-        // being added a second time. Placeholders are preferred over pictures
-        // that already have a file.
+        // being added a second time. Loaded pictures with the same basename
+        // remain separate imports.
         const existing = findPictureByFileName(useAppStore.getState().pictures, file.name);
         if (existing) {
           const asset = await createRenderableImageAsset(file);
