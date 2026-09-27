@@ -66,8 +66,15 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
   const hasClosedRef = useRef(false);
   const relinkInputRef = useRef<HTMLInputElement>(null);
 
-  const displayDuration = picture.displayDuration || 5000;
+  const displayDuration = picture.displayDuration || 3000;
   const { imageBoxWidth, imageBoxHeight, isExportSafe, popupStyle } = getPicturePopupLayout(exportFrame);
+
+  useEffect(() => () => {
+    if (fallbackImageUrlRef.current !== null) {
+      URL.revokeObjectURL(fallbackImageUrlRef.current);
+      fallbackImageUrlRef.current = null;
+    }
+  }, []);
 
   const clearProgressInterval = useCallback(() => {
     if (progressIntervalRef.current !== null) {
@@ -102,9 +109,6 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
 
     return () => {
       clearProgressInterval();
-      if (fallbackImageUrlRef.current !== null) {
-        URL.revokeObjectURL(fallbackImageUrlRef.current);
-      }
     };
   }, [clearProgressInterval, displayDuration, playbackCurrentTime, requestClose]);
 

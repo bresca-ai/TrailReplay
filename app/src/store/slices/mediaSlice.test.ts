@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createAppStore } from '@/store/createAppStore';
 import type { PictureAnnotation, VideoAnnotation } from '@/types';
 
@@ -43,6 +43,43 @@ describe('mediaSlice relink actions', () => {
     expect(picture.isPlaceholder).toBe(false);
     expect(picture.url).toMatch(/^blob:|^data:/);
     expect(picture.originalFileName).toBe('summit.jpg');
+  });
+
+  it('uses a converted renderable asset when relinking a picture', () => {
+    const store = createAppStore();
+    store.setState((state) => {
+      state.pictures.push(createPlaceholderPicture());
+    });
+
+    const source = new File(['heic'], 'summit.heic', { type: 'image/heic' });
+    const displayFile = new File(['jpeg'], 'summit.jpg', { type: 'image/jpeg' });
+    store.getState().relinkPictureFile('picture-1', source, {
+      url: 'blob:converted-preview',
+      displayFile,
+    });
+
+    const picture = store.getState().pictures[0];
+    expect(picture.file).toBe(source);
+    expect(picture.displayFile).toBe(displayFile);
+    expect(picture.url).toBe('blob:converted-preview');
+    expect(picture.originalFileName).toBe('summit.heic');
+    expect(picture.isPlaceholder).toBe(false);
+  });
+
+  it('releases the previous blob URL when replacing an existing picture file', () => {
+    const store = createAppStore();
+    store.setState((state) => {
+      state.pictures.push(createPlaceholderPicture({ url: 'blob:old-preview' }));
+    });
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL');
+
+    store.getState().relinkPictureFile(
+      'picture-1',
+      new File(['image'], 'summit.jpg', { type: 'image/jpeg' }),
+      { url: 'blob:new-preview' },
+    );
+
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:old-preview');
   });
 
   it('relinkVideoFile attaches a file to a placeholder video and clears isPlaceholder', () => {

@@ -41,7 +41,10 @@ export function getTriggeredPlaybackItems<T extends PlaybackTriggerable>(params:
   } = params;
 
   const lowerBound = Math.max(0, previousProgress - progressEpsilon);
-  const upperBound = Math.min(1, currentProgress + progressEpsilon);
+  // No look-ahead: adding the epsilon here as well opened a photo 0.5% of the
+  // route before the marker reached it, i.e. several seconds early on long
+  // replays. The lower bound keeps the epsilon so nothing is skipped.
+  const upperBound = Math.min(1, currentProgress);
   const queuedIds = new Set(queuedItemIds);
 
   return items

@@ -31,7 +31,7 @@ export function createPendingPlacement(params: {
       displayFile: params.displayFile,
       url: params.url,
       timestamp: params.timestamp,
-      displayDuration: 5000,
+      displayDuration: 3000,
       placementReason: params.reason,
       originalLat: params.originalLat,
       originalLon: params.originalLon,
@@ -74,7 +74,7 @@ function createPicture(params: {
       routeSegmentId: match.routeSegmentId,
       routeSegmentDistance: match.routeSegmentDistance,
       placementSource,
-      displayDuration: 5000,
+      displayDuration: 3000,
     },
   };
 }

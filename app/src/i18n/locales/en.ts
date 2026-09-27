@@ -563,6 +563,8 @@ export const en = {
     manualPlacementMetadataMissing: 'not found',
     manualPlacementQueuedSingle: '1 image could not be positioned automatically. Click the map to place it.',
     manualPlacementQueuedMultiple: '{count} images could not be positioned automatically. Click the map to place them.',
+    picturesRelinkedSingle: '1 picture was re-linked to its existing entry.',
+    picturesRelinkedMultiple: '{count} pictures were re-linked to their existing entries.',
     manualPlacementCount: 'Image {current} of {total}',
     manualPlacementDistance: '{distance}m away from the route',
     manualPlacementUseTimestamp: 'Use timestamp',

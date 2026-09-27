@@ -63,10 +63,21 @@ interface DrawExportFrameOptions {
   cachedLogoRef: RefObject<HTMLImageElement | null>;
   overlayLastUpdateRef: OverlayCapture['overlayLastUpdateRef'];
   overlayBusyRef: OverlayCapture['overlayBusyRef'];
+  overlayFramesSinceRefreshRef: OverlayCapture['overlayFramesSinceRefreshRef'];
   overlayRefreshIntervalMs: number;
   updateOverlayAsync: OverlayCapture['updateOverlayAsync'];
   t: (key: string, params?: Record<string, string | number>) => string;
 }
+
+// The overlay snapshot (html2canvas) used to refresh every 83ms
+// of wall-clock time. With paced/slow exports that meant nearly every frame.
+// Stats values and elevation progress are drawn per frame anyway, so refresh
+// the snapshot only every N encoded frames (default 30 = once per video second
+// at 30fps). Tune with ?overlayEvery=<frames>.
+const OVERLAY_EVERY_FRAMES = (() => {
+  const value = Number(new URLSearchParams(window.location.search).get('overlayEvery'));
+  return Number.isFinite(value) && value >= 1 ? Math.round(value) : 30;
+})();
 
 export function drawExportFrame({
   recordingCanvasRef,
@@ -82,6 +93,7 @@ export function drawExportFrame({
   cachedLogoRef,
   overlayLastUpdateRef,
   overlayBusyRef,
+  overlayFramesSinceRefreshRef,
   overlayRefreshIntervalMs,
   updateOverlayAsync,
   t,
@@ -365,7 +377,11 @@ export function drawExportFrame({
       context.restore();
     }
 
-    if (Date.now() - overlayLastUpdateRef.current >= overlayRefreshIntervalMs && !overlayBusyRef.current) {
+    overlayFramesSinceRefreshRef.current += 1;
+    const overlayDue = overlayLastUpdateRef.current === 0
+      || overlayFramesSinceRefreshRef.current >= OVERLAY_EVERY_FRAMES;
+    // Keep the wall-clock minimum as well, for the real-time WebM recorder.
+    if (overlayDue && Date.now() - overlayLastUpdateRef.current >= overlayRefreshIntervalMs && !overlayBusyRef.current) {
       updateOverlayAsync(recordW, recordH);
     }
 }

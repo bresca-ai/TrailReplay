@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import type { PendingPicturePlacement } from '@/types';
+import type { PendingPicturePlacement, PictureAnnotation } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { isImageFile } from '@/utils/files';
@@ -12,11 +12,21 @@ import { readPhotoMetadata } from '@/utils/photoMetadata';
 import { useMediaPlacement } from '@/hooks/useMediaPlacement';
 import { trackEvent } from '@/utils/analytics';
 
+// Match an uploaded file to a missing project asset by file name. Already
+// loaded pictures must remain distinct: camera rolls commonly contain the
+// same basename in different folders.
+export function findPictureByFileName(pictures: PictureAnnotation[], fileName: string): PictureAnnotation | undefined {
+  const name = fileName.toLowerCase();
+  return pictures.find((picture) => picture.isPlaceholder
+    && (picture.originalFileName ?? '').toLowerCase() === name);
+}
+
 export function usePhotos() {
   const { t } = useI18n();
   const [isProcessing, setIsProcessing] = useState(false);
   const pictures = useAppStore((state) => state.pictures);
   const addPicture = useAppStore((state) => state.addPicture);
+  const relinkPictureFile = useAppStore((state) => state.relinkPictureFile);
   const queuePendingPicturePlacement = useAppStore((state) => state.queuePendingPicturePlacement);
   const removePicture = useAppStore((state) => state.removePicture);
   const playback = useAppStore((state) => state.playback);
@@ -60,8 +70,22 @@ export function usePhotos() {
         photo_image_file_count: imageFiles.length,
       });
       const queuedPlacements: PendingPicturePlacement[] = [];
+      let relinkedCount = 0;
 
       for (const file of imageFiles) {
+        // A file whose name matches a picture already in the list
+        // (e.g. a placeholder restored from a .replay project) is re-linked to
+        // that picture - keeping its position, duration and texts - instead of
+        // being added a second time. Loaded pictures with the same basename
+        // remain separate imports.
+        const existing = findPictureByFileName(useAppStore.getState().pictures, file.name);
+        if (existing) {
+          const asset = await createRenderableImageAsset(file);
+          relinkPictureFile(existing.id, file, asset);
+          relinkedCount += 1;
+          continue;
+        }
+
         const result = await processPhoto(file);
         trackEvent('photo_import_file_processed', {
           photo_has_gps: result.kind === 'picture'
@@ -90,8 +114,14 @@ export function usePhotos() {
         queuePendingPicturePlacement(pendingPlacement);
       });
 
+      if (relinkedCount > 0) {
+        toast.success(relinkedCount === 1
+          ? t('media.picturesRelinkedSingle')
+          : t('media.picturesRelinkedMultiple', { count: relinkedCount }));
+      }
+
       trackEvent('photo_import_completed', {
-        photo_picture_count_added: imageFiles.length - queuedPlacements.length,
+        photo_picture_count_added: imageFiles.length - queuedPlacements.length - relinkedCount,
         photo_queued_for_manual_placement: queuedPlacements.length,
       });
 
@@ -103,7 +133,7 @@ export function usePhotos() {
     } finally {
       setIsProcessing(false);
     }
-  }, [addPicture, processPhoto, queuePendingPicturePlacement, t]);
+  }, [addPicture, processPhoto, queuePendingPicturePlacement, relinkPictureFile, t]);
 
   return {
     pictures,

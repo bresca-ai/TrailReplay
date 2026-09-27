@@ -34,6 +34,7 @@ import { drawExportFrame } from './drawExportFrame';
 import { MP4_MIME_TYPES } from './exportConfig';
 import { waitForSettledFrame } from './exportMapSettle';
 import { getOverlayRefreshIntervalMs } from './exportOverlay';
+import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
 import { isWebCodecsMp4Supported, type Mp4CanvasEncoder } from './mp4CanvasEncoder';
 import type { StudioDeliveryJob, StudioDeliveryRequest } from './studioDelivery';
 import { useExportOverlayCapture } from './useExportOverlayCapture';
@@ -47,6 +48,15 @@ const EXPORT_OPENING_SAMPLE_COUNT = 8;
 const STUDIO_FRAME_SETTLE_TIMEOUT_MS = 10_000;
 
 export type StudioDeliveryStatus = 'idle' | 'registering' | 'uploading' | 'emailing' | 'sent' | 'failed';
+
+// During picture/video holds the popup overlay was re-captured
+// with html2canvas on every single frame (90+ page clones per 3s photo).
+// Re-capture every N frames instead (default 6 = 5x per second at 30fps),
+// tune with ?holdOverlayEvery=<frames>; 1 restores the old behaviour.
+function getHoldOverlayEvery(): number {
+  const value = Number(new URLSearchParams(window.location.search).get('holdOverlayEvery'));
+  return Number.isFinite(value) && value >= 1 ? Math.round(value) : 6;
+}
 
 export interface UseVideoExportRecorderOptions {
   studioDelivery?: StudioDeliveryRequest;
@@ -223,6 +233,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     drawVideoFrame,
     loadHtml2Canvas,
     overlayBusyRef,
+    overlayFramesSinceRefreshRef,
     overlayLastUpdateRef,
     resetOverlayCapture,
     updateOverlayAsync,
@@ -294,6 +305,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, [preloadSvgMarkerIcon, tracks, trailStyle.currentIcon]);
 
   const captureFrame = useCallback(() => {
+    const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     drawExportFrame({
       recordingCanvasRef,
       recordingContextRef,
@@ -308,18 +320,29 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       cachedLogoRef,
       overlayLastUpdateRef,
       overlayBusyRef,
+      overlayFramesSinceRefreshRef,
       overlayRefreshIntervalMs,
       updateOverlayAsync,
       t,
     });
-  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
+    if (profileStartedAt > 0) {
+      markExportProfileStage('frameComposite', performance.now() - profileStartedAt);
+    }
+  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayFramesSinceRefreshRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
   const encodeWebCodecsFrame = useCallback(async (timestampMicros?: number, durationMicros?: number) => {
     if (!useWebCodecsRef.current || !mp4EncoderRef.current || !recordingCanvasRef.current) return;
     const elapsedMicros = timestampMicros ?? (performance.now() - recordingStartTimeRef.current) * 1000;
-    await mp4EncoderRef.current.encodeCanvas(recordingCanvasRef.current, elapsedMicros, durationMicros);
+    const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
+    try {
+      await mp4EncoderRef.current.encodeCanvas(recordingCanvasRef.current, elapsedMicros, durationMicros);
+    } finally {
+      if (profileStartedAt > 0) {
+        markExportProfileStage('encode', performance.now() - profileStartedAt);
+      }
+    }
   }, []);
 
   const startFrameCapture = useCallback(() => {
@@ -364,24 +387,31 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, [captureFrame, encodeWebCodecsFrame, videoExportSettings.fps]);
 
   const waitForMapFrame = useCallback(async () => {
-    // Let React commit the new replay state, then wait for MapLibre to draw it.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    const map = mapGlobalRef.current;
-    if (!map) return;
+    const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
+    try {
+      // Let React commit the new replay state, then wait for MapLibre to draw it.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const map = mapGlobalRef.current;
+      if (!map) return;
 
-    await new Promise<void>((resolve) => {
-      let resolved = false;
-      const finish = () => {
-        if (resolved) return;
-        resolved = true;
-        resolve();
-      };
-      map.once('render', finish);
-      map.triggerRepaint();
-      // A render event is normally immediate. Keep export cancellable if a map
-      // implementation declines to render while its style is changing.
-      requestAnimationFrame(() => requestAnimationFrame(finish));
-    });
+      await new Promise<void>((resolve) => {
+        let resolved = false;
+        const finish = () => {
+          if (resolved) return;
+          resolved = true;
+          resolve();
+        };
+        map.once('render', finish);
+        map.triggerRepaint();
+        // A render event is normally immediate. Keep export cancellable if a map
+        // implementation declines to render while its style is changing.
+        requestAnimationFrame(() => requestAnimationFrame(finish));
+      });
+    } finally {
+      if (profileStartedAt > 0) {
+        markExportProfileStage('mapFrameWait', performance.now() - profileStartedAt);
+      }
+    }
   }, []);
 
   // Advances the map by exactly one rendered frame. The paired rAF fallback
@@ -625,7 +655,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       // transition tick forward in the DOM) before rasterizing it.
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      await updateOverlayAsync(recordW, recordH);
+      // Popup snapshot every N frames only (see getHoldOverlayEvery).
+      if (frameIndex % getHoldOverlayEvery() === 0 || frameIndex === frameCount) {
+        await updateOverlayAsync(recordW, recordH);
+      }
       captureFrame();
       await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
       if (frameIndex < frameCount) {
@@ -680,7 +713,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForVideoSeek(targetSeconds, seekTolerance);
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      await updateOverlayAsync(recordW, recordH);
+      // The clip itself is drawn every frame; its chrome is not.
+      if (frameIndex % getHoldOverlayEvery() === 0) {
+        await updateOverlayAsync(recordW, recordH);
+      }
       captureFrame();
       await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
     }
