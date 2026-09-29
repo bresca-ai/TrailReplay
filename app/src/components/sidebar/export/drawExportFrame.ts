@@ -9,6 +9,34 @@ import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol'
 import { drawSidePanelShade } from '@/components/annotations/sidePanelShade';
 import type { VideoExportSettings } from '@/types';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
+import {
+  getBlockPixelRect,
+  getObjectFitDrawRect,
+  drawActionVideo,
+  sortBlocksForRender,
+} from './replayCanvas';
+import {
+  getLayout,
+  isClassicReplayLayout,
+  type ElevationConfig,
+  type MapConfig,
+  type StatsConfig,
+  type TitleConfig,
+  type VideoConfig,
+} from './replayComposition';
+
+const compositionMapLayers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+
+function getCompositionMapLayer(recordingCanvas: HTMLCanvasElement, width: number, height: number) {
+  let layer = compositionMapLayers.get(recordingCanvas);
+  if (!layer) {
+    layer = document.createElement('canvas');
+    compositionMapLayers.set(recordingCanvas, layer);
+  }
+  if (layer.width !== width) layer.width = width;
+  if (layer.height !== height) layer.height = height;
+  return layer;
+}
 
 function extractCssUrl(value: string): string | null {
   const match = value.match(/url\((['"]?)(.*?)\1\)/);
@@ -100,7 +128,21 @@ export function drawExportFrame({
 }: DrawExportFrameOptions) {
     if (!recordingCanvasRef.current || !recordingContextRef.current) return;
     const { width: recordW, height: recordH } = videoExportSettings.resolution;
-    const context = recordingContextRef.current;
+    const outputContext = recordingContextRef.current;
+    const compositionLayout = getLayout(videoExportSettings.composition, videoExportSettings.aspectRatio);
+    const usesCompositionCanvas = !isClassicReplayLayout(compositionLayout);
+    const mapLayer = usesCompositionCanvas
+      ? getCompositionMapLayer(recordingCanvasRef.current, recordW, recordH)
+      : null;
+    const mapLayerContext = mapLayer?.getContext('2d') ?? null;
+    const context = mapLayerContext ?? outputContext;
+    if (usesCompositionCanvas) {
+      outputContext.save();
+      outputContext.fillStyle = '#071512';
+      outputContext.fillRect(0, 0, recordW, recordH);
+      outputContext.restore();
+      context.clearRect(0, 0, recordW, recordH);
+    }
     const mapCanvas = (mapGlobalRef.current?.getCanvas()
       ?? document.querySelector('.maplibregl-canvas')) as HTMLCanvasElement | null;
     const container = document.getElementById('map-capture-container');
@@ -128,7 +170,7 @@ export function drawExportFrame({
       recordH,
     );
 
-    if (cachedOverlayRef.current) {
+    if (!usesCompositionCanvas && cachedOverlayRef.current) {
       context.drawImage(cachedOverlayRef.current, 0, 0, recordW, recordH);
     }
 
@@ -223,30 +265,34 @@ export function drawExportFrame({
 
     // Before the stats and markers, so the popup stays behind them exactly as
     // it did when the clip frame was still baked into the cached snapshot.
-    drawVideoFrame(context, {
-      containerRect,
-      cropX,
-      cropY,
-      scaleToRecording: scaleX,
-    });
+    if (!usesCompositionCanvas) {
+      drawVideoFrame(context, {
+        containerRect,
+        cropX,
+        cropY,
+        scaleToRecording: scaleX,
+      });
+    }
 
     // The static elevation profile remains in the cached DOM snapshot, while
     // its progress fill and label are cheap native-canvas primitives. Drawing
     // only those moving pieces here keeps them at the actual video frame rate
     // without running html2canvas 30 or 60 times per second.
-    drawStatsValues(context, {
-      containerRect,
-      cropX,
-      cropY,
-      recordW,
-      recordH,
-      scaleToRecording: scaleX,
-    });
-    drawElevationProgress(context, {
-      recordW,
-      recordH,
-      scaleToRecording: scaleX,
-    });
+    if (!usesCompositionCanvas) {
+      drawStatsValues(context, {
+        containerRect,
+        cropX,
+        cropY,
+        recordW,
+        recordH,
+        scaleToRecording: scaleX,
+      });
+      drawElevationProgress(context, {
+        recordW,
+        recordH,
+        scaleToRecording: scaleX,
+      });
+    }
 
     // The photo popup should read as fully in front of everything else
     // (matching the live view's z-index stacking): neither the route
@@ -360,7 +406,7 @@ export function drawExportFrame({
       }
     }
 
-    if (cachedLogoRef.current) {
+    if (!usesCompositionCanvas && cachedLogoRef.current) {
       // Size relative to the long edge (fixed per quality level regardless
       // of aspect ratio - see getResolution), not the frame width. Basing it
       // on width alone made the watermark shrink drastically for portrait
@@ -375,6 +421,147 @@ export function drawExportFrame({
       context.globalAlpha = 0.85;
       context.drawImage(cachedLogoRef.current, logoX, logoY, logoWidth, logoHeight);
       context.restore();
+    }
+
+    if (usesCompositionCanvas && mapLayer) {
+      const actionVideos = Array.from(document.querySelectorAll<HTMLVideoElement>('.tr-composition-action-video'));
+      const state = useAppStore.getState();
+      const journeyTitle = state.journey?.name || state.tracks[0]?.name || 'TrailReplay';
+
+      sortBlocksForRender(compositionLayout.blocks.filter((block) => block.visible)).forEach((block) => {
+        const rect = getBlockPixelRect(block, recordW, recordH);
+        if (rect.width <= 0 || rect.height <= 0) return;
+
+        if (block.kind === 'map') {
+          const config = block.config as MapConfig;
+          const inset = Math.min(rect.width, rect.height) * Math.max(0, Math.min(0.25, config.padding));
+          const target = {
+            x: rect.x + inset,
+            y: rect.y + inset,
+            width: Math.max(0, rect.width - inset * 2),
+            height: Math.max(0, rect.height - inset * 2),
+          };
+          outputContext.save();
+          outputContext.beginPath();
+          outputContext.rect(rect.x, rect.y, rect.width, rect.height);
+          outputContext.clip();
+          const draw = getObjectFitDrawRect(recordW, recordH, target, config.fit);
+          outputContext.drawImage(
+            mapLayer,
+            draw.sourceX,
+            draw.sourceY,
+            draw.sourceWidth,
+            draw.sourceHeight,
+            draw.x,
+            draw.y,
+            draw.width,
+            draw.height,
+          );
+          outputContext.restore();
+          return;
+        }
+
+        if (block.kind === 'video') {
+          const config = block.config as VideoConfig;
+          const actionVideo = actionVideos.find((video) => video.dataset.compositionBlockId === block.id);
+          outputContext.fillStyle = '#030908';
+          outputContext.fillRect(rect.x, rect.y, rect.width, rect.height);
+          drawActionVideo(outputContext, actionVideo, rect, { fit: config.fit });
+          return;
+        }
+
+        if (block.kind === 'stats') {
+          const config = block.config as StatsConfig;
+          outputContext.save();
+          if (config.style !== 'minimal') {
+            const radius = Math.min(rect.width, rect.height) * 0.12;
+            outputContext.fillStyle = config.style === 'large' ? 'rgba(4, 18, 16, 0.98)' : 'rgba(4, 18, 16, 0.9)';
+            outputContext.beginPath();
+            outputContext.roundRect(rect.x, rect.y, rect.width, rect.height, radius);
+            outputContext.fill();
+          }
+          outputContext.restore();
+          drawStatsValues(outputContext, {
+            containerRect,
+            cropX,
+            cropY,
+            recordW,
+            recordH,
+            scaleToRecording: scaleX,
+            targetRect: rect,
+            metrics: config.metrics,
+            columns: config.columns,
+          });
+          return;
+        }
+
+        if (block.kind === 'elevation') {
+          const config = block.config as ElevationConfig;
+          if (config.style === 'filled') {
+            outputContext.fillStyle = 'rgba(4, 18, 16, 0.92)';
+            outputContext.fillRect(rect.x, rect.y, rect.width, rect.height);
+          }
+          drawElevationProgress(outputContext, {
+            recordW,
+            recordH,
+            scaleToRecording: scaleX,
+            targetRect: rect,
+          });
+          return;
+        }
+
+        if (block.kind === 'title') {
+          const config = block.config as TitleConfig;
+          const title = config.text.trim() || journeyTitle;
+          const fontSize = Math.max(16, Math.min(rect.height * 0.55, rect.width / Math.max(5, title.length * 0.58)));
+          outputContext.save();
+          if (config.style === 'badge') {
+            outputContext.fillStyle = 'rgba(4, 18, 16, 0.82)';
+            outputContext.roundRect(rect.x, rect.y, rect.width, rect.height, rect.height * 0.18);
+            outputContext.fill();
+          }
+          outputContext.fillStyle = '#f7f4e8';
+          outputContext.font = `${config.style === 'hero' ? '800' : '700'} ${fontSize}px "JetBrains Mono", monospace`;
+          outputContext.textAlign = 'left';
+          outputContext.textBaseline = 'middle';
+          outputContext.fillText(title, rect.x + rect.width * 0.05, rect.y + rect.height / 2, rect.width * 0.9);
+          outputContext.restore();
+          return;
+        }
+
+        if (block.kind === 'branding') {
+          outputContext.save();
+          if (cachedLogoRef.current) {
+            const draw = getObjectFitDrawRect(
+              cachedLogoRef.current.naturalWidth || cachedLogoRef.current.width,
+              cachedLogoRef.current.naturalHeight || cachedLogoRef.current.height,
+              rect,
+              'contain',
+            );
+            outputContext.globalAlpha = 0.9;
+            outputContext.drawImage(cachedLogoRef.current, draw.x, draw.y, draw.width, draw.height);
+          } else {
+            outputContext.fillStyle = '#f7f4e8';
+            outputContext.font = `700 ${Math.max(10, rect.height * 0.42)}px "JetBrains Mono", monospace`;
+            outputContext.textAlign = 'center';
+            outputContext.textBaseline = 'middle';
+            outputContext.fillText('TRAILREPLAY', rect.x + rect.width / 2, rect.y + rect.height / 2);
+          }
+          outputContext.restore();
+        }
+      });
+
+      // Route-timed photo/video annotations remain story overlays, independent
+      // from the persistent action-video block, and intentionally sit on top.
+      if (cachedOverlayRef.current) {
+        outputContext.drawImage(cachedOverlayRef.current, 0, 0, recordW, recordH);
+      }
+      drawVideoFrame(outputContext, {
+        containerRect,
+        cropX,
+        cropY,
+        scaleToRecording: scaleX,
+      });
     }
 
     overlayFramesSinceRefreshRef.current += 1;

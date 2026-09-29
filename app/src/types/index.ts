@@ -1,3 +1,5 @@
+import type { ReplayComposition } from '@/components/sidebar/export/replayComposition';
+
 export interface GPXPoint {
   lat: number;
   lon: number;
@@ -259,6 +261,8 @@ export interface VideoExportSettings {
   resolution: { width: number; height: number };
   aspectRatio: AspectRatio;
   includeAudio: boolean;
+  /** Versioned, per-aspect layout shared by the composition editor and encoder. */
+  composition: ReplayComposition;
 }
 
 export type SocialShareTemplate = 'map-first' | 'photo-first';

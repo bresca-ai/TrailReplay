@@ -597,7 +597,7 @@ export const fr = {
     fallbackWebm: '(WebM)',
     howItWorksTitle: 'Comment ça fonctionne :',
     howItWorksBody: 
-      'L\'enregistrement capture la vue complète de la carte — y compris les statistiques, le profil d\'altitude et l\'animation du parcours — exactement telle qu\'elle apparaît à l\'écran. L\'animation est réinitialisée avant le début de l\'enregistrement.',
+      'L\'enregistrement suit la mise en page créée, avec vidéo d\'action, carte, statistiques, altitude, titre et marque. Chaque format conserve sa propre mise en page. L\'animation revient au début avant l\'enregistrement.',
     startRecording: 'Démarrer l\'enregistrement',
     needsJourney: 'Chargez un parcours et ajoutez-le d\'abord au trajet',
     recordingInProgress: 'Enregistrement en cours...',

@@ -5,6 +5,10 @@ import {
   getFollowBehindZoomLevelForPreset,
 } from '@/utils/followBehindCamera';
 import { DEFAULT_ACTIVITY_ICON } from '@/utils/activityIcons';
+import {
+  createReplayComposition,
+  normalizeReplayComposition,
+} from '@/components/sidebar/export/replayComposition';
 
 export function createDefaultPlayback(): PlaybackState {
   return {
@@ -89,6 +93,19 @@ export function createDefaultVideoExportSettings(): VideoExportSettings {
     resolution: { width: 1920, height: 1080 },
     aspectRatio: '16:9',
     includeAudio: false,
+    composition: createReplayComposition('classic'),
+  };
+}
+
+export function mergeVideoExportSettings(
+  saved?: Partial<VideoExportSettings> | null,
+): VideoExportSettings {
+  const defaults = createDefaultVideoExportSettings();
+  return {
+    ...defaults,
+    ...saved,
+    resolution: { ...defaults.resolution, ...saved?.resolution },
+    composition: normalizeReplayComposition(saved?.composition, 'classic'),
   };
 }
 

@@ -597,7 +597,7 @@ export const ca = {
     fallbackWebm: '(WebM)',
     howItWorksTitle: 'Com funciona:',
     howItWorksBody:
-      'La gravació captura la vista completa del mapa —incloent-hi la superposició d\'estadístiques, el perfil d\'elevació i l\'animació del track— exactament com es veu a la pantalla. L\'animació es reinicia a l\'inici abans de començar a gravar.',
+      'La gravació segueix el disseny que has creat, amb vídeo d\'acció, mapa, estadístiques, elevació, títol i marca. Cada format conserva el seu propi disseny. L\'animació es reinicia abans de gravar.',
     startRecording: 'Inicia gravació',
     needsJourney: 'Carrega una ruta i afegeix-la al viatge primer',
     recordingInProgress: 'Gravació en curs...',

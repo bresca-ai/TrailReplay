@@ -38,6 +38,7 @@ import { isExportProfilingEnabled, markExportProfileStage } from './exportProfil
 import { isWebCodecsMp4Supported, type Mp4CanvasEncoder } from './mp4CanvasEncoder';
 import type { StudioDeliveryJob, StudioDeliveryRequest } from './studioDelivery';
 import { useExportOverlayCapture } from './useExportOverlayCapture';
+import { getLayout, isClassicReplayLayout } from './replayComposition';
 
 const EXPORT_TILE_PRELOAD_TIMEOUT_MS = 6000;
 const EXPORT_OPENING_WINDOW_MS = 20000;
@@ -71,10 +72,18 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const mapStyle = useAppStore((state) => state.settings.mapStyle);
   const show3DTerrain = useAppStore((state) => state.settings.show3DTerrain);
   const tracks = useAppStore((state) => state.tracks);
+  const compositionLayout = getLayout(videoExportSettings.composition, videoExportSettings.aspectRatio);
+  const usesCompositionCanvas = !isClassicReplayLayout(compositionLayout);
   const visibleStats = useMemo(() => {
     const availability = getStatAvailability(tracks);
-    return configuredStats.filter((id) => isStatAvailable(id, availability));
-  }, [configuredStats, tracks]);
+    const composedStats = compositionLayout.blocks.flatMap((block) => {
+      if (block.kind !== 'stats' || !block.visible) return [];
+      const metrics = (block.config as { metrics?: string[] }).metrics ?? [];
+      return metrics.length ? metrics : configuredStats;
+    });
+    const requestedStats = usesCompositionCanvas ? composedStats : configuredStats;
+    return [...new Set(requestedStats)].filter((id): id is StatId => isStatAvailable(id as StatId, availability));
+  }, [compositionLayout.blocks, configuredStats, tracks, usesCompositionCanvas]);
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
   const journeySegments = useAppStore((state) => state.journeySegments);
@@ -118,7 +127,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const actualFormat = videoExportSettings.format === 'mp4' && !mp4Supported ? 'webm' : videoExportSettings.format;
   const estimatedSize = estimateFileSize(playback.totalDuration, videoExportSettings);
   const includeStats = visibleStats.length > 0;
-  const includeElevation = showElevationProfile;
+  const includeElevation = usesCompositionCanvas
+    ? compositionLayout.blocks.some((block) => block.kind === 'elevation' && block.visible)
+    : showElevationProfile;
   const overlayRefreshIntervalMs = useMemo(() => getOverlayRefreshIntervalMs(videoExportSettings.fps), [videoExportSettings.fps]);
   const getStatsValues = useCallback((progress: number): Partial<Record<StatId, string>> => {
     const state = useAppStore.getState();
@@ -242,6 +253,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     getStatsValues,
     includeElevation,
     includeStats,
+    captureElevation: includeElevation && !usesCompositionCanvas,
+    captureStats: includeStats && !usesCompositionCanvas,
   });
 
   const recordingCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -463,6 +476,29 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (result.timedOut) stats.timedOutFrames += 1;
   }, [renderMapOnce, waitForMapFrame]);
 
+  const waitForCompositionVideoFrame = useCallback(async () => {
+    const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('.tr-composition-action-video'));
+    await Promise.all(videos.map(async (video) => {
+      if (video.readyState < 1) return;
+      const desired = Number(video.dataset.compositionDesiredTime);
+      if (!video.seeking && (!Number.isFinite(desired) || Math.abs(video.currentTime - desired) < 1 / 120)) return;
+
+      await new Promise<void>((resolve) => {
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          video.removeEventListener('seeked', finish);
+          video.removeEventListener('error', finish);
+          resolve();
+        };
+        video.addEventListener('seeked', finish, { once: true });
+        video.addEventListener('error', finish, { once: true });
+        window.setTimeout(finish, 250);
+      });
+    }));
+  }, []);
+
   /**
    * Frame pacing for the route playback loop.
    *
@@ -478,10 +514,11 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const waitForExportFrame = useCallback(async () => {
     if (studioQualityRef.current) {
       await waitForMapSettled();
-      return;
+    } else {
+      await waitForMapFrame();
     }
-    await waitForMapFrame();
-  }, [waitForMapFrame, waitForMapSettled]);
+    await waitForCompositionVideoFrame();
+  }, [waitForCompositionVideoFrame, waitForMapFrame, waitForMapSettled]);
 
   /**
    * Raster tiles crossfade in over ~300ms, so a tile can be fully loaded and

@@ -5,7 +5,7 @@ import {
   createDefaultPlayback,
   createDefaultSettings,
   createDefaultSocialShareSettings,
-  createDefaultVideoExportSettings,
+  mergeVideoExportSettings,
 } from '@/store/defaults';
 import type { Recipe } from './types';
 import type { ResolvedRecipe } from './resolveRecipe';
@@ -83,7 +83,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     },
     settings: mergeSettings(recipe, activeTrack.color, activeTrack.activityIcon),
     cameraSettings: mergeCamera(recipe),
-    videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
+    videoExportSettings: mergeVideoExportSettings(recipe.videoExportSettings),
     socialShareSettings: { ...createDefaultSocialShareSettings(), ...recipe.socialShareSettings },
     activePanel: 'tracks',
   });
