@@ -82,7 +82,7 @@ export function getDurationBucket(durationSeconds: number) {
 }
 
 export function getVideoExportAnalyticsParams(
-  settings: VideoExportSettings,
+  settings: Omit<VideoExportSettings, 'composition'>,
   actualFormat: VideoFormat,
   durationMs: number,
 ) {

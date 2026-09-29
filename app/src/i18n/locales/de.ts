@@ -597,7 +597,7 @@ export const de = {
     fallbackWebm: '(WebM)',
     howItWorksTitle: 'So funktioniert es:',
     howItWorksBody:
-      'Bei der Aufzeichnung wird die vollständige Kartenansicht – einschließlich der Statistiküberlagerung, des Höhenprofils und der Streckenanimation – genau so erfasst, wie sie auf dem Bildschirm erscheint. Die Animation wird vor Beginn der Aufnahme auf den Anfang zurückgesetzt.',
+      'Die Aufnahme folgt dem erstellten Layout mit Action-Video, Karte, Statistiken, Höhenprofil, Titel und Branding. Jedes Seitenverhältnis behält sein eigenes Layout. Die Animation wird vor der Aufnahme zurückgesetzt.',
     startRecording: 'Starten Sie die Aufnahme',
     needsJourney: 'Laden Sie zunächst einen Track und fügen Sie ihn zur Reise hinzu',
     recordingInProgress: 'Aufnahme läuft...',

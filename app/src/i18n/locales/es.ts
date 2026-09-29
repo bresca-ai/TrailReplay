@@ -597,7 +597,7 @@ export const es = {
     fallbackWebm: '(WebM)',
     howItWorksTitle: 'Cómo funciona:',
     howItWorksBody:
-      'La grabación captura la vista completa del mapa —incluyendo el panel de estadísticas, el perfil de elevación y la animación del track— exactamente como se ve en pantalla. La animación se reinicia al inicio antes de comenzar a grabar.',
+      'La grabación sigue el diseño que has creado, con vídeo de acción, mapa, estadísticas, elevación, título y marca. Cada formato conserva su propio diseño. La animación se reinicia antes de grabar.',
     startRecording: 'Iniciar grabación',
     needsJourney: 'Carga una ruta y añádela al recorrido primero',
     recordingInProgress: 'Grabación en curso...',

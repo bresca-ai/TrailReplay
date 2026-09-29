@@ -597,7 +597,7 @@ export const en = {
     fallbackWebm: '(WebM)',
     howItWorksTitle: 'How it works:',
     howItWorksBody:
-      'Recording captures the full map view — including the stats overlay, elevation profile, and track animation — exactly as it appears on screen. The animation resets to the beginning before recording starts.',
+      'Recording follows the layout you built, including action video, map, stats, elevation, title and branding. Each aspect ratio keeps its own layout. The animation resets before recording starts.',
     startRecording: 'Start Recording',
     needsJourney: 'Load a track and add it to the journey first',
     recordingInProgress: 'Recording in progress...',

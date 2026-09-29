@@ -1,11 +1,13 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '@/i18n/useI18n';
 import { getElevationAtProgress } from '@/components/map/elevationProfile';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { convertElevation } from '@/utils/units';
 import type { StatId } from '@/types';
 import { drawExportStatIcon } from './drawExportStatIcon';
 import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
+import type { PixelRect } from './replayCanvas';
 import {
   getCapturedCanvasDrawSize,
   getElevationOverlayDrawRect,
@@ -243,6 +245,9 @@ interface UseExportOverlayCaptureOptions {
   }>;
   includeElevation: boolean;
   includeStats: boolean;
+  /** Composed exports draw these blocks natively at their authored geometry. */
+  captureElevation?: boolean;
+  captureStats?: boolean;
   getStatsValues: (progress: number) => Partial<Record<StatId, string>>;
 }
 
@@ -251,7 +256,10 @@ export function useExportOverlayCapture({
   getStatsValues,
   includeElevation,
   includeStats,
+  captureElevation = includeElevation,
+  captureStats = includeStats,
 }: UseExportOverlayCaptureOptions) {
+  const { t } = useI18n();
   const cachedOverlayRef = useRef<HTMLCanvasElement | null>(null);
   const overlayBusyRef = useRef(false);
   const overlayLastUpdateRef = useRef(0);
@@ -326,7 +334,7 @@ export function useExportOverlayCapture({
       const overlayContext = overlay.getContext('2d');
       if (!overlayContext) return;
 
-      if (includeStats) {
+      if (captureStats) {
         const statsElement = document.querySelector('.tr-stats-overlay') as HTMLElement | null;
         if (statsElement) {
           try {
@@ -371,7 +379,7 @@ export function useExportOverlayCapture({
         }
       }
 
-      if (includeElevation) {
+      if (captureElevation) {
         const elevationElement = document.getElementById('mapElevationProfile') as HTMLElement | null;
         if (elevationElement) {
           try {
@@ -472,7 +480,7 @@ export function useExportOverlayCapture({
         markExportProfileStage('overlayCapture', performance.now() - profileStartedAt);
       }
     }
-  }, [includeElevation, includeStats]);
+  }, [captureElevation, captureStats]);
 
   /**
    * Draws the clip's current decoded frame onto the frame being encoded.
@@ -522,6 +530,9 @@ export function useExportOverlayCapture({
       recordW,
       recordH,
       scaleToRecording,
+      targetRect,
+      metrics,
+      columns,
     }: {
       containerRect: DOMRect;
       cropX: number;
@@ -529,12 +540,14 @@ export function useExportOverlayCapture({
       recordW: number;
       recordH: number;
       scaleToRecording: number;
+      targetRect?: PixelRect;
+      metrics?: string[];
+      columns?: number;
     },
   ) => {
     if (!includeStats) return;
 
     const statsElement = document.querySelector('.tr-stats-overlay') as HTMLElement | null;
-    if (!statsElement) return;
 
     const state = useAppStore.getState();
     // Ten value updates per second of encoded video are visually fluid for
@@ -547,6 +560,45 @@ export function useExportOverlayCapture({
         values: getStatsValues(state.playback.progress),
       };
     }
+
+    if (targetRect) {
+      const availableIds = statsElement ? Array.from(
+        statsElement.querySelectorAll<HTMLElement>('[data-export-stat-value]'),
+      ).map((element) => element.dataset.exportStatValue).filter((id): id is string => Boolean(id)) : [];
+      const ids = (metrics?.length ? metrics : availableIds)
+        .filter((id) => statsValuesCacheRef.current.values[id as StatId] !== undefined);
+      if (ids.length === 0) return;
+      const columnCount = Math.max(1, Math.min(ids.length, Math.round(columns ?? ids.length)));
+      const rowCount = Math.ceil(ids.length / columnCount);
+      const cellWidth = targetRect.width / columnCount;
+      const cellHeight = targetRect.height / rowCount;
+      const valueSize = Math.max(8, Math.min(cellHeight * 0.34, cellWidth * 0.18));
+      const labelSize = Math.max(6, valueSize * 0.5);
+
+      ids.forEach((id, index) => {
+        const valueElement = statsElement?.querySelector<HTMLElement>(`[data-export-stat-value="${id}"]`);
+        const label = valueElement?.parentElement
+          ?.querySelector<HTMLElement>('[data-export-stat-header] span:last-child')
+          ?.textContent?.trim() || t(`stats.label_${id}`);
+        const column = index % columnCount;
+        const row = Math.floor(index / columnCount);
+        const centerX = targetRect.x + (column + 0.5) * cellWidth;
+        const centerY = targetRect.y + (row + 0.5) * cellHeight;
+        context.save();
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillStyle = 'rgba(255,255,255,0.68)';
+        context.font = `600 ${labelSize}px "JetBrains Mono", monospace`;
+        context.fillText(label.toLocaleUpperCase(), centerX, centerY - valueSize * 0.48, cellWidth * 0.9);
+        context.fillStyle = '#ffffff';
+        context.font = `700 ${valueSize}px "JetBrains Mono", monospace`;
+        context.fillText(String(statsValuesCacheRef.current.values[id as StatId]), centerX, centerY + valueSize * 0.34, cellWidth * 0.92);
+        context.restore();
+      });
+      return;
+    }
+
+    if (!statsElement) return;
 
     const statsRect = statsElement.getBoundingClientRect();
     if (statsRect.width <= 0 || statsRect.height <= 0) return;
@@ -574,6 +626,10 @@ export function useExportOverlayCapture({
     // this keeps the Route/Mountain glyphs in MP4 even if html2canvas skips an
     // SVG (or the static overlay snapshot fails entirely).
     statsElement.querySelectorAll<HTMLElement>('[data-export-stat-header]').forEach((header) => {
+      const headerStatId = header.parentElement
+        ?.querySelector<HTMLElement>('[data-export-stat-value]')
+        ?.dataset.exportStatValue;
+      if (metrics?.length && headerStatId && !metrics.includes(headerStatId)) return;
       const icon = header.querySelector('svg');
       const label = header.querySelector('span:last-child');
       if (!icon || !label) return;
@@ -624,6 +680,7 @@ export function useExportOverlayCapture({
 
     statsElement.querySelectorAll<HTMLElement>('[data-export-stat-value]').forEach((valueElement) => {
       const id = valueElement.dataset.exportStatValue as StatId | undefined;
+      if (metrics?.length && id && !metrics.includes(id)) return;
       const value = id ? statsValuesCacheRef.current.values[id] : undefined;
       if (!value) return;
 
@@ -661,7 +718,7 @@ export function useExportOverlayCapture({
       context.fillText(value, centerX, centerY);
       context.restore();
     });
-  }, [getStatsValues, includeStats]);
+  }, [getStatsValues, includeStats, t]);
 
   const drawElevationProgress = useCallback((
     context: CanvasRenderingContext2D,
@@ -669,17 +726,56 @@ export function useExportOverlayCapture({
       recordW,
       recordH,
       scaleToRecording,
+      targetRect,
     }: {
       recordW: number;
       recordH: number;
       scaleToRecording: number;
+      targetRect?: PixelRect;
     },
   ) => {
-    if (!includeElevation || typeof Path2D === 'undefined') return;
+    if (!includeElevation) return;
 
     const svg = document.getElementById('elevationProfileSvg') as SVGSVGElement | null;
     const elevationElement = document.getElementById('mapElevationProfile');
-    if (!svg || !elevationElement) return;
+    if ((!svg || !elevationElement) && targetRect) {
+      if (elevationData.length < 2) return;
+      const elevations = elevationData.map((sample) => sample.elevation);
+      const minElevation = Math.min(...elevations);
+      const elevationRange = Math.max(1, Math.max(...elevations) - minElevation);
+      const insetX = targetRect.width * 0.03;
+      const insetY = targetRect.height * 0.12;
+      const width = targetRect.width - insetX * 2;
+      const height = targetRect.height - insetY * 2;
+      const drawProfile = () => {
+        context.beginPath();
+        elevationData.forEach((sample, index) => {
+          const x = targetRect.x + insetX + sample.progress * width;
+          const y = targetRect.y + insetY + height - ((sample.elevation - minElevation) / elevationRange) * height;
+          if (index === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        });
+        context.stroke();
+      };
+      context.save();
+      context.beginPath();
+      context.rect(targetRect.x, targetRect.y, targetRect.width, targetRect.height);
+      context.clip();
+      context.lineJoin = 'round';
+      context.lineCap = 'round';
+      context.lineWidth = Math.max(1, targetRect.height * 0.025);
+      context.strokeStyle = 'rgba(193, 101, 47, 0.4)';
+      drawProfile();
+      context.beginPath();
+      context.rect(targetRect.x, targetRect.y, targetRect.width * Math.max(0, Math.min(1, useAppStore.getState().playback.progress)), targetRect.height);
+      context.clip();
+      context.strokeStyle = '#c1652f';
+      context.lineWidth = Math.max(2, targetRect.height * 0.04);
+      drawProfile();
+      context.restore();
+      return;
+    }
+    if (!svg || !elevationElement || typeof Path2D === 'undefined') return;
 
     const viewBox = svg.viewBox.baseVal;
     if (viewBox.width <= 0 || viewBox.height <= 0) return;
@@ -691,7 +787,12 @@ export function useExportOverlayCapture({
     // Match the exact centered/constrained rect used for the cached static
     // elevation snapshot, then place the SVG and label within that rect using
     // their DOM-relative positions.
-    const overlayRect = getElevationOverlayDrawRect({
+    const overlayRect = targetRect ? {
+      drawX: targetRect.x,
+      drawY: targetRect.y,
+      drawWidth: targetRect.width,
+      drawHeight: targetRect.height,
+    } : getElevationOverlayDrawRect({
       captureCanvas: { width: elementRect.width, height: elementRect.height },
       scaleToRecording,
       recordW,
@@ -700,11 +801,43 @@ export function useExportOverlayCapture({
     });
     const elementScaleX = overlayRect.drawWidth / elementRect.width;
     const elementScaleY = overlayRect.drawHeight / elementRect.height;
-    const drawX = overlayRect.drawX + (svgRect.left - elementRect.left) * elementScaleX;
-    const drawY = overlayRect.drawY + (svgRect.top - elementRect.top) * elementScaleY;
-    const drawWidth = svgRect.width * elementScaleX;
-    const drawHeight = svgRect.height * elementScaleY;
+    const drawX = targetRect
+      ? overlayRect.drawX + overlayRect.drawWidth * 0.03
+      : overlayRect.drawX + (svgRect.left - elementRect.left) * elementScaleX;
+    const drawY = targetRect
+      ? overlayRect.drawY + overlayRect.drawHeight * 0.08
+      : overlayRect.drawY + (svgRect.top - elementRect.top) * elementScaleY;
+    const drawWidth = targetRect
+      ? overlayRect.drawWidth * 0.94
+      : svgRect.width * elementScaleX;
+    const drawHeight = targetRect
+      ? overlayRect.drawHeight * 0.84
+      : svgRect.height * elementScaleY;
     const progress = Math.max(0, Math.min(1, useAppStore.getState().playback.progress));
+
+    if (targetRect) {
+      context.save();
+      context.translate(drawX, drawY);
+      context.scale(drawWidth / viewBox.width, drawHeight / viewBox.height);
+      svg.querySelectorAll<SVGPathElement>('[data-export-elevation-segment]').forEach((element) => {
+        const pathData = element.getAttribute('d');
+        if (!pathData) return;
+        let path = elevationPathCacheRef.current.get(pathData);
+        if (!path) {
+          path = new Path2D(pathData);
+          elevationPathCacheRef.current.set(pathData, path);
+        }
+        const color = element.dataset.exportElevationColor || '#c1652f';
+        context.globalAlpha = 0.28;
+        context.fillStyle = color;
+        context.fill(path);
+        context.globalAlpha = 0.55;
+        context.strokeStyle = color;
+        context.lineWidth = 1;
+        context.stroke(path);
+      });
+      context.restore();
+    }
 
     context.save();
     context.translate(drawX, drawY);
@@ -798,7 +931,7 @@ export function useExportOverlayCapture({
       context.fillText(unit, textX, baselineY);
     }
     context.restore();
-  }, [elevationSegments, includeElevation]);
+  }, [elevationData, elevationSegments, includeElevation]);
 
   const resetOverlayCapture = useCallback(() => {
     cachedOverlayRef.current = null;

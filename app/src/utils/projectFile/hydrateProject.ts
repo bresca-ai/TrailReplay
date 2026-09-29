@@ -5,7 +5,7 @@ import {
   createDefaultPlayback,
   createDefaultSettings,
   createDefaultSocialShareSettings,
-  createDefaultVideoExportSettings,
+  mergeVideoExportSettings,
 } from '@/store/defaults';
 import type { AppSettings, ComparisonTrack, PictureAnnotation, VideoAnnotation } from '@/types';
 import type { ParsedProject, ReplayProjectFile, SerializedPicture, SerializedVideo } from './types';
@@ -149,7 +149,7 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     // Older saved projects predate cameraStability; backfill it so an
     // undefined value doesn't turn the camera smoothing math into NaN.
     cameraSettings: { ...createDefaultCameraSettings(), ...project.cameraSettings },
-    videoExportSettings: { ...createDefaultVideoExportSettings(), ...project.videoExportSettings },
+    videoExportSettings: mergeVideoExportSettings(project.videoExportSettings),
     socialShareSettings: { ...createDefaultSocialShareSettings(), ...project.socialShareSettings },
     activePanel: 'tracks',
   });

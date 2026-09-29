@@ -1,13 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useProjectFile } from '@/hooks/useProjectFile';
+import type { StatId } from '@/types';
+import { getStatAvailability, isStatAvailable } from '@/utils/statAvailability';
 import { ExportSettingsModal } from './export/ExportSettingsModal';
 import { QUALITY_OPTIONS } from './export/exportConfig';
 import { useVideoExportRecorder } from './export/useVideoExportRecorder';
 import { isValidDeliveryEmail, localStudioDownload } from './export/studioDelivery';
 import { SocialSharePanel } from './export/SocialSharePanel';
-import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
+import { CompositionVideoBridge } from './export/CompositionVideoBridge';
+import { VideoCompositionEditor } from './export/VideoCompositionEditor';
+import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, LayoutTemplate, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
+
+const ALL_STAT_IDS: StatId[] = [
+  'distance', 'duration', 'movingDuration', 'pace', 'elevation', 'heartRate', 'speed', 'altitude',
+];
 
 export function ExportPanel() {
   const { t } = useI18n();
@@ -19,8 +27,15 @@ export function ExportPanel() {
   const tracks = useAppStore((state) => state.tracks);
   const isAppExporting = useAppStore((state) => state.isExporting);
   const journeyName = useAppStore((state) => state.journey?.name);
+  const videos = useAppStore((state) => state.videos);
+  const visibleStats = useAppStore((state) => state.settings.visibleStats);
+  const availableStatIds = useMemo(() => {
+    const availability = getStatAvailability(tracks);
+    return ALL_STAT_IDS.filter((id) => isStatAvailable(id, availability));
+  }, [tracks]);
   const updateJourneyName = useAppStore((state) => state.updateJourneyName);
   const [showSettings, setShowSettings] = useState(false);
+  const [showComposer, setShowComposer] = useState(false);
   const [studioDeliveryEmail, setStudioDeliveryEmail] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [consentDefaultsLoaded, setConsentDefaultsLoaded] = useState(false);
@@ -94,6 +109,7 @@ export function ExportPanel() {
 
   return (
     <div className="space-y-4">
+      <CompositionVideoBridge />
       {/* Save Project */}
       <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3">
         <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('export.saveProjectTitle')}</h3>
@@ -151,13 +167,22 @@ export function ExportPanel() {
           <div className="bg-[var(--evergreen)] text-[var(--canvas)] p-4 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm uppercase tracking-wide">{t('export.title')}</h3>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded border border-white/20 px-2 py-1.5 text-[11px] font-semibold hover:bg-white/10"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                {t('export.openSettings')}
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowComposer(true)}
+                  className="flex items-center gap-1.5 whitespace-nowrap rounded border border-[var(--trail-orange)] bg-[var(--trail-orange)] px-2 py-1.5 text-[11px] font-semibold text-white hover:brightness-110"
+                >
+                  <LayoutTemplate className="w-3.5 h-3.5" />
+                  Layout
+                </button>
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="flex items-center gap-1.5 whitespace-nowrap rounded border border-white/20 px-2 py-1.5 text-[11px] font-semibold hover:bg-white/10"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  {t('export.openSettings')}
+                </button>
+              </div>
             </div>
 
             {videoExportSettings.qualityMode === 'studio' && (
@@ -330,6 +355,23 @@ export function ExportPanel() {
             studioDeliveryEmail={studioDeliveryEmail}
             t={t}
             videoExportSettings={videoExportSettings}
+          />
+
+          <VideoCompositionEditor
+            open={showComposer}
+            onClose={() => setShowComposer(false)}
+            currentAspectRatio={videoExportSettings.aspectRatio}
+            composition={videoExportSettings.composition}
+            onChange={(composition) => setVideoExportSettings({ composition })}
+            availableVideoAnnotations={videos
+              .filter((video) => !video.isPlaceholder)
+              .map((video) => ({
+                id: video.id,
+                label: video.title || video.originalFileName || 'Route video',
+                source: video.url,
+              }))}
+            journeyTitle={journeyName ?? ''}
+            visibleStatIds={availableStatIds.length ? availableStatIds : visibleStats}
           />
 
           {showShareModal && (
