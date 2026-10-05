@@ -10,6 +10,7 @@ import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
 import { Trash2 } from 'lucide-react';
+import { OVERLAY_FONT_OPTIONS, overlayFontFamily } from '@/utils/typography';
 
 function parsePercent(raw: string): number | null {
   const parsed = parseFloat(raw.replace(',', '.'));
@@ -301,6 +302,62 @@ export function AnnotationsPanel() {
             {t('annotations.labelsHint')}
           </p>
         )}
+      </div>
+
+      {/* ── Overlay typography ──────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide">
+          {t('annotations.typographyTitle')}
+        </h3>
+        <p className="text-xs leading-4 text-[var(--evergreen-60)]">
+          {t('annotations.typographyHint')}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {OVERLAY_FONT_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => {
+                setTrailStyle({ overlayFont: option.id });
+                trackEvent('settings_changed', { setting_name: 'overlay_font', setting_value: option.id });
+              }}
+              className={`rounded-lg border px-2 py-2 text-center transition-colors ${
+                trailStyle.overlayFont === option.id
+                  ? 'border-[var(--evergreen)] bg-[var(--evergreen)]/10 text-[var(--evergreen)]'
+                  : 'border-[var(--evergreen)]/20 text-[var(--evergreen-60)] hover:border-[var(--evergreen)]/40'
+              }`}
+            >
+              <span className="block text-xl leading-none" style={{ fontFamily: overlayFontFamily(option.id) }}>
+                {option.sample}
+              </span>
+              <span className="mt-1 block text-[10px] font-medium">{t(option.labelKey)}</span>
+            </button>
+          ))}
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-[var(--evergreen-60)] uppercase tracking-wide">
+            {t('annotations.textCase')}
+          </Label>
+          <div className="flex overflow-hidden rounded-lg border border-[var(--evergreen)]/20">
+            {(['original', 'uppercase'] as const).map((textCase) => (
+              <button
+                key={textCase}
+                type="button"
+                onClick={() => setTrailStyle({ overlayTextCase: textCase })}
+                className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                  trailStyle.overlayTextCase === textCase
+                    ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
+                    : 'text-[var(--evergreen-60)] hover:bg-[var(--evergreen)]/5 hover:text-[var(--evergreen)]'
+                }`}
+              >
+                {textCase === 'original' ? t('annotations.textCaseOriginal') : t('annotations.textCaseUppercase')}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-[10px] leading-4 text-[var(--evergreen-60)]">
+          {t('annotations.typographyOpenSource')}
+        </p>
       </div>
 
       {/* ── Heart rate styling ─────────────────────────────────── */}

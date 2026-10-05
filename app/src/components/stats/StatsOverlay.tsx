@@ -6,6 +6,7 @@ import { formatDistance, formatPace, formatStatsDuration, formatElevation, forma
 import { useI18n } from '@/i18n/useI18n';
 import type { StatId } from '@/types';
 import { calculateCurrentLiveStats, elapsedTrackTime } from './liveStats';
+import { applyOverlayTextCase } from '@/utils/typography';
 import {
   Route,
   Timer,
@@ -199,7 +200,7 @@ export function StatsOverlay({ compact = false, layout = 'default', variant = 'd
             key={stat.id}
             statId={stat.id}
             icon={stat.icon}
-            label={stat.label}
+            label={applyOverlayTextCase(stat.label, settings.trailStyle.overlayTextCase, settings.language)}
             value={stat.value!}
             reserve={reserveValues[stat.id]}
             compact={isNarrowLayout}

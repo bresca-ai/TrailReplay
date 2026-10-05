@@ -2,6 +2,7 @@ import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
+import { applyOverlayTextCase } from '@/utils/typography';
 import type { StatId } from '@/types';
 import { getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
@@ -207,7 +208,14 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     if (!computedJourney) {
       return activeTrack
-        ? { color: state.settings.trailStyle.trailColor, text: activeTrack.name }
+        ? {
+            color: state.settings.trailStyle.trailColor,
+            text: applyOverlayTextCase(
+              activeTrack.name,
+              state.settings.trailStyle.overlayTextCase,
+              state.settings.language,
+            ),
+          }
         : null;
     }
 
@@ -223,7 +231,14 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       : undefined;
     const track = trackId ? state.tracks.find((candidate) => candidate.id === trackId) : null;
     return track
-      ? { color: track.color || state.settings.trailStyle.trailColor, text: track.name }
+      ? {
+          color: track.color || state.settings.trailStyle.trailColor,
+          text: applyOverlayTextCase(
+            track.name,
+            state.settings.trailStyle.overlayTextCase,
+            state.settings.language,
+          ),
+        }
       : null;
   }, [activeTrack, computedJourney, journeyDistanceProfile, segmentTimings]);
   const {
