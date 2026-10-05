@@ -1,0 +1,27 @@
+name: Request approved fork preview
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+# Fork-triggered workflows intentionally receive no write token or secrets.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  request:
+    name: Record approved fork preview request
+    if: >-
+      github.event.review.state == 'approved' &&
+      github.event.review.user.login == 'alexalmansa' &&
+      github.event.pull_request.state == 'open' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record request
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          echo "Cloudflare preview requested for PR #${PR_NUMBER} at ${HEAD_SHA}."
