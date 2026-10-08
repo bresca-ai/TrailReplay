@@ -21,16 +21,80 @@ export function buildRouteElevationProfile(points: RouteElevationPoint[]): Profi
     return { ...point, distance, progress: point.progress ?? 0, elevation: point.elevation ?? Number.NaN };
   });
   const totalDistance = raw.at(-1)?.distance ?? 0;
+  let windowStartIndex = 0;
+  let windowEndIndex = 0;
+  let elevationSum = 0;
+  let elevationCount = 0;
+
   return raw.map((point, index) => {
     const windowStart = point.distance - 120;
     const windowEnd = point.distance + 120;
-    const nearby = raw.filter((candidate) => candidate.distance >= windowStart && candidate.distance <= windowEnd && validElevation(candidate.elevation));
+
+    while (windowEndIndex < raw.length && raw[windowEndIndex].distance <= windowEnd) {
+      const elevation = raw[windowEndIndex].elevation;
+      if (validElevation(elevation)) {
+        elevationSum += elevation;
+        elevationCount += 1;
+      }
+      windowEndIndex += 1;
+    }
+    while (windowStartIndex < windowEndIndex && raw[windowStartIndex].distance < windowStart) {
+      const elevation = raw[windowStartIndex].elevation;
+      if (validElevation(elevation)) {
+        elevationSum -= elevation;
+        elevationCount -= 1;
+      }
+      windowStartIndex += 1;
+    }
+
     return {
       lat: point.lat, lon: point.lon, elevation: point.elevation, distance: point.distance,
       progress: point.progress || (totalDistance ? point.distance / totalDistance : index / (raw.length - 1)),
-      smoothedElevation: nearby.length ? nearby.reduce((sum, candidate) => sum + candidate.elevation, 0) / nearby.length : Number.NaN,
+      smoothedElevation: elevationCount > 0 ? elevationSum / elevationCount : Number.NaN,
     };
   });
+}
+
+function getLocalElevationRanges(points: ProfilePoint[], radius: number) {
+  const ranges: Array<{ min: number; max: number }> = [];
+  const minDeque: number[] = [];
+  const maxDeque: number[] = [];
+  let minHead = 0;
+  let maxHead = 0;
+  let left = 0;
+  let right = 0;
+
+  for (const point of points) {
+    const windowStart = point.distance - radius;
+    const windowEnd = point.distance + radius;
+
+    while (right < points.length && points[right].distance <= windowEnd) {
+      while (
+        minDeque.length > minHead
+        && points[minDeque[minDeque.length - 1]].smoothedElevation >= points[right].smoothedElevation
+      ) minDeque.pop();
+      while (
+        maxDeque.length > maxHead
+        && points[maxDeque[maxDeque.length - 1]].smoothedElevation <= points[right].smoothedElevation
+      ) maxDeque.pop();
+      minDeque.push(right);
+      maxDeque.push(right);
+      right += 1;
+    }
+
+    while (left < right && points[left].distance < windowStart) {
+      if (minDeque[minHead] === left) minHead += 1;
+      if (maxDeque[maxHead] === left) maxHead += 1;
+      left += 1;
+    }
+
+    ranges.push({
+      min: points[minDeque[minHead]].smoothedElevation,
+      max: points[maxDeque[maxHead]].smoothedElevation,
+    });
+  }
+
+  return ranges;
 }
 
 function landmark(id: string, type: RouteLandmark['type'], point: ProfilePoint, title: string, subtitle: string | undefined, importance: RouteLandmark['importance'], generatedKind?: NonNullable<RouteLandmark['metadata']>['generatedKind']): RouteLandmark {
@@ -43,13 +107,23 @@ export function analyzeRouteLandmarks(points: RouteElevationPoint[]): RouteLandm
   const totalDistance = profile.at(-1)?.distance ?? 0;
   const result: RouteLandmark[] = [];
   const elevated = profile.filter((point) => validElevation(point.smoothedElevation));
-  const range = elevated.length ? Math.max(...elevated.map((point) => point.smoothedElevation)) - Math.min(...elevated.map((point) => point.smoothedElevation)) : 0;
+  const elevationRange = elevated.reduce(
+    (current, point) => ({
+      min: Math.min(current.min, point.smoothedElevation),
+      max: Math.max(current.max, point.smoothedElevation),
+    }),
+    { min: Infinity, max: -Infinity },
+  );
+  const range = elevated.length ? elevationRange.max - elevationRange.min : 0;
   if (elevated.length && range >= 30) {
     const high = elevated.reduce((best, point) => point.smoothedElevation > best.smoothedElevation ? point : best);
     result.push(landmark('automatic-highest-point', 'highest-point', high, 'Highest point', elevationLabel(high.smoothedElevation), 5, 'local-maximum'));
+    const localRanges = getLocalElevationRanges(elevated, 750);
     const localPeaks = elevated.filter((point, index) => {
-      const around = elevated.filter((candidate) => Math.abs(candidate.distance - point.distance) <= 750);
-      return index > 0 && index < elevated.length - 1 && point.smoothedElevation === Math.max(...around.map((candidate) => candidate.smoothedElevation)) && high.smoothedElevation - Math.min(...around.map((candidate) => candidate.smoothedElevation)) >= PEAK_PROMINENCE;
+      const localRange = localRanges[index];
+      return index > 0 && index < elevated.length - 1
+        && point.smoothedElevation === localRange.max
+        && high.smoothedElevation - localRange.min >= PEAK_PROMINENCE;
     });
     for (const peak of localPeaks.sort((a, b) => b.smoothedElevation - a.smoothedElevation)) {
       if (result.filter((entry) => entry.type === 'high-point' || entry.type === 'highest-point').some((entry) => Math.abs((entry.routeDistanceMeters ?? 0) - peak.distance) < PEAK_SPACING)) continue;

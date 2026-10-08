@@ -81,6 +81,7 @@ export interface AppState {
   selectedVideoId: string | null;
   cameraPosition: { lat: number; lon: number; zoom: number; pitch: number; bearing: number } | null;
   addTrack: (track: GPXTrack) => void;
+  addImportedTracks: (tracks: GPXTrack[], comparisonTracks: ComparisonTrack[]) => void;
   removeTrack: (trackId: string) => void;
   setActiveTrack: (trackId: string | null) => void;
   updateTrackColor: (trackId: string, color: string) => void;
