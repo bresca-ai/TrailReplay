@@ -1,142 +1,199 @@
+import { SaxesParser, type SaxesTagNS } from 'saxes';
 import type { RawTrackPoint } from './trackStats';
 
 const GX_NS = 'http://www.google.com/kml/ext/2.2';
 
-export function parseKmlDocument(kmlContent: string, fileName: string) {
-  const parser = new DOMParser();
-  const document = parser.parseFromString(kmlContent, 'text/xml');
-  const parseError = document.querySelector('parsererror');
+type SensorField = 'heartRate' | 'cadence' | 'power' | 'temperature';
 
-  if (parseError) {
-    throw new Error('Invalid KML file format');
+interface GxTrackData {
+  when: Array<Date | null>;
+  coordinates: Array<{ lon: number; lat: number; elevation: number }>;
+  sensors: Record<SensorField, Array<number | null>>;
+}
+
+type Capture =
+  | { type: 'name' | 'when' | 'gx-coordinate' | 'line-coordinates'; text: string }
+  | { type: 'sensor'; field: SensorField; text: string };
+
+/** Streaming, worker-safe KML parser for LineString and gx:Track routes. */
+export function parseKmlDocument(kmlContent: string, fileName: string) {
+  const parser = new SaxesParser({ xmlns: true });
+  const elements: Array<{ local: string; uri: string }> = [];
+  const gxTrackPoints: RawTrackPoint[] = [];
+  const lineStringPoints: RawTrackPoint[] = [];
+  let gxTrack: GxTrackData | null = null;
+  let sensorField: SensorField | null = null;
+  let capture: Capture | null = null;
+  let name = '';
+  let parseError: Error | null = null;
+
+  parser.on('error', (error) => {
+    parseError = error;
+  });
+
+  parser.on('opentag', (tag) => {
+    const local = tag.local.toLowerCase();
+    elements.push({ local, uri: tag.uri });
+
+    if (tag.uri === GX_NS && local === 'track') {
+      gxTrack = createGxTrackData();
+      return;
+    }
+
+    if (!name && local === 'name' && elements[elements.length - 2]?.local === 'placemark') {
+      capture = { type: 'name', text: '' };
+      return;
+    }
+
+    if (gxTrack) {
+      if (local === 'when') capture = { type: 'when', text: '' };
+      else if (tag.uri === GX_NS && local === 'coord') capture = { type: 'gx-coordinate', text: '' };
+      else if (tag.uri === GX_NS && local === 'simplearraydata') {
+        sensorField = sensorFieldForName(attributeValue(tag, 'name'));
+      } else if (tag.uri === GX_NS && local === 'value' && sensorField) {
+        capture = { type: 'sensor', field: sensorField, text: '' };
+      }
+      return;
+    }
+
+    if (local === 'coordinates' && elements.some((element) => element.local === 'linestring')) {
+      capture = { type: 'line-coordinates', text: '' };
+    }
+  });
+
+  const appendText = (text: string) => {
+    if (capture) capture.text += text;
+  };
+  parser.on('text', appendText);
+  parser.on('cdata', appendText);
+
+  parser.on('closetag', (tag) => {
+    const local = tag.local.toLowerCase();
+
+    if (capture && captureClosesWith(capture, tag)) {
+      const text = capture.text.trim();
+      if (capture.type === 'name') name = text;
+      else if (capture.type === 'when' && gxTrack) gxTrack.when.push(parseDate(text));
+      else if (capture.type === 'gx-coordinate' && gxTrack) gxTrack.coordinates.push(parseGxCoordinate(text));
+      else if (capture.type === 'line-coordinates') appendLineStringPoints(text, lineStringPoints);
+      else if (capture.type === 'sensor' && gxTrack) {
+        const value = Number.parseFloat(text);
+        gxTrack.sensors[capture.field].push(Number.isFinite(value) && value !== 0 ? value : null);
+      }
+      capture = null;
+    }
+
+    if (tag.uri === GX_NS && local === 'simplearraydata') sensorField = null;
+    if (tag.uri === GX_NS && local === 'track' && gxTrack) {
+      appendGxTrackPoints(gxTrack, gxTrackPoints);
+      gxTrack = null;
+      sensorField = null;
+      capture = null;
+    }
+
+    elements.pop();
+  });
+
+  try {
+    parser.write(kmlContent).close();
+  } catch (error) {
+    parseError = error instanceof Error ? error : new Error(String(error));
   }
 
-  const name = document.querySelector('Placemark > name')?.textContent || getFileStem(fileName);
-  const rawPoints = extractKmlTrackPoints(document);
-
+  if (parseError) throw new Error('Invalid KML file format');
+  const rawPoints = gxTrackPoints.length > 0 ? gxTrackPoints : lineStringPoints;
   if (rawPoints.length < 2) {
     throw new Error('A KML route needs at least two valid coordinates');
   }
 
-  return { name, rawPoints };
+  return { name: name || getFileStem(fileName), rawPoints };
+}
+
+function createGxTrackData(): GxTrackData {
+  return {
+    when: [],
+    coordinates: [],
+    sensors: { heartRate: [], cadence: [], power: [], temperature: [] },
+  };
+}
+
+function attributeValue(tag: SaxesTagNS, localName: string): string | undefined {
+  return Object.values(tag.attributes).find((attribute) =>
+    attribute.local.toLowerCase() === localName
+  )?.value;
+}
+
+function sensorFieldForName(name: string | undefined): SensorField | null {
+  const normalized = name?.toLowerCase();
+  if (normalized === 'heartrate' || normalized === 'heart_rate' || normalized === 'hr') return 'heartRate';
+  if (normalized === 'cadence' || normalized === 'cad') return 'cadence';
+  if (normalized === 'power' || normalized === 'watts' || normalized === 'pwr') return 'power';
+  if (normalized === 'temperature' || normalized === 'temp') return 'temperature';
+  return null;
+}
+
+function captureClosesWith(capture: Capture, tag: SaxesTagNS) {
+  const local = tag.local.toLowerCase();
+  if (capture.type === 'name') return local === 'name';
+  if (capture.type === 'when') return local === 'when';
+  if (capture.type === 'gx-coordinate') return tag.uri === GX_NS && local === 'coord';
+  if (capture.type === 'line-coordinates') return local === 'coordinates';
+  return tag.uri === GX_NS && local === 'value';
+}
+
+function parseDate(text: string): Date | null {
+  if (!text) return null;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseGxCoordinate(text: string) {
+  const [lonText, latText, elevationText] = text.split(/\s+/);
+  return {
+    lon: Number.parseFloat(lonText),
+    lat: Number.parseFloat(latText),
+    elevation: Number.parseFloat(elevationText) || 0,
+  };
+}
+
+function appendGxTrackPoints(track: GxTrackData, points: RawTrackPoint[]) {
+  const pointCount = Math.min(track.when.length, track.coordinates.length);
+  for (let index = 0; index < pointCount; index += 1) {
+    const coordinate = track.coordinates[index];
+    if (!Number.isFinite(coordinate.lat) || !Number.isFinite(coordinate.lon)) continue;
+    points.push({
+      lat: coordinate.lat,
+      lon: coordinate.lon,
+      elevation: coordinate.elevation,
+      time: track.when[index],
+      heartRate: track.sensors.heartRate[index] ?? null,
+      cadence: track.sensors.cadence[index] ?? null,
+      power: track.sensors.power[index] ?? null,
+      temperature: track.sensors.temperature[index] ?? null,
+    });
+  }
+}
+
+function appendLineStringPoints(text: string, points: RawTrackPoint[]) {
+  for (const token of text.split(/\s+/)) {
+    if (!token) continue;
+    const [lonText, latText, elevationText] = token.split(',');
+    const lon = Number.parseFloat(lonText);
+    const lat = Number.parseFloat(latText);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    points.push({
+      lat,
+      lon,
+      elevation: Number.parseFloat(elevationText || '0') || 0,
+      time: null,
+      heartRate: null,
+      cadence: null,
+      power: null,
+      temperature: null,
+    });
+  }
 }
 
 function getFileStem(fileName: string): string {
   return fileName.replace(/\.kml$/i, '');
-}
-
-function extractKmlTrackPoints(document: Document) {
-  const gxTracks = Array.from(document.getElementsByTagNameNS(GX_NS, 'Track'));
-  return gxTracks.length > 0
-    ? extractGxTrackPoints(gxTracks)
-    : extractLineStringPoints(document);
-}
-
-function extractGxTrackPoints(gxTracks: Element[]) {
-  const rawPoints: RawTrackPoint[] = [];
-
-  for (const gxTrack of gxTracks) {
-    const whenDates = Array.from(gxTrack.getElementsByTagName('when')).map((element) => {
-      const text = element.textContent?.trim();
-      if (!text) return null;
-      const date = new Date(text);
-      return Number.isNaN(date.getTime()) ? null : date;
-    });
-
-    const coordinates = Array.from(gxTrack.getElementsByTagNameNS(GX_NS, 'coord')).map((element) => {
-      const [lonText, latText, elevationText] = (element.textContent?.trim() || '').split(/\s+/);
-      return {
-        lon: Number.parseFloat(lonText),
-        lat: Number.parseFloat(latText),
-        elevation: Number.parseFloat(elevationText) || 0,
-      };
-    });
-
-    const sensorData = getGxSensorData(gxTrack);
-    const pointCount = Math.min(whenDates.length, coordinates.length);
-
-    for (let index = 0; index < pointCount; index++) {
-      const coordinate = coordinates[index];
-      if (Number.isNaN(coordinate.lat) || Number.isNaN(coordinate.lon)) continue;
-
-      rawPoints.push({
-        lat: coordinate.lat,
-        lon: coordinate.lon,
-        elevation: coordinate.elevation,
-        time: whenDates[index],
-        heartRate: sensorData.heartRate[index] || null,
-        cadence: sensorData.cadence[index] || null,
-        power: sensorData.power[index] || null,
-        temperature: sensorData.temperature[index] || null,
-      });
-    }
-  }
-
-  return rawPoints;
-}
-
-function getGxSensorData(gxTrack: Element) {
-  const sensorData = {
-    heartRate: [] as Array<number | null>,
-    cadence: [] as Array<number | null>,
-    power: [] as Array<number | null>,
-    temperature: [] as Array<number | null>,
-  };
-
-  const schemaData = gxTrack.querySelector('ExtendedData > SchemaData');
-  if (!schemaData) return sensorData;
-
-  const arrays = Array.from(schemaData.getElementsByTagNameNS(GX_NS, 'SimpleArrayData'));
-  for (const arrayData of arrays) {
-    const name = arrayData.getAttribute('name')?.toLowerCase();
-    const values = Array.from(arrayData.getElementsByTagNameNS(GX_NS, 'value')).map((element) =>
-      Number.parseFloat(element.textContent || '0') || null
-    );
-
-    if (name === 'heartrate' || name === 'heart_rate' || name === 'hr') {
-      sensorData.heartRate = values;
-    } else if (name === 'cadence' || name === 'cad') {
-      sensorData.cadence = values;
-    } else if (name === 'power' || name === 'watts' || name === 'pwr') {
-      sensorData.power = values;
-    } else if (name === 'temperature' || name === 'temp') {
-      sensorData.temperature = values;
-    }
-  }
-
-  return sensorData;
-}
-
-function extractLineStringPoints(document: Document) {
-  const rawPoints: RawTrackPoint[] = [];
-  const coordinateElements = Array.from(
-    document.querySelectorAll('LineString > coordinates, MultiGeometry > LineString > coordinates')
-  );
-
-  for (const coordinateElement of coordinateElements) {
-    const tokens = (coordinateElement.textContent || '').trim().split(/\s+/);
-
-    for (const token of tokens) {
-      if (!token.trim()) continue;
-      const [lonText, latText, elevationText] = token.split(',');
-      const lon = Number.parseFloat(lonText.trim());
-      const lat = Number.parseFloat(latText.trim());
-      const elevation = Number.parseFloat(elevationText?.trim() || '0') || 0;
-
-      if (Number.isNaN(lat) || Number.isNaN(lon)) continue;
-
-      rawPoints.push({
-        lat,
-        lon,
-        elevation,
-        time: null,
-        heartRate: null,
-        cadence: null,
-        power: null,
-        temperature: null,
-      });
-    }
-  }
-
-  return rawPoints;
 }

@@ -23,6 +23,170 @@ import {
 } from '@/utils/journeyUtils';
 import { DEFAULT_ACTIVITY_ICON } from '@/utils/activityIcons';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
+import type { GPXTrack, JourneySegment, RouteTimingMode } from '@/types';
+
+const computedJourneyCache = new WeakMap<
+  JourneySegment[],
+  WeakMap<GPXTrack[], ComputedJourney | null>
+>();
+const journeyGeometryCache = new WeakMap<GPXTrack[], Map<string, ComputedJourney['coordinates']>>();
+const distanceProfileCache = new WeakMap<ComputedJourney['coordinates'], JourneyDistanceProfile | null>();
+const journeyCoordinatesCache = new WeakMap<ComputedJourney['coordinates'], number[][]>();
+const trackCoordinatesCache = new WeakMap<GPXTrack, number[][]>();
+const journeyElevationCache = new WeakMap<ComputedJourney, Map<RouteTimingMode, ReturnType<typeof getJourneyElevationData>>>();
+const trackElevationCache = new WeakMap<GPXTrack, ReturnType<typeof buildTrackElevationData>>();
+const journeyCameraPathCache = new WeakMap<ComputedJourney, Map<RouteTimingMode, number[][]>>();
+const trackCameraPathCache = new WeakMap<GPXTrack, number[][]>();
+
+function getCachedComputedJourney(journeySegments: JourneySegment[], tracks: GPXTrack[]) {
+  let tracksCache = computedJourneyCache.get(journeySegments);
+  if (!tracksCache) {
+    tracksCache = new WeakMap();
+    computedJourneyCache.set(journeySegments, tracksCache);
+  }
+  if (!tracksCache.has(tracks)) {
+    let computedJourney = buildComputedJourney(journeySegments, tracks);
+    if (computedJourney) {
+      const geometryKey = journeySegments.map((segment) => segment.type === 'track'
+        ? `track:${segment.id}:${segment.trackId}`
+        : [
+            'transport', segment.id, segment.mode,
+            segment.from.lat, segment.from.lon, segment.to.lat, segment.to.lon,
+          ].join(':')).join('|');
+      let geometryCache = journeyGeometryCache.get(tracks);
+      if (!geometryCache) {
+        geometryCache = new Map();
+        journeyGeometryCache.set(tracks, geometryCache);
+      }
+      const cachedCoordinates = geometryCache.get(geometryKey);
+      if (cachedCoordinates) {
+        computedJourney = { ...computedJourney, coordinates: cachedCoordinates };
+      } else {
+        geometryCache.set(geometryKey, computedJourney.coordinates);
+      }
+    }
+    tracksCache.set(tracks, computedJourney);
+  }
+  return tracksCache.get(tracks) ?? null;
+}
+
+function getCachedDistanceProfile(computedJourney: ComputedJourney) {
+  if (!distanceProfileCache.has(computedJourney.coordinates)) {
+    distanceProfileCache.set(
+      computedJourney.coordinates,
+      buildJourneyDistanceProfile(computedJourney.coordinates),
+    );
+  }
+  return distanceProfileCache.get(computedJourney.coordinates) ?? null;
+}
+
+function getCachedJourneyCoordinates(computedJourney: ComputedJourney) {
+  let coordinates = journeyCoordinatesCache.get(computedJourney.coordinates);
+  if (!coordinates) {
+    coordinates = getAllJourneyCoordinates(computedJourney.coordinates);
+    journeyCoordinatesCache.set(computedJourney.coordinates, coordinates);
+  }
+  return coordinates;
+}
+
+function getCachedTrackCoordinates(track: GPXTrack) {
+  let coordinates = trackCoordinatesCache.get(track);
+  if (!coordinates) {
+    coordinates = track.points.map((point) => [point.lon, point.lat]);
+    trackCoordinatesCache.set(track, coordinates);
+  }
+  return coordinates;
+}
+
+function buildTrackElevationData(track: GPXTrack) {
+  return track.points.map((point, index) => ({
+    distance: point.distance,
+    elevation: point.elevation,
+    progress: index / (track.points.length - 1),
+    segmentIndex: 0,
+    segmentType: 'track' as const,
+  }));
+}
+
+function getCachedElevationData(
+  computedJourney: ComputedJourney | null,
+  activeTrack: GPXTrack | undefined,
+  routeTimingMode: RouteTimingMode,
+) {
+  if (!computedJourney) {
+    if (!activeTrack) return [];
+    let elevationData = trackElevationCache.get(activeTrack);
+    if (!elevationData) {
+      elevationData = buildTrackElevationData(activeTrack);
+      trackElevationCache.set(activeTrack, elevationData);
+    }
+    return elevationData;
+  }
+
+  let timingCache = journeyElevationCache.get(computedJourney);
+  if (!timingCache) {
+    timingCache = new Map();
+    journeyElevationCache.set(computedJourney, timingCache);
+  }
+  let elevationData = timingCache.get(routeTimingMode);
+  if (!elevationData) {
+    elevationData = getJourneyElevationData(
+      computedJourney.coordinates,
+      computedJourney.segmentTimings,
+      routeTimingMode,
+    );
+    timingCache.set(routeTimingMode, elevationData);
+  }
+  return elevationData;
+}
+
+const CAMERA_PATH_SAMPLE_COUNT = 601;
+
+function getCachedCameraPath(
+  computedJourney: ComputedJourney | null,
+  journeyDistanceProfile: JourneyDistanceProfile | null,
+  activeTrack: GPXTrack | undefined,
+  routeTimingMode: RouteTimingMode,
+) {
+  if (!computedJourney) {
+    if (!activeTrack || activeTrack.points.length === 0) return [];
+    let coordinates = trackCameraPathCache.get(activeTrack);
+    if (!coordinates) {
+      coordinates = Array.from({ length: CAMERA_PATH_SAMPLE_COUNT }, (_, index) => {
+        const progress = index / (CAMERA_PATH_SAMPLE_COUNT - 1);
+        const point = interpolateTrackPoint(activeTrack, activeTrack.totalDistance * progress);
+        return point ? [point.lon, point.lat] : [];
+      }).filter((coordinate) => coordinate.length === 2);
+      trackCameraPathCache.set(activeTrack, coordinates);
+    }
+    return coordinates;
+  }
+
+  let timingCache = journeyCameraPathCache.get(computedJourney);
+  if (!timingCache) {
+    timingCache = new Map();
+    journeyCameraPathCache.set(computedJourney, timingCache);
+  }
+  let coordinates = timingCache.get(routeTimingMode);
+  if (!coordinates) {
+    coordinates = Array.from({ length: CAMERA_PATH_SAMPLE_COUNT }, (_, index) => {
+      const progress = index / (CAMERA_PATH_SAMPLE_COUNT - 1);
+      const point = routeTimingMode === 'uniform' && journeyDistanceProfile
+        ? getJourneyPointAtDistance(
+            journeyDistanceProfile,
+            journeyDistanceProfile.totalDistance * progress,
+          )
+        : getJourneyPointAtProgress(
+            progress,
+            computedJourney.coordinates,
+            computedJourney.segmentTimings,
+          );
+      return point ? [point.lon, point.lat] : [];
+    }).filter((coordinate) => coordinate.length === 2);
+    timingCache.set(routeTimingMode, coordinates);
+  }
+  return coordinates;
+}
 
 /**
  * Hook that provides computed journey data for multi-track animations
@@ -36,7 +200,7 @@ export function useComputedJourney() {
 
   // Build the computed journey whenever segments or tracks change
   const computedJourney = useMemo<ComputedJourney | null>(() => {
-    return buildComputedJourney(journeySegments, tracks);
+    return getCachedComputedJourney(journeySegments, tracks);
   }, [journeySegments, tracks]);
 
   // Get active track for single-track mode
@@ -46,7 +210,7 @@ export function useComputedJourney() {
 
   const journeyDistanceProfile = useMemo<JourneyDistanceProfile | null>(() => {
     if (!computedJourney) return null;
-    return buildJourneyDistanceProfile(computedJourney.coordinates);
+    return getCachedDistanceProfile(computedJourney);
   }, [computedJourney]);
 
   const routeDistance = useMemo(() => {
@@ -231,13 +395,8 @@ export function useComputedJourney() {
 
   // Get all journey coordinates for the full trail line
   const allCoordinates = useMemo<number[][]>(() => {
-    if (!computedJourney) {
-      // Fall back to single track
-      if (!activeTrack) return [];
-      return activeTrack.points.map((p) => [p.lon, p.lat]);
-    }
-
-    return getAllJourneyCoordinates(computedJourney.coordinates);
+    if (!computedJourney) return activeTrack ? getCachedTrackCoordinates(activeTrack) : [];
+    return getCachedJourneyCoordinates(computedJourney);
   }, [computedJourney, activeTrack]);
 
   // Camera prediction must follow replay time, not raw GPX point index. GPX
@@ -245,47 +404,17 @@ export function useComputedJourney() {
   // durations. This normalized path gives one coordinate per equal replay-time
   // step, using the same interpolation rules as the visible marker.
   const cameraPathCoordinates = useMemo<number[][]>(() => {
-    const sampleCount = 601;
-
-    if (computedJourney) {
-      return Array.from({ length: sampleCount }, (_, index) => {
-        const progress = index / (sampleCount - 1);
-        const point = routeTimingMode === 'uniform' && journeyDistanceProfile
-          ? getJourneyPointAtDistance(journeyDistanceProfile, journeyDistanceProfile.totalDistance * progress)
-          : getJourneyPointAtProgress(progress, computedJourney.coordinates, computedJourney.segmentTimings);
-        return point ? [point.lon, point.lat] : [];
-      }).filter((coordinate) => coordinate.length === 2);
-    }
-
-    if (!activeTrack || activeTrack.points.length === 0) return [];
-
-    return Array.from({ length: sampleCount }, (_, index) => {
-      const progress = index / (sampleCount - 1);
-      const point = interpolateTrackPoint(activeTrack, activeTrack.totalDistance * progress);
-      return point ? [point.lon, point.lat] : [];
-    }).filter((coordinate) => coordinate.length === 2);
+    return getCachedCameraPath(
+      computedJourney,
+      journeyDistanceProfile,
+      activeTrack,
+      routeTimingMode,
+    );
   }, [activeTrack, computedJourney, journeyDistanceProfile, routeTimingMode]);
 
   // Get elevation data for elevation profile
   const elevationData = useMemo(() => {
-    if (!computedJourney) {
-      // Fall back to single track
-      if (!activeTrack) return [];
-
-      return activeTrack.points.map((p, i) => ({
-        distance: p.distance,
-        elevation: p.elevation,
-        progress: i / (activeTrack.points.length - 1),
-        segmentIndex: 0,
-        segmentType: 'track' as const,
-      }));
-    }
-
-    return getJourneyElevationData(
-      computedJourney.coordinates,
-      computedJourney.segmentTimings,
-      routeTimingMode
-    );
+    return getCachedElevationData(computedJourney, activeTrack, routeTimingMode);
   }, [computedJourney, activeTrack, routeTimingMode]);
 
   // Get the current icon based on segment type

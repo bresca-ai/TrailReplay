@@ -12,6 +12,7 @@ type TracksSlice = Pick<
   | 'activeTrackId'
   | 'comparisonTracks'
   | 'addTrack'
+  | 'addImportedTracks'
   | 'removeTrack'
   | 'setActiveTrack'
   | 'updateTrackColor'
@@ -98,6 +99,15 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
   addTrack: (track) =>
     set((state) => {
       insertTrackIntoJourney(state, track);
+    }),
+
+  addImportedTracks: (tracks, comparisonTracks) =>
+    set((state) => {
+      // One store publication prevents each large file from triggering a full
+      // journey/map recomputation while the rest of the import is still being
+      // installed.
+      tracks.forEach((track) => insertTrackIntoJourney(state, track));
+      state.comparisonTracks.push(...comparisonTracks);
     }),
 
   removeTrack: (trackId) =>
