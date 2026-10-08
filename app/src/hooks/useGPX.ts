@@ -21,8 +21,7 @@ export function useGPX() {
   const { t } = useI18n();
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  const addTrack = useAppStore((state) => state.addTrack);
-  const addComparisonTrack = useAppStore((state) => state.addComparisonTrack);
+  const addImportedTracks = useAppStore((state) => state.addImportedTracks);
   const setError = useAppStore((state) => state.setError);
   const { openProjectFile } = useProjectFile();
 
@@ -152,10 +151,12 @@ export function useGPX() {
       let groupedByTimeCount = 0;
       let groupedByRouteCount = 0;
       let comparisonColorIndex = 0;
+      const primaryTracks: GPXTrack[] = [];
+      const comparisonTracks: Parameters<typeof addImportedTracks>[1] = [];
 
       clusters.forEach((cluster) => {
         if (cluster.length === 1) {
-          addTrack(cluster[0]);
+          primaryTracks.push(cluster[0]);
           return;
         }
 
@@ -172,9 +173,9 @@ export function useGPX() {
           return 0;
         });
 
-        addTrack(primary);
+        primaryTracks.push(primary);
         rest.forEach((track) => {
-          addComparisonTrack({
+          comparisonTracks.push({
             id: createId('comparison'),
             name: track.name,
             color: COMPARISON_COLORS[comparisonColorIndex % COMPARISON_COLORS.length],
@@ -189,6 +190,8 @@ export function useGPX() {
         if (isTimedCluster) groupedByTimeCount += cluster.length;
         else groupedByRouteCount += cluster.length;
       });
+
+      addImportedTracks(primaryTracks, comparisonTracks);
 
       if (groupedByTimeCount > 0) {
         toast.success(t('tracks.autoGroupedToast', { count: String(groupedByTimeCount) }));
@@ -235,7 +238,7 @@ export function useGPX() {
     } finally {
       setIsParsing(false);
     }
-  }, [addComparisonTrack, addTrack, applyRecipeFiles, openProjectFile, setError, t]);
+  }, [addImportedTracks, applyRecipeFiles, openProjectFile, setError, t]);
 
   return {
     parseFiles,

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { getHeartRateColor } from '@/utils/gpxParser';
@@ -65,13 +65,29 @@ interface UseTrailLayerDataParams {
     type: 'track' | 'transport';
     startCoordIndex: number;
     endCoordIndex: number;
-    progressStartRatio: number;
-    progressEndRatio: number;
     color?: string;
   }>;
   trailColor: string;
   colorMode: 'fixed' | 'heartRate' | 'zones';
   colorZones: readonly TrailColorZone[];
+}
+
+const segmentDataCache = new Map<string, UseTrailLayerDataParams['segmentTimings']>();
+
+function getStableSegmentData(
+  signature: string,
+  segmentTimings: UseTrailLayerDataParams['segmentTimings'],
+) {
+  const cached = segmentDataCache.get(signature);
+  if (cached) return cached;
+  // Segment structures change rarely, but cap this module cache so a long
+  // editing session cannot retain every historical arrangement indefinitely.
+  if (segmentDataCache.size >= 32) {
+    const oldest = segmentDataCache.keys().next().value;
+    if (oldest !== undefined) segmentDataCache.delete(oldest);
+  }
+  segmentDataCache.set(signature, segmentTimings);
+  return segmentTimings;
 }
 
 export function useTrailLayerData({
@@ -87,6 +103,19 @@ export function useTrailLayerData({
   segmentTimings,
   trailColor,
 }: UseTrailLayerDataParams) {
+  const segmentDataSignature = segmentTimings.map((timing) => [
+    timing.segmentIndex,
+    timing.type,
+    timing.startCoordIndex,
+    timing.endCoordIndex,
+    timing.color ?? '',
+  ].join(':')).join('|');
+  const segmentData = getStableSegmentData(segmentDataSignature, segmentTimings);
+  const journeyHeartRatePoints = computedJourney?.coordinates;
+  const heartRatePoints = useMemo(() => activeTrack && !journeyHeartRatePoints
+    ? activeTrack.points
+    : journeyHeartRatePoints ?? [], [activeTrack, journeyHeartRatePoints]);
+
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded) return;
 
@@ -94,10 +123,6 @@ export function useTrailLayerData({
 
     if (colorMode === 'heartRate' && allCoordinates.length > 0 && mapRef.current.getSource('trail-line')) {
       const features: Array<Feature<LineString, { color: string }>> = [];
-      const heartRatePoints = activeTrack && !computedJourney
-        ? activeTrack.points
-        : computedJourney?.coordinates ?? [];
-
       for (let index = 0; index < allCoordinates.length - 1; index++) {
         const heartRate = heartRatePoints[index]?.heartRate;
         features.push({
@@ -128,7 +153,7 @@ export function useTrailLayerData({
     } else if (allCoordinates.length > 0 && mapRef.current.getSource('trail-line')) {
       const coloredFeatures = buildSegmentLineFeatures({
         coordinates: allCoordinates,
-        segmentTimings,
+        segmentTimings: segmentData,
         fallbackColor: trailColor,
       });
 
@@ -146,15 +171,15 @@ export function useTrailLayerData({
       );
     }
 
-    if (segmentTimings.length > 0 && mapRef.current.getSource('transport-line')) {
+    if (segmentData.length > 0 && mapRef.current.getSource('transport-line')) {
       const transportCoordinates: number[][][] = [];
 
-      segmentTimings.forEach((timing) => {
+      segmentData.forEach((timing) => {
         if (timing.type !== 'transport') return;
 
         const segmentCoordinates: number[][] = [];
-        const startIndex = Math.floor(timing.progressStartRatio * allCoordinates.length);
-        const endIndex = Math.ceil(timing.progressEndRatio * allCoordinates.length);
+        const startIndex = timing.startCoordIndex;
+        const endIndex = timing.endCoordIndex;
 
         for (let index = startIndex; index <= endIndex && index < allCoordinates.length; index++) {
           segmentCoordinates.push(allCoordinates[index]);
@@ -176,14 +201,13 @@ export function useTrailLayerData({
       timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
     };
   }, [
-    activeTrack,
     allCoordinates,
     colorMode,
     colorZones,
-    computedJourney,
+    heartRatePoints,
     isMapLoaded,
     mapRef,
-    segmentTimings,
+    segmentData,
     trailColor,
   ]);
 
