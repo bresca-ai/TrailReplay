@@ -8,6 +8,7 @@ import { useAvailableStats } from '@/hooks/useAvailableStats';
 import { installFocusModalityTracking } from '@/utils/focusModality';
 import { AppHeader } from '@/components/app/AppHeader';
 import { AppLoadingOverlay } from '@/components/app/AppLoadingOverlay';
+import { FileImportBanner } from '@/components/app/FileImportBanner';
 import { CropPreviewBars } from '@/components/app/CropPreviewBars';
 import { PendingPicturePlacementBanner } from '@/components/app/PendingPicturePlacementBanner';
 import { WelcomeOverlay } from '@/components/app/WelcomeOverlay';
@@ -142,6 +143,7 @@ function App() {
   const exportSubMode = useAppStore((state) => state.exportSubMode);
   const isExporting = useAppStore((state) => state.isExporting);
   const isDeterministicExport = useAppStore((state) => state.isDeterministicExport);
+  const fileImportStatus = useAppStore((state) => state.fileImportStatus);
 
   useEffect(() => {
     document.documentElement.lang = settings.language;
@@ -528,8 +530,10 @@ function App() {
     <PlaybackProvider>
       <div
         className="app-container h-screen bg-[var(--canvas)] flex flex-col overflow-hidden"
+        aria-busy={fileImportStatus !== null}
         style={{ '--font-family-overlay': overlayFontFamily(settings.trailStyle.overlayFont) } as CSSProperties}
       >
+        <FileImportBanner />
         <AppHeader
           isFullscreen={isFullscreen}
           showInfoPanel={showInfoPanel}
@@ -778,6 +782,7 @@ function App() {
                 type="file"
                 accept=".gpx,.kml,.fit,.replay,.json,application/gpx+xml,application/vnd.google-earth.kml+xml,application/json"
                 multiple
+                disabled={fileImportStatus !== null}
                 onChange={handleFileChange}
                 className="hidden"
               />

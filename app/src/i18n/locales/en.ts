@@ -63,6 +63,13 @@ export const en = {
       tooLarge: 'This project file is too large to open.',
     },
   },
+  fileImport: {
+    openingProject: 'Opening replay…',
+    applyingRecipe: 'Building replay…',
+    loadingRoutes: 'Loading routes…',
+    fileCount: '{count} files',
+    keepOpen: 'Large files can take a moment. Keep this tab open.',
+  },
   tracks: {
     dropTitle: 'Drag & drop GPX, KML or FIT files',
     dropActive: 'Drop GPX/KML/FIT files here',

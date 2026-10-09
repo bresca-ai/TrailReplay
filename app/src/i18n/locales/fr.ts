@@ -63,6 +63,13 @@ export const fr = {
       tooLarge: 'Ce fichier de projet est trop volumineux pour être ouvert.',
     },
   },
+  fileImport: {
+    openingProject: 'Ouverture du replay…',
+    applyingRecipe: 'Création du replay…',
+    loadingRoutes: 'Chargement des itinéraires…',
+    fileCount: '{count} fichiers',
+    keepOpen: 'Les fichiers volumineux peuvent prendre un moment. Gardez cet onglet ouvert.',
+  },
   tracks: {
     dropTitle: 'Glissez-déposez des fichiers GPX, KML ou FIT',
     dropActive: 'Déposez les fichiers GPX/KML/FIT ici',

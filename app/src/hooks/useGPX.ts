@@ -19,18 +19,24 @@ export type RouteInputMethod = 'file_picker' | 'dropzone';
 
 export function useGPX() {
   const { t } = useI18n();
-  const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const addImportedTracks = useAppStore((state) => state.addImportedTracks);
   const setError = useAppStore((state) => state.setError);
+  const fileImportStatus = useAppStore((state) => state.fileImportStatus);
+  const setFileImportStatus = useAppStore((state) => state.setFileImportStatus);
   const { openProjectFile } = useProjectFile();
+  const isParsing = fileImportStatus !== null;
 
   const applyRecipeFiles = useCallback(async (
     recipeFile: File,
     fileArray: File[],
     routeInputMethod: RouteInputMethod,
   ) => {
-    setIsParsing(true);
+    setFileImportStatus({
+      kind: 'recipe',
+      fileName: recipeFile.name,
+      fileCount: fileArray.length,
+    });
     setParseError(null);
     trackEvent('recipe_import_started', { route_input_method: routeInputMethod });
 
@@ -78,9 +84,9 @@ export function useGPX() {
       setError(message);
       throw error;
     } finally {
-      setIsParsing(false);
+      setFileImportStatus(null);
     }
-  }, [setError, t]);
+  }, [setError, setFileImportStatus, t]);
 
   const parseFiles = useCallback(async (
     files: FileList | File[] | null,
@@ -112,7 +118,11 @@ export function useGPX() {
       return applyRecipeFiles(recipeFiles[0], fileArray, routeInputMethod);
     }
 
-    setIsParsing(true);
+    setFileImportStatus({
+      kind: 'routes',
+      fileName: fileArray[0].name,
+      fileCount: fileArray.length,
+    });
     setParseError(null);
     trackEvent('route_import_started', {
       route_file_count: fileArray.length,
@@ -236,9 +246,9 @@ export function useGPX() {
       setError(message);
       throw error;
     } finally {
-      setIsParsing(false);
+      setFileImportStatus(null);
     }
-  }, [addImportedTracks, applyRecipeFiles, openProjectFile, setError, t]);
+  }, [addImportedTracks, applyRecipeFiles, openProjectFile, setError, setFileImportStatus, t]);
 
   return {
     parseFiles,
