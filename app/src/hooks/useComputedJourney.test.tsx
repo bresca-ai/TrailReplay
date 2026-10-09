@@ -47,19 +47,4 @@ describe('useComputedJourney', () => {
     expect(result.current.computedJourney?.coordinates).toBe(initialCoordinates);
     expect(result.current.totalDuration).toBe(30_000);
   });
-
-  it('keeps the completed-color boundary on the marker position between GPS points', () => {
-    useAppStore.getState().addTrack(track());
-    const { result } = renderHook(() => useComputedJourney());
-
-    act(() => {
-      useAppStore.getState().setPlayback({ progress: 0.25 });
-    });
-
-    expect(result.current.currentPosition).toMatchObject({ lat: 42.0025, lon: 1.0025 });
-    expect(result.current.completedCoordinates.at(-1)).toEqual([
-      result.current.currentPosition?.lon,
-      result.current.currentPosition?.lat,
-    ]);
-  });
 });

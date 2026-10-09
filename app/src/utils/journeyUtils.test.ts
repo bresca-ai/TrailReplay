@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  getCompletedCoordinates,
-  getJourneyElevationData,
-  type JourneyPoint,
-  type SegmentTiming,
-} from './journeyUtils';
+import { getJourneyElevationData, type JourneyPoint, type SegmentTiming } from './journeyUtils';
 
 const timing = (segmentIndex: number, start: number, end: number, startCoordIndex: number, endCoordIndex: number): SegmentTiming => ({
   segmentId: `segment-${segmentIndex}`,
@@ -63,29 +58,5 @@ describe('getJourneyElevationData', () => {
     );
 
     expect(data.map((sample) => sample.progress)).toEqual([0, 0.2, 0.2, 1]);
-  });
-});
-
-describe('getCompletedCoordinates', () => {
-  it('ends at the interpolated marker without visiting the next GPS point first', () => {
-    const coordinates = [
-      { ...point(0, 100), lon: 0 },
-      { ...point(0, 200), lon: 10 },
-      { ...point(0, 300), lon: 20 },
-    ];
-
-    expect(getCompletedCoordinates(0.25, coordinates, [timing(0, 0, 1, 0, 2)]))
-      .toEqual([[0, 45], [5, 45]]);
-  });
-
-  it('does not duplicate the marker when it lands exactly on a GPS point', () => {
-    const coordinates = [
-      { ...point(0, 100), lon: 0 },
-      { ...point(0, 200), lon: 10 },
-      { ...point(0, 300), lon: 20 },
-    ];
-
-    expect(getCompletedCoordinates(0.5, coordinates, [timing(0, 0, 1, 0, 2)]))
-      .toEqual([[0, 45], [10, 45]]);
   });
 });

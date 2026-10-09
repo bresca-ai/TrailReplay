@@ -244,9 +244,29 @@ export function useComputedJourney() {
       if (!activeTrack || activeTrack.points.length === 0) return null;
 
       const targetDistance = routeDistance;
-      const point = interpolateTrackPoint(activeTrack, targetDistance);
-      if (!point) return null;
+      if (routeTimingMode === 'uniform') {
+        const point = interpolateTrackPoint(activeTrack, targetDistance);
+        if (!point) return null;
 
+        return {
+          ...point,
+          segmentIndex: 0,
+          segmentType: 'track' as const,
+          trackId: activeTrack.id,
+        };
+      }
+
+      let pointIndex = 0;
+
+      for (let i = 0; i < activeTrack.points.length; i++) {
+        if (activeTrack.points[i].distance >= targetDistance) {
+          pointIndex = i;
+          break;
+        }
+        pointIndex = i;
+      }
+
+      const point = activeTrack.points[pointIndex];
       return {
         ...point,
         segmentIndex: 0,
@@ -347,14 +367,16 @@ export function useComputedJourney() {
         }
       }
 
-      const currentPoint = interpolateTrackPoint(activeTrack, targetDistance);
-      if (
-        currentPoint &&
-        (completed.length === 0 ||
-          completed[completed.length - 1][0] !== currentPoint.lon ||
-          completed[completed.length - 1][1] !== currentPoint.lat)
-      ) {
-        completed.push([currentPoint.lon, currentPoint.lat]);
+      if (routeTimingMode === 'uniform') {
+        const currentPoint = interpolateTrackPoint(activeTrack, targetDistance);
+        if (
+          currentPoint &&
+          (completed.length === 0 ||
+            completed[completed.length - 1][0] !== currentPoint.lon ||
+            completed[completed.length - 1][1] !== currentPoint.lat)
+        ) {
+          completed.push([currentPoint.lon, currentPoint.lat]);
+        }
       }
 
       return completed;

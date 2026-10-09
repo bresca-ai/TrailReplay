@@ -629,7 +629,7 @@ export function getCompletedCoordinates(
   // Calculate the exact coordinate index
   const segmentCoordCount = segment.endCoordIndex - segment.startCoordIndex;
   const exactIndex = segment.startCoordIndex + localProgress * segmentCoordCount;
-  const endIndex = Math.floor(exactIndex);
+  const endIndex = Math.ceil(exactIndex);
 
   // Return coordinates up to the current point
   const completedCoords: number[][] = [];
@@ -639,11 +639,7 @@ export function getCompletedCoordinates(
 
   // Add interpolated current point
   const currentPoint = getJourneyPointAtProgress(progress, coordinates, segmentTimings);
-  const completedEndpoint = completedCoords[completedCoords.length - 1];
-  if (
-    currentPoint &&
-    (!completedEndpoint || completedEndpoint[0] !== currentPoint.lon || completedEndpoint[1] !== currentPoint.lat)
-  ) {
+  if (currentPoint && completedCoords.length > 0) {
     completedCoords.push([currentPoint.lon, currentPoint.lat]);
   }
 
