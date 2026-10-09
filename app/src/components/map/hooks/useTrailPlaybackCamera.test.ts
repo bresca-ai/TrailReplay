@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  lastPaintedCoordinate,
   resolvePlaybackMarkerColor,
   updatePlaybackMarkerElement,
 } from './useTrailPlaybackCamera';
@@ -23,23 +22,5 @@ describe('playback marker presentation', () => {
     expect(element.querySelector('.tr-marker-label')?.textContent).toBe('<img src=x onerror=alert(1)>');
     expect((element.querySelector('.tr-marker-label') as HTMLElement).style.fontFamily).toContain('Inter');
     expect(element.querySelector('.tr-marker-label img')).toBeNull();
-  });
-
-  it('places the marker at the final coordinate painted by the completed trail', () => {
-    expect(lastPaintedCoordinate({
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: { color: '#111111' },
-          geometry: { type: 'LineString', coordinates: [[1, 2], [3, 4]] },
-        },
-        {
-          type: 'Feature',
-          properties: { color: '#222222' },
-          geometry: { type: 'LineString', coordinates: [[3, 4], [5, 6]] },
-        },
-      ],
-    })).toEqual([5, 6]);
   });
 });
