@@ -1,12 +1,9 @@
 import { useEffect, useRef } from 'react';
-import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon } from '@/utils/activityIcons';
-import { getHeartRateColor } from '@/utils/gpxParser';
-import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
-import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
+import { PLAYBACK_PROGRESS_GLOBAL_STATE } from '@/utils/playbackTrailGradient';
 import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
@@ -56,8 +53,6 @@ interface UseTrailPlaybackCameraParams {
    */
   cinematicKeyframes?: PreparedCinematicKeyframe[];
   currentTimeMs: number;
-  completedCoordinates: number[][];
-  computedJourney: { coordinates: Array<{ heartRate: number | null }> } | null;
   currentIcon: string;
   currentPosition: { lat: number; lon: number } | null;
   currentSegment?: {
@@ -79,13 +74,7 @@ interface UseTrailPlaybackCameraParams {
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
   markerRef: React.MutableRefObject<maplibregl.Marker | null>;
   playbackProgress: number;
-  segmentTimings: Array<{
-    segmentIndex: number;
-    type: 'track' | 'transport';
-    startCoordIndex: number;
-    endCoordIndex: number;
-    color?: string;
-  }>;
+  routeProgress: number;
   setCameraPosition: (position: {
     lat: number;
     lon: number;
@@ -168,8 +157,6 @@ export function useTrailPlaybackCamera({
   cameraMode,
   cameraStability,
   cinematicKeyframes,
-  completedCoordinates,
-  computedJourney,
   currentIcon,
   currentTimeMs,
   currentPosition,
@@ -185,7 +172,7 @@ export function useTrailPlaybackCamera({
   mapRef,
   markerRef,
   playbackProgress,
-  segmentTimings,
+  routeProgress,
   setCameraPosition,
   smoothBearingRef,
   targetBearingRef,
@@ -205,6 +192,13 @@ export function useTrailPlaybackCamera({
 
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded || !currentPosition) return;
+
+    // This is a style-state update, not a GeoJSON worker update. The marker,
+    // camera and painted endpoint therefore consume the same animation frame.
+    mapRef.current.setGlobalStateProperty(
+      PLAYBACK_PROGRESS_GLOBAL_STATE,
+      Math.max(0, Math.min(1, routeProgress)),
+    );
 
     const shouldShowPlaybackAdornment = (trailStyle.showMarker || trailStyle.showTrackLabels) &&
       (animationPhase === 'playing' || (animationPhase === 'idle' && playbackProgress > 0));
@@ -290,80 +284,6 @@ export function useTrailPlaybackCamera({
                 text: currentTrackName,
               }
             : null,
-        );
-      }
-    }
-
-    if (completedCoordinates.length > 0 && mapRef.current.getSource('trail-completed')) {
-      if (trailStyle.colorMode === 'heartRate') {
-        const features: Array<Feature<LineString, { color: string }>> = [];
-        const heartRatePoints = activeTrack && !computedJourney
-          ? activeTrack.points
-          : computedJourney?.coordinates ?? [];
-
-        for (let index = 0; index < completedCoordinates.length - 1; index++) {
-          const heartRate = heartRatePoints[index]?.heartRate;
-          features.push({
-            type: 'Feature',
-            properties: { color: heartRate ? getHeartRateColor(heartRate, 180) : trailStyle.trailColor },
-            geometry: {
-              type: 'LineString',
-              coordinates: [completedCoordinates[index], completedCoordinates[index + 1]],
-            },
-          });
-        }
-
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData({
-          type: 'FeatureCollection',
-          features,
-        });
-      } else if (trailStyle.colorMode === 'zones') {
-        // Keep the completed line to the marker's exact fractional coordinate.
-        // `completedCoordinates` includes the next whole point followed by the
-        // interpolated marker position, so deriving an index from its length
-        // would draw the line ahead of the marker between GPS samples.
-        const activeSegment = currentSegment?.segment;
-        const localProgress = currentSegment?.localProgress;
-        const completedBaseIndex = activeSegment && localProgress !== undefined
-          ? activeSegment.startCoordIndex + (
-              Math.max(0, Math.min(1, localProgress))
-              * (activeSegment.endCoordIndex - activeSegment.startCoordIndex)
-            )
-          : playbackProgress * Math.max(0, allCoordinates.length - 1);
-        const zoneFeatures = buildColorZoneLineFeatures({
-          coordinates: allCoordinates,
-          colorZones: trailStyle.colorZones,
-          fallbackColor: trailStyle.trailColor,
-          maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
-        });
-
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData({
-          type: 'FeatureCollection',
-          features: zoneFeatures,
-        });
-      } else {
-        const completedBaseIndex = Math.max(0, Math.min(allCoordinates.length - 1, completedCoordinates.length - 2));
-        const coloredFeatures = buildSegmentLineFeatures({
-          coordinates: allCoordinates,
-          segmentTimings,
-          fallbackColor: trailStyle.trailColor,
-          maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
-          partialSegmentIndex: currentSegment?.segment.segmentIndex ?? null,
-        });
-
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData(
-          coloredFeatures.length > 0
-            ? {
-                type: 'FeatureCollection',
-                features: coloredFeatures,
-              }
-            : {
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'LineString', coordinates: completedCoordinates },
-              }
         );
       }
     }
@@ -642,8 +562,6 @@ export function useTrailPlaybackCamera({
     cameraStability,
     cameraCoordinates,
     cinematicKeyframes,
-    completedCoordinates,
-    computedJourney,
     currentIcon,
     currentPosition,
     currentSegment,
@@ -657,7 +575,7 @@ export function useTrailPlaybackCamera({
     mapRef,
     markerRef,
     playbackProgress,
-    segmentTimings,
+    routeProgress,
     setCameraPosition,
     smoothBearingRef,
     targetBearingRef,
