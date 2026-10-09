@@ -28,6 +28,7 @@ import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
 import { useI18n } from '@/i18n/useI18n';
+import { overlayFontFamily } from '@/utils/typography';
 
 const Sidebar = lazy(() => import('@/components/sidebar/Sidebar').then((module) => ({ default: module.Sidebar })));
 const InfoPanel = lazy(() => import('@/components/info/InfoPanel').then((module) => ({ default: module.InfoPanel })));
@@ -525,7 +526,10 @@ function App() {
   
   return (
     <PlaybackProvider>
-      <div className="app-container h-screen bg-[var(--canvas)] flex flex-col overflow-hidden">
+      <div
+        className="app-container h-screen bg-[var(--canvas)] flex flex-col overflow-hidden"
+        style={{ '--font-family-overlay': overlayFontFamily(settings.trailStyle.overlayFont) } as CSSProperties}
+      >
         <AppHeader
           isFullscreen={isFullscreen}
           showInfoPanel={showInfoPanel}

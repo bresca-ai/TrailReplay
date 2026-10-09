@@ -10,6 +10,7 @@ import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
 import { Trash2 } from 'lucide-react';
+import { OVERLAY_FONT_OPTIONS, overlayFontFamily } from '@/utils/typography';
 
 function parsePercent(raw: string): number | null {
   const parsed = parseFloat(raw.replace(',', '.'));
@@ -301,6 +302,41 @@ export function AnnotationsPanel() {
             {t('annotations.labelsHint')}
           </p>
         )}
+      </div>
+
+      {/* ── Overlay typography ──────────────────────────────────── */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide">
+          {t('annotations.typographyTitle')}
+        </h3>
+        <p className="text-xs leading-4 text-[var(--evergreen-60)]">
+          {t('annotations.typographyHint')}
+        </p>
+        <div className="space-y-1.5">
+          <Label htmlFor="overlay-font" className="text-xs text-[var(--evergreen-60)] uppercase tracking-wide">
+            {t('annotations.fontLabel')}
+          </Label>
+          <select
+            id="overlay-font"
+            value={trailStyle.overlayFont}
+            onChange={(event) => {
+              const overlayFont = event.target.value as typeof trailStyle.overlayFont;
+              setTrailStyle({ overlayFont });
+              trackEvent('settings_changed', { setting_name: 'overlay_font', setting_value: overlayFont });
+            }}
+            className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none transition-colors focus:border-[var(--trail-orange)] focus:ring-2 focus:ring-[var(--trail-orange)]/20"
+            style={{ fontFamily: overlayFontFamily(trailStyle.overlayFont) }}
+          >
+            {OVERLAY_FONT_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id} style={{ fontFamily: overlayFontFamily(option.id) }}>
+                {t(option.labelKey)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="text-[10px] leading-4 text-[var(--evergreen-60)]">
+          {t('annotations.typographyOpenSource')}
+        </p>
       </div>
 
       {/* ── Heart rate styling ─────────────────────────────────── */}

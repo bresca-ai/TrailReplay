@@ -308,6 +308,7 @@ export interface ComparisonTrack {
 export type UnitSystem = 'metric' | 'imperial';
 
 export type ColorMode = 'fixed' | 'heartRate' | 'zones';
+export type OverlayFont = 'modern' | 'editorial' | 'technical' | 'condensed' | 'geometric';
 
 export interface TrailColorZone {
   id: string;
@@ -333,6 +334,8 @@ export interface TrailStyleSettings {
   trackLabel: string;
   ghostTrailOpacity: number;
   colorZones: TrailColorZone[];
+  /** Self-hosted OFL font used by labels, annotations and stats. */
+  overlayFont: OverlayFont;
 }
 
 /**

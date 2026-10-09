@@ -50,6 +50,7 @@ export function createDefaultSettings(): AppSettings {
       trackLabel: 'Track 1',
       ghostTrailOpacity: 0.5,
       colorZones: [],
+      overlayFont: 'technical',
     },
     mapOverlays: { skiPistes: false, slopeOverlay: false, placeLabels: false, aspectOverlay: false },
     waybackRelease: null,

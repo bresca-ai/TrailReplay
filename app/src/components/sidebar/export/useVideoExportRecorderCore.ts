@@ -207,7 +207,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     if (!computedJourney) {
       return activeTrack
-        ? { color: state.settings.trailStyle.trailColor, text: activeTrack.name }
+        ? {
+            color: state.settings.trailStyle.trailColor,
+            text: activeTrack.name,
+          }
         : null;
     }
 
@@ -223,7 +226,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       : undefined;
     const track = trackId ? state.tracks.find((candidate) => candidate.id === trackId) : null;
     return track
-      ? { color: track.color || state.settings.trailStyle.trailColor, text: track.name }
+      ? {
+          color: track.color || state.settings.trailStyle.trailColor,
+          text: track.name,
+        }
       : null;
   }, [activeTrack, computedJourney, journeyDistanceProfile, segmentTimings]);
   const {

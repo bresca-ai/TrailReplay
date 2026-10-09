@@ -7,9 +7,10 @@ import { getActivityIconMarkerHtml, isSvgActivityIcon } from '@/utils/activityIc
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
-import type { TrailColorZone } from '@/types';
+import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
+import { overlayFontFamily } from '@/utils/typography';
 import {
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
@@ -104,6 +105,7 @@ interface UseTrailPlaybackCameraParams {
     markerColor: string;
     markerSize: number;
     markerType: 'icon' | 'dot';
+    overlayFont: OverlayFont;
     showCircle: boolean;
     showMarker: boolean;
     showTrackLabels: boolean;
@@ -126,7 +128,7 @@ export function resolvePlaybackMarkerColor(
 export function updatePlaybackMarkerElement(
   element: HTMLElement,
   markerHtml: string,
-  label: { color: string; text: string } | null,
+  label: { color: string; fontFamily: string; text: string } | null,
 ) {
   element.innerHTML = markerHtml;
   if (!label) return;
@@ -137,6 +139,7 @@ export function updatePlaybackMarkerElement(
   Object.assign(labelElement.style, {
     bottom: 'calc(100% + 8px)',
     color: label.color,
+    fontFamily: label.fontFamily,
     fontSize: '12px',
     fontWeight: '700',
     left: '50%',
@@ -258,7 +261,11 @@ export function useTrailPlaybackCamera({
           element,
           markerHtml,
           trailStyle.showTrackLabels && currentTrackName
-            ? { color: currentColor, text: currentTrackName }
+            ? {
+                color: currentColor,
+                fontFamily: overlayFontFamily(trailStyle.overlayFont),
+                text: currentTrackName,
+              }
             : null,
         );
         markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
@@ -270,7 +277,11 @@ export function useTrailPlaybackCamera({
           markerRef.current.getElement(),
           markerHtml,
           trailStyle.showTrackLabels && currentTrackName
-            ? { color: currentColor, text: currentTrackName }
+            ? {
+                color: currentColor,
+                fontFamily: overlayFontFamily(trailStyle.overlayFont),
+                text: currentTrackName,
+              }
             : null,
         );
       }
