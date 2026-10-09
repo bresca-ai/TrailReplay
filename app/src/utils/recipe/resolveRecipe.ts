@@ -206,8 +206,14 @@ export function resolveRecipe(
 
   // Presentation the recipe asked for, applied to the app's parsed tracks.
   const resolvedTracks = named.map((item) => {
-    const track = item.track;
-    track.name = item.name;
+    // Worker-parsed routes are frozen before they enter the store so Immer
+    // does not recursively freeze tens of thousands of points. A recipe adds
+    // presentation metadata, so copy the small track wrapper and continue to
+    // share the immutable points instead of mutating the parser's result.
+    const track = {
+      ...item.track,
+      name: item.name,
+    };
     if (item.spec.color) track.color = item.spec.color;
     const icon = item.spec.activityIcon ?? recipe.activityIcon;
     if (icon) track.activityIcon = icon;
