@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Feature, FeatureCollection, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
@@ -121,6 +121,14 @@ type CompletedTrailData =
 interface CompletedTrailFrame {
   data: CompletedTrailData;
   markerPosition: [number, number] | null;
+  playbackProgress: number;
+  playbackTimeMs: number;
+}
+
+interface PaintedPlaybackFrame {
+  position: { lat: number; lon: number };
+  progress: number;
+  timeMs: number;
 }
 
 export function lastPaintedCoordinate(data: CompletedTrailData): [number, number] | null {
@@ -134,11 +142,21 @@ export function lastPaintedCoordinate(data: CompletedTrailData): [number, number
   return null;
 }
 
-function waitForNextMapRender(map: maplibregl.Map): Promise<void> {
-  return new Promise((resolve) => {
-    const onRender = () => resolve();
-    map.once('render', onRender);
+function waitForSourceRender(map: maplibregl.Map, sourceId: string): Promise<void> {
+  const waitForRender = () => new Promise<void>((resolve) => {
+    map.once('render', () => resolve());
     map.triggerRepaint();
+  });
+
+  if (map.isSourceLoaded(sourceId)) return waitForRender();
+
+  return new Promise((resolve) => {
+    const onSourceData = (event: maplibregl.MapSourceDataEvent) => {
+      if (event.sourceId !== sourceId || !event.isSourceLoaded) return;
+      map.off('sourcedata', onSourceData);
+      void waitForRender().then(resolve);
+    };
+    map.on('sourcedata', onSourceData);
   });
 }
 
@@ -220,6 +238,7 @@ export function useTrailPlaybackCamera({
   const smoothedZoomTargetRef = useRef<number | null>(null);
   const completedTrailQueueRef = useRef<LatestFrameQueue<CompletedTrailFrame> | null>(null);
   const completedTrailQueueSourceRef = useRef<maplibregl.GeoJSONSource | null>(null);
+  const [paintedPlaybackFrame, setPaintedPlaybackFrame] = useState<PaintedPlaybackFrame | null>(null);
 
   useEffect(() => () => {
     completedTrailQueueRef.current?.dispose();
@@ -234,7 +253,125 @@ export function useTrailPlaybackCamera({
   }, [cameraMode, followBehindZoomLevel]);
 
   useEffect(() => {
+    if (!mapRef.current || !isMapLoaded || !currentPosition || completedCoordinates.length === 0) return;
+
+    const completedTrailSource = mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource | undefined;
+    if (!completedTrailSource) return;
+
+    if (completedTrailQueueSourceRef.current !== completedTrailSource) {
+      const completedTrailMap = mapRef.current;
+      completedTrailQueueRef.current?.dispose();
+      completedTrailQueueSourceRef.current = completedTrailSource;
+      setPaintedPlaybackFrame(null);
+      completedTrailQueueRef.current = createLatestFrameQueue<CompletedTrailFrame>({
+        paint: async (frame) => {
+          await completedTrailSource.setData(frame.data);
+          await waitForSourceRender(completedTrailMap, 'trail-completed');
+        },
+        commit: (frame) => {
+          if (!frame.markerPosition) return;
+          setPaintedPlaybackFrame({
+            position: { lat: frame.markerPosition[1], lon: frame.markerPosition[0] },
+            progress: frame.playbackProgress,
+            timeMs: frame.playbackTimeMs,
+          });
+        },
+      });
+    }
+
+    const paintCompletedTrail = (data: CompletedTrailData) => {
+      completedTrailQueueRef.current?.enqueue({
+        data,
+        markerPosition: lastPaintedCoordinate(data),
+        playbackProgress,
+        playbackTimeMs: currentTimeMs,
+      });
+    };
+
+    if (trailStyle.colorMode === 'heartRate') {
+      const features: Array<Feature<LineString, { color: string }>> = [];
+      const heartRatePoints = activeTrack && !computedJourney
+        ? activeTrack.points
+        : computedJourney?.coordinates ?? [];
+
+      for (let index = 0; index < completedCoordinates.length - 1; index++) {
+        const heartRate = heartRatePoints[index]?.heartRate;
+        features.push({
+          type: 'Feature',
+          properties: { color: heartRate ? getHeartRateColor(heartRate, 180) : trailStyle.trailColor },
+          geometry: {
+            type: 'LineString',
+            coordinates: [completedCoordinates[index], completedCoordinates[index + 1]],
+          },
+        });
+      }
+
+      paintCompletedTrail({ type: 'FeatureCollection', features });
+    } else if (trailStyle.colorMode === 'zones') {
+      const activeSegment = currentSegment?.segment;
+      const localProgress = currentSegment?.localProgress;
+      const completedBaseIndex = activeSegment && localProgress !== undefined
+        ? activeSegment.startCoordIndex + (
+            Math.max(0, Math.min(1, localProgress))
+            * (activeSegment.endCoordIndex - activeSegment.startCoordIndex)
+          )
+        : playbackProgress * Math.max(0, allCoordinates.length - 1);
+      const zoneFeatures = buildColorZoneLineFeatures({
+        coordinates: allCoordinates,
+        colorZones: trailStyle.colorZones,
+        fallbackColor: trailStyle.trailColor,
+        maxCoordIndex: completedBaseIndex,
+        partialEndpoint: [currentPosition.lon, currentPosition.lat],
+      });
+
+      paintCompletedTrail({ type: 'FeatureCollection', features: zoneFeatures });
+    } else {
+      const completedBaseIndex = Math.max(0, Math.min(allCoordinates.length - 1, completedCoordinates.length - 2));
+      const coloredFeatures = buildSegmentLineFeatures({
+        coordinates: allCoordinates,
+        segmentTimings,
+        fallbackColor: trailStyle.trailColor,
+        maxCoordIndex: completedBaseIndex,
+        partialEndpoint: [currentPosition.lon, currentPosition.lat],
+        partialSegmentIndex: currentSegment?.segment.segmentIndex ?? null,
+      });
+
+      paintCompletedTrail(
+        coloredFeatures.length > 0
+          ? { type: 'FeatureCollection', features: coloredFeatures }
+          : {
+              type: 'Feature',
+              properties: {},
+              geometry: { type: 'LineString', coordinates: completedCoordinates },
+            }
+      );
+    }
+  }, [
+    activeTrack,
+    allCoordinates,
+    completedCoordinates,
+    computedJourney,
+    currentPosition,
+    currentSegment,
+    currentTimeMs,
+    isMapLoaded,
+    mapRef,
+    playbackProgress,
+    segmentTimings,
+    trailStyle.colorMode,
+    trailStyle.colorZones,
+    trailStyle.trailColor,
+  ]);
+
+  useEffect(() => {
     if (!mapRef.current || !isMapLoaded || !currentPosition) return;
+
+    const displayedFrame = paintedPlaybackFrame && paintedPlaybackFrame.timeMs <= currentTimeMs
+      ? paintedPlaybackFrame
+      : null;
+    const displayedPosition = displayedFrame?.position ?? currentPosition;
+    const displayedProgress = displayedFrame?.progress ?? playbackProgress;
+    const displayedTimeMs = displayedFrame?.timeMs ?? currentTimeMs;
 
     const shouldShowPlaybackAdornment = (trailStyle.showMarker || trailStyle.showTrackLabels) &&
       (animationPhase === 'playing' || (animationPhase === 'idle' && playbackProgress > 0));
@@ -306,9 +443,10 @@ export function useTrailPlaybackCamera({
             : null,
         );
         markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
-          .setLngLat([currentPosition.lon, currentPosition.lat])
+          .setLngLat([displayedPosition.lon, displayedPosition.lat])
           .addTo(mapRef.current);
       } else {
+        markerRef.current.setLngLat([displayedPosition.lon, displayedPosition.lat]);
         updatePlaybackMarkerElement(
           markerRef.current.getElement(),
           markerHtml,
@@ -319,103 +457,6 @@ export function useTrailPlaybackCamera({
                 text: currentTrackName,
               }
             : null,
-        );
-      }
-    }
-
-    const completedTrailSource = mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource | undefined;
-    if (completedCoordinates.length > 0 && completedTrailSource) {
-      if (completedTrailQueueSourceRef.current !== completedTrailSource) {
-        const completedTrailMap = mapRef.current;
-        completedTrailQueueRef.current?.dispose();
-        completedTrailQueueSourceRef.current = completedTrailSource;
-        completedTrailQueueRef.current = createLatestFrameQueue<CompletedTrailFrame>({
-          paint: async (frame) => {
-            await completedTrailSource.setData(frame.data);
-            await waitForNextMapRender(completedTrailMap);
-          },
-          commit: (frame) => {
-            if (frame.markerPosition) markerRef.current?.setLngLat(frame.markerPosition);
-          },
-        });
-      }
-
-      const paintCompletedTrail = (data: CompletedTrailData) => {
-        completedTrailQueueRef.current?.enqueue({
-          data,
-          markerPosition: lastPaintedCoordinate(data),
-        });
-      };
-
-      if (trailStyle.colorMode === 'heartRate') {
-        const features: Array<Feature<LineString, { color: string }>> = [];
-        const heartRatePoints = activeTrack && !computedJourney
-          ? activeTrack.points
-          : computedJourney?.coordinates ?? [];
-
-        for (let index = 0; index < completedCoordinates.length - 1; index++) {
-          const heartRate = heartRatePoints[index]?.heartRate;
-          features.push({
-            type: 'Feature',
-            properties: { color: heartRate ? getHeartRateColor(heartRate, 180) : trailStyle.trailColor },
-            geometry: {
-              type: 'LineString',
-              coordinates: [completedCoordinates[index], completedCoordinates[index + 1]],
-            },
-          });
-        }
-
-        paintCompletedTrail({
-          type: 'FeatureCollection',
-          features,
-        });
-      } else if (trailStyle.colorMode === 'zones') {
-        // Keep the completed line to the marker's exact fractional coordinate.
-        // `completedCoordinates` includes the next whole point followed by the
-        // interpolated marker position, so deriving an index from its length
-        // would draw the line ahead of the marker between GPS samples.
-        const activeSegment = currentSegment?.segment;
-        const localProgress = currentSegment?.localProgress;
-        const completedBaseIndex = activeSegment && localProgress !== undefined
-          ? activeSegment.startCoordIndex + (
-              Math.max(0, Math.min(1, localProgress))
-              * (activeSegment.endCoordIndex - activeSegment.startCoordIndex)
-            )
-          : playbackProgress * Math.max(0, allCoordinates.length - 1);
-        const zoneFeatures = buildColorZoneLineFeatures({
-          coordinates: allCoordinates,
-          colorZones: trailStyle.colorZones,
-          fallbackColor: trailStyle.trailColor,
-          maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
-        });
-
-        paintCompletedTrail({
-          type: 'FeatureCollection',
-          features: zoneFeatures,
-        });
-      } else {
-        const completedBaseIndex = Math.max(0, Math.min(allCoordinates.length - 1, completedCoordinates.length - 2));
-        const coloredFeatures = buildSegmentLineFeatures({
-          coordinates: allCoordinates,
-          segmentTimings,
-          fallbackColor: trailStyle.trailColor,
-          maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
-          partialSegmentIndex: currentSegment?.segment.segmentIndex ?? null,
-        });
-
-        paintCompletedTrail(
-          coloredFeatures.length > 0
-            ? {
-                type: 'FeatureCollection',
-                features: coloredFeatures,
-              }
-            : {
-                type: 'Feature',
-                properties: {},
-                geometry: { type: 'LineString', coordinates: completedCoordinates },
-              }
         );
       }
     }
@@ -436,10 +477,10 @@ export function useTrailPlaybackCamera({
       const cinematicHeadingDeg = cameraMode === 'cinematic'
         ? getSmoothedRouteHeadingDeg({
             coordinates: cameraCoordinates,
-            progress: playbackProgress,
+            progress: displayedProgress,
             smoothingHalfWindow: anchorSmoothingHalfWindow,
             baselineHalfWidth: cinematicHeadingBaselineHalfWidth(anchorSmoothingHalfWindow),
-          }) ?? getRouteBearingAtProgress(cameraCoordinates, playbackProgress)
+          }) ?? getRouteBearingAtProgress(cameraCoordinates, displayedProgress)
         : 0;
 
       // Cinematic mode has no procedural input to derive a pose from: it
@@ -462,7 +503,7 @@ export function useTrailPlaybackCamera({
           coordinates: cameraCoordinates,
           elevationData,
           followBehindZoomLevel,
-          progress: playbackProgress,
+          progress: displayedProgress,
         });
         return followBehindPose && { ...followBehindPose, bearing: cinematicHeadingDeg };
       };
@@ -471,7 +512,7 @@ export function useTrailPlaybackCamera({
         ? getCinematicCameraPose({
             keyframes: cinematicKeyframes ?? [],
             coordinates: cameraCoordinates,
-            progress: playbackProgress,
+            progress: displayedProgress,
             routeHeadingDeg: cinematicHeadingDeg,
           }) ?? cinematicFallbackPose()
         : getPlaybackCameraPose({
@@ -479,7 +520,7 @@ export function useTrailPlaybackCamera({
             coordinates: cameraCoordinates,
             elevationData,
             followBehindZoomLevel,
-            progress: playbackProgress,
+            progress: displayedProgress,
           });
       if (!targetPose) return;
 
@@ -509,9 +550,9 @@ export function useTrailPlaybackCamera({
       // actually takes to render and encode, so the real elapsed time between
       // calls doesn't reflect the export fps at all.
       const deltaMs = lastCameraFrameTimeRef.current !== null
-        ? currentTimeMs - lastCameraFrameTimeRef.current
+        ? displayedTimeMs - lastCameraFrameTimeRef.current
         : null;
-      lastCameraFrameTimeRef.current = currentTimeMs;
+      lastCameraFrameTimeRef.current = displayedTimeMs;
       const frameTimeMultiplier = deltaMs !== null ? frameTimeMultiplierFromDeltaMs(deltaMs) : 1;
 
       targetBearingRef.current = targetPose.bearing;
@@ -549,7 +590,7 @@ export function useTrailPlaybackCamera({
       // every animation frame (see smoothCoordinate's doc comment for why that
       // can't be used directly during export). Compute it by hand here so both
       // paths land on the same rendered position.
-      const targetCenter: [number, number] = [currentPosition.lon, currentPosition.lat];
+      const targetCenter: [number, number] = [displayedPosition.lon, displayedPosition.lat];
       const centerChaseDuration = cameraCenterChaseDurationFromStability(cameraStability);
       const chasedCenter = smoothedCenterRef.current === null || deltaMs === null
         ? targetCenter
@@ -570,7 +611,7 @@ export function useTrailPlaybackCamera({
       const smoothedCenter = cameraMode === 'cinematic'
         ? getSmoothedCameraAnchor({
             coordinates: cameraCoordinates,
-            progress: playbackProgress,
+            progress: displayedProgress,
             smoothingHalfWindow: anchorSmoothingHalfWindow,
             markerPosition: targetCenter,
             zoom: targetPose.zoom,
@@ -600,7 +641,7 @@ export function useTrailPlaybackCamera({
       // window is read every frame but the route only has a sample every sixth
       // one, so rounding here would slide it a whole sample at a time and step
       // the averaged height ten times a second.
-      const sampleBaseIndex = Math.max(0, Math.min(1, playbackProgress))
+      const sampleBaseIndex = Math.max(0, Math.min(1, displayedProgress))
         * Math.max(0, cameraCoordinates.length - 1);
       let elevationSum = 0;
       let elevationSamples = 0;
@@ -708,6 +749,7 @@ export function useTrailPlaybackCamera({
     isMapLoaded,
     mapRef,
     markerRef,
+    paintedPlaybackFrame,
     playbackProgress,
     segmentTimings,
     setCameraPosition,
