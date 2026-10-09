@@ -21,6 +21,7 @@ import { sideAnnotationContent } from '@/components/annotations/sideAnnotationCo
 import { annotationSymbolLabel, annotationSymbolPath, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
 import { sidePanelShadeStyle } from '@/components/annotations/sidePanelShade';
+import { getSideAnnotationTypography } from '@/components/annotations/sideAnnotationTypography';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
@@ -481,6 +482,9 @@ function App() {
     annotation.id === activeTextAnnotationId && annotation.presentation === 'side-panel');
   const localizedSideAnnotation = activeSideAnnotation ? localizedAnnotation(activeSideAnnotation, language) : null;
   const sideAnnotationCopy = localizedSideAnnotation ? sideAnnotationContent(localizedSideAnnotation) : null;
+  const sideAnnotationTypography = getSideAnnotationTypography(
+    activeExportCropMetrics ? exportAspectRatio : isNarrowScreen ? '9:16' : undefined,
+  );
   const sideAnnotationNarrowFrame = activeExportCropMetrics
     ? isNarrowFrame(activeExportCropMetrics.frameWidth, activeExportCropMetrics.frameHeight)
     : false;
@@ -490,8 +494,20 @@ function App() {
   // Subscribing re-renders the panel once a Pinhead library icon has loaded.
   usePinheadIcons(needsPinheadIcons([activeSideAnnotation?.logo]));
   const sideAnnotationSymbolPath = activeSideAnnotation ? annotationSymbolPath(activeSideAnnotation.logo) : null;
-  const sideAnnotationStyle: (CSSProperties & { '--annotation-accent'?: string }) | undefined = activeSideAnnotation ? {
+  const sideAnnotationStyle: (CSSProperties & {
+    '--annotation-accent'?: string;
+    '--annotation-eyebrow-size'?: string;
+    '--annotation-code-size'?: string;
+    '--annotation-title-size'?: string;
+    '--annotation-meta-size'?: string;
+    '--annotation-details-size'?: string;
+  }) | undefined = activeSideAnnotation ? {
     '--annotation-accent': activeSideAnnotation.color,
+    '--annotation-eyebrow-size': `${sideAnnotationTypography.eyebrowSize}px`,
+    '--annotation-code-size': `${sideAnnotationTypography.codeSize}px`,
+    '--annotation-title-size': `${sideAnnotationTypography.titleSize}px`,
+    '--annotation-meta-size': `${sideAnnotationTypography.metaSize}px`,
+    '--annotation-details-size': `${sideAnnotationTypography.detailsSize}px`,
     ...sidePanelShadeStyle,
     bottom: (activeExportCropMetrics?.bottom ?? 0) + sideAnnotationBottom,
     ...(activeExportCropMetrics && sideAnnotationNarrowFrame
