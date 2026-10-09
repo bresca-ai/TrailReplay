@@ -31,7 +31,7 @@
     "exifreader": "^4.38.0",
     "fflate": "^0.8.3",
     "fix-webm-duration": "^1.0.6",
-    "heic-to": "^1.5.2",
+    "heic-to": "^1.6.5",
     "immer": "^11.1.21",
     "lucide-react": "^0.562.0",
     "maplibre-gl": "^6.12.0",
