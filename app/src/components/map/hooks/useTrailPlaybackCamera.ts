@@ -113,6 +113,13 @@ interface UseTrailPlaybackCameraParams {
   };
 }
 
+export const PLAYBACK_MARKER_OPTIONS = {
+  anchor: 'center',
+  // The terrain-draped WebGL trail renders at subpixel precision. Preserve
+  // that precision for the DOM marker too, especially in close 3D views.
+  subpixelPositioning: true,
+} as const;
+
 export function resolvePlaybackMarkerColor(
   configuredMarkerColor: string,
   activeTrackColor: string | null | undefined,
@@ -268,7 +275,7 @@ export function useTrailPlaybackCamera({
               }
             : null,
         );
-        markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
+        markerRef.current = new maplibregl.Marker({ element, ...PLAYBACK_MARKER_OPTIONS })
           .setLngLat([currentPosition.lon, currentPosition.lat])
           .addTo(mapRef.current);
       } else {
