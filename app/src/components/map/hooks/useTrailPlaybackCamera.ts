@@ -113,6 +113,13 @@ interface UseTrailPlaybackCameraParams {
   };
 }
 
+export const PLAYBACK_MARKER_OPTIONS = {
+  anchor: 'center',
+  // The trail is rendered at subpixel precision. Avoid snapping its DOM
+  // marker back and forth between adjacent whole pixels during playback.
+  subpixelPositioning: true,
+} as const;
+
 export function resolvePlaybackMarkerColor(
   configuredMarkerColor: string,
   activeTrackColor: string | null | undefined,
@@ -268,7 +275,7 @@ export function useTrailPlaybackCamera({
               }
             : null,
         );
-        markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
+        markerRef.current = new maplibregl.Marker({ element, ...PLAYBACK_MARKER_OPTIONS })
           .setLngLat([currentPosition.lon, currentPosition.lat])
           .addTo(mapRef.current);
       } else {
