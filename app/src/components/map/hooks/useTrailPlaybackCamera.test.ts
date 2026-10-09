@@ -1,19 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   lastPaintedCoordinate,
-  PLAYBACK_MARKER_OPTIONS,
   resolvePlaybackMarkerColor,
   updatePlaybackMarkerElement,
 } from './useTrailPlaybackCamera';
 
 describe('playback marker presentation', () => {
-  it('keeps the projected marker at subpixel precision in 3D views', () => {
-    expect(PLAYBACK_MARKER_OPTIONS).toEqual({
-      anchor: 'center',
-      subpixelPositioning: true,
-    });
-  });
-
   it('uses each journey track color while the marker color remains linked to the active track', () => {
     expect(resolvePlaybackMarkerColor('#C1652F', '#c1652f', '#3B82F6')).toBe('#3B82F6');
     expect(resolvePlaybackMarkerColor('#111111', '#C1652F', '#3B82F6')).toBe('#111111');

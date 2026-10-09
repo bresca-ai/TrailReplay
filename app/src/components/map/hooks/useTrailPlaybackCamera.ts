@@ -131,14 +131,6 @@ interface PaintedPlaybackFrame {
   timeMs: number;
 }
 
-export const PLAYBACK_MARKER_OPTIONS = {
-  anchor: 'center',
-  // The terrain-draped WebGL trail renders at subpixel precision. Keeping the
-  // DOM marker at the same precision prevents one-pixel rounding oscillation
-  // while the synchronized camera advances between terrain samples.
-  subpixelPositioning: true,
-} as const;
-
 export function lastPaintedCoordinate(data: CompletedTrailData): [number, number] | null {
   const features = data.type === 'FeatureCollection' ? data.features : [data];
 
@@ -450,7 +442,7 @@ export function useTrailPlaybackCamera({
               }
             : null,
         );
-        markerRef.current = new maplibregl.Marker({ element, ...PLAYBACK_MARKER_OPTIONS })
+        markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
           .setLngLat([displayedPosition.lon, displayedPosition.lat])
           .addTo(mapRef.current);
       } else {
