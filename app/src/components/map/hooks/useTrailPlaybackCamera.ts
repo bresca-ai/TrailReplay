@@ -268,7 +268,17 @@ export function useTrailPlaybackCamera({
               }
             : null,
         );
-        markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
+        markerRef.current = new maplibregl.Marker({
+          element,
+          anchor: 'center',
+          // The WebGL trail is positioned at subpixel precision. Rounding this
+          // DOM overlay to whole pixels makes it visibly step off the trail in
+          // close, pitched 3D views even when both share the same coordinate.
+          subpixelPositioning: true,
+          // A marker behind a ridge should disappear with the terrain instead
+          // of showing faintly through it and looking detached from the route.
+          opacityWhenCovered: 0,
+        })
           .setLngLat([currentPosition.lon, currentPosition.lat])
           .addTo(mapRef.current);
       } else {
@@ -311,10 +321,8 @@ export function useTrailPlaybackCamera({
           features,
         });
       } else if (trailStyle.colorMode === 'zones') {
-        // Keep the completed line to the marker's exact fractional coordinate.
-        // `completedCoordinates` includes the next whole point followed by the
-        // interpolated marker position, so deriving an index from its length
-        // would draw the line ahead of the marker between GPS samples.
+        // Keep the completed line on the same exact fractional coordinate as
+        // the marker instead of snapping its color boundary to a GPS sample.
         const activeSegment = currentSegment?.segment;
         const localProgress = currentSegment?.localProgress;
         const completedBaseIndex = activeSegment && localProgress !== undefined
@@ -336,7 +344,14 @@ export function useTrailPlaybackCamera({
           features: zoneFeatures,
         });
       } else {
-        const completedBaseIndex = Math.max(0, Math.min(allCoordinates.length - 1, completedCoordinates.length - 2));
+        const activeSegment = currentSegment?.segment;
+        const localProgress = currentSegment?.localProgress;
+        const completedBaseIndex = activeSegment && localProgress !== undefined
+          ? activeSegment.startCoordIndex + (
+              Math.max(0, Math.min(1, localProgress))
+              * (activeSegment.endCoordIndex - activeSegment.startCoordIndex)
+            )
+          : Math.max(0, Math.min(allCoordinates.length - 1, completedCoordinates.length - 1));
         const coloredFeatures = buildSegmentLineFeatures({
           coordinates: allCoordinates,
           segmentTimings,
