@@ -30,6 +30,20 @@ const sampleKml = `<?xml version="1.0" encoding="UTF-8"?>
   </Placemark>
 </kml>`;
 
+const sampleGxKml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+  <Placemark>
+    <name>Timed KML</name>
+    <gx:Track>
+      <when>2026-01-01T10:00:00Z</when><gx:coord>1 42 100</gx:coord>
+      <when>2026-01-01T10:01:00Z</when><gx:coord>1.001 42.001 120</gx:coord>
+      <ExtendedData><SchemaData>
+        <gx:SimpleArrayData name="heart_rate"><gx:value>140</gx:value><gx:value>145</gx:value></gx:SimpleArrayData>
+      </SchemaData></ExtendedData>
+    </gx:Track>
+  </Placemark>
+</kml>`;
+
 describe('gpxParser', () => {
   it('parses GPX tracks into computed track stats', () => {
     const track = parseGPX(sampleGpx, 'sample.gpx');
@@ -48,6 +62,14 @@ describe('gpxParser', () => {
     expect(track.points).toHaveLength(2);
     expect(track.totalDistance).toBeGreaterThan(0);
     expect(track.elevationGain).toBe(15);
+  });
+
+  it('preserves timestamps and sensors from KML gx:Track files', () => {
+    const track = parseKML(sampleGxKml, 'timed.kml');
+
+    expect(track.name).toBe('Timed KML');
+    expect(track.totalTime).toBe(60);
+    expect(track.points.map((point) => point.heartRate)).toEqual([140, 145]);
   });
 
   it('interpolates a point by distance along a track', () => {
