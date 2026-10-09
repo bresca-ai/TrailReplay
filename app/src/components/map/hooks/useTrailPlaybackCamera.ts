@@ -7,10 +7,10 @@ import { getActivityIconMarkerHtml, isSvgActivityIcon } from '@/utils/activityIc
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
-import type { OverlayFont, OverlayTextCase, TrailColorZone } from '@/types';
+import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
-import { applyOverlayTextCase, overlayFontFamily } from '@/utils/typography';
+import { overlayFontFamily } from '@/utils/typography';
 import {
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
@@ -106,7 +106,6 @@ interface UseTrailPlaybackCameraParams {
     markerSize: number;
     markerType: 'icon' | 'dot';
     overlayFont: OverlayFont;
-    overlayTextCase: OverlayTextCase;
     showCircle: boolean;
     showMarker: boolean;
     showTrackLabels: boolean;
@@ -265,7 +264,7 @@ export function useTrailPlaybackCamera({
             ? {
                 color: currentColor,
                 fontFamily: overlayFontFamily(trailStyle.overlayFont),
-                text: applyOverlayTextCase(currentTrackName, trailStyle.overlayTextCase),
+                text: currentTrackName,
               }
             : null,
         );
@@ -281,7 +280,7 @@ export function useTrailPlaybackCamera({
             ? {
                 color: currentColor,
                 fontFamily: overlayFontFamily(trailStyle.overlayFont),
-                text: applyOverlayTextCase(currentTrackName, trailStyle.overlayTextCase),
+                text: currentTrackName,
               }
             : null,
         );

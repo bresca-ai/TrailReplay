@@ -1,7 +1,7 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 import type { FeatureCollection, Point } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
-import type { LanguageCode, OverlayFont, OverlayTextCase, TextAnnotation, UnitSystem } from '@/types';
+import type { LanguageCode, OverlayFont, TextAnnotation, UnitSystem } from '@/types';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { convertElevation } from '@/utils/units';
 import { drawAnnotationSymbol, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
@@ -12,7 +12,7 @@ import {
   wrapText,
   type CardLayout,
 } from '@/components/map/annotationCardText';
-import { applyOverlayTextCase, overlayCanvasFontFamily } from '@/utils/typography';
+import { overlayCanvasFontFamily } from '@/utils/typography';
 
 const SOURCE_ID = 'route-annotations';
 const ACTIVE_SOURCE_ID = 'route-annotations-active';
@@ -110,8 +110,6 @@ function createAnnotationCardImage(
   unitSystem: UnitSystem,
   layout: CardLayout,
   overlayFont: OverlayFont,
-  overlayTextCase: OverlayTextCase,
-  language: LanguageCode,
 ) {
   const measure = document.createElement('canvas').getContext('2d');
   if (!measure) return null;
@@ -120,11 +118,11 @@ function createAnnotationCardImage(
   const titleFont = `800 ${layout.titleSize}px ${family}`;
   const detailFont = `700 ${layout.detailSize}px ${family}`;
 
-  const title = applyOverlayTextCase(annotation.title.trim() || 'Annotation', overlayTextCase, language);
-  const detail = applyOverlayTextCase(annotation.subtitle?.trim()
+  const title = annotation.title.trim() || 'Annotation';
+  const detail = annotation.subtitle?.trim()
     || (annotation.elevation !== undefined
       ? `${Math.round(convertElevation(annotation.elevation, unitSystem)).toLocaleString()} ${unitSystem === 'metric' ? 'm' : 'ft'}`
-      : `${Math.round(annotation.progress * 100)}%`), overlayTextCase, language);
+      : `${Math.round(annotation.progress * 100)}%`);
 
   measure.font = titleFont;
   const titleWidth = measure.measureText(title).width;
@@ -251,7 +249,6 @@ interface UseTextAnnotationsLayerParams {
   unitSystem: UnitSystem;
   language: LanguageCode;
   overlayFont: OverlayFont;
-  overlayTextCase: OverlayTextCase;
 }
 
 export function useTextAnnotationsLayer({
@@ -262,7 +259,6 @@ export function useTextAnnotationsLayer({
   unitSystem,
   language,
   overlayFont,
-  overlayTextCase,
 }: UseTextAnnotationsLayerParams) {
   // The card is sized for the map it sits on, so a resize has to redraw it.
   const [mapWidth, setMapWidth] = useState(0);
@@ -385,8 +381,6 @@ export function useTextAnnotationsLayer({
             unitSystem,
             layout,
             overlayFont,
-            overlayTextCase,
-            language,
           );
       if (imageData) {
         // Cards are sized to their text, so consecutive ones differ. updateImage
@@ -415,7 +409,6 @@ export function useTextAnnotationsLayer({
     mapRef,
     mapWidth,
     overlayFont,
-    overlayTextCase,
     pinheadIcons,
     unitSystem,
     language,

@@ -312,48 +312,27 @@ export function AnnotationsPanel() {
         <p className="text-xs leading-4 text-[var(--evergreen-60)]">
           {t('annotations.typographyHint')}
         </p>
-        <div className="grid grid-cols-3 gap-2">
-          {OVERLAY_FONT_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => {
-                setTrailStyle({ overlayFont: option.id });
-                trackEvent('settings_changed', { setting_name: 'overlay_font', setting_value: option.id });
-              }}
-              className={`rounded-lg border px-2 py-2 text-center transition-colors ${
-                trailStyle.overlayFont === option.id
-                  ? 'border-[var(--evergreen)] bg-[var(--evergreen)]/10 text-[var(--evergreen)]'
-                  : 'border-[var(--evergreen)]/20 text-[var(--evergreen-60)] hover:border-[var(--evergreen)]/40'
-              }`}
-            >
-              <span className="block text-xl leading-none" style={{ fontFamily: overlayFontFamily(option.id) }}>
-                {option.sample}
-              </span>
-              <span className="mt-1 block text-[10px] font-medium">{t(option.labelKey)}</span>
-            </button>
-          ))}
-        </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-[var(--evergreen-60)] uppercase tracking-wide">
-            {t('annotations.textCase')}
+          <Label htmlFor="overlay-font" className="text-xs text-[var(--evergreen-60)] uppercase tracking-wide">
+            {t('annotations.fontLabel')}
           </Label>
-          <div className="flex overflow-hidden rounded-lg border border-[var(--evergreen)]/20">
-            {(['original', 'uppercase'] as const).map((textCase) => (
-              <button
-                key={textCase}
-                type="button"
-                onClick={() => setTrailStyle({ overlayTextCase: textCase })}
-                className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
-                  trailStyle.overlayTextCase === textCase
-                    ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
-                    : 'text-[var(--evergreen-60)] hover:bg-[var(--evergreen)]/5 hover:text-[var(--evergreen)]'
-                }`}
-              >
-                {textCase === 'original' ? t('annotations.textCaseOriginal') : t('annotations.textCaseUppercase')}
-              </button>
+          <select
+            id="overlay-font"
+            value={trailStyle.overlayFont}
+            onChange={(event) => {
+              const overlayFont = event.target.value as typeof trailStyle.overlayFont;
+              setTrailStyle({ overlayFont });
+              trackEvent('settings_changed', { setting_name: 'overlay_font', setting_value: overlayFont });
+            }}
+            className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none transition-colors focus:border-[var(--trail-orange)] focus:ring-2 focus:ring-[var(--trail-orange)]/20"
+            style={{ fontFamily: overlayFontFamily(trailStyle.overlayFont) }}
+          >
+            {OVERLAY_FONT_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id} style={{ fontFamily: overlayFontFamily(option.id) }}>
+                {t(option.labelKey)}
+              </option>
             ))}
-          </div>
+          </select>
         </div>
         <p className="text-[10px] leading-4 text-[var(--evergreen-60)]">
           {t('annotations.typographyOpenSource')}

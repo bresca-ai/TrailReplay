@@ -28,7 +28,7 @@ import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
 import { useI18n } from '@/i18n/useI18n';
-import { applyOverlayTextCase, overlayFontFamily } from '@/utils/typography';
+import { overlayFontFamily } from '@/utils/typography';
 
 const Sidebar = lazy(() => import('@/components/sidebar/Sidebar').then((module) => ({ default: module.Sidebar })));
 const InfoPanel = lazy(() => import('@/components/info/InfoPanel').then((module) => ({ default: module.InfoPanel })));
@@ -506,11 +506,6 @@ function App() {
           }
         : {}),
   } : undefined;
-  const styleOverlayText = (value: string) => applyOverlayTextCase(
-    value,
-    settings.trailStyle.overlayTextCase,
-    settings.language,
-  );
   const activePendingPicturePlacement = pendingPicturePlacements[0];
   
   const hasTracks = tracks.length > 0;
@@ -581,13 +576,13 @@ function App() {
                         : activeSideAnnotation.logo || '●'}
                     </div>
                     <div className="tr-annotation-side-panel__identity">
-                      <span className="tr-annotation-side-panel__eyebrow">{styleOverlayText(sideAnnotationCopy.eyebrow || t('annotations.sidePanelEyebrow'))}</span>
+                      <span className="tr-annotation-side-panel__eyebrow">{sideAnnotationCopy.eyebrow || t('annotations.sidePanelEyebrow')}</span>
                       {sideAnnotationCopy.code && <span className="tr-annotation-side-panel__code">{sideAnnotationCopy.code}</span>}
                     </div>
                     <span className="tr-annotation-side-panel__dash" aria-hidden="true" />
                   </div>
-                  <h2 className="tr-annotation-side-panel__title">{styleOverlayText(sideAnnotationCopy.title)}</h2>
-                  {sideAnnotationCopy.meta && <p className="tr-annotation-side-panel__meta">{styleOverlayText(sideAnnotationCopy.meta)}</p>}
+                  <h2 className="tr-annotation-side-panel__title">{sideAnnotationCopy.title}</h2>
+                  {sideAnnotationCopy.meta && <p className="tr-annotation-side-panel__meta">{sideAnnotationCopy.meta}</p>}
                   {sideAnnotationCopy.description && (
                     <div className="tr-annotation-side-panel__details">
                       <p>{sideAnnotationCopy.description}</p>

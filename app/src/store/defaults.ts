@@ -51,7 +51,6 @@ export function createDefaultSettings(): AppSettings {
       ghostTrailOpacity: 0.5,
       colorZones: [],
       overlayFont: 'technical',
-      overlayTextCase: 'original',
     },
     mapOverlays: { skiPistes: false, slopeOverlay: false, placeLabels: false, aspectOverlay: false },
     waybackRelease: null,

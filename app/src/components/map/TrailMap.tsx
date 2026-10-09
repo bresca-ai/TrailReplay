@@ -167,7 +167,6 @@ export function TrailMap(_props: TrailMapProps) {
     unitSystem: settings.unitSystem,
     language: settings.language,
     overlayFont: trailStyle.overlayFont,
-    overlayTextCase: trailStyle.overlayTextCase,
   });
 
   const handleSelectLandmark = useCallback((landmarkId: string) => {
@@ -317,7 +316,6 @@ export function TrailMap(_props: TrailMapProps) {
       markerSize: trailStyle.markerSize,
       markerType: trailStyle.markerType,
       overlayFont: trailStyle.overlayFont,
-      overlayTextCase: trailStyle.overlayTextCase,
       showCircle: trailStyle.showCircle,
       showMarker: trailStyle.showMarker,
       showTrackLabels: trailStyle.showTrackLabels,

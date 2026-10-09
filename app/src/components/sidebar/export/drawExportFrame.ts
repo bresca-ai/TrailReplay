@@ -8,7 +8,7 @@ import { sideAnnotationContent } from '@/components/annotations/sideAnnotationCo
 import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
 import { drawSidePanelShade } from '@/components/annotations/sidePanelShade';
 import type { VideoExportSettings } from '@/types';
-import { applyOverlayTextCase, overlayCanvasFontFamily } from '@/utils/typography';
+import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 
 function extractCssUrl(value: string): string | null {
@@ -154,11 +154,6 @@ export function drawExportFrame({
         const scale = recordW / cropW;
         const copy = sideAnnotationContent(localizedAnnotation(sideAnnotation, currentState.settings.language));
         const overlayFamily = overlayCanvasFontFamily(currentState.settings.trailStyle.overlayFont);
-        const styleText = (value: string) => applyOverlayTextCase(
-          value,
-          currentState.settings.trailStyle.overlayTextCase,
-          currentState.settings.language,
-        );
         const inset = 20 * scale;
         const contentX = x + inset;
         const maxWidth = w - inset * 2;
@@ -172,7 +167,7 @@ export function drawExportFrame({
         context.textAlign = 'left';
         context.font = `600 ${10 * scale}px ${overlayFamily}`;
         context.fillStyle = '#f8f6f0';
-        context.fillText(styleText(copy.eyebrow || t('annotations.sidePanelEyebrow')).toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
+        context.fillText((copy.eyebrow || t('annotations.sidePanelEyebrow')).toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
         if (copy.code) {
           context.font = `700 ${15 * scale}px ${overlayFamily}`;
           context.fillStyle = sideAnnotation.color;
@@ -205,10 +200,10 @@ export function drawExportFrame({
         };
 
         context.fillStyle = '#f8f8f1';
-        let nextY = drawWrapped(styleText(copy.title), `700 ${23 * scale}px ${overlayFamily}`, 29, y + 82 * scale, 3);
+        let nextY = drawWrapped(copy.title, `700 ${23 * scale}px ${overlayFamily}`, 29, y + 82 * scale, 3);
         if (copy.meta) {
           context.fillStyle = sideAnnotation.color;
-          nextY = drawWrapped(styleText(copy.meta), `600 ${12 * scale}px ${overlayFamily}`, 17, nextY + 4 * scale, 2);
+          nextY = drawWrapped(copy.meta, `600 ${12 * scale}px ${overlayFamily}`, 17, nextY + 4 * scale, 2);
         }
         if (copy.description) {
           const dividerY = nextY + 8 * scale;
