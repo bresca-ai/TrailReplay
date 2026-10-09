@@ -95,7 +95,6 @@ export function TrailMap(_props: TrailMapProps) {
     currentPosition,
     currentIcon,
     currentSegment,
-    completedCoordinates,
     allCoordinates,
     cameraPathCoordinates,
     isInTransport,
@@ -105,6 +104,7 @@ export function TrailMap(_props: TrailMapProps) {
     activeTrack,
     computedJourney,
     totalDistance,
+    routeProgress,
   } = useComputedJourney();
 
   // Derive the current track name for the label
@@ -286,8 +286,6 @@ export function TrailMap(_props: TrailMapProps) {
     cameraMode,
     cameraStability: cameraSettings.cameraStability,
     cinematicKeyframes,
-    completedCoordinates,
-    computedJourney,
     currentIcon,
     currentTimeMs: playback.currentTime,
     currentPosition,
@@ -303,7 +301,7 @@ export function TrailMap(_props: TrailMapProps) {
     mapRef: map,
     markerRef,
     playbackProgress: playback.progress,
-    segmentTimings,
+    routeProgress,
     setCameraPosition,
     smoothBearingRef,
     targetBearingRef,

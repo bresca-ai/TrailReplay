@@ -11,6 +11,7 @@ export function setupTrackSources(map: maplibregl.Map, trailColor: string) {
   if (!map.getSource('trail-completed')) {
     map.addSource('trail-completed', {
       type: 'geojson',
+      lineMetrics: true,
       data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
     });
   }

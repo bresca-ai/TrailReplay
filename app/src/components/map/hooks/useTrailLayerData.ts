@@ -3,6 +3,7 @@ import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures, buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
+import { buildPlaybackTrailGradient } from '@/utils/playbackTrailGradient';
 import type { TrailColorZone } from '@/types';
 
 const INITIAL_FIT_BOUNDS_DELAY_MS = 100;
@@ -195,6 +196,31 @@ export function useTrailLayerData({
         properties: {},
         geometry: { type: 'MultiLineString', coordinates: transportCoordinates },
       });
+    }
+
+    // MapLibre 6.12+ intentionally coalesces rapid GeoJSON source updates.
+    // Keep the completed route static and reveal it through a render-time
+    // gradient instead, so playback cannot skip or batch visible sections.
+    if (allCoordinates.length > 1 && mapRef.current.getSource('trail-completed')) {
+      (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData({
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: allCoordinates },
+      });
+      if (mapRef.current.getLayer('trail-completed')) {
+        mapRef.current.setPaintProperty(
+          'trail-completed',
+          'line-gradient',
+          buildPlaybackTrailGradient({
+            coordinates: allCoordinates,
+            colorMode,
+            colorZones,
+            fallbackColor: trailColor,
+            heartRatePoints,
+            segmentTimings: segmentData,
+          }),
+        );
+      }
     }
 
     return () => {
