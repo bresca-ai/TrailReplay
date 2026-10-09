@@ -8,6 +8,7 @@ type UiSlice = Pick<
   | 'exploreMode'
   | 'activePanel'
   | 'isLoading'
+  | 'fileImportStatus'
   | 'error'
   | 'recipeReport'
   | 'sourceRecipe'
@@ -15,6 +16,7 @@ type UiSlice = Pick<
   | 'setExploreMode'
   | 'setActivePanel'
   | 'setLoading'
+  | 'setFileImportStatus'
   | 'setError'
   | 'setRecipeReport'
   | 'setSourceRecipe'
@@ -25,6 +27,7 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   exploreMode: false,
   activePanel: 'tracks',
   isLoading: false,
+  fileImportStatus: null,
   error: null,
   recipeReport: null,
   sourceRecipe: null,
@@ -60,6 +63,11 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   setLoading: (isLoading) =>
     set((state) => {
       state.isLoading = isLoading;
+    }),
+
+  setFileImportStatus: (status) =>
+    set((state) => {
+      state.fileImportStatus = status;
     }),
 
   setError: (error) =>

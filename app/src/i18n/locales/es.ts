@@ -63,6 +63,13 @@ export const es = {
       tooLarge: 'Este archivo de proyecto es demasiado grande para abrirlo.',
     },
   },
+  fileImport: {
+    openingProject: 'Abriendo la reproducción…',
+    applyingRecipe: 'Creando la reproducción…',
+    loadingRoutes: 'Cargando rutas…',
+    fileCount: '{count} archivos',
+    keepOpen: 'Los archivos grandes pueden tardar un poco. Mantén esta pestaña abierta.',
+  },
   tracks: {
     dropTitle: 'Arrastra y suelta archivos GPX, KML o FIT',
     dropActive: 'Suelta los archivos GPX/KML/FIT aquí',

@@ -63,6 +63,13 @@ export const ca = {
       tooLarge: 'Aquest fitxer de projecte és massa gran per obrir-lo.',
     },
   },
+  fileImport: {
+    openingProject: 'Obrint la reproducció…',
+    applyingRecipe: 'Creant la reproducció…',
+    loadingRoutes: 'Carregant rutes…',
+    fileCount: '{count} fitxers',
+    keepOpen: 'Els fitxers grans poden trigar una mica. Mantén aquesta pestanya oberta.',
+  },
   tracks: {
     dropTitle: 'Arrossega i deixa fitxers GPX, KML o FIT',
     dropActive: 'Deixa els fitxers GPX/KML/FIT aquí',

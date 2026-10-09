@@ -8,7 +8,7 @@ import { hydrateProject } from '@/utils/projectFile/hydrateProject';
 import { hasUnsavedProjectContent } from '@/utils/projectFile/hasUnsavedWork';
 import { downloadReplayArchive, type SaveProjectSource } from '@/utils/projectFile/downloadReplayArchive';
 import { ReplayArchiveError, type ReplayArchiveErrorCode } from '@/utils/projectFile/validation';
-import { parseGPX } from '@/utils/gpxParser';
+import { parseRouteFiles } from '@/utils/gpxParser';
 import { resolveRecipe } from '@/utils/recipe/resolveRecipe';
 import { applyRecipe } from '@/utils/recipe/applyRecipe';
 import { RecipeError } from '@/utils/recipe/types';
@@ -30,7 +30,9 @@ export function useProjectFile() {
   const { t } = useI18n();
   const setError = useAppStore((state) => state.setError);
   const [isSaving, setIsSaving] = useState(false);
-  const [isOpening, setIsOpening] = useState(false);
+  const fileImportStatus = useAppStore((state) => state.fileImportStatus);
+  const setFileImportStatus = useAppStore((state) => state.setFileImportStatus);
+  const isOpening = fileImportStatus?.kind === 'project';
 
   const saveProject = useCallback(async (source: SaveProjectSource) => {
     setIsSaving(true);
@@ -51,7 +53,7 @@ export function useProjectFile() {
       return;
     }
 
-    setIsOpening(true);
+    setFileImportStatus({ kind: 'project', fileName: file.name, fileCount: 1 });
     trackEvent('project_open_started', {});
     try {
       const parsed = await parseReplayArchive(file);
@@ -63,11 +65,16 @@ export function useProjectFile() {
         // A recipe and its routes, with nothing resolved: the same work as
         // dropping the folder, so it goes through the same resolver rather than
         // a second implementation of it.
-        const tracks = parsed.routes.map((route) => parseGPX(route.gpxText, route.fileName));
+        const parsedRoutes = await parseRouteFiles(parsed.routes.map((route) =>
+          new File([route.gpxText], route.fileName, { type: 'application/gpx+xml' })
+        ));
+        if (parsedRoutes.length !== parsed.routes.length) {
+          throw new ReplayArchiveError('corrupt', 'One or more archived routes could not be parsed');
+        }
         const resolved = resolveRecipe(
           parsed.recipe,
-          tracks,
-          parsed.routes.map((route) => route.fileName),
+          parsedRoutes.map((route) => route.track),
+          parsedRoutes.map((route) => route.fileName),
         );
         applyRecipe(parsed.recipe, resolved, useAppStore.getState());
         useAppStore.getState().setRecipeReport(resolved.report);
@@ -96,9 +103,9 @@ export function useProjectFile() {
       });
       setError(t(key));
     } finally {
-      setIsOpening(false);
+      setFileImportStatus(null);
     }
-  }, [setError, t]);
+  }, [setError, setFileImportStatus, t]);
 
   return { saveProject, openProjectFile, isSaving, isOpening };
 }

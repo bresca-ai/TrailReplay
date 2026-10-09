@@ -132,6 +132,7 @@ export function TracksPanel() {
       'application/json': ['.json'],
     },
     multiple: true,
+    disabled: isParsing,
   });
 
   const handleReorder = (fromIndex: number, toIndex: number) => {
@@ -160,14 +161,6 @@ export function TracksPanel() {
           {t('tracks.dropHint')}
         </p>
       </div>
-      {/* Loading */}
-      {isParsing && (
-        <div className="flex items-center justify-center gap-2 py-4">
-          <div className="w-5 h-5 border-2 border-[var(--trail-orange)] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-[var(--evergreen)]">{t('tracks.parsing')}</span>
-        </div>
-      )}
-      
       {/* Track List */}
       <RecipeReportCard />
 
