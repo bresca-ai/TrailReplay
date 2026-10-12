@@ -22,9 +22,9 @@ export function useAllRouteLandmarks(): RouteLandmark[] {
   const nearbyPlaceTypes = useAppStore((state) => state.nearbyPlaceTypes);
   const { computedJourney, activeTrack } = useComputedJourney();
 
-  const automatic = useMemo(() => analyzeRouteLandmarks(
-    computedJourney?.coordinates ?? activeTrack?.points ?? [],
-  ), [activeTrack?.points, computedJourney?.coordinates]);
+  const automatic = useMemo(() => showAutomaticLandmarks
+    ? analyzeRouteLandmarks(computedJourney?.coordinates ?? activeTrack?.points ?? [])
+    : [], [activeTrack?.points, computedJourney?.coordinates, showAutomaticLandmarks]);
 
   return useMemo(() => {
     const hidden = new Set(hiddenLandmarkIds);

@@ -6,8 +6,20 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     groups:
+      react-packages:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
       development-dependencies:
         dependency-type: development
+        exclude-patterns:
+          - "typescript"
+    ignore:
+      - dependency-name: "typescript"
+        versions:
+          - ">=7.0.0"
   - package-ecosystem: github-actions
     directory: /
     schedule:

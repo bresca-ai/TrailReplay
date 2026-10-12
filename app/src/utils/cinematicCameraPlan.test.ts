@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { SegmentTiming } from '@/utils/journeyUtils';
 import { getRouteBearingAtProgress } from '@/utils/replayCameraPlan';
 import {
+  CINEMATIC_ZOOM_MAX,
+  CINEMATIC_ZOOM_MIN,
   deriveCinematicKeyframeProgress,
   getCinematicCameraPose,
   prepareCinematicKeyframeTrack,
@@ -112,6 +114,45 @@ describe('prepareCinematicKeyframeTrack', () => {
 });
 
 describe('getCinematicCameraPose', () => {
+  it('supports continent-scale zoom keyframes and clamps invalid saved values', () => {
+    const wide = preparedTrack(
+      [keyframe({ id: 'wide', zoom: 2.5 })],
+      straightRoute,
+      [0.5],
+    );
+
+    expect(getCinematicCameraPose({
+      keyframes: wide,
+      coordinates: straightRoute,
+      progress: 0.5,
+      routeHeadingDeg: null,
+    })?.zoom).toBe(2.5);
+
+    const belowRange = preparedTrack(
+      [keyframe({ id: 'below', zoom: CINEMATIC_ZOOM_MIN - 1 })],
+      straightRoute,
+      [0.5],
+    );
+    const aboveRange = preparedTrack(
+      [keyframe({ id: 'above', zoom: CINEMATIC_ZOOM_MAX + 1 })],
+      straightRoute,
+      [0.5],
+    );
+
+    expect(getCinematicCameraPose({
+      keyframes: belowRange,
+      coordinates: straightRoute,
+      progress: 0.5,
+      routeHeadingDeg: null,
+    })?.zoom).toBe(CINEMATIC_ZOOM_MIN);
+    expect(getCinematicCameraPose({
+      keyframes: aboveRange,
+      coordinates: straightRoute,
+      progress: 0.5,
+      routeHeadingDeg: null,
+    })?.zoom).toBe(CINEMATIC_ZOOM_MAX);
+  });
+
   it('returns null with no keyframes, so the caller can fall back to follow-behind', () => {
     expect(getCinematicCameraPose({
       keyframes: [],

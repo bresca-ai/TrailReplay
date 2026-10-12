@@ -81,6 +81,29 @@ describe('createAppStore', () => {
     );
   });
 
+  it('publishes a multi-file import to subscribers once', () => {
+    const useStore = createAppStore();
+    let publications = 0;
+    const unsubscribe = useStore.subscribe(() => {
+      publications += 1;
+    });
+
+    useStore.getState().addImportedTracks([
+      createTrack({ id: 'track-1' }),
+      createTrack({ id: 'track-2' }),
+      createTrack({ id: 'track-3' }),
+    ], []);
+
+    unsubscribe();
+    expect(publications).toBe(1);
+    expect(useStore.getState().tracks.map((track) => track.id)).toEqual([
+      'track-1',
+      'track-2',
+      'track-3',
+    ]);
+    expect(useStore.getState().journeySegments).toHaveLength(3);
+  });
+
   it('keeps the default follow-behind preset at medium for long tracks', () => {
     const useStore = createAppStore();
     const longTrack = createTrack({

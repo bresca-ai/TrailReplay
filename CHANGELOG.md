@@ -2,6 +2,22 @@
 
 All notable user-facing changes are recorded here. TrailReplay follows [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-10-06
+
+### Added
+
+- Cinematic camera keyframes now support MapLibre's full zoom range, enabling continent-scale overview shots and smooth transitions into close route details.
+- The cinematic camera editor shows the current zoom value while composing a shot.
+
+### Improved
+
+- German translations use consistent informal language and correct activity terminology, including heart-rate labels.
+- React, Zustand, Radix Slider, Tailwind Merge, and the development toolchain have been updated to compatible current versions.
+
+### Security
+
+- Updated `source-map-js` and `brace-expansion` to patched versions.
+
 ## [1.1.0] - 2026-09-27
 
 ### Added
@@ -62,6 +78,7 @@ Version 1.0.1 was prepared but never published as a release; its changes ship he
 
 - TrailReplay remains available under its existing attribution license. Apps using the software must display the attribution described in `LICENSE`.
 
+[1.2.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.2.0
 [1.1.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.1.0
 [1.0.2]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.2
 [1.0.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.0

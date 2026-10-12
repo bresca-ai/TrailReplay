@@ -574,6 +574,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
+      await document.fonts.ready;
       // Field-note symbols from the Pinhead library are drawn into every frame;
       // without the library they would export as the fallback pin.
       const fieldNoteSymbols = useAppStore.getState().textAnnotations

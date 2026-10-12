@@ -5,6 +5,7 @@ import { parseKmlDocument } from '@/utils/gpx/parseKmlDocument';
 import { buildTrackFromRawPoints } from '@/utils/gpx/trackStats';
 import { parseFitDocument } from '@/utils/fit/parseFitFile';
 import { serializeTrackToGpx } from '@/utils/gpx/serializeTrackToGpx';
+import { canParseRouteFilesInWorker, parseRouteFilesInWorker } from '@/utils/routeFileWorkerClient';
 
 export { serializeTrackToGpx };
 
@@ -48,6 +49,32 @@ export function parseFIT(buffer: ArrayBuffer, fileName: string): GPXTrack {
  * parse must not shift the ones after it onto the wrong names.
  */
 export async function parseRouteFiles(files: File[]): Promise<Array<{ track: GPXTrack; fileName: string }>> {
+  const routeFiles = files.filter((file) => getSupportedRouteFileExtension(file.name));
+  if (canParseRouteFilesInWorker() && routeFiles.length > 0) {
+    try {
+      const response = await parseRouteFilesInWorker(routeFiles);
+      response.failures.forEach(({ fileName, message }) => {
+        console.error(`Error parsing ${fileName}:`, new Error(message));
+      });
+      return response.parsed.map(({ track, fileName }) => {
+        // Immer otherwise recursively freezes every point when this object enters
+        // the store. The route geometry is immutable, so freezing its containers
+        // once keeps that last handoff proportional to the number of files.
+        Object.freeze(track.points);
+        Object.freeze(track);
+        return { track, fileName };
+      });
+    } catch (error) {
+      // CSPs and older embedded browsers can block module workers. Preserve the
+      // existing import path instead of turning that into a failed upload.
+      console.warn('Route worker unavailable; parsing on the main thread.', error);
+    }
+  }
+
+  return parseRouteFilesOnMainThread(routeFiles);
+}
+
+async function parseRouteFilesOnMainThread(files: File[]): Promise<Array<{ track: GPXTrack; fileName: string }>> {
   const parsed: Array<{ track: GPXTrack; fileName: string }> = [];
 
   for (const file of files) {

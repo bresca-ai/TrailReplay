@@ -41,6 +41,33 @@ describe('resolveRecipe', () => {
     { name: 'race.gpx', gpx: leg({ name: 'Race', startLat: 42, points: 101 }) },
   ]);
 
+  it('applies presentation without mutating a worker-frozen track', () => {
+    const parsed = tracksFrom([
+      { name: 'day-1.gpx', gpx: leg({ name: 'Original', startLat: 42, points: 10 }) },
+    ]);
+    const original = parsed.tracks[0];
+    Object.freeze(original.points);
+    Object.freeze(original);
+
+    const resolved = resolveRecipe(
+      {
+        activityIcon: '🥾',
+        tracks: [{ file: 'day-1.gpx', name: 'Day 1', color: '#F97316' }],
+      },
+      parsed.tracks,
+      parsed.names,
+    );
+
+    expect(resolved.tracks[0]).not.toBe(original);
+    expect(resolved.tracks[0]).toMatchObject({
+      name: 'Day 1',
+      color: '#F97316',
+      activityIcon: '🥾',
+    });
+    expect(resolved.tracks[0].points).toBe(original.points);
+    expect(original.name).toBe('Original');
+  });
+
   it('places a landmark at the kilometre the recipe asked for', () => {
     const resolved = resolveRecipe(
       { landmarks: [{ km: 5, title: 'Col', type: 'pass' }] },

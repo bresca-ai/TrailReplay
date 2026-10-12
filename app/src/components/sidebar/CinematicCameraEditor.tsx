@@ -10,6 +10,8 @@ import { formatDuration } from '@/utils/units';
 import { trackEvent } from '@/utils/analytics';
 import { getPlaybackCameraPose, getRouteBearingAtProgress } from '@/utils/replayCameraPlan';
 import {
+  CINEMATIC_ZOOM_MAX,
+  CINEMATIC_ZOOM_MIN,
   deriveCinematicKeyframeProgress,
   getCinematicCameraPose,
   type CinematicKeyframeEasing,
@@ -22,8 +24,6 @@ import { Camera, ChevronDown, ChevronUp, Minus, Plus, Trash2 } from 'lucide-reac
 
 const FRAME_OPTIONS: CinematicKeyframeFrame[] = ['world', 'route'];
 const EASING_OPTIONS: CinematicKeyframeEasing[] = ['smooth', 'linear', 'hold'];
-const ZOOM_MIN = 8;
-const ZOOM_MAX = 20;
 const ZOOM_STEP = 0.5;
 const MAX_PITCH = 85;
 const BEARING_KEY_STEP = 5;
@@ -189,10 +189,10 @@ export function CinematicCameraEditor() {
           setDraftPose((current) => ({ ...current, pitchDeg: Math.min(MAX_PITCH, current.pitchDeg + PITCH_KEY_STEP) }));
           break;
         case 'r':
-          setDraftPose((current) => ({ ...current, zoom: Math.min(ZOOM_MAX, current.zoom + ZOOM_STEP) }));
+          setDraftPose((current) => ({ ...current, zoom: Math.min(CINEMATIC_ZOOM_MAX, current.zoom + ZOOM_STEP) }));
           break;
         case 'f':
-          setDraftPose((current) => ({ ...current, zoom: Math.max(ZOOM_MIN, current.zoom - ZOOM_STEP) }));
+          setDraftPose((current) => ({ ...current, zoom: Math.max(CINEMATIC_ZOOM_MIN, current.zoom - ZOOM_STEP) }));
           break;
         default:
           return;
@@ -334,11 +334,14 @@ export function CinematicCameraEditor() {
       <div>
         <div className="flex items-baseline justify-between mb-1">
           <p className="text-xs text-[var(--evergreen-60)]">{t('settings.cinematicCamera.zoom')}</p>
+          <output className="text-[10px] tabular-nums text-[var(--evergreen-60)]">
+            {draftPose.zoom.toFixed(1)}
+          </output>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setDraftPose((current) => ({ ...current, zoom: Math.max(ZOOM_MIN, current.zoom - ZOOM_STEP) }))}
+            onClick={() => setDraftPose((current) => ({ ...current, zoom: Math.max(CINEMATIC_ZOOM_MIN, current.zoom - ZOOM_STEP) }))}
             aria-label={t('settings.cinematicCamera.zoomOut')}
             className="p-1.5 rounded border border-[var(--evergreen)]/30 text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:text-[var(--trail-orange)]"
           >
@@ -346,8 +349,8 @@ export function CinematicCameraEditor() {
           </button>
           <input
             type="range"
-            min={ZOOM_MIN}
-            max={ZOOM_MAX}
+            min={CINEMATIC_ZOOM_MIN}
+            max={CINEMATIC_ZOOM_MAX}
             step={0.1}
             value={draftPose.zoom}
             onChange={(e) => setDraftPose((current) => ({ ...current, zoom: Number(e.target.value) }))}
@@ -355,7 +358,7 @@ export function CinematicCameraEditor() {
           />
           <button
             type="button"
-            onClick={() => setDraftPose((current) => ({ ...current, zoom: Math.min(ZOOM_MAX, current.zoom + ZOOM_STEP) }))}
+            onClick={() => setDraftPose((current) => ({ ...current, zoom: Math.min(CINEMATIC_ZOOM_MAX, current.zoom + ZOOM_STEP) }))}
             aria-label={t('settings.cinematicCamera.zoomIn')}
             className="p-1.5 rounded border border-[var(--evergreen)]/30 text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:text-[var(--trail-orange)]"
           >

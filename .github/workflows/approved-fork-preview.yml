@@ -1,0 +1,82 @@
+name: Approved fork preview
+
+on:
+  workflow_run:
+    workflows: [Request approved fork preview]
+    types: [completed]
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: read
+
+jobs:
+  mirror:
+    name: Mirror approved fork commit
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'alexalmansa'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify approval and mirror the exact PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          PR_NUMBER="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/pull_requests" \
+              --jq 'if length == 1 then .[0].number else empty end'
+          )"
+          case "$PR_NUMBER" in
+            ''|*[!0-9]*)
+              echo "The triggering run is not associated with a pull request."
+              exit 1
+              ;;
+          esac
+
+          pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          state="$(jq -r '.state' <<<"$pr_json")"
+          head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+          head_repo="$(jq -r '.head.repo.full_name' <<<"$pr_json")"
+
+          test "$state" = open
+          test "$head_repo" != "$GITHUB_REPOSITORY"
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
+
+          latest_review="$(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" \
+              --jq '.[] | select(.user.login == "alexalmansa") | [.state, .commit_id] | @tsv' \
+              | tail -n 1
+          )"
+          IFS=$'\t' read -r review_state review_sha <<<"$latest_review"
+
+          test "$review_state" = APPROVED
+          test "$review_sha" = "$head_sha"
+
+          gh auth setup-git
+          git init mirror
+          git -C mirror remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -C mirror fetch --no-tags --depth=1 origin "pull/${PR_NUMBER}/head"
+          test "$(git -C mirror rev-parse FETCH_HEAD)" = "$head_sha"
+          git -C mirror push --force origin \
+            "$head_sha:refs/heads/cloudflare-preview/pr-${PR_NUMBER}"
+
+  cleanup:
+    name: Remove mirrored preview branch
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the managed preview branch when present
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          ref="repos/${GITHUB_REPOSITORY}/git/ref/heads/cloudflare-preview/pr-${PR_NUMBER}"
+          if gh api "$ref" >/dev/null 2>&1; then
+            gh api --method DELETE "$ref"
+          fi

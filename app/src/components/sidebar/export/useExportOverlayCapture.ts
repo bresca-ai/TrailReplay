@@ -4,6 +4,7 @@ import { getElevationAtProgress } from '@/components/map/elevationProfile';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { convertElevation } from '@/utils/units';
 import type { StatId } from '@/types';
+import { overlayCanvasFontFamily } from '@/utils/typography';
 import { drawExportStatIcon } from './drawExportStatIcon';
 import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
 import {
@@ -782,7 +783,7 @@ export function useExportOverlayCapture({
       const valueSize = (isCompact ? 14 : 22) * elementScaleY;
       const unitSize = (isCompact ? 9 : 14) * elementScaleY;
       const gap = (isCompact ? 4 : 6) * elementScaleX;
-      const family = 'JetBrains Mono, monospace';
+      const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
 
       context.font = `700 ${valueSize}px ${family}`;
       const valueWidth = context.measureText(value).width;

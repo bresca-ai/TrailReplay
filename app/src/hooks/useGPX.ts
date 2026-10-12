@@ -19,19 +19,24 @@ export type RouteInputMethod = 'file_picker' | 'dropzone';
 
 export function useGPX() {
   const { t } = useI18n();
-  const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  const addTrack = useAppStore((state) => state.addTrack);
-  const addComparisonTrack = useAppStore((state) => state.addComparisonTrack);
+  const addImportedTracks = useAppStore((state) => state.addImportedTracks);
   const setError = useAppStore((state) => state.setError);
+  const fileImportStatus = useAppStore((state) => state.fileImportStatus);
+  const setFileImportStatus = useAppStore((state) => state.setFileImportStatus);
   const { openProjectFile } = useProjectFile();
+  const isParsing = fileImportStatus !== null;
 
   const applyRecipeFiles = useCallback(async (
     recipeFile: File,
     fileArray: File[],
     routeInputMethod: RouteInputMethod,
   ) => {
-    setIsParsing(true);
+    setFileImportStatus({
+      kind: 'recipe',
+      fileName: recipeFile.name,
+      fileCount: fileArray.length,
+    });
     setParseError(null);
     trackEvent('recipe_import_started', { route_input_method: routeInputMethod });
 
@@ -79,9 +84,9 @@ export function useGPX() {
       setError(message);
       throw error;
     } finally {
-      setIsParsing(false);
+      setFileImportStatus(null);
     }
-  }, [setError, t]);
+  }, [setError, setFileImportStatus, t]);
 
   const parseFiles = useCallback(async (
     files: FileList | File[] | null,
@@ -113,7 +118,11 @@ export function useGPX() {
       return applyRecipeFiles(recipeFiles[0], fileArray, routeInputMethod);
     }
 
-    setIsParsing(true);
+    setFileImportStatus({
+      kind: 'routes',
+      fileName: fileArray[0].name,
+      fileCount: fileArray.length,
+    });
     setParseError(null);
     trackEvent('route_import_started', {
       route_file_count: fileArray.length,
@@ -152,10 +161,12 @@ export function useGPX() {
       let groupedByTimeCount = 0;
       let groupedByRouteCount = 0;
       let comparisonColorIndex = 0;
+      const primaryTracks: GPXTrack[] = [];
+      const comparisonTracks: Parameters<typeof addImportedTracks>[1] = [];
 
       clusters.forEach((cluster) => {
         if (cluster.length === 1) {
-          addTrack(cluster[0]);
+          primaryTracks.push(cluster[0]);
           return;
         }
 
@@ -172,9 +183,9 @@ export function useGPX() {
           return 0;
         });
 
-        addTrack(primary);
+        primaryTracks.push(primary);
         rest.forEach((track) => {
-          addComparisonTrack({
+          comparisonTracks.push({
             id: createId('comparison'),
             name: track.name,
             color: COMPARISON_COLORS[comparisonColorIndex % COMPARISON_COLORS.length],
@@ -189,6 +200,8 @@ export function useGPX() {
         if (isTimedCluster) groupedByTimeCount += cluster.length;
         else groupedByRouteCount += cluster.length;
       });
+
+      addImportedTracks(primaryTracks, comparisonTracks);
 
       if (groupedByTimeCount > 0) {
         toast.success(t('tracks.autoGroupedToast', { count: String(groupedByTimeCount) }));
@@ -233,9 +246,9 @@ export function useGPX() {
       setError(message);
       throw error;
     } finally {
-      setIsParsing(false);
+      setFileImportStatus(null);
     }
-  }, [addComparisonTrack, addTrack, applyRecipeFiles, openProjectFile, setError, t]);
+  }, [addImportedTracks, applyRecipeFiles, openProjectFile, setError, setFileImportStatus, t]);
 
   return {
     parseFiles,

@@ -15,11 +15,12 @@ describe('playback marker presentation', () => {
     updatePlaybackMarkerElement(
       element,
       '<span data-testid="marker-center"></span>',
-      { color: '#3B82F6', text: '<img src=x onerror=alert(1)>' },
+      { color: '#3B82F6', fontFamily: "'Inter', sans-serif", text: '<img src=x onerror=alert(1)>' },
     );
 
     expect(element.querySelector('[data-testid="marker-center"]')).not.toBeNull();
     expect(element.querySelector('.tr-marker-label')?.textContent).toBe('<img src=x onerror=alert(1)>');
+    expect((element.querySelector('.tr-marker-label') as HTMLElement).style.fontFamily).toContain('Inter');
     expect(element.querySelector('.tr-marker-label img')).toBeNull();
   });
 });

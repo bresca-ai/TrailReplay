@@ -15,6 +15,14 @@ import type { ReplayCameraPose } from '@/utils/replayCameraPlan';
 export type CinematicKeyframeFrame = 'world' | 'route';
 export type CinematicKeyframeEasing = 'smooth' | 'linear' | 'hold';
 
+/**
+ * MapLibre's default Mercator zoom range. Cinematic shots deliberately allow
+ * the whole range: a long journey may need a continent-scale establishing
+ * shot before moving in close around a photo or landmark.
+ */
+export const CINEMATIC_ZOOM_MIN = 0;
+export const CINEMATIC_ZOOM_MAX = 20;
+
 /** Stable journey-segment anchor, so reordering segments moves the keyframe with its segment. Mirrors PictureAnnotation's anchor (see routeProjection.ts / usePictureRouteSync.ts) for the same reason: a raw progress value silently points at the wrong place once the journey is edited. */
 export interface KeyframeAnchor {
   routeSegmentId: string;
@@ -171,7 +179,7 @@ function poseFromValues(
     center,
     bearing: normalizeAngle(bearingDeg),
     pitch: clamp(pitchDeg, PITCH_MIN, PITCH_MAX),
-    zoom,
+    zoom: clamp(zoom, CINEMATIC_ZOOM_MIN, CINEMATIC_ZOOM_MAX),
   };
 }
 

@@ -23,6 +23,12 @@ import type { LandmarkType, NearbyPlacesCoverage, RouteLandmark } from '@/types/
 import type { CinematicCameraKeyframe } from '@/utils/cinematicCameraPlan';
 import type { Recipe, RecipeReport } from '@/utils/recipe/types';
 
+export interface FileImportStatus {
+  kind: 'routes' | 'recipe' | 'project';
+  fileName: string;
+  fileCount: number;
+}
+
 export interface AppState {
   tracks: GPXTrack[];
   activeTrackId: string | null;
@@ -76,11 +82,13 @@ export interface AppState {
   exploreMode: boolean;
   activePanel: 'tracks' | 'journey' | 'annotations' | 'pictures' | 'export' | 'settings';
   isLoading: boolean;
+  fileImportStatus: FileImportStatus | null;
   error: string | null;
   selectedPictureId: string | null;
   selectedVideoId: string | null;
   cameraPosition: { lat: number; lon: number; zoom: number; pitch: number; bearing: number } | null;
   addTrack: (track: GPXTrack) => void;
+  addImportedTracks: (tracks: GPXTrack[], comparisonTracks: ComparisonTrack[]) => void;
   removeTrack: (trackId: string) => void;
   setActiveTrack: (trackId: string | null) => void;
   updateTrackColor: (trackId: string, color: string) => void;
@@ -177,6 +185,7 @@ export interface AppState {
   setExploreMode: (enabled: boolean) => void;
   setActivePanel: (panel: AppState['activePanel']) => void;
   setLoading: (isLoading: boolean) => void;
+  setFileImportStatus: (status: FileImportStatus | null) => void;
   setError: (error: string | null) => void;
   setSelectedPictureId: (pictureId: string | null) => void;
   setExportVideoHoldTimeSeconds: (seconds: number | null) => void;
