@@ -14,12 +14,24 @@ export interface SettleableMap {
   isStyleLoaded: () => boolean | void;
 }
 
-export function isMapSettled(map: SettleableMap): boolean {
-  // `isStyleLoaded` is typed `boolean | void` and returns undefined while the
-  // style is being replaced. Only an explicit `false` means "not ready" — a
-  // `void` return must not be read as unsettled or the wait never completes.
-  if (map.isStyleLoaded() === false) return false;
-  if (map.isMoving()) return false;
+export interface MapSettlePredicateOptions {
+  /**
+   * A frozen MapLibre animation still reports `isMoving() === true`. Its pose
+   * is nevertheless stable until `setNow()` advances the export clock, so
+   * transition frames may ignore that flag while retaining every other
+   * readiness requirement.
+   */
+  allowMoving?: boolean;
+}
+
+export function isMapSettled(
+  map: SettleableMap,
+  options: MapSettlePredicateOptions = {},
+): boolean {
+  // MapLibre types this as `boolean | void`; `undefined` occurs while a style
+  // is being replaced and is not strong enough evidence for a Studio frame.
+  if (map.isStyleLoaded() !== true) return false;
+  if (!options.allowMoving && map.isMoving()) return false;
   return map.areTilesLoaded();
 }
 
@@ -32,6 +44,8 @@ export interface StudioWaitOptions {
   nextTask: () => Promise<void>;
   now: () => number;
   timeoutMs: number;
+  /** See MapSettlePredicateOptions.allowMoving. */
+  allowMoving?: boolean;
 }
 
 export interface StudioWaitResult {
@@ -64,9 +78,9 @@ export async function waitForSettledFrame(
   await options.renderOnce();
 
   while (!options.isCancelled()) {
-    if (isMapSettled(map)) {
+    if (isMapSettled(map, options)) {
       await options.renderOnce();
-      if (isMapSettled(map)) break;
+      if (isMapSettled(map, options)) break;
     }
 
     if (options.now() - start >= options.timeoutMs) {

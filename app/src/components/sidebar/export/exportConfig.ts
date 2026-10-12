@@ -1,4 +1,10 @@
-import type { AspectRatio, VideoExportSettings, VideoFormat, VideoQuality } from '@/types';
+import type {
+  AspectRatio,
+  VideoExportSettings,
+  VideoFormat,
+  VideoQuality,
+  VideoQualityMode,
+} from '@/types';
 
 export const MP4_MIME_TYPES = [
   'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
@@ -78,13 +84,33 @@ export function getResolution(
   }
 }
 
-export function getVideoBitrate(quality: VideoQuality): number {
-  const bitrates: Record<VideoQuality, number> = {
-    low: 2_000_000,
-    medium: 5_000_000,
-    high: 10_000_000,
-    ultra: 20_000_000,
-  };
+export interface VideoBitrateOptions {
+  width: number;
+  height: number;
+  fps: number;
+  qualityMode: VideoQualityMode;
+}
 
-  return bitrates[quality] ?? bitrates.high;
+/**
+ * Map exports contain far more high-frequency detail than typical camera
+ * footage. Size the bitrate from the actual pixel rate instead of only the
+ * quality label so portrait/square exports and 24/60 fps exports are not
+ * under- or over-provisioned. Studio uses three times the bits per pixel of
+ * Standard to preserve satellite labels and terrain during camera movement.
+ */
+export function getVideoBitrate({
+  width,
+  height,
+  fps,
+  qualityMode,
+}: VideoBitrateOptions): number {
+  const safeWidth = Math.max(1, Math.round(width));
+  const safeHeight = Math.max(1, Math.round(height));
+  const safeFps = Math.max(1, fps);
+  const bitsPerPixel = qualityMode === 'studio' ? 0.24 : 0.08;
+  const calculated = safeWidth * safeHeight * safeFps * bitsPerPixel;
+
+  // Stable half-megabit steps make the selected profile easier to inspect and
+  // avoid meaningless bitrate differences caused by aspect-ratio rounding.
+  return Math.max(1_000_000, Math.round(calculated / 500_000) * 500_000);
 }

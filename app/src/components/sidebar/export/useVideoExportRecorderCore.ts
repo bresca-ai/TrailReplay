@@ -30,8 +30,11 @@ import {
 } from '@/utils/units';
 import { estimateFileSize } from '@/utils/videoExport';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { now as maplibreNow, restoreNow, setNow } from 'maplibre-gl';
 import { drawExportFrame } from './drawExportFrame';
 import { MP4_MIME_TYPES } from './exportConfig';
+import { getDeterministicHoldFrames, getDeterministicPhaseFrames } from './exportFrameTimeline';
+import { createExportMapClock } from './exportMapClock';
 import { waitForSettledFrame } from './exportMapSettle';
 import { getOverlayRefreshIntervalMs } from './exportOverlay';
 import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
@@ -271,6 +274,11 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   // mid-export would let a settings change swap the frame pacing halfway
   // through a recording.
   const studioQualityRef = useRef(false);
+  const studioMapClockRef = useRef(createExportMapClock({
+    now: maplibreNow,
+    restoreNow,
+    setNow,
+  }));
   const studioStatsRef = useRef({ frames: 0, timedOutFrames: 0, waitedMs: 0 });
   const rasterFadeRestoreRef = useRef<Array<() => void>>([]);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
@@ -448,7 +456,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
    * flight. This trades wall clock (roughly 6x) for a video in which no frame
    * shows the fallback basemap.
    */
-  const waitForMapSettled = useCallback(async () => {
+  const waitForMapSettled = useCallback(async (allowMoving = false) => {
     const map = mapGlobalRef.current;
     if (!map) {
       await waitForMapFrame();
@@ -461,25 +469,24 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       now: () => performance.now(),
       renderOnce: renderMapOnce,
       timeoutMs: STUDIO_FRAME_SETTLE_TIMEOUT_MS,
+      allowMoving,
     });
 
     const stats = studioStatsRef.current;
     stats.frames += 1;
     stats.waitedMs += result.waitedMs;
     if (result.timedOut) stats.timedOutFrames += 1;
+    if (result.timedOut) {
+      throw new Error(`Studio map tiles did not settle within ${STUDIO_FRAME_SETTLE_TIMEOUT_MS / 1000} seconds`);
+    }
   }, [renderMapOnce, waitForMapFrame]);
 
   /**
    * Frame pacing for the route playback loop.
    *
-   * Only the route loop can be settled. The intro (`flyTo`) and outro
-   * (`fitBounds`) are time-based MapLibre camera animations that advance on
-   * wall clock, so pausing between frames does not hold the camera still — it
-   * lets the animation run ahead, dropping intro content from the video. They
-   * are also `isMoving()` throughout, so every one of their frames would burn
-   * the full settle timeout. The route loop drives the camera with `jumpTo`
-   * from explicit progress, so it holds still while tiles load, and it is the
-   * overwhelming majority of frames anyway.
+   * Route frames use a stationary `jumpTo` pose. Intro/outro frames use the
+   * same barrier through `captureDeterministicPhase`, with MapLibre's clock
+   * frozen so their moving pose cannot advance while tiles load.
    */
   const waitForExportFrame = useCallback(async () => {
     if (studioQualityRef.current) {
@@ -488,6 +495,15 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     }
     await waitForMapFrame();
   }, [waitForMapFrame, waitForMapSettled]);
+
+  const setStudioMapTime = useCallback((timestampMs: number) => {
+    if (!studioQualityRef.current) return;
+    studioMapClockRef.current.setOutputTime(timestampMs);
+  }, []);
+
+  const restoreStudioMapTime = useCallback(() => {
+    studioMapClockRef.current.restore();
+  }, []);
 
   /**
    * Raster tiles crossfade in over ~300ms, so a tile can be fully loaded and
@@ -608,32 +624,43 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const captureDeterministicPhase = useCallback(async (
     durationMs: number,
     timestampOffsetMs: number,
+    includeStartFrame: boolean,
   ) => {
-    const frameDurationMs = 1000 / videoExportSettings.fps;
-    const frameCount = Math.max(1, Math.ceil(durationMs / frameDurationMs));
     const phaseStartTime = performance.now();
+    const frames = getDeterministicPhaseFrames(
+      durationMs,
+      timestampOffsetMs,
+      videoExportSettings.fps,
+      includeStartFrame,
+    );
 
-    for (let frameIndex = 0; frameIndex <= frameCount; frameIndex += 1) {
+    for (const [frameIndex, frame] of frames.entries()) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      // Deliberately standard pacing even in studio mode — see the note on
-      // `waitForExportFrame` for why the intro/outro cannot be settled.
-      await waitForMapFrame();
+      if (studioQualityRef.current) {
+        // Advancing the MapLibre clock to the encoded timestamp produces the
+        // exact transition pose for this output frame. The clock stays frozen
+        // here for however long its tiles need to become ready.
+        setStudioMapTime(frame.timestampMs);
+        await waitForMapSettled(true);
+      } else {
+        await waitForMapFrame();
+      }
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
       captureFrame();
-      await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
-      if (frameIndex < frameCount) {
+      await encodeWebCodecsFrame(frame.timestampMs * 1000);
+      if (!studioQualityRef.current && frameIndex < frames.length - 1) {
         // Map rendering already consumes part of this frame's budget. Waiting a
         // full additional frame interval made the intro/outro take roughly twice
         // as long to export, while the encoded timestamps and pixels stayed the
         // same. Only wait for the remainder needed to preserve their timeline.
-        const nextFrameDueAt = phaseStartTime + ((frameIndex + 1) * frameDurationMs);
+        const nextFrameDueAt = phaseStartTime + frames[frameIndex + 1].elapsedMs;
         const remainingDelayMs = Math.max(0, nextFrameDueAt - performance.now());
         if (remainingDelayMs > 0) {
           await new Promise<void>((resolve) => window.setTimeout(resolve, remainingDelayMs));
         }
       }
     }
-  }, [captureFrame, encodeWebCodecsFrame, videoExportSettings.fps, waitForMapFrame]);
+  }, [captureFrame, encodeWebCodecsFrame, setStudioMapTime, videoExportSettings.fps, waitForMapFrame, waitForMapSettled]);
 
   // Holds on a picture popup for `durationMs`, forcing a fresh DOM-overlay
   // capture every single encoded frame instead of the ~12fps throttle
@@ -649,32 +676,37 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     durationMs: number,
     timestampOffsetMs: number,
   ) => {
-    const frameDurationMs = 1000 / videoExportSettings.fps;
-    const frameCount = Math.max(1, Math.ceil(durationMs / frameDurationMs));
+    const frames = getDeterministicHoldFrames(
+      durationMs,
+      timestampOffsetMs,
+      videoExportSettings.fps,
+    );
     const { width: recordW, height: recordH } = videoExportSettings.resolution;
     const phaseStartTime = performance.now();
 
-    for (let frameIndex = 0; frameIndex <= frameCount; frameIndex += 1) {
+    for (const [frameIndex, frame] of frames.entries()) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      useAppStore.getState().setExportPictureHoldElapsedMs(frameIndex * frameDurationMs);
+      useAppStore.getState().setExportPictureHoldElapsedMs(frame.visualElapsedMs);
       // Let React commit the new elapsed value (and the popup's CSS
       // transition tick forward in the DOM) before rasterizing it.
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
       // Popup snapshot every N frames only (see getHoldOverlayEvery).
-      if (frameIndex % getHoldOverlayEvery() === 0 || frameIndex === frameCount) {
+      if (frameIndex % getHoldOverlayEvery() === 0 || frameIndex === frames.length - 1) {
         await updateOverlayAsync(recordW, recordH);
       }
       captureFrame();
-      await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
-      if (frameIndex < frameCount) {
-        const nextFrameDueAt = phaseStartTime + ((frameIndex + 1) * frameDurationMs);
+      await encodeWebCodecsFrame(frame.timestampMs * 1000);
+      if (frameIndex < frames.length - 1) {
+        const nextFrameDueAt = phaseStartTime + frame.elapsedMs;
         const remainingDelayMs = Math.max(0, nextFrameDueAt - performance.now());
         if (remainingDelayMs > 0) {
           await new Promise<void>((resolve) => window.setTimeout(resolve, remainingDelayMs));
         }
       }
     }
+
+    return frames.at(-1)?.elapsedMs ?? 0;
   }, [captureFrame, encodeWebCodecsFrame, updateOverlayAsync, videoExportSettings.fps, videoExportSettings.resolution]);
 
   /** Blocks until the popup's clip has actually decoded the frame asked for. */
@@ -706,15 +738,19 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   ) => {
     const frameDurationMs = 1000 / videoExportSettings.fps;
     const durationMs = Math.max(frameDurationMs, clipDurationSeconds * 1000);
-    const frameCount = Math.max(1, Math.ceil(durationMs / frameDurationMs));
+    const frames = getDeterministicHoldFrames(
+      durationMs,
+      timestampOffsetMs,
+      videoExportSettings.fps,
+    );
     const { width: recordW, height: recordH } = videoExportSettings.resolution;
     // A seek lands on a decoded frame, which for a variable-frame-rate phone
     // clip need not be the exact instant asked for.
     const seekTolerance = Math.max(0.1, (frameDurationMs / 1000) * 2);
 
-    for (let frameIndex = 0; frameIndex <= frameCount; frameIndex += 1) {
+    for (const [frameIndex, frame] of frames.entries()) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      const targetSeconds = Math.min(clipDurationSeconds, (frameIndex * frameDurationMs) / 1000);
+      const targetSeconds = Math.min(clipDurationSeconds, frame.visualElapsedMs / 1000);
       useAppStore.getState().setExportVideoHoldTimeSeconds(targetSeconds);
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await waitForVideoSeek(targetSeconds, seekTolerance);
@@ -724,10 +760,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         await updateOverlayAsync(recordW, recordH);
       }
       captureFrame();
-      await encodeWebCodecsFrame((timestampOffsetMs + (frameIndex * frameDurationMs)) * 1000);
+      await encodeWebCodecsFrame(frame.timestampMs * 1000);
     }
 
-    return frameCount * frameDurationMs;
+    return frames.at(-1)?.elapsedMs ?? 0;
   }, [captureFrame, encodeWebCodecsFrame, updateOverlayAsync, videoExportSettings.fps, videoExportSettings.resolution, waitForVideoSeek]);
 
   /**
@@ -758,7 +794,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
-    applyStudioMapSettings, restoreStudioMapSettings, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
+    applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   };
 }
