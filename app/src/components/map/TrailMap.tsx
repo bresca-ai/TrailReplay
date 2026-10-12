@@ -335,6 +335,7 @@ export function TrailMap(_props: TrailMapProps) {
     allCoordinates: cameraPathCoordinates,
     animationPhase,
     cameraMode,
+    cinematicKeyframes,
     elevationData,
     followBehindZoomLevel,
     isMapLoaded,
@@ -356,6 +357,7 @@ export function TrailMap(_props: TrailMapProps) {
     allCoordinates: cameraPathCoordinates,
     animationPhase,
     cameraMode,
+    cinematicKeyframes,
     diagnostics: tileDiagnostics,
     elevationData,
     // Deterministic export already advances the visible map one frame at a
