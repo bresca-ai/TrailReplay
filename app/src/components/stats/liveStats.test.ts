@@ -97,6 +97,44 @@ describe('total and moving duration', () => {
 
     expect(elapsedTrackTime([], [entry], entry, 1)).toBe(1000);
   });
+
+  it('keeps moving time frozen during an auto-pause timestamp gap', () => {
+    const entry = track('paused', [0, 0, 0]);
+    entry.points = [
+      { ...point(0, 0, 0), speed: 0 },
+      { ...point(100, 0, 10), speed: 36 },
+      { ...point(100, 0, 310), speed: 0 },
+      { ...point(200, 0, 320), speed: 36 },
+    ];
+    entry.totalDistance = 200;
+    entry.totalTime = 320;
+    entry.movingTime = 20;
+
+    const segments: TrackSegment[] = [
+      { id: 'segment-paused', type: 'track', trackId: entry.id, duration: 320_000 },
+    ];
+    const computedJourney = buildComputedJourney(segments, [entry])!;
+
+    // Halfway through the 300-second stationary interval, elapsed time keeps
+    // running but moving time remains at the 10 seconds completed beforehand.
+    expect(elapsedTrackTime(
+      computedJourney.segmentTimings,
+      [entry],
+      entry,
+      160 / 320,
+      0,
+      'moving',
+    )).toBe(10);
+
+    expect(elapsedTrackTime(
+      computedJourney.segmentTimings,
+      [entry],
+      entry,
+      315 / 320,
+      0,
+      'moving',
+    )).toBe(15);
+  });
 });
 
 describe('calculateCurrentLiveStats', () => {

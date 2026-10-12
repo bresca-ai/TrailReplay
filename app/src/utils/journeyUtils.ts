@@ -35,6 +35,8 @@ export interface JourneyPoint extends GPXPoint {
   segmentType: 'track' | 'transport';
   trackId?: string;
   transportMode?: string;
+  /** Position within this segment's recorded clock, normalized to 0-1. */
+  recordedProgress?: number;
 }
 
 /**
@@ -76,6 +78,50 @@ export interface JourneyDistanceProfile {
   coordinates: JourneyPoint[];
   cumulativeDistances: number[];
   totalDistance: number;
+}
+
+/**
+ * Build a monotonic, normalized clock for a track's points.
+ *
+ * A real-pace replay can only use timestamps when they cover the complete
+ * route. Missing timestamps between two valid samples are filled by point
+ * position inside that interval. If either endpoint has no usable timestamp,
+ * or the clock has no positive duration, retaining the legacy point-index
+ * timing is safer than inventing time before or after the recorded window.
+ */
+function recordedProgressForPoints(points: GPXPoint[]): number[] {
+  const pointSpan = Math.max(points.length - 1, 1);
+  const fallback = points.map((_, index) => index / pointSpan);
+  if (points.length < 2 || !points[0].time || !points[points.length - 1].time) return fallback;
+
+  const timed: Array<{ index: number; time: number }> = [];
+  points.forEach((point, index) => {
+    const time = point.time?.getTime();
+    if (time === undefined || !Number.isFinite(time)) return;
+    if (timed.length > 0 && time < timed[timed.length - 1].time) return;
+    timed.push({ index, time });
+  });
+
+  const first = timed[0];
+  const last = timed[timed.length - 1];
+  if (first?.index !== 0 || last?.index !== points.length - 1 || last.time <= first.time) return fallback;
+
+  const result = [...fallback];
+  for (let entryIndex = 1; entryIndex < timed.length; entryIndex += 1) {
+    const lower = timed[entryIndex - 1];
+    const upper = timed[entryIndex];
+    const indexSpan = upper.index - lower.index;
+    if (indexSpan <= 0) continue;
+
+    const lowerProgress = (lower.time - first.time) / (last.time - first.time);
+    const upperProgress = (upper.time - first.time) / (last.time - first.time);
+    for (let index = lower.index; index <= upper.index; index += 1) {
+      const ratio = (index - lower.index) / indexSpan;
+      result[index] = lowerProgress + (upperProgress - lowerProgress) * ratio;
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -188,13 +234,15 @@ export function buildComputedJourney(
       const track = tracks.find((t) => t.id === trackSeg.trackId);
 
       if (track) {
+        const recordedProgress = recordedProgressForPoints(track.points);
         // Add all track points to the flattened array
-        track.points.forEach((point) => {
+        track.points.forEach((point, pointIndex) => {
           coordinates.push({
             ...point,
             segmentIndex,
             segmentType: 'track',
             trackId: track.id,
+            recordedProgress: recordedProgress[pointIndex],
           });
           currentCoordIndex++;
         });
@@ -245,6 +293,7 @@ export function buildComputedJourney(
           segmentIndex,
           segmentType: 'transport',
           transportMode: transportSeg.mode,
+          recordedProgress: transportPoints.length > 1 ? i / (transportPoints.length - 1) : 0,
         });
         currentCoordIndex++;
       });
@@ -344,8 +393,9 @@ export function progressForRouteDistance(
     );
   }
 
-  // Recorded pace counts measurement points, so walk the segment's points to
-  // find the one this distance falls on.
+  // Find the exact point at this route distance, then use that point's GPX
+  // timestamp-derived progress. This keeps route-anchored media and camera
+  // keyframes aligned with the real-pace marker.
   const { startCoordIndex, endCoordIndex } = timing;
   if (endCoordIndex <= startCoordIndex) return clamp01(timing.progressStartRatio);
 
@@ -362,8 +412,7 @@ export function progressForRouteDistance(
     }
   }
 
-  const coordSpan = Math.max(endCoordIndex - startCoordIndex, 1);
-  const localRatio = (exactIndex - startCoordIndex) / coordSpan;
+  const localRatio = recordedProgressAtCoordinateIndex(coordinates, timing, exactIndex);
   return clamp01(
     timing.progressStartRatio + localRatio * (timing.progressEndRatio - timing.progressStartRatio)
   );
@@ -406,6 +455,58 @@ export function segmentAnchorForRouteDistance(
 
 function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
+}
+
+function pointRecordedProgress(
+  coordinates: JourneyPoint[],
+  segment: SegmentTiming,
+  index: number,
+) {
+  const stored = coordinates[index]?.recordedProgress;
+  if (stored !== undefined && Number.isFinite(stored)) return clamp01(stored);
+  const span = Math.max(segment.endCoordIndex - segment.startCoordIndex, 1);
+  return clamp01((index - segment.startCoordIndex) / span);
+}
+
+/** Resolve segment-local replay progress to a fractional coordinate index. */
+function exactCoordinateIndexAtProgress(
+  coordinates: JourneyPoint[],
+  segment: SegmentTiming,
+  localProgress: number,
+) {
+  const target = clamp01(localProgress);
+  if (segment.endCoordIndex <= segment.startCoordIndex) return segment.startCoordIndex;
+
+  let low = segment.startCoordIndex;
+  let high = segment.endCoordIndex;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (pointRecordedProgress(coordinates, segment, middle) < target) low = middle + 1;
+    else high = middle;
+  }
+
+  const upperIndex = low;
+  const lowerIndex = Math.max(segment.startCoordIndex, upperIndex - 1);
+  const lowerProgress = pointRecordedProgress(coordinates, segment, lowerIndex);
+  const upperProgress = pointRecordedProgress(coordinates, segment, upperIndex);
+  const span = upperProgress - lowerProgress;
+  const ratio = span > 0 ? clamp01((target - lowerProgress) / span) : 0;
+  return lowerIndex + (upperIndex - lowerIndex) * ratio;
+}
+
+/** Resolve a fractional coordinate index back to segment-local recorded time. */
+function recordedProgressAtCoordinateIndex(
+  coordinates: JourneyPoint[],
+  segment: SegmentTiming,
+  exactIndex: number,
+) {
+  const boundedIndex = Math.max(segment.startCoordIndex, Math.min(segment.endCoordIndex, exactIndex));
+  const lowerIndex = Math.floor(boundedIndex);
+  const upperIndex = Math.min(lowerIndex + 1, segment.endCoordIndex);
+  const ratio = boundedIndex - lowerIndex;
+  const lower = pointRecordedProgress(coordinates, segment, lowerIndex);
+  const upper = pointRecordedProgress(coordinates, segment, upperIndex);
+  return lower + (upper - lower) * ratio;
 }
 
 function interpolateNullableNumber(
@@ -507,9 +608,7 @@ export function getJourneyPointAtProgress(
 
   const { segment, localProgress } = segmentInfo;
 
-  // Calculate the exact coordinate index within this segment
-  const segmentCoordCount = segment.endCoordIndex - segment.startCoordIndex;
-  const exactIndex = segment.startCoordIndex + localProgress * segmentCoordCount;
+  const exactIndex = exactCoordinateIndexAtProgress(coordinates, segment, localProgress);
 
   const lowerIndex = Math.floor(exactIndex);
   const upperIndex = Math.min(lowerIndex + 1, coordinates.length - 1);
@@ -525,11 +624,13 @@ export function getJourneyPointAtProgress(
     lat: lower.lat + (upper.lat - lower.lat) * t,
     lon: lower.lon + (upper.lon - lower.lon) * t,
     elevation: lower.elevation + (upper.elevation - lower.elevation) * t,
-    time: lower.time,
-    heartRate: lower.heartRate,
-    cadence: lower.cadence,
-    power: lower.power,
-    temperature: lower.temperature,
+    time: lower.time && upper.time
+      ? new Date(lower.time.getTime() + (upper.time.getTime() - lower.time.getTime()) * t)
+      : (t < 1 ? lower.time : upper.time),
+    heartRate: interpolateNullableNumber(lower.heartRate, upper.heartRate, t),
+    cadence: interpolateNullableNumber(lower.cadence, upper.cadence, t),
+    power: interpolateNullableNumber(lower.power, upper.power, t),
+    temperature: interpolateNullableNumber(lower.temperature, upper.temperature, t),
     distance: lower.distance + (upper.distance - lower.distance) * t,
     speed: lower.speed + (upper.speed - lower.speed) * t,
     segmentIndex: segment.segmentIndex,
@@ -550,8 +651,7 @@ export function getJourneyDistanceAtProgress(
   if (!segmentInfo) return 0;
 
   const { segment, localProgress } = segmentInfo;
-  const segmentCoordCount = segment.endCoordIndex - segment.startCoordIndex;
-  const exactIndex = segment.startCoordIndex + localProgress * segmentCoordCount;
+  const exactIndex = exactCoordinateIndexAtProgress(profile.coordinates, segment, localProgress);
   const lowerIndex = Math.floor(exactIndex);
   const upperIndex = Math.min(lowerIndex + 1, profile.cumulativeDistances.length - 1);
   const ratio = exactIndex - lowerIndex;
@@ -626,10 +726,8 @@ export function getCompletedCoordinates(
 
   const { segment, localProgress } = segmentInfo;
 
-  // Calculate the exact coordinate index
-  const segmentCoordCount = segment.endCoordIndex - segment.startCoordIndex;
-  const exactIndex = segment.startCoordIndex + localProgress * segmentCoordCount;
-  const endIndex = Math.ceil(exactIndex);
+  const exactIndex = exactCoordinateIndexAtProgress(coordinates, segment, localProgress);
+  const endIndex = Math.floor(exactIndex);
 
   // Return coordinates up to the current point
   const completedCoords: number[][] = [];
@@ -722,9 +820,7 @@ export function getBearingAtProgress(
 
   const { segment, localProgress } = segmentInfo;
 
-  // Calculate current position index
-  const segmentCoordCount = segment.endCoordIndex - segment.startCoordIndex;
-  const currentIndex = Math.floor(segment.startCoordIndex + localProgress * segmentCoordCount);
+  const currentIndex = Math.floor(exactCoordinateIndexAtProgress(coordinates, segment, localProgress));
 
   // Look ahead for bearing calculation
   const lookAhead = Math.min(10, coordinates.length - currentIndex - 1);
@@ -832,7 +928,10 @@ export function getJourneyElevationData(
       ? Math.max(0, Math.min(1, (point.distance - spanStartDistance) / distanceSpan))
       : null;
 
-    const segmentProgress = distanceProgress ?? indexProgress;
+    const recordedProgress = timing
+      ? pointRecordedProgress(coordinates, timing, i)
+      : indexProgress;
+    const segmentProgress = distanceProgress ?? recordedProgress;
     const progressStart = routeTimingMode === 'uniform'
       ? timing?.distanceStartRatio ?? 0
       : timing?.progressStartRatio ?? 0;

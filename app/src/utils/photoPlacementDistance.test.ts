@@ -99,12 +99,12 @@ describe('Constant Pace placement', () => {
   });
 });
 
-describe('Real Pace placement is unchanged', () => {
-  it('still places by measurement point', () => {
+describe('Real Pace placement follows recorded timestamps', () => {
+  it('places the summit at its recorded time', () => {
     const match = projectCoordinateToJourney(journey, 51.04, 10.0, 0, 'recorded');
 
     expect(match).not.toBeNull();
-    expect(match!.progress).toBeCloseTo(SUMMIT_BY_POINT_INDEX, 1);
+    expect(match!.progress).toBeCloseTo(80 / 90, 2);
   });
 });
 
@@ -147,9 +147,9 @@ describe('The anchor kept with the photo', () => {
       journey.coordinates, journey.segmentTimings, onTheWayDown, 'recorded',
     );
 
-    // Three quarters of the distance, but 45 of 50 points.
+    // Three quarters of the distance and 85 of 90 recorded minutes.
     expect(uniform).toBeCloseTo(0.75, 2);
-    expect(recorded).toBeCloseTo(45 / 50, 2);
+    expect(recorded).toBeCloseTo(85 / 90, 2);
 
     // Searching for the nearest coordinate instead would find the identical
     // point on the way up and place the photo at half that distance.
