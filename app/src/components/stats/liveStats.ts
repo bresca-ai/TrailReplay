@@ -1,6 +1,9 @@
 import type { GPXTrack } from '@/types';
 import type { ComputedJourney, JourneyPoint, SegmentTiming } from '@/utils/journeyUtils';
-import { calculateElevationGain as calculateFilteredElevationGain } from '@/utils/gpx/trackStats';
+import {
+  calculateElevationGain as calculateFilteredElevationGain,
+  MOVING_SPEED_THRESHOLD_KMH,
+} from '@/utils/gpx/trackStats';
 
 export interface CurrentLiveStats {
   distance: number;
@@ -73,6 +76,99 @@ function localProgressFor(timing: SegmentTiming, playbackProgress: number): numb
   return Math.max(0, Math.min(1, (playbackProgress - timing.progressStartRatio) / span));
 }
 
+interface MovingInterval {
+  start: number;
+  end: number;
+  moving: boolean;
+  movingSecondsBefore: number;
+}
+
+interface MovingTimeProfile {
+  firstTime: number;
+  lastTime: number;
+  intervals: MovingInterval[];
+  calculatedTotal: number;
+}
+
+const movingTimeProfiles = new WeakMap<GPXTrack, MovingTimeProfile | null>();
+
+function movingTimeProfile(track: GPXTrack): MovingTimeProfile | null {
+  const cached = movingTimeProfiles.get(track);
+  if (cached !== undefined) return cached;
+
+  const points = track.points;
+  const firstTime = points[0]?.time?.getTime();
+  const lastTime = points[points.length - 1]?.time?.getTime();
+  if (
+    firstTime === undefined
+    || lastTime === undefined
+    || !Number.isFinite(firstTime)
+    || !Number.isFinite(lastTime)
+    || lastTime <= firstTime
+  ) {
+    movingTimeProfiles.set(track, null);
+    return null;
+  }
+
+  const intervals: MovingInterval[] = [];
+  let calculatedTotal = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    const start = points[index - 1].time?.getTime();
+    const end = points[index].time?.getTime();
+    if (
+      start === undefined
+      || end === undefined
+      || !Number.isFinite(start)
+      || !Number.isFinite(end)
+      || end <= start
+    ) continue;
+
+    const moving = points[index].speed > MOVING_SPEED_THRESHOLD_KMH;
+    intervals.push({ start, end, moving, movingSecondsBefore: calculatedTotal });
+    if (moving) calculatedTotal += (end - start) / 1000;
+  }
+
+  const profile = { firstTime, lastTime, intervals, calculatedTotal };
+  movingTimeProfiles.set(track, profile);
+  return profile;
+}
+
+/**
+ * Accumulate the moving clock up to a point on the track's recorded timeline.
+ *
+ * A point's speed describes the interval ending at that point (the same rule
+ * used while parsing the GPX). This makes a long auto-pause gap contribute to
+ * elapsed duration without also advancing moving duration.
+ */
+function movingTimeAtProgress(track: GPXTrack, progress: number): number {
+  const profile = movingTimeProfile(track);
+  if (!profile) {
+    return recordedTime(track, 'moving') * Math.max(0, Math.min(1, progress));
+  }
+
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+  const targetTime = profile.firstTime
+    + (profile.lastTime - profile.firstTime) * clampedProgress;
+  let low = 0;
+  let high = profile.intervals.length;
+  while (low < high) {
+    const middle = (low + high) >> 1;
+    if (profile.intervals[middle].end < targetTime) low = middle + 1;
+    else high = middle;
+  }
+
+  const interval = profile.intervals[low];
+  const elapsed = !interval
+    ? profile.calculatedTotal
+    : interval.movingSecondsBefore + (interval.moving
+      ? Math.max(0, Math.min(targetTime, interval.end) - interval.start) / 1000
+      : 0);
+  const storedTotal = recordedTime(track, 'moving');
+  return profile.calculatedTotal > 0
+    ? elapsed * (storedTotal / profile.calculatedTotal)
+    : storedTotal * clampedProgress;
+}
+
 /**
  * GPX files with no recorded timestamps (common for planned/drawn routes,
  * and for anyone using "Constant Pace" specifically because they don't have
@@ -94,7 +190,9 @@ export function elapsedTrackTime(
   if (segmentTimings.length === 0) {
     const trackRealTime = recordedTime(activeTrack, mode);
     return trackRealTime > 0
-      ? trackRealTime * playbackProgress
+      ? (mode === 'moving' && activeTrack
+        ? movingTimeAtProgress(activeTrack, playbackProgress)
+        : trackRealTime * playbackProgress)
       : videoDurationSeconds * playbackProgress;
   }
 
@@ -114,7 +212,10 @@ export function elapsedTrackTime(
     const trackRealTime = recordedTime(track, mode);
     if (playbackProgress >= timing.progressEndRatio) return elapsed + trackRealTime;
     if (playbackProgress > timing.progressStartRatio) {
-      return elapsed + trackRealTime * localProgressFor(timing, playbackProgress);
+      const localProgress = localProgressFor(timing, playbackProgress);
+      return elapsed + (mode === 'moving'
+        ? movingTimeAtProgress(track, localProgress)
+        : trackRealTime * localProgress);
     }
     return elapsed;
   }, 0);
@@ -199,7 +300,9 @@ export function calculateCurrentLiveStats({
     if (currentTiming?.type !== 'track' || !currentTrack) return 0;
     const trackRealTime = recordedTime(currentTrack, mode);
     return trackRealTime > 0
-      ? trackRealTime * localProgressFor(currentTiming, playbackProgress)
+      ? (mode === 'moving'
+        ? movingTimeAtProgress(currentTrack, localProgressFor(currentTiming, playbackProgress))
+        : trackRealTime * localProgressFor(currentTiming, playbackProgress))
       : (currentTiming.duration / 1000) * localProgressFor(currentTiming, playbackProgress);
   };
 

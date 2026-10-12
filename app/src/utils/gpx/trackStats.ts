@@ -19,6 +19,9 @@ export interface RawTrackPoint {
  */
 export const DEFAULT_ELEVATION_THRESHOLD_METERS = 10;
 
+/** Intervals at or below this speed are excluded from moving time. */
+export const MOVING_SPEED_THRESHOLD_KMH = 0.5;
+
 function median(values: number[]): number {
   const sorted = [...values].sort((left, right) => left - right);
   return sorted[Math.floor(sorted.length / 2)];
@@ -135,7 +138,7 @@ export function buildTrackFromRawPoints(params: {
         if (timeDiffSeconds > 0) {
           speed = (segmentDistance / timeDiffSeconds) * 3.6;
           maxSpeed = Math.max(maxSpeed, speed);
-          if (speed > 0.5) {
+          if (speed > MOVING_SPEED_THRESHOLD_KMH) {
             totalSpeed += speed;
             speedCount++;
             movingTime += timeDiffSeconds;
