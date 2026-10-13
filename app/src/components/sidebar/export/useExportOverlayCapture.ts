@@ -236,6 +236,7 @@ function withLightClone(baseCapture: Html2Canvas): Html2Canvas {
 }
 
 interface UseExportOverlayCaptureOptions {
+  dynamicElevation?: boolean;
   elevationData: Array<{
     elevation: number;
     progress: number;
@@ -248,6 +249,7 @@ interface UseExportOverlayCaptureOptions {
 }
 
 export function useExportOverlayCapture({
+  dynamicElevation = false,
   elevationData,
   getStatsValues,
   includeElevation,
@@ -372,7 +374,7 @@ export function useExportOverlayCapture({
         }
       }
 
-      if (includeElevation) {
+      if (includeElevation && !dynamicElevation) {
         const elevationElement = document.getElementById('mapElevationProfile') as HTMLElement | null;
         if (elevationElement) {
           try {
@@ -473,7 +475,7 @@ export function useExportOverlayCapture({
         markExportProfileStage('overlayCapture', performance.now() - profileStartedAt);
       }
     }
-  }, [includeElevation, includeStats]);
+  }, [dynamicElevation, includeElevation, includeStats]);
 
   /**
    * Draws the clip's current decoded frame onto the frame being encoded.
@@ -707,14 +709,55 @@ export function useExportOverlayCapture({
     const drawHeight = svgRect.height * elementScaleY;
     const progress = Math.max(0, Math.min(1, useAppStore.getState().playback.progress));
 
+    const markerX = Number(svg.dataset.exportElevationMarkerX);
+    const markerPosition = Number.isFinite(markerX)
+      ? markerX
+      : viewBox.x + progress * viewBox.width;
+    const markerRatio = Math.max(0, Math.min(1, (markerPosition - viewBox.x) / viewBox.width));
+    const segmentElements = [...svg.querySelectorAll<SVGPathElement>('[data-export-elevation-segment]')];
+
     context.save();
     context.translate(drawX, drawY);
     context.scale(drawWidth / viewBox.width, drawHeight / viewBox.height);
+    context.translate(-viewBox.x, -viewBox.y);
     context.beginPath();
-    context.rect(viewBox.x, viewBox.y, viewBox.width * progress, viewBox.height);
+    context.rect(viewBox.x, viewBox.y, viewBox.width, viewBox.height);
     context.clip();
 
-    svg.querySelectorAll<SVGPathElement>('[data-export-elevation-segment]').forEach((element) => {
+    // Static mode gets this layer from the cached DOM capture. A dynamic
+    // viewport changes every frame, so paint its complete profile here instead
+    // of forcing an html2canvas snapshot for every encoded frame.
+    if (dynamicElevation) {
+      segmentElements.forEach((element) => {
+        const pathData = element.getAttribute('d');
+        if (!pathData) return;
+        let path = elevationPathCacheRef.current.get(pathData);
+        if (!path) {
+          path = new Path2D(pathData);
+          elevationPathCacheRef.current.set(pathData, path);
+        }
+        const color = element.dataset.exportElevationColor || '#c1652f';
+        const transport = element.dataset.exportElevationType === 'transport';
+        context.globalAlpha = transport ? 0.09 : 0.18;
+        context.fillStyle = color;
+        context.fill(path);
+        context.globalAlpha = transport ? 0.3 : 0.55;
+        context.strokeStyle = color;
+        context.lineWidth = 1;
+        context.stroke(path);
+      });
+    }
+
+    context.beginPath();
+    context.rect(
+      viewBox.x,
+      viewBox.y,
+      Math.max(0, Math.min(viewBox.width, markerPosition - viewBox.x)),
+      viewBox.height,
+    );
+    context.clip();
+
+    segmentElements.forEach((element) => {
       const pathData = element.getAttribute('d');
       if (!pathData) return;
 
@@ -757,7 +800,7 @@ export function useExportOverlayCapture({
     const state = useAppStore.getState();
     const unitSystem = state.settings.unitSystem;
     const isCompact = recordW > recordH;
-    const centerX = drawX + progress * drawWidth;
+    const centerX = drawX + markerRatio * drawWidth;
     const baselineY = overlayRect.drawY
       + overlayRect.drawHeight
       - (isCompact ? 4 : 8) * elementScaleY;
@@ -799,7 +842,21 @@ export function useExportOverlayCapture({
       context.fillText(unit, textX, baselineY);
     }
     context.restore();
-  }, [elevationSegments, includeElevation]);
+
+    const sectionLabel = svg.dataset.exportElevationSectionLabel;
+    if (dynamicElevation && sectionLabel) {
+      context.save();
+      context.font = `700 ${(isCompact ? 10 : 15) * elementScaleY}px ${overlayCanvasFontFamily(state.settings.trailStyle.overlayFont)}`;
+      context.textAlign = 'left';
+      context.textBaseline = 'top';
+      context.fillStyle = '#ffffff';
+      context.shadowColor = 'rgba(0, 0, 0, 0.86)';
+      context.shadowBlur = 5 * elementScaleY;
+      context.shadowOffsetY = 2 * elementScaleY;
+      context.fillText(sectionLabel, drawX + 4 * elementScaleX, drawY + 3 * elementScaleY);
+      context.restore();
+    }
+  }, [dynamicElevation, elevationSegments, includeElevation]);
 
   const resetOverlayCapture = useCallback(() => {
     cachedOverlayRef.current = null;

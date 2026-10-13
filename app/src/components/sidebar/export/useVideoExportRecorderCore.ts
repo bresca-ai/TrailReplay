@@ -77,6 +77,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
   const configuredStats = useAppStore((state) => state.settings.visibleStats);
   const showElevationProfile = useAppStore((state) => state.settings.showElevationProfile);
+  const dynamicElevationProfile = useAppStore((state) => state.settings.dynamicElevationProfile);
   const mapStyle = useAppStore((state) => state.settings.mapStyle);
   const show3DTerrain = useAppStore((state) => state.settings.show3DTerrain);
   const tracks = useAppStore((state) => state.tracks);
@@ -253,6 +254,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     resetOverlayCapture,
     updateOverlayAsync,
   } = useExportOverlayCapture({
+    dynamicElevation: showElevationProfile && dynamicElevationProfile,
     elevationData,
     getStatsValues,
     includeElevation,

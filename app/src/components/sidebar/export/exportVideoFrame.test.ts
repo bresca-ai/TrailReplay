@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useAppStore } from '@/store/useAppStore';
 import { useExportOverlayCapture } from './useExportOverlayCapture';
 
 /**
@@ -209,5 +210,113 @@ describe('drawVideoFrame', () => {
     expect(clonedOutsideTag).toBe('DIV');
     outsideImage.remove();
     container.remove();
+  });
+});
+
+describe('dynamic elevation export', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it('does not cache a stale elevation snapshot when the viewport changes every frame', async () => {
+    const container = document.createElement('div');
+    container.id = 'map-capture-container';
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 800);
+    document.body.appendChild(container);
+
+    const elevation = document.createElement('div');
+    elevation.id = 'mapElevationProfile';
+    document.body.appendChild(elevation);
+
+    const capture = vi.fn(async () => document.createElement('canvas'));
+    vi.stubGlobal('html2canvas', capture);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      { drawImage: () => {} } as unknown as CanvasRenderingContext2D,
+    );
+
+    const { result } = renderHook(() => useExportOverlayCapture({
+      dynamicElevation: true,
+      elevationData: [],
+      getStatsValues: () => ({}),
+      includeElevation: true,
+      includeStats: false,
+    }));
+
+    await result.current.updateOverlayAsync(1920, 1080);
+
+    expect(capture).not.toHaveBeenCalled();
+  });
+
+  it('draws the full focused profile, progress, and section label from the live SVG', () => {
+    const wrapper = document.createElement('div');
+    wrapper.id = 'mapElevationProfile';
+    wrapper.getBoundingClientRect = () => new DOMRect(0, 700, 1000, 60);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'elevationProfileSvg';
+    svg.dataset.exportElevationMarkerX = '280';
+    svg.dataset.exportElevationProgressColor = '#ff6600';
+    svg.dataset.exportElevationSectionLabel = '↗ 1.40 km · 100 m–310 m · +210 m';
+    Object.defineProperty(svg, 'viewBox', {
+      value: { baseVal: { x: 120, y: 5, width: 320, height: 50 } },
+    });
+    svg.getBoundingClientRect = () => new DOMRect(0, 700, 1000, 60);
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M 120 60 L 280 5 L 440 60 Z');
+    path.dataset.exportElevationSegment = '';
+    path.dataset.exportElevationColor = '#aa5500';
+    path.dataset.exportElevationType = 'track';
+    svg.appendChild(path);
+    wrapper.appendChild(svg);
+    document.body.appendChild(wrapper);
+
+    const fill = vi.fn();
+    const stroke = vi.fn();
+    const fillText = vi.fn();
+    const translate = vi.fn();
+    const context = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate,
+      scale: vi.fn(),
+      beginPath: vi.fn(),
+      rect: vi.fn(),
+      clip: vi.fn(),
+      fill,
+      stroke,
+      fillText,
+      measureText: (text: string) => ({ width: text.length * 6 }),
+    } as unknown as CanvasRenderingContext2D;
+    vi.stubGlobal('Path2D', class {
+      constructor() {}
+    });
+
+    useAppStore.getState().setPlayback({ progress: 0.35 });
+    const { result } = renderHook(() => useExportOverlayCapture({
+      dynamicElevation: true,
+      elevationData: [
+        { elevation: 100, progress: 0.2, segmentIndex: 0, segmentType: 'track' },
+        { elevation: 310, progress: 0.5, segmentIndex: 0, segmentType: 'track' },
+      ],
+      getStatsValues: () => ({}),
+      includeElevation: true,
+      includeStats: false,
+    }));
+
+    result.current.drawElevationProgress(context, {
+      recordW: 1920,
+      recordH: 1080,
+      scaleToRecording: 1.92,
+    });
+
+    expect(translate).toHaveBeenCalledWith(-120, -5);
+    expect(fill).toHaveBeenCalledTimes(2);
+    expect(stroke).toHaveBeenCalledTimes(2);
+    expect(fillText).toHaveBeenCalledWith(
+      '↗ 1.40 km · 100 m–310 m · +210 m',
+      expect.any(Number),
+      expect.any(Number),
+    );
   });
 });
