@@ -71,6 +71,9 @@ describe('MapElevationProfile dynamic sections', () => {
   it('starts with the full route, focuses a detected climb, and restores static mode', async () => {
     render(<MapElevationProfile />);
 
+    expect(document.getElementById('mapElevationProfile')).toHaveStyle({
+      fontFamily: 'var(--font-family-overlay)',
+    });
     const svg = document.getElementById('elevationProfileSvg');
     expect(svg).toHaveAttribute('viewBox', '0 0 800 60');
     expect(svg).not.toHaveAttribute('data-export-elevation-change');

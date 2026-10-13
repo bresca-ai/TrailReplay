@@ -285,7 +285,10 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   return (
     <div
       className={`absolute z-20 ${className}`}
-      style={exportProfileStyle}
+      style={{
+        ...exportProfileStyle,
+        fontFamily: 'var(--font-family-overlay)',
+      }}
       id="mapElevationProfile"
     >
       <div
