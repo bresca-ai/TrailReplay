@@ -516,8 +516,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (!map) return;
 
     studioMapPresentationRestoreRef.current?.();
-    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, mapStyle);
-  }, [mapStyle]);
+    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map);
+  }, []);
 
   const restoreStudioMapSettings = useCallback(() => {
     studioMapPresentationRestoreRef.current?.();

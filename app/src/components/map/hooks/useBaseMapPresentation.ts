@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { AppSettings, TrailStyleSettings } from '@/types';
 import { applyBasemapFilter } from '@/components/map/mapFilters';
+import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
 import {
   BASEMAP_FALLBACK_MAX_ZOOM,
   BASEMAP_PRESENTATIONS,
@@ -114,7 +115,7 @@ export function useBaseMapPresentation({
         type: 'raster',
         source: 'wayback',
         layout: { visibility: isWaybackActive ? 'visible' : 'none' },
-        paint: { 'raster-fade-duration': 250 },
+        paint: { 'raster-fade-duration': 0 },
       },
       'carto-labels'
     );
@@ -128,6 +129,16 @@ export function useBaseMapPresentation({
 
     applyBasemapFilter(map, settings.mapFilter ?? 'none');
   }, [isMapLoaded, mapRef, settings.mapFilter, settings.mapStyle, settings.waybackItemURL]);
+
+  // Keep one imagery zoom across pitched frames in preview, playback, and all
+  // export modes. Declared after dynamic Wayback source creation so it covers
+  // those sources as soon as their selected capture is installed.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded) return;
+
+    applyConsistentBasemapTileLod(map, settings.mapStyle);
+  }, [isMapLoaded, mapRef, settings.mapStyle, settings.waybackItemURL]);
 
   useEffect(() => {
     const map = mapRef.current;

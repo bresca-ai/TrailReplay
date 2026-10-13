@@ -6,6 +6,7 @@ import {
   STATIC_BASEMAP_LAYER_IDS,
   STATIC_FALLBACK_LAYER_IDS,
 } from '@/components/map/mapStyle';
+import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
 import {
   getOpeningPreloadProgresses,
   getPredictivePlaybackPoses,
@@ -153,6 +154,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           map.setLayoutProperty(layerId, 'visibility', activeLayers.has(layerId) ? 'visible' : 'none');
         }
       });
+      applyConsistentBasemapTileLod(map, latestParamsRef.current.mapStyle);
     };
 
     if (map.isStyleLoaded()) syncActiveBaseMap();

@@ -612,8 +612,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       setSpeed(exportSpeed);
       setCinematicPlayed(false);
 
-      // Apply Studio LOD before preloading so the opening flight warms the
-      // same single-zoom, high-detail tile set that the encoder will capture.
+      // Disable Studio raster fades before preloading so cached opening tiles
+      // are painted immediately when the encoder starts.
       if (videoExportSettings.qualityMode === 'studio') {
         applyStudioMapSettings();
       }
