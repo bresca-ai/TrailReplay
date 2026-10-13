@@ -612,6 +612,12 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       setSpeed(exportSpeed);
       setCinematicPlayed(false);
 
+      // Apply Studio LOD before preloading so the opening flight warms the
+      // same single-zoom, high-detail tile set that the encoder will capture.
+      if (videoExportSettings.qualityMode === 'studio') {
+        applyStudioMapSettings();
+      }
+
       setExportStage(t('export.stagePreparing'));
       await preloadExportOpeningTiles();
 
@@ -685,7 +691,6 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
             throw deliveryError;
           }
         }
-        applyStudioMapSettings();
         await requestScreenWakeLock();
       }
 

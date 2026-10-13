@@ -39,6 +39,7 @@ import { waitForSettledFrame } from './exportMapSettle';
 import { getOverlayRefreshIntervalMs } from './exportOverlay';
 import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
 import { isWebCodecsMp4Supported, type Mp4CanvasEncoder } from './mp4CanvasEncoder';
+import { applyStudioMapPresentation } from './studioMapPresentation';
 import type { StudioDeliveryJob, StudioDeliveryRequest } from './studioDelivery';
 import { useExportOverlayCapture } from './useExportOverlayCapture';
 
@@ -280,7 +281,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     setNow,
   }));
   const studioStatsRef = useRef({ frames: 0, timedOutFrames: 0, waitedMs: 0 });
-  const rasterFadeRestoreRef = useRef<Array<() => void>>([]);
+  const studioMapPresentationRestoreRef = useRef<(() => void) | null>(null);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const hiddenSinceRef = useRef<number | null>(null);
   const hiddenMsRef = useRef(0);
@@ -514,30 +515,13 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     const map = mapGlobalRef.current;
     if (!map) return;
 
-    const restores: Array<() => void> = [];
-    const layers = map.getStyle()?.layers ?? [];
-    layers.forEach((layer) => {
-      if (layer.type !== 'raster') return;
-      try {
-        const previous = map.getPaintProperty(layer.id, 'raster-fade-duration');
-        map.setPaintProperty(layer.id, 'raster-fade-duration', 0);
-        restores.push(() => {
-          try {
-            map.setPaintProperty(layer.id, 'raster-fade-duration', previous ?? undefined);
-          } catch {
-            // The layer can be gone if the basemap changed during the export.
-          }
-        });
-      } catch {
-        // Ignore layers that reject the property rather than abort the export.
-      }
-    });
-    rasterFadeRestoreRef.current = restores;
-  }, []);
+    studioMapPresentationRestoreRef.current?.();
+    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, mapStyle);
+  }, [mapStyle]);
 
   const restoreStudioMapSettings = useCallback(() => {
-    rasterFadeRestoreRef.current.forEach((restore) => restore());
-    rasterFadeRestoreRef.current = [];
+    studioMapPresentationRestoreRef.current?.();
+    studioMapPresentationRestoreRef.current = null;
 
     const wakeLock = wakeLockRef.current;
     wakeLockRef.current = null;
