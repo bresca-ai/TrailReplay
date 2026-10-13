@@ -6,6 +6,7 @@ import {
   getReplayWarmupPose,
   getTransitionWarmupPoses,
   sampleCameraTransition,
+  selectBoundedCameraPoses,
 } from './replayCameraWarmupPlan';
 
 const coordinates = [[0, 0], [0.01, 0], [0.02, 0]];
@@ -118,5 +119,23 @@ describe('replay camera warmup plan', () => {
     expect(poses[0]).toMatchObject({ zoom: 10, bearing: 0 });
     expect(poses.at(-1)).toMatchObject({ zoom: 15, bearing: 90 });
     expect(poses[2].zoom).toBeCloseTo(12.5);
+  });
+
+  it('bounds an observed flight while preserving its real endpoints and curve', () => {
+    const observed = Array.from({ length: 61 }, (_, index) => ({
+      center: [index ** 2 / 3600, 0] as [number, number],
+      zoom: 8 + Math.sin((index / 60) * Math.PI / 2) * 8,
+      pitch: index / 2,
+      bearing: index,
+    }));
+    const selected = selectBoundedCameraPoses(observed, 12);
+
+    expect(selected).toHaveLength(12);
+    expect(selected[0]).toEqual(observed[0]);
+    expect(selected.at(-1)).toEqual(observed.at(-1));
+    // The selected midpoint is an observed nonlinear flight pose, not a
+    // linearly invented midpoint between the endpoints.
+    expect(selected[6].center[0]).toBeCloseTo(observed[33].center[0]);
+    expect(selected[6].zoom).toBeCloseTo(observed[33].zoom);
   });
 });

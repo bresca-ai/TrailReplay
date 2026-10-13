@@ -65,6 +65,25 @@ export function deduplicateCameraPoses(poses: Array<ReplayCameraPose | null>): R
   });
 }
 
+/**
+ * Keeps evenly distributed samples from an observed MapLibre flight, including
+ * both endpoints. Unlike interpolating endpoints ourselves, these poses retain
+ * MapLibre's van Wijk coupling between centre and zoom.
+ */
+export function selectBoundedCameraPoses(
+  poses: Array<ReplayCameraPose | null>,
+  maxSamples: number,
+): ReplayCameraPose[] {
+  const unique = deduplicateCameraPoses(poses);
+  const limit = Math.max(2, Math.floor(maxSamples));
+  if (unique.length <= limit) return unique;
+
+  const lastIndex = unique.length - 1;
+  return Array.from({ length: limit }, (_, index) => (
+    unique[Math.round((index * lastIndex) / (limit - 1))]
+  ));
+}
+
 /** The same unsmoothed target pose the replay camera uses for a given mode. */
 export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPose | null {
   if (options.cameraMode === 'cinematic') {
