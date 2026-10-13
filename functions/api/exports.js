@@ -6,6 +6,7 @@
 
 import {
   EXPORT_LINK_TTL_DAYS,
+  MAX_JOBS_PER_IP_PER_DAY,
   errorResponse,
   getClientIp,
   getCountry,
@@ -48,6 +49,15 @@ export async function onRequest({ request, env }) {
   // Recording which of the two this was is what makes the consent auditable.
   const marketingOptIn = body.marketingConsent === true;
   const preTickAllowed = allowsPreTickedMarketing(country);
+  const bypassesRateLimit = isRateLimitBypassed(env, email);
+
+  if (!bypassesRateLimit && await exceedsIpQuota(env.LEADS_DB, clientIp)) {
+    return errorResponse(
+      'rate_limited',
+      'Too many Studio exports from this network in the last 24 hours',
+      429,
+    );
+  }
 
   const jobId = crypto.randomUUID();
   const jobToken = createToken();
@@ -97,12 +107,14 @@ export async function onRequest({ request, env }) {
     env.LEADS_DB.prepare(`
       INSERT INTO export_jobs (
         id, email, created_at, status, quality, quality_mode, aspect_ratio,
-        fps, duration_ms, job_token_hash, expires_at
-      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
+        fps, duration_ms, job_token_hash, client_ip, expires_at
+      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       jobId, email, createdAt,
       settings.quality, settings.qualityMode, settings.aspectRatio,
-      settings.fps, settings.durationMs, jobTokenHash, expiresAt,
+      settings.fps, settings.durationMs, jobTokenHash,
+      bypassesRateLimit ? null : clientIp,
+      expiresAt,
     ),
   ];
 
@@ -115,4 +127,23 @@ export async function onRequest({ request, env }) {
     completeUrl: `/api/exports/${jobId}/complete`,
     expiresAt,
   }, 201);
+}
+
+function isRateLimitBypassed(env, email) {
+  const configured = env.STUDIO_EXPORT_RATE_LIMIT_BYPASS_EMAILS;
+  if (typeof configured !== 'string') return false;
+
+  return configured
+    .split(/[\s,;]+/)
+    .some((candidate) => normalizeEmail(candidate) === email);
+}
+
+async function exceedsIpQuota(db, clientIp) {
+  if (!clientIp) return false;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const row = await db
+    .prepare('SELECT COUNT(*) AS count FROM export_jobs WHERE client_ip = ? AND created_at > ?')
+    .bind(clientIp, since)
+    .first();
+  return (row?.count ?? 0) >= MAX_JOBS_PER_IP_PER_DAY;
 }
