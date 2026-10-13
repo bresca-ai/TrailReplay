@@ -73,6 +73,8 @@ export interface AppState {
   cameraSettings: CameraSettings;
   videoExportSettings: VideoExportSettings;
   socialShareSettings: SocialShareSettings;
+  /** Runtime-only delivery address for repeated Studio exports in the current project. */
+  studioDeliveryEmail: string;
   exportSubMode: 'video' | 'image';
   isExporting: boolean;
   isDeterministicExport: boolean;
@@ -175,6 +177,7 @@ export interface AppState {
   setTrailStyle: (settings: Partial<TrailStyleSettings>) => void;
   setVideoExportSettings: (settings: Partial<VideoExportSettings>) => void;
   setSocialShareSettings: (settings: Partial<SocialShareSettings>) => void;
+  setStudioDeliveryEmail: (email: string) => void;
   setExportSubMode: (mode: 'video' | 'image') => void;
   setIsExporting: (isExporting: boolean) => void;
   setIsDeterministicExport: (isDeterministic: boolean) => void;

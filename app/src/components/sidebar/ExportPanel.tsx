@@ -20,8 +20,9 @@ export function ExportPanel() {
   const isAppExporting = useAppStore((state) => state.isExporting);
   const journeyName = useAppStore((state) => state.journey?.name);
   const updateJourneyName = useAppStore((state) => state.updateJourneyName);
+  const studioDeliveryEmail = useAppStore((state) => state.studioDeliveryEmail);
+  const setStudioDeliveryEmail = useAppStore((state) => state.setStudioDeliveryEmail);
   const [showSettings, setShowSettings] = useState(false);
-  const [studioDeliveryEmail, setStudioDeliveryEmail] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [consentDefaultsLoaded, setConsentDefaultsLoaded] = useState(false);
   const consentTouchedRef = useRef(false);
