@@ -1,5 +1,4 @@
-import * as maplibregl from 'maplibre-gl';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { PreparedCinematicKeyframe } from './cinematicCameraPlan';
 import {
   deduplicateCameraPoses,
@@ -18,58 +17,37 @@ const baseOptions = {
 };
 
 describe('replay camera warmup plan', () => {
-  it('derives a stable wide intro start without reading the live camera', () => {
-    const cameraForBounds = vi.fn(() => ({
-      center: { lng: 0.01, lat: 0 },
-      zoom: 15,
-      bearing: 0,
-    }));
-    const map = {
-      cameraForBounds,
-      getBearing: vi.fn(() => 173),
-      getCenter: vi.fn(() => ({ lng: 120, lat: -30 })),
-      getPitch: vi.fn(() => 67),
-      getZoom: vi.fn(() => 19),
-    } as unknown as maplibregl.Map;
-
+  it('derives a stable country-scale intro start', () => {
     expect(getDeterministicIntroStartPose({
       coordinates,
       introTo: { center: [0, 0], zoom: 16.5, pitch: 56, bearing: 90 },
-      map,
-      padding: 100,
     })).toEqual({
-      center: [0.01, 0],
-      zoom: 13.5,
+      center: [0, 0],
+      zoom: 5.25,
       pitch: 0,
       bearing: 0,
     });
-    expect(cameraForBounds).toHaveBeenCalledWith(expect.anything(), {
-      bearing: 0,
-      padding: 100,
-      pitch: 0,
-    });
-    expect(map.getCenter).not.toHaveBeenCalled();
-    expect(map.getZoom).not.toHaveBeenCalled();
-    expect(map.getPitch).not.toHaveBeenCalled();
-    expect(map.getBearing).not.toHaveBeenCalled();
   });
 
-  it('uses a deterministic route-center fallback when bounds fitting is unavailable', () => {
-    const map = {
-      cameraForBounds: vi.fn(() => undefined),
-    } as unknown as maplibregl.Map;
-
+  it('keeps a visible zoom gap when an authored opening pose is already wide', () => {
     expect(getDeterministicIntroStartPose({
       coordinates,
-      introTo: { center: [0, 0], zoom: 14, pitch: 45, bearing: 90 },
-      map,
-      padding: 100,
+      introTo: { center: [0, 0], zoom: 5, pitch: 45, bearing: 90 },
     })).toEqual({
-      center: [0.01, 0],
-      zoom: 11,
+      center: [0, 0],
+      zoom: 2,
       pitch: 0,
       bearing: 0,
     });
+  });
+
+  it('anchors the overview to the route start rather than the full-route center', () => {
+    const longRoute = [[-17.9, 28.6], [2.17, 41.39], [24.9, 60.17]];
+
+    expect(getDeterministicIntroStartPose({
+      coordinates: longRoute,
+      introTo: { center: [-17.9, 28.6], zoom: 16, pitch: 50, bearing: 45 },
+    })).toMatchObject({ center: [-17.9, 28.6], zoom: 5.25, pitch: 0, bearing: 0 });
   });
 
   it('uses the authored cinematic pose rather than a follow-behind approximation', () => {

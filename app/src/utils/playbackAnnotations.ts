@@ -9,7 +9,13 @@ export function getActivePlaybackAnnotationId(params: {
 }) {
   const { annotations, currentTime, totalDuration, phase } = params;
 
-  if (totalDuration <= 0 || annotations.length === 0 || phase === 'outro' || phase === 'ended') {
+  const cameraTransitionHidesAnnotations = phase === 'preloading'
+    || phase === 'intro'
+    || phase === 'outro'
+    || phase === 'ended'
+    || (phase === 'idle' && currentTime <= 0);
+
+  if (totalDuration <= 0 || annotations.length === 0 || cameraTransitionHidesAnnotations) {
     return null;
   }
 

@@ -42,4 +42,16 @@ describe('playback marker presentation', () => {
       showTrackLabels: true,
     })).toBe(true);
   });
+
+  it('shows the start marker during the intro without showing it during tile preloading', () => {
+    const options = {
+      activeTextAnnotationId: null,
+      playbackProgress: 0,
+      showMarker: true,
+      showTrackLabels: false,
+    };
+
+    expect(shouldRenderPlaybackAdornment({ ...options, animationPhase: 'preloading' })).toBe(false);
+    expect(shouldRenderPlaybackAdornment({ ...options, animationPhase: 'intro' })).toBe(true);
+  });
 });

@@ -1,5 +1,4 @@
 import { getCinematicCameraPose, type PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
-import * as maplibregl from 'maplibre-gl';
 import {
   getOpeningPreloadProgresses,
   getPlaybackCameraPose,
@@ -24,6 +23,7 @@ const MAX_ZOOM_DELTA_PER_SAMPLE = 0.75;
 const MAX_BEARING_DELTA_PER_SAMPLE = 30;
 const MAX_TILE_DISTANCE_PER_SAMPLE = 0.75;
 const INTRO_MIN_ZOOM_DELTA = 3;
+const INTRO_COUNTRY_ZOOM = 5.25;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -72,41 +72,26 @@ export function deduplicateCameraPoses(poses: Array<ReplayCameraPose | null>): R
  *
  * This must not read the map's live camera: the editor camera may have been
  * panned, zoomed, or restored from a project, and inheriting it makes the same
- * replay produce a different opening move. Fitting the route from a neutral
- * north-up, top-down pose makes both preview and export deterministic. The
- * zoom gap also guarantees that even a very short route opens with a visible
- * zoom-in rather than a flat move or an accidental zoom-out.
+ * replay produce a different opening move. A route-bounds overview also makes
+ * the opening depend on route length: a short loop starts close while a long
+ * route can begin half a continent away from its own start. Instead, begin at
+ * the first route coordinate at a stable country-scale, north-up zoom. The
+ * start marker then gives viewers a geographic anchor before the camera moves
+ * into the playback framing.
  */
 export function getDeterministicIntroStartPose({
   coordinates,
   introTo,
-  map,
-  padding,
 }: {
   coordinates: number[][];
   introTo: ReplayCameraPose;
-  map: maplibregl.Map;
-  padding: number | maplibregl.PaddingOptions;
 }): ReplayCameraPose | null {
   if (coordinates.length === 0) return null;
-
-  const bounds = new maplibregl.LngLatBounds();
-  coordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
-  const fitted = map.cameraForBounds(bounds, {
-    bearing: 0,
-    padding,
-    pitch: 0,
-  });
-  const fittedCenter = fitted?.center
-    ? maplibregl.LngLat.convert(fitted.center)
-    : bounds.getCenter();
-  const fittedZoom = typeof fitted?.zoom === 'number'
-    ? fitted.zoom
-    : introTo.zoom - INTRO_MIN_ZOOM_DELTA;
+  const start = coordinates[0];
 
   return {
-    center: [fittedCenter.lng, fittedCenter.lat],
-    zoom: Math.min(fittedZoom, introTo.zoom - INTRO_MIN_ZOOM_DELTA),
+    center: [start[0], start[1]],
+    zoom: Math.max(0, Math.min(INTRO_COUNTRY_ZOOM, introTo.zoom - INTRO_MIN_ZOOM_DELTA)),
     pitch: 0,
     bearing: 0,
   };

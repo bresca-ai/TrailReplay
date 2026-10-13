@@ -571,8 +571,6 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     const introStartPose = getDeterministicIntroStartPose({
       coordinates: cameraPathCoordinates,
       introTo: introPose,
-      map,
-      padding: 100,
     });
     if (!introStartPose) return;
     const poses = deduplicateCameraPoses([

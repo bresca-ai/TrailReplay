@@ -148,7 +148,9 @@ export function shouldRenderPlaybackAdornment({
   if (activeTextAnnotationId) return false;
 
   return (showMarker || showTrackLabels)
-    && (animationPhase === 'playing' || (animationPhase === 'idle' && playbackProgress > 0));
+    && (animationPhase === 'intro'
+      || animationPhase === 'playing'
+      || (animationPhase === 'idle' && playbackProgress > 0));
 }
 
 export function updatePlaybackMarkerElement(
@@ -730,22 +732,19 @@ export function useTrailPlaybackCamera({
         });
 
     if (animationPhase === 'intro' && introPose) {
-      const boundsPadding = exportFrame ? getExportFrameFitPadding(exportFrame) : 100;
       const introStartPose = getDeterministicIntroStartPose({
         coordinates: allCoordinates,
         introTo: introPose,
-        map: mapRef.current,
-        padding: boundsPadding,
       });
       mapRef.current.stop();
       if (introStartPose) mapRef.current.jumpTo(introStartPose);
       mapRef.current.flyTo({
         ...introPose,
         duration: INTRO_DURATION,
-        // A linear fly-in reaches the playback pose exactly at the end. The
-        // old strong ease-out arrived visually early, which read as a pause
-        // before the marker started moving.
-        easing: (value) => value,
+        // Ease both ends: linger just long enough on the country-scale start
+        // marker to establish location, then settle into the first playback
+        // pose without the old ease-out's apparent pause.
+        easing: (value) => value * value * (3 - 2 * value),
       });
 
       smoothBearingRef.current = introPose.bearing;

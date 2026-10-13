@@ -28,7 +28,6 @@ interface UseTilePreloadParams {
   cinematicKeyframes?: PreparedCinematicKeyframe[];
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
-  fitPadding: number | maplibregl.PaddingOptions;
   isMapLoaded: boolean;
   isPlaying: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
@@ -52,7 +51,6 @@ export function useTilePreload({
   cinematicKeyframes,
   elevationData,
   followBehindZoomLevel,
-  fitPadding,
   isMapLoaded,
   isPlaying,
   mapRef,
@@ -98,8 +96,6 @@ export function useTilePreload({
     const overview = getDeterministicIntroStartPose({
       coordinates: allCoordinates,
       introTo: introPose,
-      map,
-      padding: fitPadding,
     });
     if (!overview) {
       setAnimationPhase('intro');
@@ -197,7 +193,6 @@ export function useTilePreload({
     cameraMode,
     cinematicKeyframes,
     elevationData,
-    fitPadding,
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying,
