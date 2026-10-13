@@ -340,7 +340,6 @@ export function TrailMap(_props: TrailMapProps) {
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying: playback.isPlaying,
-    mapStyle: settings.mapStyle,
     mapRef: map,
     setAnimationPhase,
     smoothBearingRef,
