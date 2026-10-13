@@ -29,7 +29,7 @@ export interface ElevationSectionDetectionOptions {
   mergeGapDistance?: number;
   minOverviewGap?: number;
   maxSections?: number;
-  /** Include downhill-only focus moments. Climb curation is the default. */
+  /** Include downhill focus moments. Enabled by default. */
   includeDescents?: boolean;
 }
 
@@ -241,7 +241,7 @@ function sectionScore(section: ElevationFocusSection): number {
   return vertical * Math.sqrt(Math.max(1, section.distance));
 }
 
-/** Detects noteworthy, animation-friendly climbs (and optional descents). */
+/** Detects noteworthy, animation-friendly climbs and descents. */
 export function detectElevationFocusSections(
   points: ElevationSectionPoint[],
   options: ElevationSectionDetectionOptions = {},
@@ -286,21 +286,27 @@ export function detectElevationFocusSections(
       ?? clamp(runDistance * 0.025, 120, 350);
 
     const candidates = mergeNearbyLegs(findTrendLegs(samples), mergeGap);
+    const includeDescents = options.includeDescents ?? true;
     sections.push(...candidates
       .filter((candidate) => {
         const distance = candidateDistance(candidate);
         const change = candidateChange(candidate);
-        return (options.includeDescents || candidate.kind === 'climb')
+        return (includeDescents || candidate.kind === 'climb')
           && distance >= minDistance
           && change >= minChange
           && change / distance >= minGrade;
       })
       .map(toSection)
-      // A real climb may contain shelves and small dips, but it should still
-      // read unmistakably uphill. This keeps noisy rolling terrain from
-      // producing arbitrary-looking focus moments.
-      .filter((section) => section.kind !== 'climb'
-        || section.elevationGain / Math.max(1, section.elevationGain + section.elevationLoss) >= 0.72));
+      // A meaningful leg may contain shelves and small reversals, but its
+      // direction should remain unmistakable. This keeps noisy rolling
+      // terrain from producing arbitrary-looking focus moments.
+      .filter((section) => {
+        const totalMovement = section.elevationGain + section.elevationLoss;
+        const dominantMovement = section.kind === 'climb'
+          ? section.elevationGain
+          : section.elevationLoss;
+        return dominantMovement / Math.max(1, totalMovement) >= 0.72;
+      }));
   });
 
   sections.sort((left, right) => left.startProgress - right.startProgress);
@@ -312,24 +318,33 @@ export function detectElevationFocusSections(
   );
   const overviewGap = options.minOverviewGap
     ?? clamp(totalDistance * 0.035, 800, 5_000);
-  const spaced: ElevationFocusSection[] = [];
-  sections.forEach((section) => {
-    const previous = spaced.at(-1);
-    if (!previous || previous.segmentIndex !== section.segmentIndex
-      || section.startDistance - previous.endDistance >= overviewGap) {
-      spaced.push(section);
-    } else if (sectionScore(section) > sectionScore(previous)) {
-      spaced[spaced.length - 1] = section;
-    }
+  const maxSections = Math.max(1, Math.floor(options.maxSections ?? 4));
+  const ranked = [...sections].sort((left, right) => sectionScore(right) - sectionScore(left));
+  const selected: ElevationFocusSection[] = [];
+  const canAdd = (candidate: ElevationFocusSection) => selected.every((existing) => {
+    if (candidate.segmentIndex !== existing.segmentIndex) return true;
+    return candidate.endDistance + overviewGap <= existing.startDistance
+      || existing.endDistance + overviewGap <= candidate.startDistance;
+  });
+  const addFirstMatching = (predicate: (section: ElevationFocusSection) => boolean) => {
+    const candidate = ranked.find((section) => predicate(section) && canAdd(section));
+    if (candidate) selected.push(candidate);
+  };
+
+  // Anchor the edit with the strongest terrain moment, then reserve room for
+  // the opposite direction when the route provides a separated one. This
+  // keeps a mountainous route from becoming an all-climb or all-descent reel.
+  const strongest = ranked[0];
+  if (strongest) selected.push(strongest);
+  if (strongest && maxSections > 1) {
+    addFirstMatching((section) => section.kind !== strongest.kind);
+  }
+  ranked.forEach((section) => {
+    if (selected.length >= maxSections || selected.includes(section) || !canAdd(section)) return;
+    selected.push(section);
   });
 
-  const maxSections = Math.max(1, Math.floor(options.maxSections ?? 4));
-  const capped = spaced.length <= maxSections
-    ? spaced
-    : [...spaced]
-      .sort((left, right) => sectionScore(right) - sectionScore(left))
-      .slice(0, maxSections)
-      .sort((left, right) => left.startProgress - right.startProgress);
+  const capped = selected.sort((left, right) => left.startProgress - right.startProgress);
 
   return capped.map((section, index) => ({
     ...section,

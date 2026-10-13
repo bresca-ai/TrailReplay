@@ -432,7 +432,7 @@ export const en = {
     paceModePerKm: 'Per km',
     showElevationProfile: 'Elevation profile',
     dynamicElevationProfile: 'Dynamic sections',
-    dynamicElevationProfileHint: 'Automatically focuses the strongest sustained climbs during playback.',
+    dynamicElevationProfileHint: 'Automatically focuses the strongest sustained climbs and descents during playback.',
     markerTitle: 'Marker',
     markerTypeIcon: 'Icon',
     markerTypeDot: 'Dot',

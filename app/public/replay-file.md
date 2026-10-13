@@ -435,7 +435,7 @@ pushing.
 | `statsColumns` | number or `null` |
 | `paceMode` | `cumulative` \| `per-km` |
 | `showElevationProfile` | boolean |
-| `dynamicElevationProfile` | boolean; automatically focus the strongest sustained climbs |
+| `dynamicElevationProfile` | boolean; automatically focus the strongest sustained climbs and descents |
 | `landmarkScale` | multiplier on pins and their labels |
 | `landmarkLabelFade` | boolean; fade labels in with zoom instead of popping |
 

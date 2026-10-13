@@ -34,21 +34,21 @@ describe('detectElevationFocusSections', () => {
     expect(sections[0].minElevation).toBeLessThan(sections[0].maxElevation);
   });
 
-  it('keeps the default edit climb-focused instead of selecting downhill moments', () => {
+  it('detects a sustained descent by default', () => {
     const sections = detectElevationFocusSections(profile([
       310, 301, 289, 276, 263, 251, 239, 225, 214, 202, 190,
     ]));
 
-    expect(sections).toEqual([]);
-  });
-
-  it('can still detect descents when a future edit explicitly requests them', () => {
-    const sections = detectElevationFocusSections(profile([
-      310, 301, 289, 276, 263, 251, 239, 225, 214, 202, 190,
-    ]), { includeDescents: true });
-
     expect(sections[0]).toMatchObject({ kind: 'descent', segmentIndex: 0 });
     expect(sections[0].elevationLoss).toBeGreaterThan(100);
+  });
+
+  it('can explicitly restrict detection to climbs', () => {
+    const sections = detectElevationFocusSections(profile([
+      310, 301, 289, 276, 263, 251, 239, 225, 214, 202, 190,
+    ]), { includeDescents: false });
+
+    expect(sections).toEqual([]);
   });
 
   it('ignores essentially flat terrain', () => {
@@ -73,7 +73,7 @@ describe('detectElevationFocusSections', () => {
 
     const sections = detectElevationFocusSections(
       [...firstTrack, invalid, ...transport, ...secondTrack],
-      { includeDescents: true, minSectionDistance: 150, minElevationChange: 20, minOverviewGap: 0 },
+      { minSectionDistance: 150, minElevationChange: 20, minOverviewGap: 0 },
     );
 
     expect(sections.map((section) => section.segmentIndex)).toEqual([0, 2]);
@@ -113,5 +113,18 @@ describe('detectElevationFocusSections', () => {
     expect(sections[0].startDistance).toBe(0);
     expect(sections[0].endDistance).toBe(900);
     expect(sections[0].elevationLoss).toBeGreaterThan(0);
+  });
+
+  it('keeps both directions represented when separated climbs and descents are available', () => {
+    const descent = profile([260, 225, 190, 155, 120, 85], 100, 0);
+    const climb = profile([80, 115, 150, 185, 220, 255], 100, 1, 'track', 2_000);
+    const sections = detectElevationFocusSections([...descent, ...climb], {
+      minSectionDistance: 300,
+      minElevationChange: 60,
+      minOverviewGap: 500,
+      maxSections: 3,
+    });
+
+    expect(new Set(sections.map((section) => section.kind))).toEqual(new Set(['climb', 'descent']));
   });
 });
