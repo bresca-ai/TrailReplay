@@ -8,6 +8,9 @@ import { projectCoordinateToTrack } from '@/utils/routeProjection';
 import {
   buildLandmarkLookupBatches,
   landmarkTrackSignature,
+  MAX_NEARBY_PLACES_PER_ROUTE,
+  MAX_NEARBY_PLACES_TOTAL,
+  selectRouteWidePlaces,
   tracksNeedingLandmarkLookup,
 } from '@/utils/landmarkLookup';
 import type { ComputedJourney, SegmentTiming } from '@/utils/journeyUtils';
@@ -53,6 +56,10 @@ function projectCachedPlaces(
   computedJourney: ComputedJourney | null,
 ): RouteLandmark[] {
   const unique = new Map<string, RouteLandmark>();
+  const perTrackLimit = Math.min(
+    MAX_NEARBY_PLACES_PER_ROUTE,
+    Math.max(1, Math.floor(MAX_NEARBY_PLACES_TOTAL / Math.max(1, tracks.length))),
+  );
 
   for (const track of tracks) {
     const cached = cache.get(track.id);
@@ -62,12 +69,18 @@ function projectCachedPlaces(
     ) ?? [];
     const matches = cached.places
       .map((place) => ({ place, match: projectCoordinateToTrack(track, place.lat, place.lon, 0) }))
-      .filter(({ match }) => Boolean(match && match.distanceMeters <= 1_500))
-      .sort((left, right) => right.place.importance - left.place.importance)
-      .slice(0, 16);
+      .filter((candidate): candidate is typeof candidate & { match: NonNullable<typeof candidate.match> } => (
+        Boolean(candidate.match && candidate.match.distanceMeters <= 1_500)
+      ));
+    const selectedMatches = selectRouteWidePlaces(matches.map(({ place, match }) => ({
+      distanceMeters: match.distanceMeters,
+      importance: place.importance,
+      match,
+      place,
+      progress: match.progress,
+    })), perTrackLimit);
 
-    for (const { place, match } of matches) {
-      if (!match) continue;
+    for (const { place, match } of selectedMatches) {
       if (timings.length === 0) {
         unique.set(`${track.id}:${place.id}`, {
           ...place,
@@ -83,9 +96,7 @@ function projectCachedPlaces(
     }
   }
 
-  return [...unique.values()]
-    .sort((left, right) => right.importance - left.importance)
-    .slice(0, 40);
+  return [...unique.values()];
 }
 
 export function useRouteLandmarks(): RouteLandmark[] {

@@ -1,9 +1,65 @@
 const MAX_BATCH_POINTS = 160;
 const MAX_BATCH_SPAN_DEGREES = 1.1;
+export const MAX_NEARBY_PLACES_PER_ROUTE = 32;
+export const MAX_NEARBY_PLACES_TOTAL = 120;
+const DEFAULT_ROUTE_PLACE_BUCKETS = 16;
 
 export interface LandmarkLookupPoint {
   lat: number;
   lon: number;
+}
+
+interface RoutePlaceCandidate {
+  distanceMeters: number;
+  importance: number;
+  progress: number;
+}
+
+/**
+ * Keeps a route's named places spread across its full length.
+ *
+ * Provider/database order has no geographic meaning. Taking the first N after
+ * sorting only by importance used to fill the quota with equal-ranked towns
+ * from one area. Progress buckets make coverage the primary constraint, while
+ * importance and proximity decide which places represent each area.
+ */
+export function selectRouteWidePlaces<T extends RoutePlaceCandidate>(
+  candidates: T[],
+  limit = MAX_NEARBY_PLACES_PER_ROUTE,
+  bucketCount = DEFAULT_ROUTE_PLACE_BUCKETS,
+): T[] {
+  if (limit <= 0 || candidates.length === 0) return [];
+  const bucketTotal = Math.max(1, Math.min(Math.floor(bucketCount), limit));
+  const buckets: Array<Array<{ candidate: T; index: number }>> = Array.from(
+    { length: bucketTotal },
+    () => [],
+  );
+
+  candidates.forEach((candidate, index) => {
+    const progress = Math.max(0, Math.min(1, candidate.progress));
+    const bucketIndex = Math.min(bucketTotal - 1, Math.floor(progress * bucketTotal));
+    buckets[bucketIndex].push({ candidate, index });
+  });
+  buckets.forEach((bucket) => bucket.sort((left, right) => (
+    right.candidate.importance - left.candidate.importance
+    || left.candidate.distanceMeters - right.candidate.distanceMeters
+    || left.index - right.index
+  )));
+
+  const selected: T[] = [];
+  for (let round = 0; selected.length < limit; round += 1) {
+    let foundCandidate = false;
+    for (const bucket of buckets) {
+      const entry = bucket[round];
+      if (!entry) continue;
+      foundCandidate = true;
+      selected.push(entry.candidate);
+      if (selected.length === limit) break;
+    }
+    if (!foundCandidate) break;
+  }
+
+  return selected.sort((left, right) => left.progress - right.progress);
 }
 
 function sampleBatch(points: LandmarkLookupPoint[]): Array<[number, number]> {

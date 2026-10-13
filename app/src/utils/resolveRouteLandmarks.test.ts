@@ -12,4 +12,31 @@ describe('resolveRouteLandmarks', () => {
   it('caps lower-priority labels in the same route corridor', () => {
     expect(resolveRouteLandmarks([landmark('first', 'automatic', 100), landmark('second', 'automatic', 200)]).length).toBe(1);
   });
+
+  it('keeps more than forty distributed places from multiple routes', () => {
+    const places = Array.from({ length: 64 }, (_, index) => (
+      landmark(`place-${index}`, 'enriched', index * 1_000, 4)
+    ));
+
+    expect(resolveRouteLandmarks(places)).toHaveLength(64);
+  });
+
+  it('deduplicates the same physical place projected onto two journey segments', () => {
+    const first = landmark('osm-town-1:segment-a', 'enriched', 1_000, 4);
+    const second = {
+      ...landmark('osm-town-1:segment-b', 'enriched', 80_000, 4),
+      lat: first.lat + 0.00001,
+      lon: first.lon + 0.00001,
+    };
+
+    expect(resolveRouteLandmarks([first, second])).toHaveLength(1);
+  });
+
+  it('retains a generous safety ceiling for very large landmark sets', () => {
+    const places = Array.from({ length: 140 }, (_, index) => (
+      landmark(`place-${index}`, 'enriched', index * 1_000, 4)
+    ));
+
+    expect(resolveRouteLandmarks(places)).toHaveLength(120);
+  });
 });
