@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   resolvePlaybackMarkerColor,
+  shouldRenderPlaybackAdornment,
   updatePlaybackMarkerElement,
 } from './useTrailPlaybackCamera';
 
@@ -22,5 +23,23 @@ describe('playback marker presentation', () => {
     expect(element.querySelector('.tr-marker-label')?.textContent).toBe('<img src=x onerror=alert(1)>');
     expect((element.querySelector('.tr-marker-label') as HTMLElement).style.fontFamily).toContain('Inter');
     expect(element.querySelector('.tr-marker-label img')).toBeNull();
+  });
+
+  it('never renders the moving marker or label over an active track annotation', () => {
+    expect(shouldRenderPlaybackAdornment({
+      activeTextAnnotationId: 'annotation-1',
+      animationPhase: 'playing',
+      playbackProgress: 0.5,
+      showMarker: true,
+      showTrackLabels: true,
+    })).toBe(false);
+
+    expect(shouldRenderPlaybackAdornment({
+      activeTextAnnotationId: null,
+      animationPhase: 'playing',
+      playbackProgress: 0.5,
+      showMarker: true,
+      showTrackLabels: true,
+    })).toBe(true);
   });
 });

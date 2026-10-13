@@ -280,6 +280,7 @@ export function TrailMap(_props: TrailMapProps) {
 
   useTrailPlaybackCamera({
     activeTrack,
+    activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
     allCoordinates,
     cameraCoordinates: cameraPathCoordinates,
     animationPhase,
