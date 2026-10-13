@@ -55,6 +55,33 @@ describe('configuration usage analytics', () => {
     expect(JSON.stringify(trackEvent.mock.calls)).not.toContain('Private summit note');
   });
 
+  it('records actual dynamic elevation use in playback and export contexts', () => {
+    trackEvent.mockClear();
+    const snapshot = configuration();
+    snapshot.settings.showElevationProfile = true;
+    snapshot.settings.dynamicElevationProfile = true;
+
+    trackConfigurationUsage('playback', snapshot);
+    trackConfigurationUsage('video_export', snapshot);
+
+    expect(trackEvent).toHaveBeenCalledWith('feature_used', {
+      feature_name: 'dynamic_elevation_profile', feature_value: 'enabled', feature_context: 'playback',
+    });
+    expect(trackEvent).toHaveBeenCalledWith('feature_used', {
+      feature_name: 'dynamic_elevation_profile', feature_value: 'enabled', feature_context: 'video_export',
+    });
+  });
+
+  it('does not count a retained dynamic toggle when the elevation profile is hidden', () => {
+    const snapshot = configuration();
+    snapshot.settings.showElevationProfile = false;
+    snapshot.settings.dynamicElevationProfile = true;
+
+    const usage = new Map(getConfigurationUsage(snapshot));
+
+    expect(usage.get('dynamic_elevation_profile')).toBe('disabled');
+  });
+
   it('reports actual video output choices as option usage', () => {
     trackEvent.mockClear();
     trackConfigurationUsage('video_export', {
