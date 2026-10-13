@@ -8,8 +8,8 @@
  */
 export const SIDE_PANEL_SHADE = {
   radius: 16,
-  top: 'rgba(4, 16, 15, 0.5)',
-  bottom: 'rgba(4, 16, 15, 0.3)',
+  top: 'rgba(4, 16, 15, 0.66)',
+  bottom: 'rgba(4, 16, 15, 0.5)',
 } as const;
 
 export const sidePanelShadeStyle = {
