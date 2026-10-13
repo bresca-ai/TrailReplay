@@ -645,6 +645,29 @@ export function AnnotationsPanel() {
             }}
           />
         </div>
+        {settings.showElevationProfile && (
+          <div className="ml-3 space-y-1.5 border-l border-[var(--evergreen)]/15 pl-3">
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-sm text-[var(--evergreen)]">
+                {t('annotations.dynamicElevationProfile')}
+              </Label>
+              <Switch
+                checked={settings.dynamicElevationProfile}
+                onCheckedChange={(checked) => {
+                  setSettings({ dynamicElevationProfile: checked });
+                  trackEvent('feature_enabled', {
+                    feature_name: 'dynamic_elevation_profile',
+                    feature_state: checked ? 'enabled' : 'disabled',
+                    feature_context: 'annotations_panel',
+                  });
+                }}
+              />
+            </div>
+            <p className="text-xs text-[var(--evergreen-60)]">
+              {t('annotations.dynamicElevationProfileHint')}
+            </p>
+          </div>
+        )}
         <p className="text-xs text-[var(--evergreen-60)]">{t('annotations.statsHint')}</p>
       </div>
 

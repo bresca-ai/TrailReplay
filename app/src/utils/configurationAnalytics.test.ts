@@ -37,6 +37,7 @@ describe('configuration usage analytics', () => {
     expect(usage.get('camera_stability')).toBe('balanced');
     expect(usage.get('annotations')).toBe('none');
     expect(usage.get('terrain_3d')).toBe('enabled');
+    expect(usage.get('dynamic_elevation_profile')).toBe('disabled');
     expect(usage.get('track_labels')).toBe('disabled');
     expect(usage.get('stat_distance')).toBe('enabled');
     expect(usage.get('stat_heartRate')).toBe('disabled');

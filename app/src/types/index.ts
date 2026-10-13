@@ -377,6 +377,8 @@ export interface AppSettings {
   statsColumns: number | null;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
+  /** Automatically focus the elevation chart on significant climbs and descents. */
+  dynamicElevationProfile: boolean;
   /** Multiplier applied to landmark pins and their labels together. */
   landmarkScale: number;
   /** Fade landmark labels in with zoom instead of popping them in. */

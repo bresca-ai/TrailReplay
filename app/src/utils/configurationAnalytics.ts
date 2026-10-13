@@ -52,6 +52,7 @@ export function getConfigurationUsage(configuration: UsageConfiguration): Array<
     ['videos', bucketCount(videos.length)],
     ['show_pictures', stateOf(settings.showPictures)],
     ['elevation_profile', stateOf(settings.showElevationProfile)],
+    ['dynamic_elevation_profile', stateOf(settings.dynamicElevationProfile)],
     ['marker', stateOf(trailStyle.showMarker)],
     ['marker_type', trailStyle.markerType],
     ['track_labels', stateOf(trailStyle.showTrackLabels)],

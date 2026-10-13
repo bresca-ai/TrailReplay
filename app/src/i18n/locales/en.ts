@@ -431,6 +431,8 @@ export const en = {
     paceModeCumulative: 'Overall',
     paceModePerKm: 'Per km',
     showElevationProfile: 'Elevation profile',
+    dynamicElevationProfile: 'Dynamic sections',
+    dynamicElevationProfileHint: 'Automatically zooms to significant climbs and descents during playback.',
     markerTitle: 'Marker',
     markerTypeIcon: 'Icon',
     markerTypeDot: 'Dot',

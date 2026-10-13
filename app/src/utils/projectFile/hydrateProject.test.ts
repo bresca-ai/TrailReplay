@@ -182,6 +182,24 @@ describe('hydrateProject', () => {
     expect(legacyStore.getState().settings.statsLayout).toBe('auto');
     expect(legacyStore.getState().settings.statsColumns).toBeNull();
   });
+
+  it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
+    const sourceStore = createAppStore();
+    sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
+    sourceStore.getState().setSettings({ dynamicElevationProfile: true });
+
+    const blob = await buildReplayArchive(sourceStore.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
+
+    const restoredStore = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, restoredStore.getState());
+    expect(restoredStore.getState().settings.dynamicElevationProfile).toBe(true);
+
+    delete (parsed.project!.settings as Record<string, unknown>).dynamicElevationProfile;
+    const legacyStore = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, legacyStore.getState());
+    expect(legacyStore.getState().settings.dynamicElevationProfile).toBe(false);
+  });
 });
 
 describe('cinematic camera keyframes in a saved project', () => {

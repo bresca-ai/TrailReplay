@@ -64,6 +64,7 @@ export function createDefaultSettings(): AppSettings {
     statsColumns: null,
     paceMode: 'per-km' as const,
     showElevationProfile: true,
+    dynamicElevationProfile: false,
     landmarkScale: 1,
     landmarkLabelFade: true,
   };

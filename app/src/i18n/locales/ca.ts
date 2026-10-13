@@ -431,6 +431,8 @@ export const ca = {
     paceModeCumulative: 'Global',
     paceModePerKm: 'Per km',
     showElevationProfile: 'Perfil d\'altitud',
+    dynamicElevationProfile: 'Seccions dinàmiques',
+    dynamicElevationProfileHint: 'Amplia automàticament les pujades i baixades destacades durant la reproducció.',
     markerTitle: 'Marcador',
     markerTypeIcon: 'Icona',
     markerTypeDot: 'Punt',
