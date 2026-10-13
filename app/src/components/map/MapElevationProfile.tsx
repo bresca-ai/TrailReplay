@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
-import { convertElevation } from '@/utils/units';
+import { convertElevation, formatDistance, formatElevation } from '@/utils/units';
 import type { CropPreviewMetrics } from '@/utils/crop';
+import { getDynamicElevationViewport } from './dynamicElevationViewport';
 import { getElevationAtProgress } from './elevationProfile';
+import { detectElevationFocusSections } from './elevationSections';
 
 interface MapElevationProfileProps {
   className?: string;
@@ -134,10 +136,32 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     return {
       svgWidth,
       svgHeight,
+      padding,
+      chartHeight,
+      minElevation,
+      maxElevation,
       pointsBySegment,
       segmentPaths,
     };
   }, [elevationData, segmentTimings, trailStyle.trailColor, tracks]);
+
+  const focusSections = useMemo(
+    () => settings.dynamicElevationProfile
+      ? detectElevationFocusSections(elevationData)
+      : [],
+    [elevationData, settings.dynamicElevationProfile],
+  );
+
+  const dynamicViewport = useMemo(() => {
+    if (!profileData || !settings.dynamicElevationProfile) return null;
+    return getDynamicElevationViewport({
+      currentTimeMs: playback.currentTime,
+      totalDurationMs: playback.totalDuration,
+      fullElevationMin: profileData.minElevation,
+      fullElevationMax: profileData.maxElevation,
+      sections: focusSections,
+    });
+  }, [focusSections, playback.currentTime, playback.totalDuration, profileData, settings.dynamicElevationProfile]);
 
   // Only the clip width and interpolated label change during playback. The
   // profile paths themselves stay static, avoiding a full GPX scan and a large
@@ -183,11 +207,43 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     return null;
   }
 
-  const { svgWidth, svgHeight, segmentPaths } = profileData;
+  const {
+    svgWidth,
+    svgHeight,
+    padding,
+    chartHeight,
+    minElevation,
+    maxElevation,
+    segmentPaths,
+  } = profileData;
   const { currentElevation, markerX, currentColor } = progressData;
   const elevUnit = settings.unitSystem === 'metric' ? 'm' : 'ft';
 
   const formattedCurrentElev = Math.round(convertElevation(currentElevation, settings.unitSystem));
+  const elevationRange = maxElevation - minElevation;
+  const elevationToY = (elevation: number) => {
+    if (elevationRange <= 0) return padding + chartHeight / 2;
+    return svgHeight - padding - ((elevation - minElevation) / elevationRange) * chartHeight;
+  };
+  const progressDomain = dynamicViewport?.progressDomain ?? [0, 1];
+  const elevationDomain = dynamicViewport?.elevationDomain ?? [minElevation, maxElevation];
+  const viewBoxX = progressDomain[0] * svgWidth;
+  const viewBoxWidth = Math.max(1, (progressDomain[1] - progressDomain[0]) * svgWidth);
+  const focusAmount = dynamicViewport?.focusAmount ?? 0;
+  const focusedViewBoxTop = elevationToY(elevationDomain[1]);
+  const focusedViewBoxBottom = elevationToY(elevationDomain[0]);
+  const viewBoxTop = dynamicViewport
+    ? focusedViewBoxTop - padding * (1 - focusAmount)
+    : 0;
+  const viewBoxBottom = dynamicViewport
+    ? focusedViewBoxBottom + padding * (1 - focusAmount)
+    : svgHeight;
+  const viewBoxHeight = Math.max(1, viewBoxBottom - viewBoxTop);
+  const markerPosition = Math.min(1, Math.max(0, (markerX - viewBoxX) / viewBoxWidth));
+  const focusedSection = dynamicViewport?.activeSection ?? null;
+  const sectionLabel = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
+    ? `${focusedSection.kind === 'climb' ? '↗' : '↘'} ${formatDistance(focusedSection.distance, settings.unitSystem)} · ${formatElevation(focusedSection.minElevation, settings.unitSystem)}–${formatElevation(focusedSection.maxElevation, settings.unitSystem)} · ${focusedSection.kind === 'climb' ? '+' : '−'}${formatElevation(focusedSection.kind === 'climb' ? focusedSection.elevationGain : focusedSection.elevationLoss, settings.unitSystem)}`
+    : '';
   const isExportPreview = isExporting || activePanel === 'export';
   const isNonWideExportPreview = isExportPreview && exportAspectRatio !== '16:9';
   const labelOverflowPadding = isNonWideExportPreview ? 24 : 18;
@@ -218,11 +274,14 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       >
         {/* SVG Profile */}
         <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          viewBox={`${viewBoxX} ${viewBoxTop} ${viewBoxWidth} ${viewBoxHeight}`}
           preserveAspectRatio="none"
           className={`w-full ${isNonWideExportPreview ? 'h-[72px]' : 'h-[60px]'}`}
           id="elevationProfileSvg"
           data-export-elevation-progress-color={currentColor}
+          data-export-elevation-marker-x={markerX}
+          data-export-elevation-section-label={sectionLabel || undefined}
+          data-export-elevation-dynamic-profile={settings.dynamicElevationProfile ? 'true' : undefined}
         >
           {/* Gradient definitions for segments */}
           <defs>
@@ -244,7 +303,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
               <stop offset="100%" stopColor={currentColor} stopOpacity="0.5" />
             </linearGradient>
             <clipPath id="elevationProgressClip">
-              <rect x="0" y="0" width={markerX} height={svgHeight} />
+              <rect x={viewBoxX} y={viewBoxTop} width={Math.max(0, markerX - viewBoxX)} height={viewBoxHeight} />
             </clipPath>
           </defs>
 
@@ -255,11 +314,13 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
               d={seg.pathD}
               data-export-elevation-segment
               data-export-elevation-color={seg.color}
+              data-export-elevation-type={seg.type}
               fill={`url(#segmentGradient-${seg.segmentIndex})`}
               stroke={seg.color}
               strokeWidth="1"
               strokeOpacity={seg.type === 'transport' ? '0.3' : '0.5'}
               strokeDasharray={seg.type === 'transport' ? '4,4' : 'none'}
+              vectorEffect="non-scaling-stroke"
               id={`segmentPath-${seg.segmentIndex}`}
             />
           ))}
@@ -274,6 +335,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
                   fill="url(#progressGradient)"
                   stroke={currentColor}
                   strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
                 />
               ))}
             </g>
@@ -297,6 +359,18 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           })}
         </svg>
 
+        {sectionLabel && (
+          <div
+            data-export-elevation-dynamic
+            className={`absolute left-2 top-1 whitespace-nowrap rounded-md bg-black/70 px-1.5 py-0.5 font-semibold text-white shadow-sm transition-opacity ${
+              isNonWideExportPreview ? 'text-[13px]' : 'text-[9px]'
+            }`}
+            style={{ opacity: dynamicViewport?.focusAmount ?? 0 }}
+          >
+            {sectionLabel}
+          </div>
+        )}
+
         {/* Current elevation label - follows the progress, aligned to bottom */}
         {playback.progress > 0 && (
           <div
@@ -308,7 +382,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
                 : 'bottom-1'
             }`}
             style={{
-              left: `${(markerX / svgWidth) * 100}%`,
+              left: `${markerPosition * 100}%`,
               textShadow: isNonWideExportPreview
                 ? '0 3px 10px rgba(0, 0, 0, 0.72), 0 1px 3px rgba(0, 0, 0, 0.9)'
                 : '0 2px 6px rgba(0, 0, 0, 0.75)',
@@ -352,7 +426,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
         )}
 
         {/* Segment labels (small indicators at top) */}
-        {segmentTimings.length > 1 && (
+        {!settings.dynamicElevationProfile && segmentTimings.length > 1 && (
           <div className="absolute top-0 left-0 right-0 flex">
             {segmentTimings.map((timing, i) => {
               const { start, end } = segmentProgressRange(timing);
