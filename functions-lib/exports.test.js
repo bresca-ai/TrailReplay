@@ -49,8 +49,8 @@ function createRequest() {
 }
 
 describe('Studio export registration', () => {
-  it('allows the 50th job from a network and rejects the 51st', async () => {
-    const db = createDb(49);
+  it('allows the 10th job from a network and rejects the 11th', async () => {
+    const db = createDb(9);
     const env = { LEADS_DB: db };
 
     const allowed = await onRequest({ request: createRequest(), env });
@@ -64,7 +64,7 @@ describe('Studio export registration', () => {
   });
 
   it('bypasses the quota for configured developer emails without storing the job IP', async () => {
-    const db = createDb(50);
+    const db = createDb(10);
     const env = {
       LEADS_DB: db,
       STUDIO_EXPORT_RATE_LIMIT_BYPASS_EMAILS: 'other@example.com, RIDER@EXAMPLE.COM',
