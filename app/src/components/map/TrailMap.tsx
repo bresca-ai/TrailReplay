@@ -17,7 +17,7 @@ import {
 import { useManualPicturePlacement } from './hooks/useManualPicturePlacement';
 import { usePictureMarkers } from './hooks/usePictureMarkers';
 import { useTextAnnotationsLayer } from './hooks/useTextAnnotationsLayer';
-import { useRouteLandmarksLayer } from './hooks/useRouteLandmarksLayer';
+import { shouldShowRouteLandmarks, useRouteLandmarksLayer } from './hooks/useRouteLandmarksLayer';
 import { useLandmarkPlacement } from './hooks/useLandmarkPlacement';
 import { useRouteLandmarks } from '@/hooks/useRouteLandmarks';
 import { useComparisonTrackLayers } from './hooks/useComparisonTrackLayers';
@@ -184,6 +184,7 @@ export function TrailMap(_props: TrailMapProps) {
     mapRef: map,
     onSelectLandmark: handleSelectLandmark,
     selectedLandmarkId,
+    visible: shouldShowRouteLandmarks(animationPhase),
   });
 
   useLandmarkPlacement({

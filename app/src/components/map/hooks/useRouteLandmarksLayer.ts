@@ -63,6 +63,14 @@ interface UseRouteLandmarksLayerParams {
   /** Called when a landmark icon or label is clicked on the map. */
   onSelectLandmark?: (landmarkId: string) => void;
   selectedLandmarkId?: string | null;
+  /** Hide map labels while the opening camera establishes geographic context. */
+  visible?: boolean;
+}
+
+export function shouldShowRouteLandmarks(
+  phase: 'idle' | 'preloading' | 'intro' | 'playing' | 'outro' | 'ended',
+): boolean {
+  return phase !== 'preloading' && phase !== 'intro';
 }
 
 export function useRouteLandmarksLayer({
@@ -73,6 +81,7 @@ export function useRouteLandmarksLayer({
   mapRef,
   onSelectLandmark,
   selectedLandmarkId = null,
+  visible = true,
 }: UseRouteLandmarksLayerParams) {
   useEffect(() => {
     const map = mapRef.current; if (!map || !isMapLoaded) return;
@@ -86,8 +95,10 @@ export function useRouteLandmarksLayer({
     const beforeAnnotations = ANNOTATION_LAYER_IDS.find((layerId) => map.getLayer(layerId));
     if (!map.getLayer(ICON)) map.addLayer(landmarkIconLayer(scale), beforeAnnotations);
     if (!map.getLayer(LABEL)) map.addLayer(landmarkLabelLayer(scale, labelFade), beforeAnnotations);
-    (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(data(landmarks, selectedLandmarkId));
-  }, [isMapLoaded, labelFade, landmarks, mapRef, scale, selectedLandmarkId]);
+    (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
+      data(visible ? landmarks : [], selectedLandmarkId),
+    );
+  }, [isMapLoaded, labelFade, landmarks, mapRef, scale, selectedLandmarkId, visible]);
 
   // The layers are only added once, so size and fade changes have to be pushed
   // onto the existing layers rather than waiting for a re-add.
