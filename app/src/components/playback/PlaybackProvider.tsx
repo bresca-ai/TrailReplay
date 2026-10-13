@@ -1,8 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
-import { mapGlobalRef } from '@/utils/mapRef';
-import { getLivePlaybackClockTick, isLivePlaybackBasemapReady } from './livePlaybackTileGate';
 
 interface PlaybackProviderProps {
   children: React.ReactNode;
@@ -32,7 +30,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
   const resetPlayback = useAppStore((state) => state.resetPlayback);
 
   const animationRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
+  const lastTimeRef = useRef<number>(0);
   const introTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const outroTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -118,7 +116,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
-      lastTimeRef.current = null;
+      lastTimeRef.current = 0;
       return;
     }
 
@@ -126,27 +124,22 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
     if (totalDuration === 0) return;
 
     const animate = (timestamp: number) => {
-      const state = useAppStore.getState();
-      const basemapReady = isLivePlaybackBasemapReady(
-        mapGlobalRef.current,
-        state.settings.mapStyle,
-      );
-      const clockTick = getLivePlaybackClockTick(timestamp, lastTimeRef.current, basemapReady);
-      lastTimeRef.current = clockTick.timestampMs;
-
-      if (!basemapReady) {
-        animationRef.current = requestAnimationFrame(animate);
-        return;
+      if (!lastTimeRef.current) {
+        lastTimeRef.current = timestamp;
       }
+
+      const deltaTime = timestamp - lastTimeRef.current;
+      lastTimeRef.current = timestamp;
 
       // Read the latest time/speed from the store rather than closing over them,
       // so this effect doesn't need `playback.currentTime` as a dependency.
       // Depending on it would tear down and recreate this rAF loop every frame,
       // resetting lastTimeRef and dropping elapsed time — which stretched a 30s
       // animation into ~75s of wall-clock (and recording) time.
+      const state = useAppStore.getState();
       const { currentTime, speed } = state.playback;
       const annotations = state.textAnnotations;
-      const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations) + clockTick.deltaMs * speed;
+      const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations) + deltaTime * speed;
       const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations);
 
       if (elapsed >= playbackTimeForRoute(totalDuration, totalDuration, annotations)) {
@@ -171,7 +164,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       }
     };
 
-    lastTimeRef.current = null;
+    lastTimeRef.current = 0;
     animationRef.current = requestAnimationFrame(animate);
 
     return () => {
