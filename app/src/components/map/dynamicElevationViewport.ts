@@ -1,6 +1,15 @@
 import type { ElevationFocusSection } from './elevationSections';
 
-export const ELEVATION_FOCUS_TRANSITION_MS = 700;
+// Give the profile enough screen time to read as a camera move instead of a
+// viewBox cut. This duration is expressed in the authored/output timeline, so
+// Studio captures the same intermediate zoom frames as live playback.
+export const ELEVATION_FOCUS_TRANSITION_MS = 1_800;
+
+// Keep the original chapter grouping tolerance independent from the camera
+// move duration. Otherwise a longer, nicer zoom would merge unrelated nearby
+// sections into one focus group and remove their individual reveals.
+const ELEVATION_FOCUS_GROUP_MERGE_GAP_MS = 1_400;
+const ELEVATION_OVERVIEW_HOLD_MS = 300;
 
 const MIN_PROGRESS_PADDING = 0.01;
 const PROGRESS_PADDING_RATIO = 0.12;
@@ -40,13 +49,22 @@ interface FocusGroup {
   endTimeMs: number;
 }
 
+interface FocusGroupWindow {
+  group: FocusGroup;
+  transitionInStartMs: number;
+  transitionOutEndMs: number;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function smoothstep(value: number): number {
+function cinematicEase(value: number): number {
   const clamped = clamp(value, 0, 1);
-  return clamped * clamped * (3 - 2 * clamped);
+  // Smootherstep has zero velocity and acceleration at both ends. That makes
+  // the profile settle naturally before metrics appear and before it returns
+  // to the overview.
+  return clamped * clamped * clamped * (clamped * (clamped * 6 - 15) + 10);
 }
 
 function interpolate(from: number, to: number, amount: number): number {
@@ -116,7 +134,7 @@ function buildFocusGroups(
     if (
       previous
       && previous.sections[previous.sections.length - 1].segmentIndex === section.segmentIndex
-      && startTimeMs - previous.endTimeMs <= ELEVATION_FOCUS_TRANSITION_MS * 2
+      && startTimeMs - previous.endTimeMs <= ELEVATION_FOCUS_GROUP_MERGE_GAP_MS
     ) {
       previous.sections.push(section);
       previous.startProgress = Math.min(previous.startProgress, section.startProgress);
@@ -139,6 +157,44 @@ function buildFocusGroups(
   }
 
   return groups;
+}
+
+function buildFocusGroupWindows(
+  groups: FocusGroup[],
+  totalDurationMs: number,
+): FocusGroupWindow[] {
+  return groups.map((group, index) => {
+    const previous = groups[index - 1];
+    const next = groups[index + 1];
+    let transitionInStartMs = Math.max(
+      0,
+      group.startTimeMs - ELEVATION_FOCUS_TRANSITION_MS,
+    );
+    let transitionOutEndMs = Math.min(
+      totalDurationMs,
+      group.endTimeMs + ELEVATION_FOCUS_TRANSITION_MS,
+    );
+
+    // Reserve a brief full-profile beat between distinct chapters. Limiting
+    // each transition to its side of that beat prevents the active viewport
+    // from switching directly between two focused domains.
+    if (previous) {
+      const midpointMs = (previous.endTimeMs + group.startTimeMs) / 2;
+      transitionInStartMs = Math.max(
+        transitionInStartMs,
+        Math.min(group.startTimeMs, midpointMs + ELEVATION_OVERVIEW_HOLD_MS / 2),
+      );
+    }
+    if (next) {
+      const midpointMs = (group.endTimeMs + next.startTimeMs) / 2;
+      transitionOutEndMs = Math.min(
+        transitionOutEndMs,
+        Math.max(group.endTimeMs, midpointMs - ELEVATION_OVERVIEW_HOLD_MS / 2),
+      );
+    }
+
+    return { group, transitionInStartMs, transitionOutEndMs };
+  });
 }
 
 function getFocusedDomains(
@@ -247,49 +303,38 @@ export function getDynamicElevationViewport({
     totalDurationMs,
   );
   const groups = buildFocusGroups(sections, totalDurationMs);
-  const focusedGroup = [...groups].reverse().find((group) => (
+  const windows = buildFocusGroupWindows(groups, totalDurationMs);
+  const focusedWindow = [...windows].reverse().find(({ group }) => (
     safeCurrentTimeMs >= group.startTimeMs
     && safeCurrentTimeMs <= group.endTimeMs
   ));
-  const transitionGroups = groups
-    .filter((group) => (
-      safeCurrentTimeMs >= Math.max(
-        0,
-        group.startTimeMs - ELEVATION_FOCUS_TRANSITION_MS,
-      )
-      && safeCurrentTimeMs < Math.min(
-        totalDurationMs,
-        group.endTimeMs + ELEVATION_FOCUS_TRANSITION_MS,
-      )
+  const transitionWindows = windows
+    .filter(({ transitionInStartMs, transitionOutEndMs }) => (
+      safeCurrentTimeMs >= transitionInStartMs
+      && safeCurrentTimeMs < transitionOutEndMs
     ))
     .sort((left, right) => {
-      const leftDistance = safeCurrentTimeMs < left.startTimeMs
-        ? left.startTimeMs - safeCurrentTimeMs
-        : safeCurrentTimeMs - left.endTimeMs;
-      const rightDistance = safeCurrentTimeMs < right.startTimeMs
-        ? right.startTimeMs - safeCurrentTimeMs
-        : safeCurrentTimeMs - right.endTimeMs;
-      return leftDistance - rightDistance || right.startTimeMs - left.startTimeMs;
+      const leftDistance = safeCurrentTimeMs < left.group.startTimeMs
+        ? left.group.startTimeMs - safeCurrentTimeMs
+        : safeCurrentTimeMs - left.group.endTimeMs;
+      const rightDistance = safeCurrentTimeMs < right.group.startTimeMs
+        ? right.group.startTimeMs - safeCurrentTimeMs
+        : safeCurrentTimeMs - right.group.endTimeMs;
+      return leftDistance - rightDistance || right.group.startTimeMs - left.group.startTimeMs;
     });
-  const activeGroup = focusedGroup ?? transitionGroups[0];
+  const activeWindow = focusedWindow ?? transitionWindows[0];
 
-  if (activeGroup) {
-    const group = activeGroup;
+  if (activeWindow) {
+    const { group, transitionInStartMs, transitionOutEndMs } = activeWindow;
     if (safeCurrentTimeMs === 0 && group.startTimeMs === 0) {
       return overview(fullElevationDomain);
     }
-    const transitionInStartMs = Math.max(
-      0,
-      group.startTimeMs - ELEVATION_FOCUS_TRANSITION_MS,
-    );
-    const transitionOutEndMs = Math.min(
-      totalDurationMs,
-      group.endTimeMs + ELEVATION_FOCUS_TRANSITION_MS,
-    );
-    const transitionInEndMs = Math.min(
-      group.endTimeMs,
-      transitionInStartMs + ELEVATION_FOCUS_TRANSITION_MS,
-    );
+    const transitionInEndMs = group.startTimeMs === 0
+      ? Math.min(
+          group.endTimeMs,
+          transitionInStartMs + ELEVATION_FOCUS_TRANSITION_MS,
+        )
+      : group.startTimeMs;
 
     const focusedDomains = getFocusedDomains(group, fullElevationDomain);
     const activeSection = getActiveSection(
@@ -305,7 +350,7 @@ export function getDynamicElevationViewport({
       mode = 'transition-in';
       const duration = transitionInEndMs - transitionInStartMs;
       focusAmount = duration > 0
-        ? smoothstep((safeCurrentTimeMs - transitionInStartMs) / duration)
+        ? cinematicEase((safeCurrentTimeMs - transitionInStartMs) / duration)
         : 1;
     } else if (safeCurrentTimeMs <= group.endTimeMs) {
       mode = 'focused';
@@ -314,7 +359,7 @@ export function getDynamicElevationViewport({
       mode = 'transition-out';
       const duration = transitionOutEndMs - group.endTimeMs;
       focusAmount = duration > 0
-        ? 1 - smoothstep((safeCurrentTimeMs - group.endTimeMs) / duration)
+        ? 1 - cinematicEase((safeCurrentTimeMs - group.endTimeMs) / duration)
         : 0;
     }
 

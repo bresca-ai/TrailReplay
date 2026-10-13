@@ -53,16 +53,16 @@ describe('dynamic elevation viewport', () => {
     }).mode).toBe('overview');
   });
 
-  it('begins in overview, then enters the section 700ms before it starts', () => {
-    expect(ELEVATION_FOCUS_TRANSITION_MS).toBe(700);
+  it('begins in overview, then enters the section 1.8s before it starts', () => {
+    expect(ELEVATION_FOCUS_TRANSITION_MS).toBe(1_800);
     expect(getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 2_299,
+      currentTimeMs: 1_199,
     }).mode).toBe('overview');
 
     const transitionStart = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 2_300,
+      currentTimeMs: 1_200,
     });
     expect(transitionStart.mode).toBe('transition-in');
     expect(transitionStart.focusAmount).toBe(0);
@@ -70,7 +70,7 @@ describe('dynamic elevation viewport', () => {
     expect(transitionStart.activeSection?.id).toBe('climb-1');
   });
 
-  it('starts from overview and uses a 700ms entrance when a section begins at zero', () => {
+  it('starts from overview and uses a 1.8s entrance when a section begins at zero', () => {
     const fromStart = section({ startProgress: 0, endProgress: 0.2 });
     const firstFrame = getDynamicElevationViewport({
       ...baseInput,
@@ -84,7 +84,7 @@ describe('dynamic elevation viewport', () => {
 
     const halfway = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 350,
+      currentTimeMs: 900,
       sections: [fromStart],
     });
     expect(halfway.mode).toBe('transition-in');
@@ -92,17 +92,17 @@ describe('dynamic elevation viewport', () => {
 
     const entered = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 700,
+      currentTimeMs: 1_800,
       sections: [fromStart],
     });
     expect(entered.mode).toBe('focused');
     expect(entered.focusAmount).toBe(1);
   });
 
-  it('uses smoothstep interpolation for zoom-in and padded focus domains', () => {
+  it('uses cinematic interpolation for zoom-in and padded focus domains', () => {
     const halfway = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 2_650,
+      currentTimeMs: 2_100,
     });
 
     expect(halfway.mode).toBe('transition-in');
@@ -123,6 +123,30 @@ describe('dynamic elevation viewport', () => {
     expect(focused.elevationDomain).toEqual([176, 424]);
   });
 
+  it('moves through visible intermediate zoom frames instead of snapping', () => {
+    const quarter = getDynamicElevationViewport({
+      ...baseInput,
+      currentTimeMs: 1_650,
+    });
+    const halfway = getDynamicElevationViewport({
+      ...baseInput,
+      currentTimeMs: 2_100,
+    });
+    const threeQuarter = getDynamicElevationViewport({
+      ...baseInput,
+      currentTimeMs: 2_550,
+    });
+
+    expect(quarter.mode).toBe('transition-in');
+    expect(quarter.focusAmount).toBeCloseTo(0.103515625);
+    expect(halfway.focusAmount).toBeCloseTo(0.5);
+    expect(threeQuarter.focusAmount).toBeCloseTo(0.896484375);
+    expect(quarter.progressDomain[0]).toBeLessThan(halfway.progressDomain[0]);
+    expect(halfway.progressDomain[0]).toBeLessThan(threeQuarter.progressDomain[0]);
+    expect(quarter.progressDomain[1]).toBeGreaterThan(halfway.progressDomain[1]);
+    expect(halfway.progressDomain[1]).toBeGreaterThan(threeQuarter.progressDomain[1]);
+  });
+
   it('remains focused through the section and smoothly returns to overview', () => {
     expect(getDynamicElevationViewport({
       ...baseInput,
@@ -131,7 +155,7 @@ describe('dynamic elevation viewport', () => {
 
     const halfway = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 6_350,
+      currentTimeMs: 6_900,
     });
     expect(halfway.mode).toBe('transition-out');
     expect(halfway.focusAmount).toBeCloseTo(0.5);
@@ -140,7 +164,7 @@ describe('dynamic elevation viewport', () => {
 
     const finished = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 6_700,
+      currentTimeMs: 7_800,
     });
     expect(finished.mode).toBe('overview');
     expect(finished.focusAmount).toBe(0);
