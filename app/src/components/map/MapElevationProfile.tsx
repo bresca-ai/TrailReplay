@@ -249,6 +249,28 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   const viewBoxHeight = Math.max(1, viewBoxBottom - viewBoxTop);
   const markerPosition = Math.min(1, Math.max(0, (markerX - viewBoxX) / viewBoxWidth));
   const focusedSection = dynamicViewport?.activeSection ?? null;
+  const upcomingFocusSection = settings.dynamicElevationProfile
+    && dynamicViewport?.mode === 'overview'
+    ? focusSections.find((section) => section.startProgress >= playback.progress - 0.000001) ?? null
+    : null;
+  const upcomingSectionPoints = upcomingFocusSection
+    ? normalizedPoints.filter((point) => (
+        point.segmentIndex === upcomingFocusSection.segmentIndex
+        && point.progress >= upcomingFocusSection.startProgress
+        && point.progress <= upcomingFocusSection.endProgress
+      ))
+    : [];
+  const upcomingSectionHighlight = upcomingFocusSection && upcomingSectionPoints.length >= 2
+    ? {
+        section: upcomingFocusSection,
+        color: segmentPaths.find((segment) => segment.segmentIndex === upcomingFocusSection.segmentIndex)?.color
+          ?? trailStyle.trailColor,
+        ridgeD: upcomingSectionPoints.reduce(
+          (path, point, index) => `${path}${index === 0 ? 'M' : ' L'} ${point.x} ${point.y}`,
+          '',
+        ),
+      }
+    : null;
   const sectionMetrics = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
     ? {
         kind: focusedSection.kind,
@@ -366,80 +388,33 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             </g>
           ))}
 
-          {/* Highlight each upcoming chapter on its own ridge, with a pin above its midpoint. */}
-          {settings.dynamicElevationProfile && (
-            <g opacity={0.95 * (1 - focusAmount)} data-export-elevation-focus-sections>
-              {focusSections.map((section) => {
-                const color = segmentPaths.find((segment) => segment.segmentIndex === section.segmentIndex)?.color
-                  ?? trailStyle.trailColor;
-                const sectionPoints = normalizedPoints.filter((point) => (
-                  point.segmentIndex === section.segmentIndex
-                  && point.progress >= section.startProgress
-                  && point.progress <= section.endProgress
-                ));
-                if (sectionPoints.length < 2) return null;
-                const ridgeD = sectionPoints.reduce(
-                  (path, point, index) => `${path}${index === 0 ? 'M' : ' L'} ${point.x} ${point.y}`,
-                  '',
-                );
-                const sectionMidpoint = (section.startProgress + section.endProgress) / 2;
-                const anchor = sectionPoints.reduce((nearest, point) => (
-                  Math.abs(point.progress - sectionMidpoint) < Math.abs(nearest.progress - sectionMidpoint)
-                    ? point
-                    : nearest
-                ));
-                const markerY = Math.max(4.5, anchor.y - 7);
-                return (
-                  <g key={`focus-section-${section.id}`}>
-                    <path
-                      d={ridgeD}
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="5"
-                      strokeOpacity="0.72"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <path
-                      d={ridgeD}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      vectorEffect="non-scaling-stroke"
-                      data-export-elevation-focus-section
-                      data-export-elevation-start-progress={section.startProgress}
-                      data-export-elevation-end-progress={section.endProgress}
-                      data-export-elevation-color={color}
-                      data-export-elevation-kind={section.kind}
-                      data-export-elevation-marker-x={anchor.x}
-                      data-export-elevation-marker-y={markerY}
-                      data-export-elevation-marker-anchor-y={anchor.y}
-                    />
-                    <line
-                      x1={anchor.x}
-                      y1={markerY + 3}
-                      x2={anchor.x}
-                      y2={anchor.y}
-                      stroke="white"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <circle
-                      cx={anchor.x}
-                      cy={markerY}
-                      r="3.25"
-                      fill={color}
-                      stroke="white"
-                      strokeWidth="1.5"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </g>
-                );
-              })}
+          {/* Cue only the next chapter; the cue clears as its zoom begins. */}
+          {upcomingSectionHighlight && (
+            <g opacity="0.95" data-export-elevation-focus-sections>
+              <path
+                d={upcomingSectionHighlight.ridgeD}
+                fill="none"
+                stroke="white"
+                strokeWidth="5"
+                strokeOpacity="0.72"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+              <path
+                d={upcomingSectionHighlight.ridgeD}
+                fill="none"
+                stroke={upcomingSectionHighlight.color}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+                data-export-elevation-focus-section
+                data-export-elevation-start-progress={upcomingSectionHighlight.section.startProgress}
+                data-export-elevation-end-progress={upcomingSectionHighlight.section.endProgress}
+                data-export-elevation-color={upcomingSectionHighlight.color}
+                data-export-elevation-kind={upcomingSectionHighlight.section.kind}
+              />
             </g>
           )}
 

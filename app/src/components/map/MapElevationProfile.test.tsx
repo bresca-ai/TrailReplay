@@ -77,17 +77,18 @@ describe('MapElevationProfile dynamic sections', () => {
     const svg = document.getElementById('elevationProfileSvg');
     expect(svg).toHaveAttribute('viewBox', '0 0 800 60');
     expect(svg).not.toHaveAttribute('data-export-elevation-change');
-    expect(svg?.querySelectorAll('[data-export-elevation-focus-section]').length).toBeGreaterThan(0);
+    expect(svg?.querySelectorAll('[data-export-elevation-focus-section]')).toHaveLength(1);
     expect(svg?.querySelector('[data-export-elevation-focus-section]')?.tagName).toBe('path');
     expect(svg?.querySelector('rect[data-export-elevation-focus-section]')).not.toBeInTheDocument();
-    expect(svg?.querySelectorAll('circle').length).toBeGreaterThan(0);
+    expect(svg?.querySelectorAll('circle')).toHaveLength(0);
 
     act(() => {
       useAppStore.getState().setPlayback({
-        currentTime: 3_500,
-        progress: 0.35,
+        currentTime: 5_000,
+        progress: 0.5,
       });
     });
+    expect(svg?.querySelectorAll('[data-export-elevation-focus-section]')).toHaveLength(0);
 
     await waitFor(() => {
       const [, , width] = (svg?.getAttribute('viewBox') ?? '').split(' ').map(Number);

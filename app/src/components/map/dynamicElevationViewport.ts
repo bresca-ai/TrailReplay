@@ -9,7 +9,6 @@ export const ELEVATION_FOCUS_TRANSITION_MS = 1_800;
 // move duration. Otherwise a longer, nicer zoom would merge unrelated nearby
 // sections into one focus group and remove their individual reveals.
 const ELEVATION_FOCUS_GROUP_MERGE_GAP_MS = 1_400;
-const ELEVATION_OVERVIEW_HOLD_MS = 300;
 
 const MIN_PROGRESS_PADDING = 0.01;
 const PROGRESS_PADDING_RATIO = 0.12;
@@ -76,10 +75,19 @@ function interpolateDomain(
   to: [number, number],
   amount: number,
 ): [number, number] {
-  return [
-    interpolate(from[0], to[0], amount),
-    interpolate(from[1], to[1], amount),
-  ];
+  if (amount <= 0) return from;
+  if (amount >= 1) return to;
+  const fromSpan = from[1] - from[0];
+  const toSpan = to[1] - to[0];
+  if (fromSpan <= 0 || toSpan <= 0) return to;
+
+  const fromCenter = (from[0] + from[1]) / 2;
+  const toCenter = (to[0] + to[1]) / 2;
+  const center = interpolate(fromCenter, toCenter, amount);
+  // Interpolate scale geometrically, as a camera zoom would. Interpolating
+  // the rectangle edges linearly makes the apparent scale rush at the end.
+  const span = fromSpan * ((toSpan / fromSpan) ** amount);
+  return [center - span / 2, center + span / 2];
 }
 
 function normalizeFullElevationDomain(
@@ -164,32 +172,19 @@ function buildFocusGroupWindows(
   totalDurationMs: number,
 ): FocusGroupWindow[] {
   return groups.map((group, index) => {
-    const previous = groups[index - 1];
     const next = groups[index + 1];
-    let transitionInStartMs = Math.max(
-      0,
-      group.startTimeMs - ELEVATION_FOCUS_TRANSITION_MS,
-    );
+    const transitionInStartMs = group.startTimeMs;
     let transitionOutEndMs = Math.min(
       totalDurationMs,
       group.endTimeMs + ELEVATION_FOCUS_TRANSITION_MS,
     );
 
-    // Reserve a brief full-profile beat between distinct chapters. Limiting
-    // each transition to its side of that beat prevents the active viewport
-    // from switching directly between two focused domains.
-    if (previous) {
-      const midpointMs = (previous.endTimeMs + group.startTimeMs) / 2;
-      transitionInStartMs = Math.max(
-        transitionInStartMs,
-        Math.min(group.startTimeMs, midpointMs + ELEVATION_OVERVIEW_HOLD_MS / 2),
-      );
-    }
+    // Finish the previous zoom-out before the following section starts. The
+    // next push-in always begins from the complete profile at its own start.
     if (next) {
-      const midpointMs = (group.endTimeMs + next.startTimeMs) / 2;
       transitionOutEndMs = Math.min(
         transitionOutEndMs,
-        Math.max(group.endTimeMs, midpointMs - ELEVATION_OVERVIEW_HOLD_MS / 2),
+        Math.max(group.endTimeMs, next.startTimeMs),
       );
     }
 
@@ -329,12 +324,10 @@ export function getDynamicElevationViewport({
     if (safeCurrentTimeMs === 0 && group.startTimeMs === 0) {
       return overview(fullElevationDomain);
     }
-    const transitionInEndMs = group.startTimeMs === 0
-      ? Math.min(
-          group.endTimeMs,
-          transitionInStartMs + ELEVATION_FOCUS_TRANSITION_MS,
-        )
-      : group.startTimeMs;
+    const transitionInEndMs = Math.min(
+      group.endTimeMs,
+      transitionInStartMs + ELEVATION_FOCUS_TRANSITION_MS,
+    );
 
     const focusedDomains = getFocusedDomains(group, fullElevationDomain);
     const activeSection = getActiveSection(

@@ -53,16 +53,16 @@ describe('dynamic elevation viewport', () => {
     }).mode).toBe('overview');
   });
 
-  it('begins in overview, then enters the section 1.8s before it starts', () => {
+  it('keeps the overview until the section starts, then begins the zoom', () => {
     expect(ELEVATION_FOCUS_TRANSITION_MS).toBe(1_800);
     expect(getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 1_199,
+      currentTimeMs: 2_999,
     }).mode).toBe('overview');
 
     const transitionStart = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 1_200,
+      currentTimeMs: 3_000,
     });
     expect(transitionStart.mode).toBe('transition-in');
     expect(transitionStart.focusAmount).toBe(0);
@@ -102,19 +102,19 @@ describe('dynamic elevation viewport', () => {
   it('uses cinematic interpolation for zoom-in and padded focus domains', () => {
     const halfway = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 2_100,
+      currentTimeMs: 3_900,
     });
 
     expect(halfway.mode).toBe('transition-in');
     expect(halfway.focusAmount).toBeCloseTo(0.5);
-    expect(halfway.progressDomain[0]).toBeCloseTo(0.132);
-    expect(halfway.progressDomain[1]).toBeCloseTo(0.818);
-    expect(halfway.elevationDomain[0]).toBeCloseTo(138);
-    expect(halfway.elevationDomain[1]).toBeCloseTo(462);
+    expect(halfway.progressDomain[0]).toBeCloseTo(0.17004);
+    expect(halfway.progressDomain[1]).toBeCloseTo(0.77996);
+    expect(halfway.elevationDomain[0]).toBeCloseTo(142.52);
+    expect(halfway.elevationDomain[1]).toBeCloseTo(457.48);
 
     const focused = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 3_000,
+      currentTimeMs: 4_800,
     });
     expect(focused.mode).toBe('focused');
     expect(focused.focusAmount).toBe(1);
@@ -126,15 +126,15 @@ describe('dynamic elevation viewport', () => {
   it('moves through visible intermediate zoom frames instead of snapping', () => {
     const quarter = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 1_650,
+      currentTimeMs: 3_450,
     });
     const halfway = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 2_100,
+      currentTimeMs: 3_900,
     });
     const threeQuarter = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 2_550,
+      currentTimeMs: 4_350,
     });
 
     expect(quarter.mode).toBe('transition-in');
@@ -159,8 +159,8 @@ describe('dynamic elevation viewport', () => {
     });
     expect(halfway.mode).toBe('transition-out');
     expect(halfway.focusAmount).toBeCloseTo(0.5);
-    expect(halfway.progressDomain[0]).toBeCloseTo(0.132);
-    expect(halfway.progressDomain[1]).toBeCloseTo(0.818);
+    expect(halfway.progressDomain[0]).toBeCloseTo(0.17004);
+    expect(halfway.progressDomain[1]).toBeCloseTo(0.77996);
 
     const finished = getDynamicElevationViewport({
       ...baseInput,
@@ -190,7 +190,7 @@ describe('dynamic elevation viewport', () => {
 
     const between = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 3_600,
+      currentTimeMs: 4_000,
       sections: [second, first],
     });
     expect(between.mode).toBe('focused');
@@ -206,7 +206,7 @@ describe('dynamic elevation viewport', () => {
 
     const between = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 3_500,
+      currentTimeMs: 4_400,
       sections: [first, second],
     });
     expect(between.mode).toBe('overview');
@@ -229,7 +229,7 @@ describe('dynamic elevation viewport', () => {
 
     const atSecond = getDynamicElevationViewport({
       ...baseInput,
-      currentTimeMs: 3_500,
+      currentTimeMs: 4_500,
       sections: [first, second],
     });
     expect(atSecond.mode).toBe('focused');

@@ -791,12 +791,6 @@ export function useExportOverlayCapture({
           }
           const drawPath = new Path2D();
           drawPath.addPath(sourcePath, pathTransform);
-          const markerSourceX = Number(element.dataset.exportElevationMarkerX);
-          const markerSourceY = Number(element.dataset.exportElevationMarkerY);
-          const markerAnchorSourceY = Number(element.dataset.exportElevationMarkerAnchorY);
-          const markerDrawX = drawX + ((markerSourceX - viewBox.x) / viewBox.width) * drawWidth;
-          const markerDrawY = drawY + ((markerSourceY - viewBox.y) / viewBox.height) * drawHeight;
-          const markerAnchorDrawY = drawY + ((markerAnchorSourceY - viewBox.y) / viewBox.height) * drawHeight;
 
           context.globalAlpha = focusOpacity * 0.76;
           context.strokeStyle = '#ffffff';
@@ -808,22 +802,6 @@ export function useExportOverlayCapture({
           context.strokeStyle = element.dataset.exportElevationColor || '#c1652f';
           context.lineWidth = Math.max(2.5, 3 * elementScaleY);
           context.stroke(drawPath);
-
-          if (![markerSourceX, markerSourceY, markerAnchorSourceY].every(Number.isFinite)) return;
-          context.beginPath();
-          context.moveTo(markerDrawX, markerDrawY + 3 * elementScaleY);
-          context.lineTo(markerDrawX, markerAnchorDrawY);
-          context.globalAlpha = focusOpacity;
-          context.strokeStyle = '#ffffff';
-          context.lineWidth = Math.max(1.5, 1.5 * elementScaleY);
-          context.stroke();
-          context.beginPath();
-          context.arc(markerDrawX, markerDrawY, Math.max(3.25, 3.25 * elementScaleY), 0, Math.PI * 2);
-          context.fillStyle = element.dataset.exportElevationColor || '#c1652f';
-          context.fill();
-          context.strokeStyle = '#ffffff';
-          context.lineWidth = Math.max(1.5, 1.5 * elementScaleY);
-          context.stroke();
         });
       }
     }
