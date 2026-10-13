@@ -8,6 +8,10 @@ import { sideAnnotationContent } from '@/components/annotations/sideAnnotationCo
 import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
 import { drawSidePanelShade } from '@/components/annotations/sidePanelShade';
 import { getSideAnnotationTypography } from '@/components/annotations/sideAnnotationTypography';
+import {
+  layoutSideAnnotationCanvasText,
+  type SideAnnotationTextRole,
+} from '@/components/annotations/sideAnnotationCanvasLayout';
 import type { VideoExportSettings } from '@/types';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
@@ -149,16 +153,35 @@ export function drawExportFrame({
       const rect = panel?.getBoundingClientRect();
       if (rect) {
         const x = (rect.left - containerRect.left - cropX) * (recordW / cropW);
-        const y = (rect.top - containerRect.top - cropY) * (recordH / cropH);
+        const measuredY = (rect.top - containerRect.top - cropY) * (recordH / cropH);
         const w = rect.width * (recordW / cropW);
-        const h = rect.height * (recordH / cropH);
+        const measuredHeight = rect.height * (recordH / cropH);
         const scale = recordW / cropW;
         const copy = sideAnnotationContent(localizedAnnotation(sideAnnotation, currentState.settings.language));
         const overlayFamily = overlayCanvasFontFamily(currentState.settings.trailStyle.overlayFont);
         const typography = getSideAnnotationTypography(videoExportSettings.aspectRatio);
         const inset = 20 * scale;
-        const contentX = x + inset;
         const maxWidth = w - inset * 2;
+        const fonts: Record<SideAnnotationTextRole, string> = {
+          title: `700 ${typography.titleSize * scale}px ${overlayFamily}`,
+          meta: `600 ${typography.metaSize * scale}px ${overlayFamily}`,
+          description: `500 ${typography.detailsSize * scale}px ${overlayFamily}`,
+        };
+        const layout = layoutSideAnnotationCanvasText(
+          copy,
+          typography,
+          maxWidth,
+          (role, value) => {
+            context.font = fonts[role];
+            return context.measureText(value);
+          },
+        );
+        const h = Math.max(measuredHeight, layout.panelHeight * scale);
+        // The live panel is bottom-anchored. If canvas font metrics need more
+        // lines, grow upward so the stop never spills into the elevation strip
+        // or beyond the export frame.
+        const y = measuredY + measuredHeight - h;
+        const contentX = x + inset;
         context.save();
         drawSidePanelShade(context, x, y, w, h, scale);
         const logoY = y + 18 * scale;
@@ -178,36 +201,21 @@ export function drawExportFrame({
         context.fillStyle = sideAnnotation.color;
         context.fillRect(x + w - 51 * scale, logoY + 10 * scale, 31 * scale, scale);
 
-        const drawWrapped = (value: string, font: string, lineHeight: number, baseline: number, maxLines: number) => {
+        const drawLines = (lines: string[], font: string, lineHeight: number, baseline: number) => {
           context.font = font;
-          const words = value.split(/\s+/).filter(Boolean);
-          let line = '';
-          let drawn = 0;
-          let currentY = baseline;
-          for (const word of words) {
-            const next = line ? `${line} ${word}` : word;
-            if (context.measureText(next).width > maxWidth && line) {
-              context.fillText(line, contentX, currentY);
-              currentY += lineHeight * scale;
-              drawn += 1;
-              if (drawn >= maxLines) return currentY;
-              line = word;
-            } else line = next;
-          }
-          if (line && drawn < maxLines) {
-            context.fillText(line, contentX, currentY);
-            currentY += lineHeight * scale;
-          }
-          return currentY;
+          lines.forEach((line, index) => {
+            context.fillText(line, contentX, baseline + index * lineHeight * scale);
+          });
+          return baseline + lines.length * lineHeight * scale;
         };
 
         context.fillStyle = '#f8f8f1';
-        let nextY = drawWrapped(copy.title, `700 ${typography.titleSize * scale}px ${overlayFamily}`, typography.titleSize * 1.25, y + 82 * scale, 3);
-        if (copy.meta) {
+        let nextY = drawLines(layout.title, fonts.title, typography.titleSize * 1.25, y + 82 * scale);
+        if (layout.meta.length > 0) {
           context.fillStyle = sideAnnotation.color;
-          nextY = drawWrapped(copy.meta, `600 ${typography.metaSize * scale}px ${overlayFamily}`, typography.metaSize * 1.4, nextY + 4 * scale, 2);
+          nextY = drawLines(layout.meta, fonts.meta, typography.metaSize * 1.4, nextY + 4 * scale);
         }
-        if (copy.description) {
+        if (layout.description.length > 0) {
           const dividerY = nextY + 8 * scale;
           context.strokeStyle = sideAnnotation.color;
           context.lineWidth = scale;
@@ -216,7 +224,7 @@ export function drawExportFrame({
           context.lineTo(x + w - inset, dividerY);
           context.stroke();
           context.fillStyle = '#f8f6f0';
-          drawWrapped(copy.description, `500 ${typography.detailsSize * scale}px ${overlayFamily}`, typography.detailsSize * 1.55, dividerY + 26 * scale, 12);
+          drawLines(layout.description, fonts.description, typography.detailsSize * 1.55, dividerY + 26 * scale);
         }
         context.restore();
       }
