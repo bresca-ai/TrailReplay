@@ -736,9 +736,21 @@ export function useExportOverlayCapture({
       // non-scaling-stroke behavior instead of becoming visibly distorted.
       const drawPath = new Path2D();
       drawPath.addPath(sourcePath, pathTransform);
+      const ridgeData = element.dataset.exportElevationRidge;
+      let drawRidge: Path2D | null = null;
+      if (ridgeData) {
+        let sourceRidge = elevationPathCacheRef.current.get(ridgeData);
+        if (!sourceRidge) {
+          sourceRidge = new Path2D(ridgeData);
+          elevationPathCacheRef.current.set(ridgeData, sourceRidge);
+        }
+        drawRidge = new Path2D();
+        drawRidge.addPath(sourceRidge, pathTransform);
+      }
       return [{
         color: element.dataset.exportElevationColor || '#c1652f',
         drawPath,
+        drawRidge: drawRidge ?? drawPath,
         transport: element.dataset.exportElevationType === 'transport',
       }];
     });
@@ -752,14 +764,33 @@ export function useExportOverlayCapture({
     // viewport changes every frame, so paint its complete profile here instead
     // of forcing an html2canvas snapshot for every encoded frame.
     if (dynamicElevation) {
-      drawableSegments.forEach(({ color, drawPath, transport }) => {
+      const focusAmount = Math.max(
+        0,
+        Math.min(1, Number(svg.dataset.exportElevationFocusAmount) || 0),
+      );
+      const focusOpacity = 0.2 * (1 - focusAmount);
+      if (focusOpacity > 0) {
+        const focusElements = [...svg.querySelectorAll<SVGRectElement>('[data-export-elevation-focus-section]')];
+        focusElements.forEach((element) => {
+          const startX = Number(element.getAttribute('x'));
+          const width = Number(element.getAttribute('width'));
+          if (!Number.isFinite(startX) || !Number.isFinite(width) || width <= 0) return;
+          const left = drawX + ((startX - viewBox.x) / viewBox.width) * drawWidth;
+          const right = drawX + ((startX + width - viewBox.x) / viewBox.width) * drawWidth;
+          context.globalAlpha = focusOpacity;
+          context.fillStyle = element.dataset.exportElevationColor || '#c1652f';
+          context.fillRect(left, drawY, right - left, drawHeight);
+        });
+      }
+
+      drawableSegments.forEach(({ color, drawPath, drawRidge, transport }) => {
         context.globalAlpha = transport ? 0.09 : 0.18;
         context.fillStyle = color;
         context.fill(drawPath);
         context.globalAlpha = transport ? 0.3 : 0.55;
         context.strokeStyle = color;
         context.lineWidth = Math.max(1, elementScaleY);
-        context.stroke(drawPath);
+        context.stroke(drawRidge);
       });
     }
 
@@ -772,37 +803,17 @@ export function useExportOverlayCapture({
     );
     context.clip();
 
-    drawableSegments.forEach(({ color: segmentColor, drawPath }) => {
+    drawableSegments.forEach(({ color: segmentColor, drawPath, drawRidge }) => {
       const color = svg.dataset.exportElevationProgressColor
         || segmentColor
         || '#c1652f';
       context.globalAlpha = 0.7;
       context.fillStyle = color;
-      if (dynamicElevation) {
-        context.shadowColor = 'rgba(7, 21, 15, 0.62)';
-        context.shadowBlur = 4 * elementScaleY;
-        context.shadowOffsetY = 2 * elementScaleY;
-      }
       context.fill(drawPath);
-      context.shadowColor = 'transparent';
-      context.shadowBlur = 0;
-      context.shadowOffsetY = 0;
-      context.globalAlpha = 1;
-      if (dynamicElevation) {
-        context.strokeStyle = '#07150f';
-        context.globalAlpha = 0.5;
-        context.lineWidth = Math.max(1, 4 * elementScaleY);
-        context.stroke(drawPath);
-      }
       context.globalAlpha = 1;
       context.strokeStyle = color;
       context.lineWidth = Math.max(1, 2 * elementScaleY);
-      context.stroke(drawPath);
-      if (dynamicElevation) {
-        context.strokeStyle = 'rgba(255, 255, 255, 0.38)';
-        context.lineWidth = Math.max(0.65, 0.65 * elementScaleY);
-        context.stroke(drawPath);
-      }
+      context.stroke(drawRidge);
     });
     context.restore();
 
@@ -831,12 +842,13 @@ export function useExportOverlayCapture({
       + overlayRect.drawHeight
       - (isCompact ? 4 : 8) * elementScaleY;
 
-    const sectionDuration = svg.dataset.exportElevationDuration;
-    const sectionGain = svg.dataset.exportElevationGain;
-    const sectionHigh = svg.dataset.exportElevationHigh;
-    const sectionLow = svg.dataset.exportElevationLow;
+    const sectionChange = svg.dataset.exportElevationChange;
+    const sectionStart = svg.dataset.exportElevationStart;
+    const sectionEnd = svg.dataset.exportElevationEnd;
+    const sectionKind = svg.dataset.exportElevationSectionKind;
     const hasSectionMetrics = dynamicElevation
-      && Boolean(sectionDuration && sectionGain && sectionHigh && sectionLow);
+      && Boolean(sectionChange && sectionStart && sectionEnd)
+      && (sectionKind === 'climb' || sectionKind === 'descent');
 
     if (hasSectionMetrics) {
       context.save();
@@ -892,8 +904,8 @@ export function useExportOverlayCapture({
 
     if (hasSectionMetrics) {
       const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
-      const primarySize = (isCompact ? 11 : 16) * elementScaleY;
-      const secondarySize = (isCompact ? 9 : 13) * elementScaleY;
+      const endpointSize = (isCompact ? 12 : 18) * elementScaleY;
+      const changeSize = (isCompact ? 11 : 16) * elementScaleY;
       const insetX = 4 * elementScaleX;
       const insetY = 2 * elementScaleY;
       context.save();
@@ -902,20 +914,26 @@ export function useExportOverlayCapture({
       context.shadowBlur = 5 * elementScaleY;
       context.shadowOffsetY = 2 * elementScaleY;
 
-      context.font = `700 ${primarySize}px ${family}`;
-      context.textAlign = 'left';
-      context.textBaseline = 'top';
-      context.fillText(sectionDuration!, drawX + insetX, drawY + insetY);
-
-      context.font = `700 ${secondarySize}px ${family}`;
+      context.font = `700 ${changeSize}px ${family}`;
       context.textAlign = 'center';
-      context.fillText(sectionGain!, drawX + drawWidth / 2, drawY + insetY);
+      context.textBaseline = 'top';
+      context.fillText(sectionChange!, drawX + drawWidth / 2, drawY + insetY);
 
-      context.font = `600 ${secondarySize}px ${family}`;
+      context.font = `700 ${endpointSize}px ${family}`;
+      context.textAlign = 'left';
+      context.textBaseline = sectionKind === 'climb' ? 'bottom' : 'top';
+      context.fillText(
+        sectionStart!,
+        drawX + insetX,
+        sectionKind === 'climb' ? drawY + drawHeight : drawY,
+      );
       context.textAlign = 'right';
-      context.fillText(sectionHigh!, drawX + drawWidth - insetX, drawY);
-      context.textBaseline = 'bottom';
-      context.fillText(sectionLow!, drawX + drawWidth - insetX, drawY + drawHeight);
+      context.textBaseline = sectionKind === 'climb' ? 'top' : 'bottom';
+      context.fillText(
+        sectionEnd!,
+        drawX + drawWidth - insetX,
+        sectionKind === 'climb' ? drawY : drawY + drawHeight,
+      );
       context.restore();
     }
   }, [dynamicElevation, elevationSegments, includeElevation]);

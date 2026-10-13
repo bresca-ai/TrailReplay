@@ -257,26 +257,35 @@ describe('dynamic elevation export', () => {
     svg.id = 'elevationProfileSvg';
     svg.dataset.exportElevationMarkerX = '280';
     svg.dataset.exportElevationProgressColor = '#ff6600';
-    svg.dataset.exportElevationDuration = '0:18';
-    svg.dataset.exportElevationGain = '+210 m';
-    svg.dataset.exportElevationHigh = '310 m';
-    svg.dataset.exportElevationLow = '100 m';
+    svg.dataset.exportElevationFocusAmount = '0';
+    svg.dataset.exportElevationChange = '+210 m';
+    svg.dataset.exportElevationStart = '100 m';
+    svg.dataset.exportElevationEnd = '310 m';
+    svg.dataset.exportElevationSectionKind = 'climb';
     Object.defineProperty(svg, 'viewBox', {
       value: { baseVal: { x: 120, y: 5, width: 320, height: 50 } },
     });
     svg.getBoundingClientRect = () => new DOMRect(0, 700, 1000, 60);
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', 'M 120 60 L 280 5 L 440 60 Z');
+    path.dataset.exportElevationRidge = 'M 120 60 L 280 5 L 440 60';
     path.dataset.exportElevationSegment = '';
     path.dataset.exportElevationColor = '#aa5500';
     path.dataset.exportElevationType = 'track';
     svg.appendChild(path);
+    const focus = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    focus.setAttribute('x', '160');
+    focus.setAttribute('width', '120');
+    focus.dataset.exportElevationFocusSection = '';
+    focus.dataset.exportElevationColor = '#aa5500';
+    svg.appendChild(focus);
     wrapper.appendChild(svg);
     document.body.appendChild(wrapper);
 
     const fill = vi.fn();
     const stroke = vi.fn();
     const fillText = vi.fn();
+    const fillRect = vi.fn();
     const context = {
       save: vi.fn(),
       restore: vi.fn(),
@@ -289,6 +298,7 @@ describe('dynamic elevation export', () => {
       fill,
       stroke,
       fillText,
+      fillRect,
       measureText: (text: string) => ({ width: text.length * 6 }),
     } as unknown as CanvasRenderingContext2D;
     vi.stubGlobal('Path2D', class {
@@ -315,9 +325,10 @@ describe('dynamic elevation export', () => {
     });
 
     expect(fill).toHaveBeenCalledTimes(2);
-    expect(stroke).toHaveBeenCalledTimes(5);
-    expect(fillText).toHaveBeenCalledTimes(4);
-    for (const label of ['0:18', '+210 m', '310 m', '100 m']) {
+    expect(fillRect).toHaveBeenCalledTimes(1);
+    expect(stroke).toHaveBeenCalledTimes(3);
+    expect(fillText).toHaveBeenCalledTimes(3);
+    for (const label of ['+210 m', '100 m', '310 m']) {
       expect(fillText).toHaveBeenCalledWith(label, expect.any(Number), expect.any(Number));
     }
   });

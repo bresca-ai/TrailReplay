@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
-import { convertElevation, formatDuration, formatElevation } from '@/utils/units';
+import { convertElevation, formatElevation } from '@/utils/units';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { getDynamicElevationViewport } from './dynamicElevationViewport';
 import { getElevationAtProgress } from './elevationProfile';
@@ -88,6 +88,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     // Create segment paths with different colors
     const segmentPaths: Array<{
       pathD: string;
+      ridgeD: string;
       color: string;
       segmentIndex: number;
       type: 'track' | 'transport';
@@ -108,8 +109,12 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
 
       if (segmentPoints.length > 1) {
         let segPathD = `M ${segmentPoints[0].x} ${svgHeight}`;
+        let ridgeD = `M ${segmentPoints[0].x} ${segmentPoints[0].y}`;
         segmentPoints.forEach((point) => {
           segPathD += ` L ${point.x} ${point.y}`;
+        });
+        segmentPoints.slice(1).forEach((point) => {
+          ridgeD += ` L ${point.x} ${point.y}`;
         });
         segPathD += ` L ${segmentPoints[segmentPoints.length - 1].x} ${svgHeight} Z`;
 
@@ -126,6 +131,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
 
         segmentPaths.push({
           pathD: segPathD,
+          ridgeD,
           color,
           segmentIndex: timing.segmentIndex,
           type: timing.type,
@@ -243,13 +249,22 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   const focusedSection = dynamicViewport?.activeSection ?? null;
   const sectionMetrics = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
     ? {
-        duration: formatDuration(
-          ((focusedSection.endProgress - focusedSection.startProgress) * playback.totalDuration)
-            / 1000,
+        kind: focusedSection.kind,
+        change: focusedSection.kind === 'climb'
+          ? `+${formatElevation(focusedSection.elevationGain, settings.unitSystem)}`
+          : `-${formatElevation(focusedSection.elevationLoss, settings.unitSystem)}`,
+        start: formatElevation(
+          focusedSection.kind === 'climb'
+            ? focusedSection.minElevation
+            : focusedSection.maxElevation,
+          settings.unitSystem,
         ),
-        gain: `+${formatElevation(focusedSection.elevationGain, settings.unitSystem)}`,
-        high: formatElevation(focusedSection.maxElevation, settings.unitSystem),
-        low: formatElevation(focusedSection.minElevation, settings.unitSystem),
+        end: formatElevation(
+          focusedSection.kind === 'climb'
+            ? focusedSection.maxElevation
+            : focusedSection.minElevation,
+          settings.unitSystem,
+        ),
       }
     : null;
   const isExportPreview = isExporting || activePanel === 'export';
@@ -288,10 +303,11 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           id="elevationProfileSvg"
           data-export-elevation-progress-color={currentColor}
           data-export-elevation-marker-x={markerX}
-          data-export-elevation-duration={sectionMetrics?.duration}
-          data-export-elevation-gain={sectionMetrics?.gain}
-          data-export-elevation-high={sectionMetrics?.high}
-          data-export-elevation-low={sectionMetrics?.low}
+          data-export-elevation-focus-amount={focusAmount}
+          data-export-elevation-change={sectionMetrics?.change}
+          data-export-elevation-start={sectionMetrics?.start}
+          data-export-elevation-end={sectionMetrics?.end}
+          data-export-elevation-section-kind={sectionMetrics?.kind}
           data-export-elevation-dynamic-profile={settings.dynamicElevationProfile ? 'true' : undefined}
         >
           {/* Gradient definitions for segments */}
@@ -314,37 +330,63 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
               <stop offset="45%" stopColor={currentColor} stopOpacity="0.68" />
               <stop offset="100%" stopColor={currentColor} stopOpacity="0.24" />
             </linearGradient>
-            <filter id="elevationDepthShadow" x="-20%" y="-30%" width="140%" height="170%">
-              <feDropShadow dx="0" dy="2" stdDeviation="1.25" floodColor="#07150f" floodOpacity="0.62" />
-            </filter>
             <clipPath id="elevationProgressClip">
               <rect x={viewBoxX} y={viewBoxTop} width={Math.max(0, markerX - viewBoxX)} height={viewBoxHeight} />
             </clipPath>
           </defs>
 
+          {settings.dynamicElevationProfile && (
+            <g opacity={0.2 * (1 - focusAmount)} data-export-elevation-focus-sections>
+              {focusSections.map((section) => {
+                const color = segmentPaths.find((segment) => segment.segmentIndex === section.segmentIndex)?.color
+                  ?? trailStyle.trailColor;
+                return (
+                  <rect
+                    key={`focus-section-${section.id}`}
+                    x={section.startProgress * svgWidth}
+                    y="0"
+                    width={Math.max(1, (section.endProgress - section.startProgress) * svgWidth)}
+                    height={svgHeight}
+                    fill={color}
+                    data-export-elevation-focus-section
+                    data-export-elevation-start-progress={section.startProgress}
+                    data-export-elevation-end-progress={section.endProgress}
+                    data-export-elevation-color={color}
+                    data-export-elevation-kind={section.kind}
+                  />
+                );
+              })}
+            </g>
+          )}
+
           {/* Background elevation profiles for each segment */}
           {segmentPaths.map((seg) => (
-            <path
-              key={`segment-${seg.segmentIndex}`}
-              d={seg.pathD}
-              data-export-elevation-segment
-              data-export-elevation-color={seg.color}
-              data-export-elevation-type={seg.type}
-              fill={`url(#segmentGradient-${seg.segmentIndex})`}
-              stroke={seg.color}
-              strokeWidth="1"
-              strokeOpacity={seg.type === 'transport' ? '0.3' : '0.5'}
-              strokeDasharray={seg.type === 'transport' ? '4,4' : 'none'}
-              vectorEffect="non-scaling-stroke"
-              id={`segmentPath-${seg.segmentIndex}`}
-            />
+            <g key={`segment-${seg.segmentIndex}`}>
+              <path
+                d={seg.pathD}
+                data-export-elevation-segment
+                data-export-elevation-ridge={seg.ridgeD}
+                data-export-elevation-color={seg.color}
+                data-export-elevation-type={seg.type}
+                fill={`url(#segmentGradient-${seg.segmentIndex})`}
+                id={`segmentPath-${seg.segmentIndex}`}
+              />
+              <path
+                d={seg.ridgeD}
+                fill="none"
+                stroke={seg.color}
+                strokeWidth="1"
+                strokeOpacity={seg.type === 'transport' ? '0.3' : '0.5'}
+                strokeDasharray={seg.type === 'transport' ? '4,4' : 'none'}
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
           ))}
 
           {/* Progress overlay */}
           {playback.progress > 0 && (
             <g
               clipPath="url(#elevationProgressClip)"
-              filter="url(#elevationDepthShadow)"
               data-export-elevation-dynamic
             >
               {segmentPaths.map((seg) => (
@@ -352,24 +394,12 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
                   <path
                     d={seg.pathD}
                     fill="url(#progressGradient)"
-                    stroke="#07150f"
-                    strokeWidth="4"
-                    strokeOpacity="0.5"
-                    vectorEffect="non-scaling-stroke"
                   />
                   <path
-                    d={seg.pathD}
+                    d={seg.ridgeD}
                     fill="none"
                     stroke={currentColor}
                     strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <path
-                    d={seg.pathD}
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="0.65"
-                    strokeOpacity="0.38"
                     vectorEffect="non-scaling-stroke"
                   />
                 </g>
@@ -417,32 +447,29 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             style={{ opacity: dynamicViewport?.focusAmount ?? 0 }}
           >
             <span
-              data-export-elevation-duration-label
-              className={`absolute left-2 top-1 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[16px]' : 'text-[11px]'}`}
+              data-export-elevation-change-label
+              className={`absolute left-1/2 top-1 -translate-x-1/2 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[16px]' : 'text-[11px]'}`}
               style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
             >
-              {sectionMetrics.duration}
+              {sectionMetrics.change}
             </span>
             <span
-              data-export-elevation-gain-label
-              className={`absolute left-1/2 top-1 -translate-x-1/2 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[15px]' : 'text-[10px]'}`}
-              style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
-            >
-              {sectionMetrics.gain}
-            </span>
-            <span
-              data-export-elevation-high-label
-              className={`absolute right-1 top-0 border-b border-white/45 pb-px font-semibold tabular-nums ${isNonWideExportPreview ? 'text-[13px]' : 'text-[9px]'}`}
+              data-export-elevation-start-label
+              className={`absolute left-1 font-bold tabular-nums ${
+                sectionMetrics.kind === 'climb' ? 'bottom-0' : 'top-0'
+              } ${isNonWideExportPreview ? 'text-[18px]' : 'text-[12px]'}`}
               style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
             >
-              {sectionMetrics.high}
+              {sectionMetrics.start}
             </span>
             <span
-              data-export-elevation-low-label
-              className={`absolute bottom-0 right-1 border-t border-white/45 pt-px font-semibold tabular-nums ${isNonWideExportPreview ? 'text-[13px]' : 'text-[9px]'}`}
+              data-export-elevation-end-label
+              className={`absolute right-1 font-bold tabular-nums ${
+                sectionMetrics.kind === 'climb' ? 'top-0' : 'bottom-0'
+              } ${isNonWideExportPreview ? 'text-[18px]' : 'text-[12px]'}`}
               style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
             >
-              {sectionMetrics.low}
+              {sectionMetrics.end}
             </span>
           </div>
         )}
