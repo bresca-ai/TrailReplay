@@ -220,4 +220,19 @@ describe('createAppStore', () => {
     useStore.getState().setActivePanel('settings');
     expect(useStore.getState().activePanel).toBe('settings');
   });
+
+  it('keeps the Studio delivery email while working on a project and clears it on reset', () => {
+    const useStore = createAppStore();
+
+    useStore.getState().setStudioDeliveryEmail('rider@example.com');
+    useStore.getState().setActivePanel('export');
+    useStore.getState().setActivePanel('settings');
+    useStore.getState().setActivePanel('export');
+
+    expect(useStore.getState().studioDeliveryEmail).toBe('rider@example.com');
+
+    useStore.getState().reset();
+
+    expect(useStore.getState().studioDeliveryEmail).toBe('');
+  });
 });

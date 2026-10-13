@@ -38,3 +38,10 @@ bucket_name = "trailreplay-exports"
 #   npx wrangler pages secret put CLOUDFLARE_ACCOUNT_ID
 #   npx wrangler pages secret put CLOUDFLARE_EMAIL_API_TOKEN
 # It falls back to RESEND_API_KEY when those are absent.
+
+# Studio export registration allows 10 jobs per network in a rolling day.
+# Developer/test addresses can bypass that quota without exposing a client-side
+# secret. Add STUDIO_EXPORT_RATE_LIMIT_BYPASS_EMAILS as an encrypted Pages
+# variable in the Preview environment (and Production too, if desired), with
+# one or more comma-separated addresses. Wrangler can set the project secret:
+#   npx wrangler pages secret put STUDIO_EXPORT_RATE_LIMIT_BYPASS_EMAILS --project-name trailreplay-web

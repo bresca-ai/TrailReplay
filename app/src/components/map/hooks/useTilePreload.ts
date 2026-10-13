@@ -1,12 +1,17 @@
 import { useEffect, useRef } from 'react';
-import type * as maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import {
-  getIntroCameraPose,
-  getOpeningPreloadProgresses,
-  getPlaybackCameraPose,
   type ReplayCameraMode,
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
+import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import {
+  deduplicateCameraPoses,
+  getDeterministicIntroStartPose,
+  getOpeningReplayWarmupPoses,
+  getReplayWarmupPose,
+  getTransitionWarmupPoses,
+} from '@/utils/replayCameraWarmupPlan';
 
 // Never hold the replay behind the preparation screen indefinitely. The opening
 // sequence gets the whole budget; each camera sample may finish sooner on idle.
@@ -20,6 +25,7 @@ interface UseTilePreloadParams {
   allCoordinates: number[][];
   animationPhase: AnimationPhase;
   cameraMode: ReplayCameraMode | 'cinematic';
+  cinematicKeyframes?: PreparedCinematicKeyframe[];
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
   isMapLoaded: boolean;
@@ -31,25 +37,8 @@ interface UseTilePreloadParams {
   totalDurationMs: number;
 }
 
-function uniquePoses(poses: Array<ReplayCameraPose | null>): ReplayCameraPose[] {
-  const seen = new Set<string>();
-  return poses.filter((pose): pose is ReplayCameraPose => {
-    if (!pose) return false;
-    const key = [
-      pose.center[0].toFixed(5),
-      pose.center[1].toFixed(5),
-      pose.zoom.toFixed(2),
-      pose.pitch.toFixed(2),
-      pose.bearing.toFixed(1),
-    ].join(':');
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
 /**
- * Warms the exact intro pose and a short sequence of future playback poses.
+ * Warms the intro/outro camera paths and a short sequence of future playback poses.
  * The map remains covered while it visits each viewport, so MapLibre retains
  * decoded tiles in its primary-map cache instead of only warming the browser's
  * HTTP cache. Playback then begins with both the opening shot and the first
@@ -59,6 +48,7 @@ export function useTilePreload({
   allCoordinates,
   animationPhase,
   cameraMode,
+  cinematicKeyframes,
   elevationData,
   followBehindZoomLevel,
   isMapLoaded,
@@ -91,35 +81,70 @@ export function useTilePreload({
     hasAdvancedRef.current = false;
     let cancelled = false;
     let activeTimeout: ReturnType<typeof setTimeout> | null = null;
-    const overview = {
-      center: map.getCenter(),
-      zoom: map.getZoom(),
-      pitch: map.getPitch(),
-      bearing: map.getBearing(),
-    };
-    // Tile prefetch has no cinematic-specific pose logic yet — approximate
-    // with follow-behind, which sits at a similar zoom/pitch, rather than
-    // skipping prefetch for the mode entirely.
-    const poseCameraMode = cameraMode === 'cinematic' ? 'follow-behind' : cameraMode;
-    const introPose = getIntroCameraPose({
-      cameraMode: poseCameraMode,
+    const introPose = getReplayWarmupPose({
+      cameraMode,
+      cinematicKeyframes,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
       progress: 0,
     });
-    const openingPoses = getOpeningPreloadProgresses(
-      totalDurationMs || 60000,
-      OPENING_WINDOW_MS,
-      OPENING_SAMPLE_COUNT,
-    ).map((progress) => getPlaybackCameraPose({
-      cameraMode: poseCameraMode,
+    if (!introPose) {
+      setAnimationPhase('intro');
+      return;
+    }
+    const overview = getDeterministicIntroStartPose({
+      coordinates: allCoordinates,
+      introTo: introPose,
+    });
+    if (!overview) {
+      setAnimationPhase('intro');
+      return;
+    }
+    const finalPose = getReplayWarmupPose({
+      cameraMode,
+      cinematicKeyframes,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
-      progress,
-    }));
-    const poses = uniquePoses([introPose, ...openingPoses]);
+      progress: 1,
+    });
+    const openingPoses = getOpeningReplayWarmupPoses({
+      cameraMode,
+      cinematicKeyframes,
+      coordinates: allCoordinates,
+      elevationData,
+      followBehindZoomLevel,
+      totalDurationMs: totalDurationMs || 60000,
+      windowMs: OPENING_WINDOW_MS,
+      sampleCount: OPENING_SAMPLE_COUNT,
+    });
+    const bounds = new maplibregl.LngLatBounds();
+    allCoordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
+    const outroCamera = map.cameraForBounds(bounds, { padding: 100, bearing: 0, pitch: 45 });
+    const outroCenter = outroCamera?.center ? maplibregl.LngLat.convert(outroCamera.center) : null;
+    const outroPose: ReplayCameraPose | null = outroCamera && outroCenter
+      ? {
+          center: [outroCenter.lng, outroCenter.lat],
+          zoom: outroCamera.zoom ?? overview.zoom,
+          pitch: 45,
+          bearing: outroCamera.bearing ?? 0,
+        }
+      : null;
+    const transitions = getTransitionWarmupPoses({
+      introFrom: overview,
+      introTo: introPose,
+      outroFrom: finalPose,
+      outroTo: outroPose,
+    });
+    // Opening is immediately visible, so spend the real idle-wait budget there
+    // first. Once the deadline expires, remaining poses are still visited with
+    // zero-delay discovery; the predictive map refreshes outro coverage later.
+    const poses = deduplicateCameraPoses([
+      ...transitions.intro,
+      ...openingPoses,
+      ...transitions.outro,
+    ]);
     const deadline = Date.now() + PRELOAD_TIMEOUT_MS;
 
     const restoreAndAdvance = () => {
@@ -166,6 +191,7 @@ export function useTilePreload({
     allCoordinates,
     animationPhase,
     cameraMode,
+    cinematicKeyframes,
     elevationData,
     followBehindZoomLevel,
     isMapLoaded,

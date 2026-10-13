@@ -49,10 +49,14 @@ export async function onRequest({ request, env }) {
   // Recording which of the two this was is what makes the consent auditable.
   const marketingOptIn = body.marketingConsent === true;
   const preTickAllowed = allowsPreTickedMarketing(country);
+  const bypassesRateLimit = isRateLimitBypassed(env, email);
 
-  const rateLimited = await exceedsIpQuota(env.LEADS_DB, clientIp);
-  if (rateLimited) {
-    return errorResponse('rate_limited', 'Too many exports from this network today', 429);
+  if (!bypassesRateLimit && await exceedsIpQuota(env.LEADS_DB, clientIp)) {
+    return errorResponse(
+      'rate_limited',
+      'Too many Studio exports from this network in the last 24 hours',
+      429,
+    );
   }
 
   const jobId = crypto.randomUUID();
@@ -108,7 +112,9 @@ export async function onRequest({ request, env }) {
     `).bind(
       jobId, email, createdAt,
       settings.quality, settings.qualityMode, settings.aspectRatio,
-      settings.fps, settings.durationMs, jobTokenHash, clientIp, expiresAt,
+      settings.fps, settings.durationMs, jobTokenHash,
+      bypassesRateLimit ? null : clientIp,
+      expiresAt,
     ),
   ];
 
@@ -121,6 +127,15 @@ export async function onRequest({ request, env }) {
     completeUrl: `/api/exports/${jobId}/complete`,
     expiresAt,
   }, 201);
+}
+
+function isRateLimitBypassed(env, email) {
+  const configured = env.STUDIO_EXPORT_RATE_LIMIT_BYPASS_EMAILS;
+  if (typeof configured !== 'string') return false;
+
+  return configured
+    .split(/[\s,;]+/)
+    .some((candidate) => normalizeEmail(candidate) === email);
 }
 
 async function exceedsIpQuota(db, clientIp) {

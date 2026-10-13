@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLandmarkLookupBatches,
   landmarkTrackSignature,
+  selectRouteWidePlaces,
   tracksNeedingLandmarkLookup,
 } from './landmarkLookup';
 
@@ -42,5 +43,40 @@ describe('landmark lookup batching', () => {
 
     expect(tracksNeedingLandmarkLookup([first, second], cached).map((track) => track.id))
       .toEqual(['track-2']);
+  });
+
+  it('spreads equal-importance places across the full route instead of trusting provider order', () => {
+    const candidates = Array.from({ length: 96 }, (_, index) => ({
+      id: `place-${index}`,
+      distanceMeters: 100,
+      importance: 4,
+      // Provider order is grouped by route section, so a naive first-32 slice
+      // would never reach the second half of the route.
+      progress: index / 95,
+    }));
+    const selected = selectRouteWidePlaces(candidates);
+
+    expect(selected).toHaveLength(32);
+    expect(selected[0].progress).toBeLessThan(0.07);
+    expect(selected.at(-1)?.progress).toBeGreaterThan(0.93);
+    for (let bucket = 0; bucket < 16; bucket += 1) {
+      expect(selected.filter((place) => (
+        Math.min(15, Math.floor(place.progress * 16)) === bucket
+      ))).toHaveLength(2);
+    }
+  });
+
+  it('allows separate routes to contribute more than forty places', () => {
+    const route = (prefix: string) => Array.from({ length: 64 }, (_, index) => ({
+      id: `${prefix}-${index}`,
+      distanceMeters: 50,
+      importance: 4,
+      progress: index / 63,
+    }));
+
+    expect([
+      ...selectRouteWidePlaces(route('first')),
+      ...selectRouteWidePlaces(route('second')),
+    ]).toHaveLength(64);
   });
 });

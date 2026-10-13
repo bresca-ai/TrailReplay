@@ -34,6 +34,7 @@ import {
   getRouteBearingAtProgress,
 } from '@/utils/replayCameraPlan';
 import { getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
+import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
 import {
   getSmoothedCameraAnchor,
@@ -42,6 +43,7 @@ import {
 
 interface UseTrailPlaybackCameraParams {
   activeTrack: { color: string; points: Array<{ heartRate: number | null }> } | null | undefined;
+  activeTextAnnotationId: string | null;
   allCoordinates: number[][];
   cameraCoordinates: number[][];
   animationPhase: 'idle' | 'preloading' | 'intro' | 'playing' | 'outro' | 'ended';
@@ -125,6 +127,32 @@ export function resolvePlaybackMarkerColor(
     : configuredMarkerColor;
 }
 
+export function shouldRenderPlaybackAdornment({
+  activeTextAnnotationId,
+  animationPhase,
+  playbackProgress,
+  showMarker,
+  showTrackLabels,
+}: {
+  activeTextAnnotationId: string | null;
+  animationPhase: UseTrailPlaybackCameraParams['animationPhase'];
+  playbackProgress: number;
+  showMarker: boolean;
+  showTrackLabels: boolean;
+}): boolean {
+  // The moving marker is a DOM overlay, while annotation cards live in the
+  // WebGL canvas. DOM markers always paint over canvas layers regardless of
+  // MapLibre layer order, so remove the adornment for the annotation hold.
+  // Behind an opaque annotation card it would not be visible anyway, and this
+  // keeps live playback and the manually composited export frame identical.
+  if (activeTextAnnotationId) return false;
+
+  return (showMarker || showTrackLabels)
+    && (animationPhase === 'intro'
+      || animationPhase === 'playing'
+      || (animationPhase === 'idle' && playbackProgress > 0));
+}
+
 export function updatePlaybackMarkerElement(
   element: HTMLElement,
   markerHtml: string,
@@ -155,6 +183,7 @@ export function updatePlaybackMarkerElement(
 
 export function useTrailPlaybackCamera({
   activeTrack,
+  activeTextAnnotationId,
   allCoordinates,
   cameraCoordinates,
   animationPhase,
@@ -199,8 +228,13 @@ export function useTrailPlaybackCamera({
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded || !currentPosition) return;
 
-    const shouldShowPlaybackAdornment = (trailStyle.showMarker || trailStyle.showTrackLabels) &&
-      (animationPhase === 'playing' || (animationPhase === 'idle' && playbackProgress > 0));
+    const shouldShowPlaybackAdornment = shouldRenderPlaybackAdornment({
+      activeTextAnnotationId,
+      animationPhase,
+      playbackProgress,
+      showMarker: trailStyle.showMarker,
+      showTrackLabels: trailStyle.showTrackLabels,
+    });
     const currentColor = currentTrackColor || trailStyle.trailColor;
     const icon = isInTransport
       ? TRANSPORT_ICONS[currentSegment?.segment.transportMode || 'car'] || '🚗'
@@ -629,6 +663,7 @@ export function useTrailPlaybackCamera({
     });
   }, [
     activeTrack,
+    activeTextAnnotationId,
     allCoordinates,
     animationPhase,
     cameraMode,
@@ -697,13 +732,19 @@ export function useTrailPlaybackCamera({
         });
 
     if (animationPhase === 'intro' && introPose) {
+      const introStartPose = getDeterministicIntroStartPose({
+        coordinates: allCoordinates,
+        introTo: introPose,
+      });
+      mapRef.current.stop();
+      if (introStartPose) mapRef.current.jumpTo(introStartPose);
       mapRef.current.flyTo({
         ...introPose,
         duration: INTRO_DURATION,
-        // A linear fly-in reaches the playback pose exactly at the end. The
-        // old strong ease-out arrived visually early, which read as a pause
-        // before the marker started moving.
-        easing: (value) => value,
+        // Ease both ends: linger just long enough on the country-scale start
+        // marker to establish location, then settle into the first playback
+        // pose without the old ease-out's apparent pause.
+        easing: (value) => value * value * (3 - 2 * value),
       });
 
       smoothBearingRef.current = introPose.bearing;

@@ -22,6 +22,7 @@ describe('buildReplayArchive', () => {
     const store = createAppStore();
     const track = parseGPX(sampleGpx, 'ridge-loop.gpx');
     store.getState().addTrack(track);
+    store.getState().setStudioDeliveryEmail('rider@example.com');
     store.getState().setCameraPosition({ lat: 42.1, lon: 1.2, zoom: 15.75, pitch: 42, bearing: 123 });
     store.getState().addPicture({
       id: 'picture-1',
@@ -46,6 +47,7 @@ describe('buildReplayArchive', () => {
     expect(manifest.pictureCount).toBe(1);
 
     const project = JSON.parse(strFromU8(files['project.json'])) as ReplayProjectFile;
+    expect((project as unknown as Record<string, unknown>).studioDeliveryEmail).toBeUndefined();
     expect(project.tracks).toHaveLength(1);
     expect(project.tracks[0].id).toBe(track.id);
     expect(project.pictures).toHaveLength(1);

@@ -12,6 +12,7 @@ type UiSlice = Pick<
   | 'error'
   | 'recipeReport'
   | 'sourceRecipe'
+  | 'studioDeliveryEmail'
   | 'setSidebarOpen'
   | 'setExploreMode'
   | 'setActivePanel'
@@ -20,6 +21,7 @@ type UiSlice = Pick<
   | 'setError'
   | 'setRecipeReport'
   | 'setSourceRecipe'
+  | 'setStudioDeliveryEmail'
 >;
 
 export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
@@ -31,6 +33,7 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   error: null,
   recipeReport: null,
   sourceRecipe: null,
+  studioDeliveryEmail: '',
 
   setSidebarOpen: (isOpen) =>
     set((state) => {
@@ -45,6 +48,11 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   setRecipeReport: (report) =>
     set((state) => {
       state.recipeReport = report;
+    }),
+
+  setStudioDeliveryEmail: (email) =>
+    set((state) => {
+      state.studioDeliveryEmail = email;
     }),
 
   setExploreMode: (enabled) =>
