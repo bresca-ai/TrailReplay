@@ -261,6 +261,7 @@ describe('dynamic elevation export', () => {
     svg.dataset.exportElevationChange = '+210 m';
     svg.dataset.exportElevationStart = '100 m';
     svg.dataset.exportElevationEnd = '310 m';
+    svg.dataset.exportElevationDistance = '1.40 km';
     svg.dataset.exportElevationSectionKind = 'climb';
     Object.defineProperty(svg, 'viewBox', {
       value: { baseVal: { x: 120, y: 5, width: 320, height: 50 } },
@@ -273,12 +274,13 @@ describe('dynamic elevation export', () => {
     path.dataset.exportElevationColor = '#aa5500';
     path.dataset.exportElevationType = 'track';
     svg.appendChild(path);
-    const focus = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    focus.setAttribute('x1', '160');
-    focus.setAttribute('x2', '280');
-    focus.setAttribute('y1', '58.5');
+    const focus = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    focus.setAttribute('d', 'M 160 45 L 220 25 L 280 10');
     focus.dataset.exportElevationFocusSection = '';
     focus.dataset.exportElevationColor = '#aa5500';
+    focus.dataset.exportElevationMarkerX = '220';
+    focus.dataset.exportElevationMarkerY = '18';
+    focus.dataset.exportElevationMarkerAnchorY = '25';
     svg.appendChild(focus);
     wrapper.appendChild(svg);
     document.body.appendChild(wrapper);
@@ -295,6 +297,7 @@ describe('dynamic elevation export', () => {
       clip: vi.fn(),
       moveTo: vi.fn(),
       lineTo: vi.fn(),
+      arc: vi.fn(),
       setLineDash: vi.fn(),
       fill,
       stroke,
@@ -325,11 +328,11 @@ describe('dynamic elevation export', () => {
       scaleToRecording: 1.92,
     });
 
-    expect(fill).toHaveBeenCalledTimes(2);
+    expect(fill).toHaveBeenCalledTimes(3);
     expect(fillRect).not.toHaveBeenCalled();
-    expect(stroke).toHaveBeenCalledTimes(4);
-    expect(fillText).toHaveBeenCalledTimes(3);
-    for (const label of ['+210 m', '100 m', '310 m']) {
+    expect(stroke).toHaveBeenCalledTimes(7);
+    expect(fillText).toHaveBeenCalledTimes(4);
+    for (const label of ['+210 m', '100 m', '310 m', '1.40 km']) {
       expect(fillText).toHaveBeenCalledWith(label, expect.any(Number), expect.any(Number));
     }
   });

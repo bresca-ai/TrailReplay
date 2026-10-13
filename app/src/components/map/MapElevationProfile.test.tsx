@@ -78,8 +78,9 @@ describe('MapElevationProfile dynamic sections', () => {
     expect(svg).toHaveAttribute('viewBox', '0 0 800 60');
     expect(svg).not.toHaveAttribute('data-export-elevation-change');
     expect(svg?.querySelectorAll('[data-export-elevation-focus-section]').length).toBeGreaterThan(0);
-    expect(svg?.querySelector('[data-export-elevation-focus-section]')?.tagName).toBe('line');
+    expect(svg?.querySelector('[data-export-elevation-focus-section]')?.tagName).toBe('path');
     expect(svg?.querySelector('rect[data-export-elevation-focus-section]')).not.toBeInTheDocument();
+    expect(svg?.querySelectorAll('circle').length).toBeGreaterThan(0);
 
     act(() => {
       useAppStore.getState().setPlayback({
@@ -95,9 +96,11 @@ describe('MapElevationProfile dynamic sections', () => {
     expect(svg?.getAttribute('data-export-elevation-change')).toMatch(/^\+\d+ m$/);
     expect(svg?.getAttribute('data-export-elevation-start')).toMatch(/^\d+ m$/);
     expect(svg?.getAttribute('data-export-elevation-end')).toMatch(/^\d+ m$/);
+    expect(svg?.getAttribute('data-export-elevation-distance')).toMatch(/^\d+\.\d{2} km$/);
     expect(svg?.getAttribute('data-export-elevation-section-kind')).toBe('climb');
     expect(svg?.querySelector('path[stroke="#07150f"]')).not.toBeInTheDocument();
     expect(screen.getByText(/^\+\d+ m$/)).toBeVisible();
+    expect(screen.getByText(/^\d+\.\d{2} km$/)).toBeVisible();
 
     act(() => {
       useAppStore.getState().setSettings({ dynamicElevationProfile: false });

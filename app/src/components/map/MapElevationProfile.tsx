@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
-import { convertElevation, formatElevation } from '@/utils/units';
+import { convertElevation, formatDistance, formatElevation } from '@/utils/units';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { getDynamicElevationViewport } from './dynamicElevationViewport';
 import { getElevationAtProgress } from './elevationProfile';
@@ -147,6 +147,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       minElevation,
       maxElevation,
       pointsBySegment,
+      normalizedPoints,
       segmentPaths,
     };
   }, [elevationData, segmentTimings, trailStyle.trailColor, tracks]);
@@ -220,6 +221,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     chartHeight,
     minElevation,
     maxElevation,
+    normalizedPoints,
     segmentPaths,
   } = profileData;
   const { currentElevation, markerX, currentColor } = progressData;
@@ -265,6 +267,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             : focusedSection.minElevation,
           settings.unitSystem,
         ),
+        distance: formatDistance(focusedSection.distance, settings.unitSystem),
       }
     : null;
   const isExportPreview = isExporting || activePanel === 'export';
@@ -310,6 +313,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           data-export-elevation-change={sectionMetrics?.change}
           data-export-elevation-start={sectionMetrics?.start}
           data-export-elevation-end={sectionMetrics?.end}
+          data-export-elevation-distance={sectionMetrics?.distance}
           data-export-elevation-section-kind={sectionMetrics?.kind}
           data-export-elevation-dynamic-profile={settings.dynamicElevationProfile ? 'true' : undefined}
         >
@@ -362,50 +366,75 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             </g>
           ))}
 
-          {/* A compact chapter marker identifies each upcoming focus without obscuring the profile. */}
+          {/* Highlight each upcoming chapter on its own ridge, with a pin above its midpoint. */}
           {settings.dynamicElevationProfile && (
-            <g opacity={0.82 * (1 - focusAmount)} data-export-elevation-focus-sections>
+            <g opacity={0.95 * (1 - focusAmount)} data-export-elevation-focus-sections>
               {focusSections.map((section) => {
                 const color = segmentPaths.find((segment) => segment.segmentIndex === section.segmentIndex)?.color
                   ?? trailStyle.trailColor;
-                const startX = section.startProgress * svgWidth;
-                const endX = section.endProgress * svgWidth;
-                const markerY = svgHeight - 1.5;
+                const sectionPoints = normalizedPoints.filter((point) => (
+                  point.segmentIndex === section.segmentIndex
+                  && point.progress >= section.startProgress
+                  && point.progress <= section.endProgress
+                ));
+                if (sectionPoints.length < 2) return null;
+                const ridgeD = sectionPoints.reduce(
+                  (path, point, index) => `${path}${index === 0 ? 'M' : ' L'} ${point.x} ${point.y}`,
+                  '',
+                );
+                const sectionMidpoint = (section.startProgress + section.endProgress) / 2;
+                const anchor = sectionPoints.reduce((nearest, point) => (
+                  Math.abs(point.progress - sectionMidpoint) < Math.abs(nearest.progress - sectionMidpoint)
+                    ? point
+                    : nearest
+                ));
+                const markerY = Math.max(4.5, anchor.y - 7);
                 return (
                   <g key={`focus-section-${section.id}`}>
-                    <line
-                      x1={startX}
-                      y1={markerY}
-                      x2={endX}
-                      y2={markerY}
-                      stroke={color}
-                      strokeWidth="2"
+                    <path
+                      d={ridgeD}
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="5"
+                      strokeOpacity="0.72"
                       strokeLinecap="round"
+                      strokeLinejoin="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <path
+                      d={ridgeD}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                       vectorEffect="non-scaling-stroke"
                       data-export-elevation-focus-section
                       data-export-elevation-start-progress={section.startProgress}
                       data-export-elevation-end-progress={section.endProgress}
                       data-export-elevation-color={color}
                       data-export-elevation-kind={section.kind}
+                      data-export-elevation-marker-x={anchor.x}
+                      data-export-elevation-marker-y={markerY}
+                      data-export-elevation-marker-anchor-y={anchor.y}
                     />
                     <line
-                      x1={startX}
-                      y1={markerY}
-                      x2={startX}
-                      y2={markerY - 4}
-                      stroke={color}
-                      strokeWidth="2"
+                      x1={anchor.x}
+                      y1={markerY + 3}
+                      x2={anchor.x}
+                      y2={anchor.y}
+                      stroke="white"
+                      strokeWidth="1.5"
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                     />
-                    <line
-                      x1={endX}
-                      y1={markerY}
-                      x2={endX}
-                      y2={markerY - 4}
-                      stroke={color}
-                      strokeWidth="2"
-                      strokeLinecap="round"
+                    <circle
+                      cx={anchor.x}
+                      cy={markerY}
+                      r="3.25"
+                      fill={color}
+                      stroke="white"
+                      strokeWidth="1.5"
                       vectorEffect="non-scaling-stroke"
                     />
                   </g>
@@ -479,7 +508,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           >
             <span
               data-export-elevation-change-label
-              className={`absolute left-1/2 top-1 -translate-x-1/2 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[16px]' : 'text-[11px]'}`}
+              className={`absolute left-1/2 top-0.5 -translate-x-1/2 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[18px]' : 'text-[13px]'}`}
               style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
             >
               {sectionMetrics.change}
@@ -488,7 +517,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
               data-export-elevation-start-label
               className={`absolute left-1 font-bold tabular-nums ${
                 sectionMetrics.kind === 'climb' ? 'bottom-0' : 'top-0'
-              } ${isNonWideExportPreview ? 'text-[18px]' : 'text-[12px]'}`}
+              } ${isNonWideExportPreview ? 'text-[20px]' : 'text-[14px]'}`}
               style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
             >
               {sectionMetrics.start}
@@ -497,10 +526,17 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
               data-export-elevation-end-label
               className={`absolute right-1 font-bold tabular-nums ${
                 sectionMetrics.kind === 'climb' ? 'top-0' : 'bottom-0'
-              } ${isNonWideExportPreview ? 'text-[18px]' : 'text-[12px]'}`}
+              } ${isNonWideExportPreview ? 'text-[20px]' : 'text-[14px]'}`}
               style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
             >
               {sectionMetrics.end}
+            </span>
+            <span
+              data-export-elevation-distance-label
+              className={`absolute bottom-0 left-1/2 -translate-x-1/2 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[17px]' : 'text-[12px]'}`}
+              style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
+            >
+              {sectionMetrics.distance}
             </span>
           </div>
         )}

@@ -778,28 +778,51 @@ export function useExportOverlayCapture({
         context.stroke(drawRidge);
       });
 
-      const focusOpacity = 0.82 * (1 - focusAmount);
+      const focusOpacity = 0.95 * (1 - focusAmount);
       if (focusOpacity > 0) {
-        const focusElements = [...svg.querySelectorAll<SVGLineElement>('[data-export-elevation-focus-section]')];
+        const focusElements = [...svg.querySelectorAll<SVGPathElement>('[data-export-elevation-focus-section]')];
         focusElements.forEach((element) => {
-          const startX = Number(element.getAttribute('x1'));
-          const endX = Number(element.getAttribute('x2'));
-          const markerY = Number(element.getAttribute('y1'));
-          if (!Number.isFinite(startX) || !Number.isFinite(endX) || !Number.isFinite(markerY) || endX <= startX) return;
-          const left = drawX + ((startX - viewBox.x) / viewBox.width) * drawWidth;
-          const right = drawX + ((endX - viewBox.x) / viewBox.width) * drawWidth;
-          const baseline = drawY + ((markerY - viewBox.y) / viewBox.height) * drawHeight;
-          const tickHeight = Math.max(3, 4 * elementScaleY);
-          context.beginPath();
-          context.moveTo(left, baseline - tickHeight);
-          context.lineTo(left, baseline);
-          context.lineTo(right, baseline);
-          context.lineTo(right, baseline - tickHeight);
-          context.globalAlpha = focusOpacity;
-          context.strokeStyle = element.dataset.exportElevationColor || '#c1652f';
-          context.lineWidth = Math.max(2, 2 * elementScaleY);
+          const pathData = element.getAttribute('d');
+          if (!pathData) return;
+          let sourcePath = elevationPathCacheRef.current.get(pathData);
+          if (!sourcePath) {
+            sourcePath = new Path2D(pathData);
+            elevationPathCacheRef.current.set(pathData, sourcePath);
+          }
+          const drawPath = new Path2D();
+          drawPath.addPath(sourcePath, pathTransform);
+          const markerSourceX = Number(element.dataset.exportElevationMarkerX);
+          const markerSourceY = Number(element.dataset.exportElevationMarkerY);
+          const markerAnchorSourceY = Number(element.dataset.exportElevationMarkerAnchorY);
+          const markerDrawX = drawX + ((markerSourceX - viewBox.x) / viewBox.width) * drawWidth;
+          const markerDrawY = drawY + ((markerSourceY - viewBox.y) / viewBox.height) * drawHeight;
+          const markerAnchorDrawY = drawY + ((markerAnchorSourceY - viewBox.y) / viewBox.height) * drawHeight;
+
+          context.globalAlpha = focusOpacity * 0.76;
+          context.strokeStyle = '#ffffff';
+          context.lineWidth = Math.max(4, 5 * elementScaleY);
           context.lineCap = 'round';
           context.lineJoin = 'round';
+          context.stroke(drawPath);
+          context.globalAlpha = focusOpacity;
+          context.strokeStyle = element.dataset.exportElevationColor || '#c1652f';
+          context.lineWidth = Math.max(2.5, 3 * elementScaleY);
+          context.stroke(drawPath);
+
+          if (![markerSourceX, markerSourceY, markerAnchorSourceY].every(Number.isFinite)) return;
+          context.beginPath();
+          context.moveTo(markerDrawX, markerDrawY + 3 * elementScaleY);
+          context.lineTo(markerDrawX, markerAnchorDrawY);
+          context.globalAlpha = focusOpacity;
+          context.strokeStyle = '#ffffff';
+          context.lineWidth = Math.max(1.5, 1.5 * elementScaleY);
+          context.stroke();
+          context.beginPath();
+          context.arc(markerDrawX, markerDrawY, Math.max(3.25, 3.25 * elementScaleY), 0, Math.PI * 2);
+          context.fillStyle = element.dataset.exportElevationColor || '#c1652f';
+          context.fill();
+          context.strokeStyle = '#ffffff';
+          context.lineWidth = Math.max(1.5, 1.5 * elementScaleY);
           context.stroke();
         });
       }
@@ -856,9 +879,10 @@ export function useExportOverlayCapture({
     const sectionChange = svg.dataset.exportElevationChange;
     const sectionStart = svg.dataset.exportElevationStart;
     const sectionEnd = svg.dataset.exportElevationEnd;
+    const sectionDistance = svg.dataset.exportElevationDistance;
     const sectionKind = svg.dataset.exportElevationSectionKind;
     const hasSectionMetrics = dynamicElevation
-      && Boolean(sectionChange && sectionStart && sectionEnd)
+      && Boolean(sectionChange && sectionStart && sectionEnd && sectionDistance)
       && (sectionKind === 'climb' || sectionKind === 'descent');
 
     if (hasSectionMetrics) {
@@ -915,8 +939,9 @@ export function useExportOverlayCapture({
 
     if (hasSectionMetrics) {
       const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
-      const endpointSize = (isCompact ? 12 : 18) * elementScaleY;
-      const changeSize = (isCompact ? 11 : 16) * elementScaleY;
+      const endpointSize = (isCompact ? 14 : 20) * elementScaleY;
+      const changeSize = (isCompact ? 13 : 18) * elementScaleY;
+      const distanceSize = (isCompact ? 12 : 17) * elementScaleY;
       const insetX = 4 * elementScaleX;
       const insetY = 2 * elementScaleY;
       context.save();
@@ -945,6 +970,10 @@ export function useExportOverlayCapture({
         drawX + drawWidth - insetX,
         sectionKind === 'climb' ? drawY : drawY + drawHeight,
       );
+      context.font = `700 ${distanceSize}px ${family}`;
+      context.textAlign = 'center';
+      context.textBaseline = 'bottom';
+      context.fillText(sectionDistance!, drawX + drawWidth / 2, drawY + drawHeight);
       context.restore();
     }
   }, [dynamicElevation, elevationSegments, includeElevation]);
