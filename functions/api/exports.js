@@ -6,7 +6,6 @@
 
 import {
   EXPORT_LINK_TTL_DAYS,
-  MAX_JOBS_PER_IP_PER_DAY,
   errorResponse,
   getClientIp,
   getCountry,
@@ -49,11 +48,6 @@ export async function onRequest({ request, env }) {
   // Recording which of the two this was is what makes the consent auditable.
   const marketingOptIn = body.marketingConsent === true;
   const preTickAllowed = allowsPreTickedMarketing(country);
-
-  const rateLimited = await exceedsIpQuota(env.LEADS_DB, clientIp);
-  if (rateLimited) {
-    return errorResponse('rate_limited', 'Too many exports from this network today', 429);
-  }
 
   const jobId = crypto.randomUUID();
   const jobToken = createToken();
@@ -103,12 +97,12 @@ export async function onRequest({ request, env }) {
     env.LEADS_DB.prepare(`
       INSERT INTO export_jobs (
         id, email, created_at, status, quality, quality_mode, aspect_ratio,
-        fps, duration_ms, job_token_hash, client_ip, expires_at
-      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)
+        fps, duration_ms, job_token_hash, expires_at
+      ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       jobId, email, createdAt,
       settings.quality, settings.qualityMode, settings.aspectRatio,
-      settings.fps, settings.durationMs, jobTokenHash, clientIp, expiresAt,
+      settings.fps, settings.durationMs, jobTokenHash, expiresAt,
     ),
   ];
 
@@ -121,14 +115,4 @@ export async function onRequest({ request, env }) {
     completeUrl: `/api/exports/${jobId}/complete`,
     expiresAt,
   }, 201);
-}
-
-async function exceedsIpQuota(db, clientIp) {
-  if (!clientIp) return false;
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const row = await db
-    .prepare('SELECT COUNT(*) AS count FROM export_jobs WHERE client_ip = ? AND created_at > ?')
-    .bind(clientIp, since)
-    .first();
-  return (row?.count ?? 0) >= MAX_JOBS_PER_IP_PER_DAY;
 }
