@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import * as maplibregl from 'maplibre-gl';
+import { describe, expect, it, vi } from 'vitest';
 import type { PreparedCinematicKeyframe } from './cinematicCameraPlan';
 import {
   deduplicateCameraPoses,
+  getDeterministicIntroStartPose,
   getOpeningReplayWarmupPoses,
   getReplayWarmupPose,
   getTransitionWarmupPoses,
@@ -16,6 +18,60 @@ const baseOptions = {
 };
 
 describe('replay camera warmup plan', () => {
+  it('derives a stable wide intro start without reading the live camera', () => {
+    const cameraForBounds = vi.fn(() => ({
+      center: { lng: 0.01, lat: 0 },
+      zoom: 15,
+      bearing: 0,
+    }));
+    const map = {
+      cameraForBounds,
+      getBearing: vi.fn(() => 173),
+      getCenter: vi.fn(() => ({ lng: 120, lat: -30 })),
+      getPitch: vi.fn(() => 67),
+      getZoom: vi.fn(() => 19),
+    } as unknown as maplibregl.Map;
+
+    expect(getDeterministicIntroStartPose({
+      coordinates,
+      introTo: { center: [0, 0], zoom: 16.5, pitch: 56, bearing: 90 },
+      map,
+      padding: 100,
+    })).toEqual({
+      center: [0.01, 0],
+      zoom: 13.5,
+      pitch: 0,
+      bearing: 0,
+    });
+    expect(cameraForBounds).toHaveBeenCalledWith(expect.anything(), {
+      bearing: 0,
+      padding: 100,
+      pitch: 0,
+    });
+    expect(map.getCenter).not.toHaveBeenCalled();
+    expect(map.getZoom).not.toHaveBeenCalled();
+    expect(map.getPitch).not.toHaveBeenCalled();
+    expect(map.getBearing).not.toHaveBeenCalled();
+  });
+
+  it('uses a deterministic route-center fallback when bounds fitting is unavailable', () => {
+    const map = {
+      cameraForBounds: vi.fn(() => undefined),
+    } as unknown as maplibregl.Map;
+
+    expect(getDeterministicIntroStartPose({
+      coordinates,
+      introTo: { center: [0, 0], zoom: 14, pitch: 45, bearing: 90 },
+      map,
+      padding: 100,
+    })).toEqual({
+      center: [0.01, 0],
+      zoom: 11,
+      pitch: 0,
+      bearing: 0,
+    });
+  });
+
   it('uses the authored cinematic pose rather than a follow-behind approximation', () => {
     const cinematicKeyframes: PreparedCinematicKeyframe[] = [{
       id: 'opening',

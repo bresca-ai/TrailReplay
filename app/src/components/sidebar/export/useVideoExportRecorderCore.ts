@@ -15,6 +15,11 @@ import {
 } from '@/utils/journeyUtils';
 import { mapGlobalRef } from '@/utils/mapRef';
 import {
+  deduplicateCameraPoses,
+  getDeterministicIntroStartPose,
+  sampleCameraTransition,
+} from '@/utils/replayCameraWarmupPlan';
+import {
   getIntroCameraPose,
   getOpeningPreloadProgresses,
   getPlaybackCameraPose,
@@ -562,8 +567,16 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
       progress: 0,
     });
-    const poses = [
-      introPose,
+    if (!introPose) return;
+    const introStartPose = getDeterministicIntroStartPose({
+      coordinates: cameraPathCoordinates,
+      introTo: introPose,
+      map,
+      padding: 100,
+    });
+    if (!introStartPose) return;
+    const poses = deduplicateCameraPoses([
+      ...sampleCameraTransition(introStartPose, introPose),
       ...getOpeningPreloadProgresses(
         routeDurationMs,
         EXPORT_OPENING_WINDOW_MS,
@@ -575,14 +588,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
         progress,
       })),
-    ].filter((pose): pose is ReplayCameraPose => pose !== null);
-
-    const overview = {
-      center: map.getCenter(),
-      zoom: map.getZoom(),
-      pitch: map.getPitch(),
-      bearing: map.getBearing(),
-    };
+    ].filter((pose): pose is ReplayCameraPose => pose !== null));
     const deadline = Date.now() + EXPORT_TILE_PRELOAD_TIMEOUT_MS;
 
     for (const pose of poses) {
@@ -601,7 +607,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       });
     }
 
-    map.jumpTo(overview);
+    map.jumpTo(introStartPose);
     await waitForMapFrame();
   }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.mode, elevationData, waitForMapFrame]);
 

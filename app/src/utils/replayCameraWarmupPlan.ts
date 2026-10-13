@@ -1,4 +1,5 @@
 import { getCinematicCameraPose, type PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import * as maplibregl from 'maplibre-gl';
 import {
   getOpeningPreloadProgresses,
   getPlaybackCameraPose,
@@ -22,6 +23,7 @@ const DEFAULT_MAX_TRANSITION_SAMPLES = 24;
 const MAX_ZOOM_DELTA_PER_SAMPLE = 0.75;
 const MAX_BEARING_DELTA_PER_SAMPLE = 30;
 const MAX_TILE_DISTANCE_PER_SAMPLE = 0.75;
+const INTRO_MIN_ZOOM_DELTA = 3;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -63,6 +65,51 @@ export function deduplicateCameraPoses(poses: Array<ReplayCameraPose | null>): R
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * Builds the wide shot that every intro starts from.
+ *
+ * This must not read the map's live camera: the editor camera may have been
+ * panned, zoomed, or restored from a project, and inheriting it makes the same
+ * replay produce a different opening move. Fitting the route from a neutral
+ * north-up, top-down pose makes both preview and export deterministic. The
+ * zoom gap also guarantees that even a very short route opens with a visible
+ * zoom-in rather than a flat move or an accidental zoom-out.
+ */
+export function getDeterministicIntroStartPose({
+  coordinates,
+  introTo,
+  map,
+  padding,
+}: {
+  coordinates: number[][];
+  introTo: ReplayCameraPose;
+  map: maplibregl.Map;
+  padding: number | maplibregl.PaddingOptions;
+}): ReplayCameraPose | null {
+  if (coordinates.length === 0) return null;
+
+  const bounds = new maplibregl.LngLatBounds();
+  coordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
+  const fitted = map.cameraForBounds(bounds, {
+    bearing: 0,
+    padding,
+    pitch: 0,
+  });
+  const fittedCenter = fitted?.center
+    ? maplibregl.LngLat.convert(fitted.center)
+    : bounds.getCenter();
+  const fittedZoom = typeof fitted?.zoom === 'number'
+    ? fitted.zoom
+    : introTo.zoom - INTRO_MIN_ZOOM_DELTA;
+
+  return {
+    center: [fittedCenter.lng, fittedCenter.lat],
+    zoom: Math.min(fittedZoom, introTo.zoom - INTRO_MIN_ZOOM_DELTA),
+    pitch: 0,
+    bearing: 0,
+  };
 }
 
 /** The same unsmoothed target pose the replay camera uses for a given mode. */

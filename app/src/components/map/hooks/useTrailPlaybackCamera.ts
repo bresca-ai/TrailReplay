@@ -34,6 +34,7 @@ import {
   getRouteBearingAtProgress,
 } from '@/utils/replayCameraPlan';
 import { getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
+import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
 import {
   getSmoothedCameraAnchor,
@@ -697,6 +698,15 @@ export function useTrailPlaybackCamera({
         });
 
     if (animationPhase === 'intro' && introPose) {
+      const boundsPadding = exportFrame ? getExportFrameFitPadding(exportFrame) : 100;
+      const introStartPose = getDeterministicIntroStartPose({
+        coordinates: allCoordinates,
+        introTo: introPose,
+        map: mapRef.current,
+        padding: boundsPadding,
+      });
+      mapRef.current.stop();
+      if (introStartPose) mapRef.current.jumpTo(introStartPose);
       mapRef.current.flyTo({
         ...introPose,
         duration: INTRO_DURATION,

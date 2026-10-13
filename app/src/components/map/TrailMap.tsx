@@ -30,7 +30,7 @@ import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
 import { useTilePreloadDiagnostics } from './hooks/useTilePreloadDiagnostics';
 import { projectCoordinateToJourney, projectCoordinateToTrack } from '@/utils/routeProjection';
-import type { CropPreviewMetrics } from '@/utils/crop';
+import { getExportFrameFitPadding, type CropPreviewMetrics } from '@/utils/crop';
 
 interface TrailMapProps {
   activeTextAnnotationId?: string | null;
@@ -337,6 +337,7 @@ export function TrailMap(_props: TrailMapProps) {
     cameraMode,
     cinematicKeyframes,
     elevationData,
+    fitPadding: _props.exportFrame ? getExportFrameFitPadding(_props.exportFrame) : 100,
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying: playback.isPlaying,

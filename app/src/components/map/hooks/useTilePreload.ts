@@ -7,6 +7,7 @@ import {
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
 import {
   deduplicateCameraPoses,
+  getDeterministicIntroStartPose,
   getOpeningReplayWarmupPoses,
   getReplayWarmupPose,
   getTransitionWarmupPoses,
@@ -27,6 +28,7 @@ interface UseTilePreloadParams {
   cinematicKeyframes?: PreparedCinematicKeyframe[];
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
+  fitPadding: number | maplibregl.PaddingOptions;
   isMapLoaded: boolean;
   isPlaying: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
@@ -50,6 +52,7 @@ export function useTilePreload({
   cinematicKeyframes,
   elevationData,
   followBehindZoomLevel,
+  fitPadding,
   isMapLoaded,
   isPlaying,
   mapRef,
@@ -80,13 +83,6 @@ export function useTilePreload({
     hasAdvancedRef.current = false;
     let cancelled = false;
     let activeTimeout: ReturnType<typeof setTimeout> | null = null;
-    const currentCenter = map.getCenter();
-    const overview: ReplayCameraPose = {
-      center: [currentCenter.lng, currentCenter.lat],
-      zoom: map.getZoom(),
-      pitch: map.getPitch(),
-      bearing: map.getBearing(),
-    };
     const introPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
@@ -95,6 +91,20 @@ export function useTilePreload({
       followBehindZoomLevel,
       progress: 0,
     });
+    if (!introPose) {
+      setAnimationPhase('intro');
+      return;
+    }
+    const overview = getDeterministicIntroStartPose({
+      coordinates: allCoordinates,
+      introTo: introPose,
+      map,
+      padding: fitPadding,
+    });
+    if (!overview) {
+      setAnimationPhase('intro');
+      return;
+    }
     const finalPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
@@ -187,6 +197,7 @@ export function useTilePreload({
     cameraMode,
     cinematicKeyframes,
     elevationData,
+    fitPadding,
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying,
