@@ -178,6 +178,48 @@ describe('detectElevationFocusSections', () => {
     ]);
   });
 
+  it('uses a later higher summit when an extended dip has low prominence', () => {
+    const sections = detectElevationFocusSections(profile([
+      100, 140, 180, 220, 260, 300, 340, 380, 420, 460, 500,
+      494, 488, 482, 476, 470, 464, 458, 452, 446, 440,
+      465, 490, 515, 540, 565, 590, 615, 640,
+    ], 100), {
+      minSectionDistance: 300,
+      minElevationChange: 30,
+      minOverviewGap: 0,
+      maxSections: 4,
+    });
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]).toMatchObject({
+      kind: 'climb',
+      startDistance: 0,
+      endDistance: 2_800,
+    });
+    expect(sections[0].maxElevation).toBeGreaterThan(620);
+  });
+
+  it('uses a later lower valley when an extended bump has low prominence', () => {
+    const sections = detectElevationFocusSections(profile([
+      640, 600, 560, 520, 480, 440, 400, 360, 320, 280, 240,
+      246, 252, 258, 264, 270, 276, 282, 288, 294, 300,
+      275, 250, 225, 200, 175, 150, 125, 100,
+    ], 100), {
+      minSectionDistance: 300,
+      minElevationChange: 30,
+      minOverviewGap: 0,
+      maxSections: 4,
+    });
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]).toMatchObject({
+      kind: 'descent',
+      startDistance: 0,
+      endDistance: 2_800,
+    });
+    expect(sections[0].minElevation).toBeLessThan(120);
+  });
+
   it('keeps both directions represented when separated climbs and descents are available', () => {
     const descent = profile([260, 225, 190, 155, 120, 85], 100, 0);
     const climb = profile([80, 115, 150, 185, 220, 255], 100, 1, 'track', 2_000);

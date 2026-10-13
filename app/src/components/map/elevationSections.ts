@@ -174,46 +174,38 @@ function candidateChange(candidate: Candidate): number {
   return Math.abs(end - start);
 }
 
-function isMinorCounterSlope(
+function isMeaningfulCounterSlope(
   first: Candidate,
   interruption: Candidate,
   last: Candidate,
-  mergeGapDistance: number,
+  minDistance: number,
+  minChange: number,
 ): boolean {
-  const firstDistance = candidateDistance(first);
-  const lastDistance = candidateDistance(last);
   const interruptionDistance = candidateDistance(interruption);
   const firstChange = candidateChange(first);
   const lastChange = candidateChange(last);
   const interruptionChange = candidateChange(interruption);
 
-  // Scale the distance allowance to the shorter surrounding leg. A 500 m dip
-  // can be a brief interruption inside two multi-kilometre climbs even though
-  // it is too long for the absolute GPS-noise allowance.
-  const distanceLimit = Math.max(
-    mergeGapDistance,
-    Math.min(firstDistance, lastDistance) * 0.5,
-  );
-  // Compare the reversal with both legs, not just the first. This prevents a
-  // large valley after a huge climb from absorbing a genuinely separate hill.
-  const verticalLimit = Math.max(
-    24,
-    Math.min(firstChange, lastChange) * 0.4,
-  );
-  const reversalShare = interruptionChange
-    / Math.max(1, firstChange + interruptionChange + lastChange);
-
-  return interruptionDistance <= distanceLimit
-    && interruptionChange <= verticalLimit
-    && reversalShare <= 0.18;
+  // A turning point should only split the surrounding hill when it forms a
+  // meaningful valley or summit of its own. Judging prominence vertically as
+  // well as by distance prevents a short counter-slope from cutting a large
+  // climb/descent in two, regardless of the route's overall length.
+  const prominence = interruptionChange / Math.max(1, Math.min(firstChange, lastChange));
+  return interruptionDistance >= minDistance
+    && interruptionChange >= minChange
+    && prominence >= 0.35;
 }
 
-function mergeNearbyLegs(candidates: Candidate[], mergeGapDistance: number): Candidate[] {
+function mergeInsignificantTurningPoints(
+  candidates: Candidate[],
+  minDistance: number,
+  minChange: number,
+): Candidate[] {
   const merged = [...candidates];
   let index = 0;
 
-  // A minor counter-slope is normally a shelf or rolling interruption inside
-  // the same hill, even when it exceeds the fixed GPS-noise distance.
+  // Simplify raw local extrema into prominent low/high points. A climb then
+  // spans a meaningful low to a meaningful high, and a descent the reverse.
   while (index <= merged.length - 3) {
     const first = merged[index];
     const interruption = merged[index + 1];
@@ -221,7 +213,7 @@ function mergeNearbyLegs(candidates: Candidate[], mergeGapDistance: number): Can
 
     if (
       first.kind === last.kind
-      && isMinorCounterSlope(first, interruption, last, mergeGapDistance)
+      && !isMeaningfulCounterSlope(first, interruption, last, minDistance, minChange)
     ) {
       merged.splice(index, 3, {
         kind: first.kind,
@@ -321,7 +313,11 @@ export function detectElevationFocusSections(
     const mergeGap = options.mergeGapDistance
       ?? clamp(runDistance * 0.025, 120, 350);
 
-    const candidates = mergeNearbyLegs(findTrendLegs(samples), mergeGap);
+    const candidates = mergeInsignificantTurningPoints(
+      findTrendLegs(samples),
+      Math.max(minDistance, mergeGap),
+      minChange,
+    );
     const includeDescents = options.includeDescents ?? true;
     sections.push(...candidates
       .filter((candidate) => {
