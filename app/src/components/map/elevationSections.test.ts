@@ -115,6 +115,69 @@ describe('detectElevationFocusSections', () => {
     expect(sections[0].elevationLoss).toBeGreaterThan(0);
   });
 
+  it('keeps a long climb together across a proportionally short downhill interruption', () => {
+    const sections = detectElevationFocusSections(profile([
+      100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300,
+      285, 275, 270,
+      285, 300, 320, 340, 360, 380, 400, 420, 440,
+    ], 100), {
+      minSectionDistance: 300,
+      minElevationChange: 30,
+      minOverviewGap: 0,
+      maxSections: 4,
+    });
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]).toMatchObject({
+      kind: 'climb',
+      startDistance: 0,
+      endDistance: 2_200,
+    });
+    expect(sections[0].elevationGain).toBeGreaterThan(330);
+    expect(sections[0].elevationLoss).toBeGreaterThan(20);
+  });
+
+  it('keeps a long descent together across a proportionally short uphill interruption', () => {
+    const sections = detectElevationFocusSections(profile([
+      440, 420, 400, 380, 360, 340, 320, 300, 280, 260, 240,
+      255, 265, 270,
+      255, 240, 220, 200, 180, 160, 140, 120, 100,
+    ], 100), {
+      minSectionDistance: 300,
+      minElevationChange: 30,
+      minOverviewGap: 0,
+      maxSections: 4,
+    });
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0]).toMatchObject({
+      kind: 'descent',
+      startDistance: 0,
+      endDistance: 2_200,
+    });
+    expect(sections[0].elevationLoss).toBeGreaterThan(330);
+    expect(sections[0].elevationGain).toBeGreaterThan(20);
+  });
+
+  it('keeps a substantial valley as separate terrain instead of merging two hills', () => {
+    const sections = detectElevationFocusSections(profile([
+      100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300,
+      285, 270, 255, 240, 225, 210, 200,
+      220, 240, 260, 280, 300, 320, 340, 360, 380, 400,
+    ], 100), {
+      minSectionDistance: 300,
+      minElevationChange: 30,
+      minOverviewGap: 0,
+      maxSections: 4,
+    });
+
+    expect(sections.map((section) => section.kind)).toEqual([
+      'climb',
+      'descent',
+      'climb',
+    ]);
+  });
+
   it('keeps both directions represented when separated climbs and descents are available', () => {
     const descent = profile([260, 225, 190, 155, 120, 85], 100, 0);
     const climb = profile([80, 115, 150, 185, 220, 255], 100, 1, 'track', 2_000);

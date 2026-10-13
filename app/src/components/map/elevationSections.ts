@@ -174,19 +174,55 @@ function candidateChange(candidate: Candidate): number {
   return Math.abs(end - start);
 }
 
+function isMinorCounterSlope(
+  first: Candidate,
+  interruption: Candidate,
+  last: Candidate,
+  mergeGapDistance: number,
+): boolean {
+  const firstDistance = candidateDistance(first);
+  const lastDistance = candidateDistance(last);
+  const interruptionDistance = candidateDistance(interruption);
+  const firstChange = candidateChange(first);
+  const lastChange = candidateChange(last);
+  const interruptionChange = candidateChange(interruption);
+
+  // Scale the distance allowance to the shorter surrounding leg. A 500 m dip
+  // can be a brief interruption inside two multi-kilometre climbs even though
+  // it is too long for the absolute GPS-noise allowance.
+  const distanceLimit = Math.max(
+    mergeGapDistance,
+    Math.min(firstDistance, lastDistance) * 0.5,
+  );
+  // Compare the reversal with both legs, not just the first. This prevents a
+  // large valley after a huge climb from absorbing a genuinely separate hill.
+  const verticalLimit = Math.max(
+    24,
+    Math.min(firstChange, lastChange) * 0.4,
+  );
+  const reversalShare = interruptionChange
+    / Math.max(1, firstChange + interruptionChange + lastChange);
+
+  return interruptionDistance <= distanceLimit
+    && interruptionChange <= verticalLimit
+    && reversalShare <= 0.18;
+}
+
 function mergeNearbyLegs(candidates: Candidate[], mergeGapDistance: number): Candidate[] {
   const merged = [...candidates];
   let index = 0;
 
-  // A small counter-slope is normally a shelf or GPS wobble inside the same hill.
+  // A minor counter-slope is normally a shelf or rolling interruption inside
+  // the same hill, even when it exceeds the fixed GPS-noise distance.
   while (index <= merged.length - 3) {
     const first = merged[index];
     const interruption = merged[index + 1];
     const last = merged[index + 2];
-    const interruptionIsSmall = candidateDistance(interruption) <= mergeGapDistance
-      && candidateChange(interruption) <= Math.max(16, candidateChange(first) * 0.35);
 
-    if (first.kind === last.kind && interruptionIsSmall) {
+    if (
+      first.kind === last.kind
+      && isMinorCounterSlope(first, interruption, last, mergeGapDistance)
+    ) {
       merged.splice(index, 3, {
         kind: first.kind,
         startIndex: first.startIndex,
