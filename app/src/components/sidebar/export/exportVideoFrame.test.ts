@@ -273,9 +273,10 @@ describe('dynamic elevation export', () => {
     path.dataset.exportElevationColor = '#aa5500';
     path.dataset.exportElevationType = 'track';
     svg.appendChild(path);
-    const focus = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    focus.setAttribute('x', '160');
-    focus.setAttribute('width', '120');
+    const focus = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    focus.setAttribute('x1', '160');
+    focus.setAttribute('x2', '280');
+    focus.setAttribute('y1', '58.5');
     focus.dataset.exportElevationFocusSection = '';
     focus.dataset.exportElevationColor = '#aa5500';
     svg.appendChild(focus);
@@ -325,8 +326,8 @@ describe('dynamic elevation export', () => {
     });
 
     expect(fill).toHaveBeenCalledTimes(2);
-    expect(fillRect).toHaveBeenCalledTimes(1);
-    expect(stroke).toHaveBeenCalledTimes(3);
+    expect(fillRect).not.toHaveBeenCalled();
+    expect(stroke).toHaveBeenCalledTimes(4);
     expect(fillText).toHaveBeenCalledTimes(3);
     for (const label of ['+210 m', '100 m', '310 m']) {
       expect(fillText).toHaveBeenCalledWith(label, expect.any(Number), expect.any(Number));

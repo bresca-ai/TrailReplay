@@ -768,21 +768,6 @@ export function useExportOverlayCapture({
         0,
         Math.min(1, Number(svg.dataset.exportElevationFocusAmount) || 0),
       );
-      const focusOpacity = 0.2 * (1 - focusAmount);
-      if (focusOpacity > 0) {
-        const focusElements = [...svg.querySelectorAll<SVGRectElement>('[data-export-elevation-focus-section]')];
-        focusElements.forEach((element) => {
-          const startX = Number(element.getAttribute('x'));
-          const width = Number(element.getAttribute('width'));
-          if (!Number.isFinite(startX) || !Number.isFinite(width) || width <= 0) return;
-          const left = drawX + ((startX - viewBox.x) / viewBox.width) * drawWidth;
-          const right = drawX + ((startX + width - viewBox.x) / viewBox.width) * drawWidth;
-          context.globalAlpha = focusOpacity;
-          context.fillStyle = element.dataset.exportElevationColor || '#c1652f';
-          context.fillRect(left, drawY, right - left, drawHeight);
-        });
-      }
-
       drawableSegments.forEach(({ color, drawPath, drawRidge, transport }) => {
         context.globalAlpha = transport ? 0.09 : 0.18;
         context.fillStyle = color;
@@ -792,6 +777,32 @@ export function useExportOverlayCapture({
         context.lineWidth = Math.max(1, elementScaleY);
         context.stroke(drawRidge);
       });
+
+      const focusOpacity = 0.82 * (1 - focusAmount);
+      if (focusOpacity > 0) {
+        const focusElements = [...svg.querySelectorAll<SVGLineElement>('[data-export-elevation-focus-section]')];
+        focusElements.forEach((element) => {
+          const startX = Number(element.getAttribute('x1'));
+          const endX = Number(element.getAttribute('x2'));
+          const markerY = Number(element.getAttribute('y1'));
+          if (!Number.isFinite(startX) || !Number.isFinite(endX) || !Number.isFinite(markerY) || endX <= startX) return;
+          const left = drawX + ((startX - viewBox.x) / viewBox.width) * drawWidth;
+          const right = drawX + ((endX - viewBox.x) / viewBox.width) * drawWidth;
+          const baseline = drawY + ((markerY - viewBox.y) / viewBox.height) * drawHeight;
+          const tickHeight = Math.max(3, 4 * elementScaleY);
+          context.beginPath();
+          context.moveTo(left, baseline - tickHeight);
+          context.lineTo(left, baseline);
+          context.lineTo(right, baseline);
+          context.lineTo(right, baseline - tickHeight);
+          context.globalAlpha = focusOpacity;
+          context.strokeStyle = element.dataset.exportElevationColor || '#c1652f';
+          context.lineWidth = Math.max(2, 2 * elementScaleY);
+          context.lineCap = 'round';
+          context.lineJoin = 'round';
+          context.stroke();
+        });
+      }
     }
 
     context.beginPath();

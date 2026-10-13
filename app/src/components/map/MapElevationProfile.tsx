@@ -338,30 +338,6 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             </clipPath>
           </defs>
 
-          {settings.dynamicElevationProfile && (
-            <g opacity={0.2 * (1 - focusAmount)} data-export-elevation-focus-sections>
-              {focusSections.map((section) => {
-                const color = segmentPaths.find((segment) => segment.segmentIndex === section.segmentIndex)?.color
-                  ?? trailStyle.trailColor;
-                return (
-                  <rect
-                    key={`focus-section-${section.id}`}
-                    x={section.startProgress * svgWidth}
-                    y="0"
-                    width={Math.max(1, (section.endProgress - section.startProgress) * svgWidth)}
-                    height={svgHeight}
-                    fill={color}
-                    data-export-elevation-focus-section
-                    data-export-elevation-start-progress={section.startProgress}
-                    data-export-elevation-end-progress={section.endProgress}
-                    data-export-elevation-color={color}
-                    data-export-elevation-kind={section.kind}
-                  />
-                );
-              })}
-            </g>
-          )}
-
           {/* Background elevation profiles for each segment */}
           {segmentPaths.map((seg) => (
             <g key={`segment-${seg.segmentIndex}`}>
@@ -385,6 +361,58 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
               />
             </g>
           ))}
+
+          {/* A compact chapter marker identifies each upcoming focus without obscuring the profile. */}
+          {settings.dynamicElevationProfile && (
+            <g opacity={0.82 * (1 - focusAmount)} data-export-elevation-focus-sections>
+              {focusSections.map((section) => {
+                const color = segmentPaths.find((segment) => segment.segmentIndex === section.segmentIndex)?.color
+                  ?? trailStyle.trailColor;
+                const startX = section.startProgress * svgWidth;
+                const endX = section.endProgress * svgWidth;
+                const markerY = svgHeight - 1.5;
+                return (
+                  <g key={`focus-section-${section.id}`}>
+                    <line
+                      x1={startX}
+                      y1={markerY}
+                      x2={endX}
+                      y2={markerY}
+                      stroke={color}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                      data-export-elevation-focus-section
+                      data-export-elevation-start-progress={section.startProgress}
+                      data-export-elevation-end-progress={section.endProgress}
+                      data-export-elevation-color={color}
+                      data-export-elevation-kind={section.kind}
+                    />
+                    <line
+                      x1={startX}
+                      y1={markerY}
+                      x2={startX}
+                      y2={markerY - 4}
+                      stroke={color}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <line
+                      x1={endX}
+                      y1={markerY}
+                      x2={endX}
+                      y2={markerY - 4}
+                      stroke={color}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                );
+              })}
+            </g>
+          )}
 
           {/* Progress overlay */}
           {playback.progress > 0 && (
