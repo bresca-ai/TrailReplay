@@ -274,12 +274,9 @@ describe('dynamic elevation export', () => {
     const fill = vi.fn();
     const stroke = vi.fn();
     const fillText = vi.fn();
-    const translate = vi.fn();
     const context = {
       save: vi.fn(),
       restore: vi.fn(),
-      translate,
-      scale: vi.fn(),
       beginPath: vi.fn(),
       rect: vi.fn(),
       clip: vi.fn(),
@@ -290,6 +287,7 @@ describe('dynamic elevation export', () => {
     } as unknown as CanvasRenderingContext2D;
     vi.stubGlobal('Path2D', class {
       constructor() {}
+      addPath() {}
     });
 
     useAppStore.getState().setPlayback({ progress: 0.35 });
@@ -310,7 +308,6 @@ describe('dynamic elevation export', () => {
       scaleToRecording: 1.92,
     });
 
-    expect(translate).toHaveBeenCalledWith(-120, -5);
     expect(fill).toHaveBeenCalledTimes(2);
     expect(stroke).toHaveBeenCalledTimes(2);
     expect(fillText).toHaveBeenCalledWith(

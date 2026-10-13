@@ -715,68 +715,74 @@ export function useExportOverlayCapture({
       : viewBox.x + progress * viewBox.width;
     const markerRatio = Math.max(0, Math.min(1, (markerPosition - viewBox.x) / viewBox.width));
     const segmentElements = [...svg.querySelectorAll<SVGPathElement>('[data-export-elevation-segment]')];
+    const pathTransform: DOMMatrix2DInit = {
+      a: drawWidth / viewBox.width,
+      b: 0,
+      c: 0,
+      d: drawHeight / viewBox.height,
+      e: drawX - viewBox.x * (drawWidth / viewBox.width),
+      f: drawY - viewBox.y * (drawHeight / viewBox.height),
+    };
+    const drawableSegments = segmentElements.flatMap((element) => {
+      const pathData = element.getAttribute('d');
+      if (!pathData) return [];
+      let sourcePath = elevationPathCacheRef.current.get(pathData);
+      if (!sourcePath) {
+        sourcePath = new Path2D(pathData);
+        elevationPathCacheRef.current.set(pathData, sourcePath);
+      }
+      // Transform the geometry rather than the canvas. Stroke width then stays
+      // stable during a deep horizontal/vertical focus, matching the SVG's
+      // non-scaling-stroke behavior instead of becoming visibly distorted.
+      const drawPath = new Path2D();
+      drawPath.addPath(sourcePath, pathTransform);
+      return [{
+        color: element.dataset.exportElevationColor || '#c1652f',
+        drawPath,
+        transport: element.dataset.exportElevationType === 'transport',
+      }];
+    });
 
     context.save();
-    context.translate(drawX, drawY);
-    context.scale(drawWidth / viewBox.width, drawHeight / viewBox.height);
-    context.translate(-viewBox.x, -viewBox.y);
     context.beginPath();
-    context.rect(viewBox.x, viewBox.y, viewBox.width, viewBox.height);
+    context.rect(drawX, drawY, drawWidth, drawHeight);
     context.clip();
 
     // Static mode gets this layer from the cached DOM capture. A dynamic
     // viewport changes every frame, so paint its complete profile here instead
     // of forcing an html2canvas snapshot for every encoded frame.
     if (dynamicElevation) {
-      segmentElements.forEach((element) => {
-        const pathData = element.getAttribute('d');
-        if (!pathData) return;
-        let path = elevationPathCacheRef.current.get(pathData);
-        if (!path) {
-          path = new Path2D(pathData);
-          elevationPathCacheRef.current.set(pathData, path);
-        }
-        const color = element.dataset.exportElevationColor || '#c1652f';
-        const transport = element.dataset.exportElevationType === 'transport';
+      drawableSegments.forEach(({ color, drawPath, transport }) => {
         context.globalAlpha = transport ? 0.09 : 0.18;
         context.fillStyle = color;
-        context.fill(path);
+        context.fill(drawPath);
         context.globalAlpha = transport ? 0.3 : 0.55;
         context.strokeStyle = color;
-        context.lineWidth = 1;
-        context.stroke(path);
+        context.lineWidth = Math.max(1, elementScaleY);
+        context.stroke(drawPath);
       });
     }
 
     context.beginPath();
     context.rect(
-      viewBox.x,
-      viewBox.y,
-      Math.max(0, Math.min(viewBox.width, markerPosition - viewBox.x)),
-      viewBox.height,
+      drawX,
+      drawY,
+      markerRatio * drawWidth,
+      drawHeight,
     );
     context.clip();
 
-    segmentElements.forEach((element) => {
-      const pathData = element.getAttribute('d');
-      if (!pathData) return;
-
-      let path = elevationPathCacheRef.current.get(pathData);
-      if (!path) {
-        path = new Path2D(pathData);
-        elevationPathCacheRef.current.set(pathData, path);
-      }
-
+    drawableSegments.forEach(({ color: segmentColor, drawPath }) => {
       const color = svg.dataset.exportElevationProgressColor
-        || element.dataset.exportElevationColor
+        || segmentColor
         || '#c1652f';
       context.globalAlpha = 0.7;
       context.fillStyle = color;
-      context.fill(path);
+      context.fill(drawPath);
       context.globalAlpha = 1;
       context.strokeStyle = color;
-      context.lineWidth = 2;
-      context.stroke(path);
+      context.lineWidth = Math.max(1, 2 * elementScaleY);
+      context.stroke(drawPath);
     });
     context.restore();
 
