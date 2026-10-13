@@ -3,7 +3,7 @@ import {
   applyConsistentBasemapTileLod,
   BASEMAP_MAX_TILE_ZOOM_LEVELS,
   BASEMAP_TILE_COUNT_RATIO,
-  calculateUniformBasemapTileZoom,
+  createUniformBasemapTileZoomCalculator,
 } from './basemapTileLod';
 
 function createMap(sourceIds = ['satellite', 'fallback-satellite']) {
@@ -37,8 +37,17 @@ describe('applyConsistentBasemapTileLod', () => {
       'fallback-satellite',
     );
     expect((map.getSource('satellite') as { calculateTileZoom?: unknown }).calculateTileZoom)
-      .toBe(calculateUniformBasemapTileZoom);
-    expect(calculateUniformBasemapTileZoom(17, 100, 1, 1, 45)).toBe(17);
+      .toEqual(expect.any(Function));
+  });
+
+  it('keeps the near-field zoom stable across small camera corrections', () => {
+    const calculate = createUniformBasemapTileZoomCalculator();
+
+    expect(calculate(12.35, 100, 1, 1, 45)).toBe(12);
+    expect(calculate(12.6, 0, 0, 0, 0)).toBe(12);
+    expect(calculate(12.76, 0, 0, 0, 0)).toBe(13);
+    expect(calculate(12.4, 0, 0, 0, 0)).toBe(13);
+    expect(calculate(12.24, 0, 0, 0, 0)).toBe(12);
   });
 
   it('applies only sources that exist and falls back to satellite metadata', () => {

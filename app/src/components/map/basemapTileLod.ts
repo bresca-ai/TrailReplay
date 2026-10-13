@@ -20,10 +20,23 @@ interface LodControllableSource {
   calculateTileZoom?: TileZoomCalculator;
 }
 
-/** Use the center/near-field source zoom for every tile in the viewport. */
-export const calculateUniformBasemapTileZoom: TileZoomCalculator = (requestedCenterZoom) => (
-  requestedCenterZoom
-);
+const ZOOM_IN_SWITCH_FRACTION = 0.75;
+const ZOOM_OUT_SWITCH_FRACTION = 0.75;
+
+/**
+ * Use one near-field source zoom across the viewport, with hysteresis so small
+ * camera zoom corrections do not repeatedly exchange whole imagery pyramids.
+ */
+export function createUniformBasemapTileZoomCalculator(): TileZoomCalculator {
+  let selectedZoom: number | null = null;
+
+  return (requestedCenterZoom) => {
+    if (selectedZoom === null) selectedZoom = Math.floor(requestedCenterZoom);
+    while (requestedCenterZoom >= selectedZoom + ZOOM_IN_SWITCH_FRACTION) selectedZoom += 1;
+    while (requestedCenterZoom < selectedZoom - ZOOM_OUT_SWITCH_FRACTION) selectedZoom -= 1;
+    return selectedZoom;
+  };
+}
 
 /** Keep the active basemap on one source zoom across the visible viewport. */
 export function applyConsistentBasemapTileLod(
@@ -46,7 +59,7 @@ export function applyConsistentBasemapTileLod(
         BASEMAP_TILE_COUNT_RATIO,
         sourceId,
       );
-      source.calculateTileZoom = calculateUniformBasemapTileZoom;
+      source.calculateTileZoom = createUniformBasemapTileZoomCalculator();
       appliedSourceIds.push(sourceId);
     } catch {
       // Custom sources may not support MapLibre's tile LOD controls.
