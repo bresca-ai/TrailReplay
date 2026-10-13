@@ -29,6 +29,8 @@ export interface ElevationSectionDetectionOptions {
   mergeGapDistance?: number;
   minOverviewGap?: number;
   maxSections?: number;
+  /** Include downhill-only focus moments. Climb curation is the default. */
+  includeDescents?: boolean;
 }
 
 interface Sample extends ElevationSectionPoint {
@@ -239,23 +241,7 @@ function sectionScore(section: ElevationFocusSection): number {
   return vertical * Math.sqrt(Math.max(1, section.distance));
 }
 
-function mergeSections(
-  first: ElevationFocusSection,
-  second: ElevationFocusSection,
-): ElevationFocusSection {
-  return {
-    ...first,
-    endProgress: second.endProgress,
-    endDistance: second.endDistance,
-    distance: second.endDistance - first.startDistance,
-    minElevation: Math.min(first.minElevation, second.minElevation),
-    maxElevation: Math.max(first.maxElevation, second.maxElevation),
-    elevationGain: first.elevationGain + second.elevationGain,
-    elevationLoss: first.elevationLoss + second.elevationLoss,
-  };
-}
-
-/** Detects noteworthy, animation-friendly climbing and descending sections. */
+/** Detects noteworthy, animation-friendly climbs (and optional descents). */
 export function detectElevationFocusSections(
   points: ElevationSectionPoint[],
   options: ElevationSectionDetectionOptions = {},
@@ -295,7 +281,7 @@ export function detectElevationFocusSections(
       ?? clamp(runDistance * 0.06, 250, 700);
     const minChange = options.minElevationChange
       ?? clamp(runDistance * 0.006, 25, 55);
-    const minGrade = options.minAverageGrade ?? 0.025;
+    const minGrade = options.minAverageGrade ?? 0.03;
     const mergeGap = options.mergeGapDistance
       ?? clamp(runDistance * 0.025, 120, 350);
 
@@ -304,11 +290,17 @@ export function detectElevationFocusSections(
       .filter((candidate) => {
         const distance = candidateDistance(candidate);
         const change = candidateChange(candidate);
-        return distance >= minDistance
+        return (options.includeDescents || candidate.kind === 'climb')
+          && distance >= minDistance
           && change >= minChange
           && change / distance >= minGrade;
       })
-      .map(toSection));
+      .map(toSection)
+      // A real climb may contain shelves and small dips, but it should still
+      // read unmistakably uphill. This keeps noisy rolling terrain from
+      // producing arbitrary-looking focus moments.
+      .filter((section) => section.kind !== 'climb'
+        || section.elevationGain / Math.max(1, section.elevationGain + section.elevationLoss) >= 0.72));
   });
 
   sections.sort((left, right) => left.startProgress - right.startProgress);
@@ -319,21 +311,19 @@ export function detectElevationFocusSections(
     0,
   );
   const overviewGap = options.minOverviewGap
-    ?? clamp(totalDistance * 0.025, 150, 500);
+    ?? clamp(totalDistance * 0.035, 800, 5_000);
   const spaced: ElevationFocusSection[] = [];
   sections.forEach((section) => {
     const previous = spaced.at(-1);
     if (!previous || previous.segmentIndex !== section.segmentIndex
       || section.startDistance - previous.endDistance >= overviewGap) {
       spaced.push(section);
-    } else if (previous.kind === section.kind) {
-      spaced[spaced.length - 1] = mergeSections(previous, section);
     } else if (sectionScore(section) > sectionScore(previous)) {
       spaced[spaced.length - 1] = section;
     }
   });
 
-  const maxSections = Math.max(1, Math.floor(options.maxSections ?? 6));
+  const maxSections = Math.max(1, Math.floor(options.maxSections ?? 4));
   const capped = spaced.length <= maxSections
     ? spaced
     : [...spaced]

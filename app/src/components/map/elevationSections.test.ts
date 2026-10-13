@@ -34,15 +34,21 @@ describe('detectElevationFocusSections', () => {
     expect(sections[0].minElevation).toBeLessThan(sections[0].maxElevation);
   });
 
-  it('detects a meaningful descent with loss statistics', () => {
+  it('keeps the default edit climb-focused instead of selecting downhill moments', () => {
     const sections = detectElevationFocusSections(profile([
       310, 301, 289, 276, 263, 251, 239, 225, 214, 202, 190,
     ]));
 
-    expect(sections).toHaveLength(1);
+    expect(sections).toEqual([]);
+  });
+
+  it('can still detect descents when a future edit explicitly requests them', () => {
+    const sections = detectElevationFocusSections(profile([
+      310, 301, 289, 276, 263, 251, 239, 225, 214, 202, 190,
+    ]), { includeDescents: true });
+
     expect(sections[0]).toMatchObject({ kind: 'descent', segmentIndex: 0 });
     expect(sections[0].elevationLoss).toBeGreaterThan(100);
-    expect(sections[0].elevationGain).toBe(0);
   });
 
   it('ignores essentially flat terrain', () => {
@@ -67,12 +73,29 @@ describe('detectElevationFocusSections', () => {
 
     const sections = detectElevationFocusSections(
       [...firstTrack, invalid, ...transport, ...secondTrack],
-      { minSectionDistance: 150, minElevationChange: 20, minOverviewGap: 0 },
+      { includeDescents: true, minSectionDistance: 150, minElevationChange: 20, minOverviewGap: 0 },
     );
 
     expect(sections.map((section) => section.segmentIndex)).toEqual([0, 2]);
     expect(sections.map((section) => section.kind)).toEqual(['climb', 'descent']);
     expect(sections.every((section) => section.startDistance >= (section.segmentIndex === 2 ? 700 : 0))).toBe(true);
+  });
+
+  it('keeps the stronger of two nearby climbs instead of combining them into one arbitrary span', () => {
+    const sections = detectElevationFocusSections(profile([
+      100, 120, 145, 170, 195,
+      155, 145, 140,
+      155, 170, 185, 200,
+    ], 100), {
+      minSectionDistance: 250,
+      minElevationChange: 30,
+      mergeGapDistance: 100,
+      minOverviewGap: 500,
+    });
+
+    expect(sections).toHaveLength(1);
+    expect(sections[0].startDistance).toBe(0);
+    expect(sections[0].endDistance).toBe(400);
   });
 
   it('merges close same-direction climbs separated by a short shelf', () => {
