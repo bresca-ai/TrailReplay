@@ -778,11 +778,31 @@ export function useExportOverlayCapture({
         || '#c1652f';
       context.globalAlpha = 0.7;
       context.fillStyle = color;
+      if (dynamicElevation) {
+        context.shadowColor = 'rgba(7, 21, 15, 0.62)';
+        context.shadowBlur = 4 * elementScaleY;
+        context.shadowOffsetY = 2 * elementScaleY;
+      }
       context.fill(drawPath);
+      context.shadowColor = 'transparent';
+      context.shadowBlur = 0;
+      context.shadowOffsetY = 0;
+      context.globalAlpha = 1;
+      if (dynamicElevation) {
+        context.strokeStyle = '#07150f';
+        context.globalAlpha = 0.5;
+        context.lineWidth = Math.max(1, 4 * elementScaleY);
+        context.stroke(drawPath);
+      }
       context.globalAlpha = 1;
       context.strokeStyle = color;
       context.lineWidth = Math.max(1, 2 * elementScaleY);
       context.stroke(drawPath);
+      if (dynamicElevation) {
+        context.strokeStyle = 'rgba(255, 255, 255, 0.38)';
+        context.lineWidth = Math.max(0.65, 0.65 * elementScaleY);
+        context.stroke(drawPath);
+      }
     });
     context.restore();
 
@@ -811,6 +831,25 @@ export function useExportOverlayCapture({
       + overlayRect.drawHeight
       - (isCompact ? 4 : 8) * elementScaleY;
 
+    const sectionDuration = svg.dataset.exportElevationDuration;
+    const sectionGain = svg.dataset.exportElevationGain;
+    const sectionHigh = svg.dataset.exportElevationHigh;
+    const sectionLow = svg.dataset.exportElevationLow;
+    const hasSectionMetrics = dynamicElevation
+      && Boolean(sectionDuration && sectionGain && sectionHigh && sectionLow);
+
+    if (hasSectionMetrics) {
+      context.save();
+      context.beginPath();
+      context.moveTo(centerX, drawY);
+      context.lineTo(centerX, drawY + drawHeight);
+      context.strokeStyle = 'rgba(255, 255, 255, 0.38)';
+      context.lineWidth = Math.max(1, elementScaleX * 0.65);
+      context.setLineDash([2 * elementScaleY, 3 * elementScaleY]);
+      context.stroke();
+      context.restore();
+    }
+
     context.save();
     context.textBaseline = 'bottom';
     context.fillStyle = '#ffffff';
@@ -818,48 +857,65 @@ export function useExportOverlayCapture({
     context.shadowBlur = 5 * elementScaleY;
     context.shadowOffsetY = 2 * elementScaleY;
 
-    if (currentSegment.type === 'transport') {
-      const journeySegment = state.journeySegments[currentSegmentIndex];
-      const mode = journeySegment?.type === 'transport' ? journeySegment.mode : 'car';
-      const icon = TRANSPORT_ICONS[mode] || '🚗';
-      context.font = `${(isCompact ? 12 : 18) * elementScaleY}px sans-serif`;
-      context.textAlign = 'center';
-      context.fillText(icon, centerX, baselineY);
-    } else {
-      const elevation = getElevationAtProgress(currentSegment.points, progress);
-      const value = String(Math.round(convertElevation(elevation, unitSystem)));
-      const unit = unitSystem === 'metric' ? 'M' : 'FT';
-      const valueSize = (isCompact ? 14 : 22) * elementScaleY;
-      const unitSize = (isCompact ? 9 : 14) * elementScaleY;
-      const gap = (isCompact ? 4 : 6) * elementScaleX;
-      const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
+    if (!hasSectionMetrics) {
+      if (currentSegment.type === 'transport') {
+        const journeySegment = state.journeySegments[currentSegmentIndex];
+        const mode = journeySegment?.type === 'transport' ? journeySegment.mode : 'car';
+        const icon = TRANSPORT_ICONS[mode] || '🚗';
+        context.font = `${(isCompact ? 12 : 18) * elementScaleY}px sans-serif`;
+        context.textAlign = 'center';
+        context.fillText(icon, centerX, baselineY);
+      } else {
+        const elevation = getElevationAtProgress(currentSegment.points, progress);
+        const value = String(Math.round(convertElevation(elevation, unitSystem)));
+        const unit = unitSystem === 'metric' ? 'M' : 'FT';
+        const valueSize = (isCompact ? 14 : 22) * elementScaleY;
+        const unitSize = (isCompact ? 9 : 14) * elementScaleY;
+        const gap = (isCompact ? 4 : 6) * elementScaleX;
+        const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
 
-      context.font = `700 ${valueSize}px ${family}`;
-      const valueWidth = context.measureText(value).width;
-      context.font = `600 ${unitSize}px ${family}`;
-      const unitWidth = context.measureText(unit).width;
-      let textX = centerX - (valueWidth + gap + unitWidth) / 2;
+        context.font = `700 ${valueSize}px ${family}`;
+        const valueWidth = context.measureText(value).width;
+        context.font = `600 ${unitSize}px ${family}`;
+        const unitWidth = context.measureText(unit).width;
+        let textX = centerX - (valueWidth + gap + unitWidth) / 2;
 
-      context.textAlign = 'left';
-      context.font = `700 ${valueSize}px ${family}`;
-      context.fillText(value, textX, baselineY);
-      textX += valueWidth + gap;
-      context.font = `600 ${unitSize}px ${family}`;
-      context.fillText(unit, textX, baselineY);
+        context.textAlign = 'left';
+        context.font = `700 ${valueSize}px ${family}`;
+        context.fillText(value, textX, baselineY);
+        textX += valueWidth + gap;
+        context.font = `600 ${unitSize}px ${family}`;
+        context.fillText(unit, textX, baselineY);
+      }
     }
     context.restore();
 
-    const sectionLabel = svg.dataset.exportElevationSectionLabel;
-    if (dynamicElevation && sectionLabel) {
+    if (hasSectionMetrics) {
+      const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
+      const primarySize = (isCompact ? 11 : 16) * elementScaleY;
+      const secondarySize = (isCompact ? 9 : 13) * elementScaleY;
+      const insetX = 4 * elementScaleX;
+      const insetY = 2 * elementScaleY;
       context.save();
-      context.font = `700 ${(isCompact ? 10 : 15) * elementScaleY}px ${overlayCanvasFontFamily(state.settings.trailStyle.overlayFont)}`;
-      context.textAlign = 'left';
-      context.textBaseline = 'top';
       context.fillStyle = '#ffffff';
       context.shadowColor = 'rgba(0, 0, 0, 0.86)';
       context.shadowBlur = 5 * elementScaleY;
       context.shadowOffsetY = 2 * elementScaleY;
-      context.fillText(sectionLabel, drawX + 4 * elementScaleX, drawY + 3 * elementScaleY);
+
+      context.font = `700 ${primarySize}px ${family}`;
+      context.textAlign = 'left';
+      context.textBaseline = 'top';
+      context.fillText(sectionDuration!, drawX + insetX, drawY + insetY);
+
+      context.font = `700 ${secondarySize}px ${family}`;
+      context.textAlign = 'center';
+      context.fillText(sectionGain!, drawX + drawWidth / 2, drawY + insetY);
+
+      context.font = `600 ${secondarySize}px ${family}`;
+      context.textAlign = 'right';
+      context.fillText(sectionHigh!, drawX + drawWidth - insetX, drawY);
+      context.textBaseline = 'bottom';
+      context.fillText(sectionLow!, drawX + drawWidth - insetX, drawY + drawHeight);
       context.restore();
     }
   }, [dynamicElevation, elevationSegments, includeElevation]);

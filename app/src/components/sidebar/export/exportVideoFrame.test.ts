@@ -249,7 +249,7 @@ describe('dynamic elevation export', () => {
     expect(capture).not.toHaveBeenCalled();
   });
 
-  it('draws the full focused profile, progress, and section label from the live SVG', () => {
+  it('draws the focused profile, progress, anchored metrics, and depth from the live SVG', () => {
     const wrapper = document.createElement('div');
     wrapper.id = 'mapElevationProfile';
     wrapper.getBoundingClientRect = () => new DOMRect(0, 700, 1000, 60);
@@ -257,7 +257,10 @@ describe('dynamic elevation export', () => {
     svg.id = 'elevationProfileSvg';
     svg.dataset.exportElevationMarkerX = '280';
     svg.dataset.exportElevationProgressColor = '#ff6600';
-    svg.dataset.exportElevationSectionLabel = '↗ 1.40 km · 100 m–310 m · +210 m';
+    svg.dataset.exportElevationDuration = '0:18';
+    svg.dataset.exportElevationGain = '+210 m';
+    svg.dataset.exportElevationHigh = '310 m';
+    svg.dataset.exportElevationLow = '100 m';
     Object.defineProperty(svg, 'viewBox', {
       value: { baseVal: { x: 120, y: 5, width: 320, height: 50 } },
     });
@@ -280,6 +283,9 @@ describe('dynamic elevation export', () => {
       beginPath: vi.fn(),
       rect: vi.fn(),
       clip: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      setLineDash: vi.fn(),
       fill,
       stroke,
       fillText,
@@ -309,11 +315,10 @@ describe('dynamic elevation export', () => {
     });
 
     expect(fill).toHaveBeenCalledTimes(2);
-    expect(stroke).toHaveBeenCalledTimes(2);
-    expect(fillText).toHaveBeenCalledWith(
-      '↗ 1.40 km · 100 m–310 m · +210 m',
-      expect.any(Number),
-      expect.any(Number),
-    );
+    expect(stroke).toHaveBeenCalledTimes(5);
+    expect(fillText).toHaveBeenCalledTimes(4);
+    for (const label of ['0:18', '+210 m', '310 m', '100 m']) {
+      expect(fillText).toHaveBeenCalledWith(label, expect.any(Number), expect.any(Number));
+    }
   });
 });

@@ -432,7 +432,7 @@ export const de = {
     paceModePerKm: 'Pro km',
     showElevationProfile: 'Höhenprofil',
     dynamicElevationProfile: 'Dynamische Abschnitte',
-    dynamicElevationProfileHint: 'Zoomt während der Wiedergabe automatisch auf markante Anstiege und Abfahrten.',
+    dynamicElevationProfileHint: 'Fokussiert während der Wiedergabe automatisch die markantesten längeren Anstiege.',
     markerTitle: 'Marker',
     markerTypeIcon: 'Symbol',
     markerTypeDot: 'Punkt',

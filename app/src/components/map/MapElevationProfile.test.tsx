@@ -73,7 +73,7 @@ describe('MapElevationProfile dynamic sections', () => {
 
     const svg = document.getElementById('elevationProfileSvg');
     expect(svg).toHaveAttribute('viewBox', '0 0 800 60');
-    expect(svg).not.toHaveAttribute('data-export-elevation-section-label');
+    expect(svg).not.toHaveAttribute('data-export-elevation-duration');
 
     act(() => {
       useAppStore.getState().setPlayback({
@@ -86,14 +86,17 @@ describe('MapElevationProfile dynamic sections', () => {
       const [, , width] = (svg?.getAttribute('viewBox') ?? '').split(' ').map(Number);
       expect(width).toBeLessThan(800);
     });
-    expect(svg?.getAttribute('data-export-elevation-section-label')).toMatch(/^↗ .*km .*m/);
-    expect(screen.getByText(/^↗ /)).toBeVisible();
+    expect(svg?.getAttribute('data-export-elevation-duration')).toMatch(/^0:/);
+    expect(svg?.getAttribute('data-export-elevation-gain')).toMatch(/^\+\d+ m$/);
+    expect(svg?.getAttribute('data-export-elevation-high')).toMatch(/^\d+ m$/);
+    expect(svg?.getAttribute('data-export-elevation-low')).toMatch(/^\d+ m$/);
+    expect(screen.getByText(/^\+\d+ m$/)).toBeVisible();
 
     act(() => {
       useAppStore.getState().setSettings({ dynamicElevationProfile: false });
     });
 
     await waitFor(() => expect(svg).toHaveAttribute('viewBox', '0 0 800 60'));
-    expect(screen.queryByText(/^↗ /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\+\d+ m$/)).not.toBeInTheDocument();
   });
 });

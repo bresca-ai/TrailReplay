@@ -432,7 +432,7 @@ export const ca = {
     paceModePerKm: 'Per km',
     showElevationProfile: 'Perfil d\'altitud',
     dynamicElevationProfile: 'Seccions dinàmiques',
-    dynamicElevationProfileHint: 'Amplia automàticament les pujades i baixades destacades durant la reproducció.',
+    dynamicElevationProfileHint: 'Enfoca automàticament les pujades sostingudes més destacades durant la reproducció.',
     markerTitle: 'Marcador',
     markerTypeIcon: 'Icona',
     markerTypeDot: 'Punt',

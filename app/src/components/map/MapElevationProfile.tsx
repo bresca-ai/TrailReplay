@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
-import { convertElevation, formatDistance, formatElevation } from '@/utils/units';
+import { convertElevation, formatDuration, formatElevation } from '@/utils/units';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { getDynamicElevationViewport } from './dynamicElevationViewport';
 import { getElevationAtProgress } from './elevationProfile';
@@ -241,9 +241,17 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   const viewBoxHeight = Math.max(1, viewBoxBottom - viewBoxTop);
   const markerPosition = Math.min(1, Math.max(0, (markerX - viewBoxX) / viewBoxWidth));
   const focusedSection = dynamicViewport?.activeSection ?? null;
-  const sectionLabel = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
-    ? `${focusedSection.kind === 'climb' ? '↗' : '↘'} ${formatDistance(focusedSection.distance, settings.unitSystem)} · ${formatElevation(focusedSection.minElevation, settings.unitSystem)}–${formatElevation(focusedSection.maxElevation, settings.unitSystem)} · ${focusedSection.kind === 'climb' ? '+' : '−'}${formatElevation(focusedSection.kind === 'climb' ? focusedSection.elevationGain : focusedSection.elevationLoss, settings.unitSystem)}`
-    : '';
+  const sectionMetrics = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
+    ? {
+        duration: formatDuration(
+          ((focusedSection.endProgress - focusedSection.startProgress) * playback.totalDuration)
+            / 1000,
+        ),
+        gain: `+${formatElevation(focusedSection.elevationGain, settings.unitSystem)}`,
+        high: formatElevation(focusedSection.maxElevation, settings.unitSystem),
+        low: formatElevation(focusedSection.minElevation, settings.unitSystem),
+      }
+    : null;
   const isExportPreview = isExporting || activePanel === 'export';
   const isNonWideExportPreview = isExportPreview && exportAspectRatio !== '16:9';
   const labelOverflowPadding = isNonWideExportPreview ? 24 : 18;
@@ -280,7 +288,10 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           id="elevationProfileSvg"
           data-export-elevation-progress-color={currentColor}
           data-export-elevation-marker-x={markerX}
-          data-export-elevation-section-label={sectionLabel || undefined}
+          data-export-elevation-duration={sectionMetrics?.duration}
+          data-export-elevation-gain={sectionMetrics?.gain}
+          data-export-elevation-high={sectionMetrics?.high}
+          data-export-elevation-low={sectionMetrics?.low}
           data-export-elevation-dynamic-profile={settings.dynamicElevationProfile ? 'true' : undefined}
         >
           {/* Gradient definitions for segments */}
@@ -300,8 +311,12 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             ))}
             <linearGradient id="progressGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor={currentColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={currentColor} stopOpacity="0.5" />
+              <stop offset="45%" stopColor={currentColor} stopOpacity="0.68" />
+              <stop offset="100%" stopColor={currentColor} stopOpacity="0.24" />
             </linearGradient>
+            <filter id="elevationDepthShadow" x="-20%" y="-30%" width="140%" height="170%">
+              <feDropShadow dx="0" dy="2" stdDeviation="1.25" floodColor="#07150f" floodOpacity="0.62" />
+            </filter>
             <clipPath id="elevationProgressClip">
               <rect x={viewBoxX} y={viewBoxTop} width={Math.max(0, markerX - viewBoxX)} height={viewBoxHeight} />
             </clipPath>
@@ -327,18 +342,54 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
 
           {/* Progress overlay */}
           {playback.progress > 0 && (
-            <g clipPath="url(#elevationProgressClip)" data-export-elevation-dynamic>
+            <g
+              clipPath="url(#elevationProgressClip)"
+              filter="url(#elevationDepthShadow)"
+              data-export-elevation-dynamic
+            >
               {segmentPaths.map((seg) => (
-                <path
-                  key={`progress-${seg.segmentIndex}`}
-                  d={seg.pathD}
-                  fill="url(#progressGradient)"
-                  stroke={currentColor}
-                  strokeWidth="2"
-                  vectorEffect="non-scaling-stroke"
-                />
+                <g key={`progress-${seg.segmentIndex}`}>
+                  <path
+                    d={seg.pathD}
+                    fill="url(#progressGradient)"
+                    stroke="#07150f"
+                    strokeWidth="4"
+                    strokeOpacity="0.5"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <path
+                    d={seg.pathD}
+                    fill="none"
+                    stroke={currentColor}
+                    strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <path
+                    d={seg.pathD}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="0.65"
+                    strokeOpacity="0.38"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
               ))}
             </g>
+          )}
+
+          {sectionMetrics && playback.progress > 0 && (
+            <line
+              x1={markerX}
+              y1={viewBoxTop}
+              x2={markerX}
+              y2={viewBoxBottom}
+              stroke="white"
+              strokeWidth="1"
+              strokeOpacity="0.38"
+              strokeDasharray="2 3"
+              vectorEffect="non-scaling-stroke"
+              data-export-elevation-dynamic
+            />
           )}
 
           {/* Segment boundaries (vertical lines) */}
@@ -359,20 +410,45 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           })}
         </svg>
 
-        {sectionLabel && (
+        {sectionMetrics && (
           <div
             data-export-elevation-dynamic
-            className={`absolute left-2 top-1 whitespace-nowrap rounded-md bg-black/70 px-1.5 py-0.5 font-semibold text-white shadow-sm transition-opacity ${
-              isNonWideExportPreview ? 'text-[13px]' : 'text-[9px]'
-            }`}
+            className="pointer-events-none absolute inset-0 text-white transition-opacity"
             style={{ opacity: dynamicViewport?.focusAmount ?? 0 }}
           >
-            {sectionLabel}
+            <span
+              data-export-elevation-duration-label
+              className={`absolute left-2 top-1 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[16px]' : 'text-[11px]'}`}
+              style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
+            >
+              {sectionMetrics.duration}
+            </span>
+            <span
+              data-export-elevation-gain-label
+              className={`absolute left-1/2 top-1 -translate-x-1/2 font-bold tabular-nums ${isNonWideExportPreview ? 'text-[15px]' : 'text-[10px]'}`}
+              style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
+            >
+              {sectionMetrics.gain}
+            </span>
+            <span
+              data-export-elevation-high-label
+              className={`absolute right-1 top-0 border-b border-white/45 pb-px font-semibold tabular-nums ${isNonWideExportPreview ? 'text-[13px]' : 'text-[9px]'}`}
+              style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
+            >
+              {sectionMetrics.high}
+            </span>
+            <span
+              data-export-elevation-low-label
+              className={`absolute bottom-0 right-1 border-t border-white/45 pt-px font-semibold tabular-nums ${isNonWideExportPreview ? 'text-[13px]' : 'text-[9px]'}`}
+              style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
+            >
+              {sectionMetrics.low}
+            </span>
           </div>
         )}
 
         {/* Current elevation label - follows the progress, aligned to bottom */}
-        {playback.progress > 0 && (
+        {playback.progress > 0 && !sectionMetrics && (
           <div
             data-export-elevation-dynamic
             data-export-elevation-label
