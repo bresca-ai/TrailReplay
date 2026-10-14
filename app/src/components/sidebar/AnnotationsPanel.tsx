@@ -645,6 +645,53 @@ export function AnnotationsPanel() {
             }}
           />
         </div>
+        {settings.showElevationProfile && (
+          <div className="ml-3 space-y-1.5 border-l border-[var(--evergreen)]/15 pl-3">
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-sm text-[var(--evergreen)]">
+                {t('annotations.dynamicElevationProfile')}
+              </Label>
+              <Switch
+                checked={settings.dynamicElevationProfile}
+                onCheckedChange={(checked) => {
+                  setSettings({ dynamicElevationProfile: checked });
+                  trackEvent('feature_enabled', {
+                    feature_name: 'dynamic_elevation_profile',
+                    feature_state: checked ? 'enabled' : 'disabled',
+                    feature_context: 'annotations_panel',
+                  });
+                }}
+              />
+            </div>
+            <p className="text-xs text-[var(--evergreen-60)]">
+              {t('annotations.dynamicElevationProfileHint')}
+            </p>
+            {settings.dynamicElevationProfile && (
+              <div
+                className="space-y-2 rounded-lg border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-2.5"
+                role="note"
+              >
+                <p className="text-xs font-semibold text-[var(--evergreen)]">
+                  {t('annotations.dynamicElevationProfileGuideTitle')}
+                </p>
+                <ol className="space-y-1.5 text-[11px] leading-relaxed text-[var(--evergreen-60)]">
+                  {[
+                    t('annotations.dynamicElevationProfileGuideAutomatic'),
+                    t('annotations.dynamicElevationProfileGuideEdit'),
+                    t('annotations.dynamicElevationProfileGuideAddRemove'),
+                  ].map((instruction, index) => (
+                    <li key={instruction} className="flex gap-2">
+                      <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)] text-[9px] font-bold text-[var(--canvas)]">
+                        {index + 1}
+                      </span>
+                      <span>{instruction}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
         <p className="text-xs text-[var(--evergreen-60)]">{t('annotations.statsHint')}</p>
       </div>
 

@@ -52,6 +52,10 @@ export function getConfigurationUsage(configuration: UsageConfiguration): Array<
     ['videos', bucketCount(videos.length)],
     ['show_pictures', stateOf(settings.showPictures)],
     ['elevation_profile', stateOf(settings.showElevationProfile)],
+    // Report effective use: the dynamic profile cannot render when its parent
+    // elevation-profile setting is off, even if a saved project retains the
+    // nested toggle value.
+    ['dynamic_elevation_profile', stateOf(settings.showElevationProfile && settings.dynamicElevationProfile)],
     ['marker', stateOf(trailStyle.showMarker)],
     ['marker_type', trailStyle.markerType],
     ['track_labels', stateOf(trailStyle.showTrackLabels)],

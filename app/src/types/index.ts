@@ -377,10 +377,35 @@ export interface AppSettings {
   statsColumns: number | null;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
+  /** Automatically focus the elevation chart on significant climbs and descents. */
+  dynamicElevationProfile: boolean;
+  /** Route-specific boundary adjustments for automatically detected elevation sections. */
+  elevationSectionOverrides: ElevationSectionOverride[];
+  /** User-authored zoom sections added from the paused elevation editor. */
+  customElevationSections: CustomElevationSection[];
+  /** Automatically detected sections removed by the user. */
+  hiddenElevationSectionIds: string[];
   /** Multiplier applied to landmark pins and their labels together. */
   landmarkScale: number;
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
+}
+
+export interface ElevationSectionOverride {
+  sectionId: string;
+  segmentIndex: number;
+  kind: 'climb' | 'descent';
+  detectedStartProgress: number;
+  detectedEndProgress: number;
+  startProgress: number;
+  endProgress: number;
+}
+
+export interface CustomElevationSection {
+  id: string;
+  segmentIndex: number;
+  startProgress: number;
+  endProgress: number;
 }
 
 export interface LiveStats {

@@ -1,9 +1,17 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
-import { convertElevation } from '@/utils/units';
+import { convertElevation, formatDistance, formatElevation } from '@/utils/units';
 import type { CropPreviewMetrics } from '@/utils/crop';
+import { getDynamicElevationViewport } from './dynamicElevationViewport';
 import { getElevationAtProgress } from './elevationProfile';
+import { detectElevationFocusSections } from './elevationSections';
+import { ElevationSectionEditor } from './ElevationSectionEditor';
+import { ElevationProfileChart } from './ElevationProfileChart';
+import { ElevationProfileLabels } from './ElevationProfileLabels';
+import { buildElevationProfileGeometry } from './elevationProfileGeometry';
+import { applyElevationSectionOverrides } from './elevationSectionOverrides';
+import { useElevationSectionEditing } from './useElevationSectionEditing';
 
 interface MapElevationProfileProps {
   className?: string;
@@ -19,6 +27,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   const isExporting = useAppStore((state) => state.isExporting);
   const activePanel = useAppStore((state) => state.activePanel);
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
+  const setSettings = useAppStore((state) => state.setSettings);
   const exportAspectRatio = videoExportSettings.aspectRatio;
 
   // Use computed journey for multi-track support
@@ -36,108 +45,63 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     end: routeTimingMode === 'uniform' ? timing.distanceEndRatio : timing.progressEndRatio,
   });
 
-  // Generate elevation profile data
-  const profileData = useMemo(() => {
-    if (elevationData.length === 0) {
-      return null;
-    }
+  const profileData = useMemo(
+    () => buildElevationProfileGeometry(
+      elevationData,
+      segmentTimings,
+      trailStyle.trailColor,
+      tracks,
+    ),
+    [elevationData, segmentTimings, trailStyle.trailColor, tracks],
+  );
 
-    const svgWidth = 800;
-    const svgHeight = 60;
+  const detectedFocusSections = useMemo(
+    () => settings.dynamicElevationProfile
+      ? detectElevationFocusSections(elevationData)
+      : [],
+    [elevationData, settings.dynamicElevationProfile],
+  );
+  const focusSections = useMemo(
+    () => applyElevationSectionOverrides(
+      detectedFocusSections,
+      settings.elevationSectionOverrides,
+      elevationData,
+      settings.customElevationSections,
+      settings.hiddenElevationSectionIds,
+    ),
+    [
+      detectedFocusSections,
+      elevationData,
+      settings.customElevationSections,
+      settings.elevationSectionOverrides,
+      settings.hiddenElevationSectionIds,
+    ],
+  );
+  const {
+    addSection,
+    changeSectionBoundary,
+    removeSection,
+  } = useElevationSectionEditing({
+    detectedSections: detectedFocusSections,
+    elevationData,
+    settings,
+    setSettings,
+  });
+  const isExportPreview = isExporting || activePanel === 'export';
+  const isEditingSections = settings.dynamicElevationProfile
+    && !playback.isPlaying
+    && !isExportPreview;
 
-    // Get elevation data, filtering out transport segments for elevation calculation
-    const trackElevations = elevationData
-      .filter((d) => d.segmentType === 'track')
-      .map((d) => d.elevation);
-
-    const validElevations = trackElevations.filter((e) => e > 0);
-
-    if (validElevations.length === 0) {
-      return null;
-    }
-
-    const minElevation = Math.min(...validElevations);
-    const maxElevation = Math.max(...validElevations);
-    const elevationRange = maxElevation - minElevation;
-
-    // Normalize elevations to SVG coordinates
-    const padding = 5;
-    const chartHeight = svgHeight - padding * 2;
-
-    const normalizedPoints = elevationData.map((point) => {
-      const x = point.progress * svgWidth;
-      // For transport segments, use min elevation
-      const elevation = point.segmentType === 'transport' ? minElevation : (point.elevation > 0 ? point.elevation : minElevation);
-      const normalizedY = elevationRange > 0
-        ? ((elevation - minElevation) / elevationRange) * chartHeight
-        : chartHeight / 2;
-      // SVG y is inverted (0 at top)
-      const y = svgHeight - padding - normalizedY;
-      return {
-        x,
-        y,
-        elevation: point.elevation,
-        segmentIndex: point.segmentIndex,
-        segmentType: point.segmentType,
-        progress: point.progress,
-      };
+  const dynamicViewport = useMemo(() => {
+    if (!profileData || !settings.dynamicElevationProfile || isEditingSections) return null;
+    return getDynamicElevationViewport({
+      currentTimeMs: playback.currentTime,
+      totalDurationMs: playback.totalDuration,
+      fullElevationMin: profileData.minElevation,
+      fullElevationMax: profileData.maxElevation,
+      sections: focusSections,
     });
-
-    // Create segment paths with different colors
-    const segmentPaths: Array<{
-      pathD: string;
-      color: string;
-      segmentIndex: number;
-      type: 'track' | 'transport';
-    }> = [];
-    const pointsBySegment = new Map<number, typeof normalizedPoints>();
-
-    normalizedPoints.forEach((point) => {
-      const points = pointsBySegment.get(point.segmentIndex) ?? [];
-      points.push(point);
-      pointsBySegment.set(point.segmentIndex, points);
-    });
-
-    segmentTimings.forEach((timing) => {
-      // Segment progress can share an exact boundary with the adjacent file.
-      // Select by ownership, rather than by the boundary range, so separate
-      // routes never become a fictitious climb or descent in the profile.
-      const segmentPoints = pointsBySegment.get(timing.segmentIndex) ?? [];
-
-      if (segmentPoints.length > 1) {
-        let segPathD = `M ${segmentPoints[0].x} ${svgHeight}`;
-        segmentPoints.forEach((point) => {
-          segPathD += ` L ${point.x} ${point.y}`;
-        });
-        segPathD += ` L ${segmentPoints[segmentPoints.length - 1].x} ${svgHeight} Z`;
-
-        // Get track color for this segment
-        let color = trailStyle.trailColor;
-        if (timing.type === 'track' && timing.trackId) {
-          const track = tracks.find((t) => t.id === timing.trackId);
-          if (track?.color) {
-            color = track.color;
-          }
-        } else if (timing.type === 'transport') {
-          color = '#888888'; // Gray for transport
-        }
-
-        segmentPaths.push({
-          pathD: segPathD,
-          color,
-          segmentIndex: timing.segmentIndex,
-          type: timing.type,
-        });
-      }
-    });
-
-    return {
-      svgWidth,
-      svgHeight,
-      pointsBySegment,
-      segmentPaths,
-    };
-  }, [elevationData, segmentTimings, trailStyle.trailColor, tracks]);
+  }, [focusSections, isEditingSections, playback.currentTime, playback.totalDuration, profileData, settings.dynamicElevationProfile]);
 
   // Only the clip width and interpolated label change during playback. The
   // profile paths themselves stay static, avoiding a full GPX scan and a large
@@ -183,12 +147,86 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     return null;
   }
 
-  const { svgWidth, svgHeight, segmentPaths } = profileData;
+  const {
+    svgWidth,
+    svgHeight,
+    padding,
+    chartHeight,
+    minElevation,
+    maxElevation,
+    normalizedPoints,
+    segmentPaths,
+  } = profileData;
   const { currentElevation, markerX, currentColor } = progressData;
   const elevUnit = settings.unitSystem === 'metric' ? 'm' : 'ft';
 
   const formattedCurrentElev = Math.round(convertElevation(currentElevation, settings.unitSystem));
-  const isExportPreview = isExporting || activePanel === 'export';
+  const elevationRange = maxElevation - minElevation;
+  const elevationToY = (elevation: number) => {
+    if (elevationRange <= 0) return padding + chartHeight / 2;
+    return svgHeight - padding - ((elevation - minElevation) / elevationRange) * chartHeight;
+  };
+  const progressDomain = dynamicViewport?.progressDomain ?? [0, 1];
+  const elevationDomain = dynamicViewport?.elevationDomain ?? [minElevation, maxElevation];
+  const viewBoxX = progressDomain[0] * svgWidth;
+  const viewBoxWidth = Math.max(1, (progressDomain[1] - progressDomain[0]) * svgWidth);
+  const focusAmount = dynamicViewport?.focusAmount ?? 0;
+  const focusedViewBoxTop = elevationToY(elevationDomain[1]);
+  const focusedViewBoxBottom = elevationToY(elevationDomain[0]);
+  const viewBoxTop = dynamicViewport
+    ? focusedViewBoxTop - padding * (1 - focusAmount)
+    : 0;
+  const viewBoxBottom = dynamicViewport
+    ? focusedViewBoxBottom + padding * (1 - focusAmount)
+    : svgHeight;
+  const viewBoxHeight = Math.max(1, viewBoxBottom - viewBoxTop);
+  const markerPosition = Math.min(1, Math.max(0, (markerX - viewBoxX) / viewBoxWidth));
+  const focusedSection = dynamicViewport?.activeSection ?? null;
+  const upcomingFocusSection = settings.dynamicElevationProfile
+    && dynamicViewport?.mode === 'overview'
+    ? focusSections.find((section) => section.startProgress >= playback.progress - 0.000001) ?? null
+    : null;
+  const highlightedSections = isEditingSections
+    ? focusSections
+    : (upcomingFocusSection ? [upcomingFocusSection] : []);
+  const sectionHighlights = highlightedSections.flatMap((section) => {
+    const points = normalizedPoints.filter((point) => (
+      point.segmentIndex === section.segmentIndex
+      && point.progress >= section.startProgress
+      && point.progress <= section.endProgress
+    ));
+    if (points.length < 2) return [];
+    return [{
+      section,
+      color: segmentPaths.find((segment) => segment.segmentIndex === section.segmentIndex)?.color
+        ?? trailStyle.trailColor,
+      ridgeD: points.reduce(
+        (path, point, index) => `${path}${index === 0 ? 'M' : ' L'} ${point.x} ${point.y}`,
+        '',
+      ),
+    }];
+  });
+  const sectionMetrics = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
+    ? {
+        kind: focusedSection.kind,
+        change: focusedSection.kind === 'climb'
+          ? `+${formatElevation(focusedSection.elevationGain, settings.unitSystem)}`
+          : `-${formatElevation(focusedSection.elevationLoss, settings.unitSystem)}`,
+        start: formatElevation(
+          focusedSection.kind === 'climb'
+            ? focusedSection.minElevation
+            : focusedSection.maxElevation,
+          settings.unitSystem,
+        ),
+        end: formatElevation(
+          focusedSection.kind === 'climb'
+            ? focusedSection.maxElevation
+            : focusedSection.minElevation,
+          settings.unitSystem,
+        ),
+        distance: formatDistance(focusedSection.distance, settings.unitSystem),
+      }
+    : null;
   const isNonWideExportPreview = isExportPreview && exportAspectRatio !== '16:9';
   const labelOverflowPadding = isNonWideExportPreview ? 24 : 18;
   const exportProfileStyle = exportFrame
@@ -203,10 +241,16 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
         bottom: 0,
       };
 
+  const sectionColors = new Map(
+    segmentPaths.map((segment) => [segment.segmentIndex, segment.color]),
+  );
   return (
     <div
       className={`absolute z-20 ${className}`}
-      style={exportProfileStyle}
+      style={{
+        ...exportProfileStyle,
+        fontFamily: 'var(--font-family-overlay)',
+      }}
       id="mapElevationProfile"
     >
       <div
@@ -216,143 +260,48 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           marginRight: labelOverflowPadding,
         }}
       >
-        {/* SVG Profile */}
-        <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          preserveAspectRatio="none"
-          className={`w-full ${isNonWideExportPreview ? 'h-[72px]' : 'h-[60px]'}`}
-          id="elevationProfileSvg"
-          data-export-elevation-progress-color={currentColor}
-        >
-          {/* Gradient definitions for segments */}
-          <defs>
-            {segmentPaths.map((seg) => (
-              <linearGradient
-                key={`gradient-${seg.segmentIndex}`}
-                id={`segmentGradient-${seg.segmentIndex}`}
-                x1="0%"
-                y1="0%"
-                x2="0%"
-                y2="100%"
-              >
-                <stop offset="0%" stopColor={seg.color} stopOpacity={seg.type === 'transport' ? '0.2' : '0.3'} />
-                <stop offset="100%" stopColor={seg.color} stopOpacity={seg.type === 'transport' ? '0.05' : '0.1'} />
-              </linearGradient>
-            ))}
-            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={currentColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={currentColor} stopOpacity="0.5" />
-            </linearGradient>
-            <clipPath id="elevationProgressClip">
-              <rect x="0" y="0" width={markerX} height={svgHeight} />
-            </clipPath>
-          </defs>
-
-          {/* Background elevation profiles for each segment */}
-          {segmentPaths.map((seg) => (
-            <path
-              key={`segment-${seg.segmentIndex}`}
-              d={seg.pathD}
-              data-export-elevation-segment
-              data-export-elevation-color={seg.color}
-              fill={`url(#segmentGradient-${seg.segmentIndex})`}
-              stroke={seg.color}
-              strokeWidth="1"
-              strokeOpacity={seg.type === 'transport' ? '0.3' : '0.5'}
-              strokeDasharray={seg.type === 'transport' ? '4,4' : 'none'}
-              id={`segmentPath-${seg.segmentIndex}`}
-            />
-          ))}
-
-          {/* Progress overlay */}
-          {playback.progress > 0 && (
-            <g clipPath="url(#elevationProgressClip)" data-export-elevation-dynamic>
-              {segmentPaths.map((seg) => (
-                <path
-                  key={`progress-${seg.segmentIndex}`}
-                  d={seg.pathD}
-                  fill="url(#progressGradient)"
-                  stroke={currentColor}
-                  strokeWidth="2"
-                />
-              ))}
-            </g>
-          )}
-
-          {/* Segment boundaries (vertical lines) */}
-          {segmentTimings.length > 1 && segmentTimings.slice(1).map((timing, i) => {
-            const { start } = segmentProgressRange(timing);
-            return (
-              <line
-                key={`boundary-${i}`}
-                x1={start * svgWidth}
-                y1="0"
-                x2={start * svgWidth}
-                y2={svgHeight}
-                stroke="white"
-                strokeWidth="1"
-                strokeOpacity="0.3"
-              />
-            );
-          })}
-        </svg>
-
-        {/* Current elevation label - follows the progress, aligned to bottom */}
-        {playback.progress > 0 && (
-          <div
-            data-export-elevation-dynamic
-            data-export-elevation-label
-            className={`absolute transform -translate-x-1/2 whitespace-nowrap ${
-              isNonWideExportPreview
-                ? 'bottom-2'
-                : 'bottom-1'
-            }`}
-            style={{
-              left: `${(markerX / svgWidth) * 100}%`,
-              textShadow: isNonWideExportPreview
-                ? '0 3px 10px rgba(0, 0, 0, 0.72), 0 1px 3px rgba(0, 0, 0, 0.9)'
-                : '0 2px 6px rgba(0, 0, 0, 0.75)',
-            }}
-          >
-            {isInTransport ? (
-              <span
-                className={`block text-white ${
-                  isNonWideExportPreview ? 'text-[18px] leading-none' : 'text-[12px] leading-none'
-                }`}
-              >
-                {currentSegment?.segment.transportMode === 'car' && '🚗'}
-                {currentSegment?.segment.transportMode === 'bus' && '🚌'}
-                {currentSegment?.segment.transportMode === 'train' && '🚆'}
-                {currentSegment?.segment.transportMode === 'plane' && '✈️'}
-                {currentSegment?.segment.transportMode === 'bike' && '🚲'}
-                {currentSegment?.segment.transportMode === 'walk' && '🚶'}
-                {currentSegment?.segment.transportMode === 'ferry' && '⛴️'}
-              </span>
-            ) : (
-              <span
-                className={`inline-flex items-baseline font-bold text-white ${
-                  isNonWideExportPreview ? 'gap-1.5' : 'gap-1'
-                }`}
-              >
-                <span
-                  className={isNonWideExportPreview ? 'text-[22px] leading-none tracking-[-0.03em]' : 'text-[14px] leading-none'}
-                >
-                  {formattedCurrentElev}
-                </span>
-                <span
-                  className={`font-semibold uppercase ${
-                    isNonWideExportPreview ? 'text-[14px] leading-none' : 'text-[9px] leading-none'
-                  }`}
-                >
-                  {elevUnit}
-                </span>
-              </span>
-            )}
-          </div>
+        <ElevationProfileChart
+          geometry={profileData}
+          viewBox={{
+            x: viewBoxX,
+            y: viewBoxTop,
+            width: viewBoxWidth,
+            height: viewBoxHeight,
+            bottom: viewBoxBottom,
+          }}
+          markerX={markerX}
+          currentColor={currentColor}
+          progress={playback.progress}
+          focusAmount={focusAmount}
+          sectionMetrics={sectionMetrics}
+          sectionHighlights={sectionHighlights}
+          segmentTimings={segmentTimings}
+          routeTimingMode={routeTimingMode}
+          dynamic={settings.dynamicElevationProfile}
+          tall={isNonWideExportPreview}
+        />
+        {isEditingSections && (
+          <ElevationSectionEditor
+            sections={focusSections}
+            colors={sectionColors}
+            onBoundaryChange={changeSectionBoundary}
+            onAdd={addSection}
+            onRemove={removeSection}
+          />
         )}
 
+        <ElevationProfileLabels
+          sectionMetrics={sectionMetrics}
+          focusAmount={dynamicViewport?.focusAmount ?? 0}
+          progress={playback.progress}
+          markerPosition={markerPosition}
+          currentElevation={formattedCurrentElev}
+          elevationUnit={elevUnit}
+          transportMode={isInTransport ? currentSegment?.segment.transportMode ?? null : null}
+          tall={isNonWideExportPreview}
+        />
         {/* Segment labels (small indicators at top) */}
-        {segmentTimings.length > 1 && (
+        {!settings.dynamicElevationProfile && segmentTimings.length > 1 && (
           <div className="absolute top-0 left-0 right-0 flex">
             {segmentTimings.map((timing, i) => {
               const { start, end } = segmentProgressRange(timing);

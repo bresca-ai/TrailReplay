@@ -37,6 +37,7 @@ describe('configuration usage analytics', () => {
     expect(usage.get('camera_stability')).toBe('balanced');
     expect(usage.get('annotations')).toBe('none');
     expect(usage.get('terrain_3d')).toBe('enabled');
+    expect(usage.get('dynamic_elevation_profile')).toBe('disabled');
     expect(usage.get('track_labels')).toBe('disabled');
     expect(usage.get('stat_distance')).toBe('enabled');
     expect(usage.get('stat_heartRate')).toBe('disabled');
@@ -52,6 +53,33 @@ describe('configuration usage analytics', () => {
       feature_name: 'annotations', feature_value: 'one', feature_context: 'video_export',
     });
     expect(JSON.stringify(trackEvent.mock.calls)).not.toContain('Private summit note');
+  });
+
+  it('records actual dynamic elevation use in playback and export contexts', () => {
+    trackEvent.mockClear();
+    const snapshot = configuration();
+    snapshot.settings.showElevationProfile = true;
+    snapshot.settings.dynamicElevationProfile = true;
+
+    trackConfigurationUsage('playback', snapshot);
+    trackConfigurationUsage('video_export', snapshot);
+
+    expect(trackEvent).toHaveBeenCalledWith('feature_used', {
+      feature_name: 'dynamic_elevation_profile', feature_value: 'enabled', feature_context: 'playback',
+    });
+    expect(trackEvent).toHaveBeenCalledWith('feature_used', {
+      feature_name: 'dynamic_elevation_profile', feature_value: 'enabled', feature_context: 'video_export',
+    });
+  });
+
+  it('does not count a retained dynamic toggle when the elevation profile is hidden', () => {
+    const snapshot = configuration();
+    snapshot.settings.showElevationProfile = false;
+    snapshot.settings.dynamicElevationProfile = true;
+
+    const usage = new Map(getConfigurationUsage(snapshot));
+
+    expect(usage.get('dynamic_elevation_profile')).toBe('disabled');
   });
 
   it('reports actual video output choices as option usage', () => {
