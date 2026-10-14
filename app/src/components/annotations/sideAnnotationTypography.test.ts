@@ -9,8 +9,8 @@ describe('side annotation typography', () => {
     expect(getSideAnnotationTypography()).toBe(SIDE_ANNOTATION_TYPOGRAPHY.wide);
     expect(getSideAnnotationTypography('16:9')).toBe(SIDE_ANNOTATION_TYPOGRAPHY.wide);
     expect(getSideAnnotationTypography('16:9')).toMatchObject({
-      titleSize: 30,
-      detailsSize: 16,
+      titleSize: 28,
+      detailsSize: 15,
     });
   });
 
@@ -18,7 +18,10 @@ describe('side annotation typography', () => {
     const typography = getSideAnnotationTypography(aspectRatio);
 
     expect(typography).toBe(SIDE_ANNOTATION_TYPOGRAPHY.narrow);
+    expect(typography).toMatchObject({
+      titleSize: 30,
+      detailsSize: 16,
+    });
     expect(typography.titleSize).toBeGreaterThan(getSideAnnotationTypography('16:9').titleSize);
-    expect(typography.detailsSize).toBeGreaterThan(getSideAnnotationTypography('16:9').detailsSize);
   });
 });

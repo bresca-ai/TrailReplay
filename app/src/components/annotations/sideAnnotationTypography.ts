@@ -10,18 +10,18 @@ export interface SideAnnotationTypography {
 
 export const SIDE_ANNOTATION_TYPOGRAPHY = {
   wide: {
-    eyebrowSize: 12,
-    codeSize: 18,
-    titleSize: 30,
-    metaSize: 15,
-    detailsSize: 16,
+    eyebrowSize: 11,
+    codeSize: 17,
+    titleSize: 28,
+    metaSize: 14,
+    detailsSize: 15,
   },
   narrow: {
-    eyebrowSize: 14,
-    codeSize: 22,
-    titleSize: 36,
-    metaSize: 18,
-    detailsSize: 18,
+    eyebrowSize: 12,
+    codeSize: 19,
+    titleSize: 30,
+    metaSize: 16,
+    detailsSize: 16,
   },
 } as const satisfies Record<'wide' | 'narrow', SideAnnotationTypography>;
 

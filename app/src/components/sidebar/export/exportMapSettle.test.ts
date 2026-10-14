@@ -23,14 +23,16 @@ describe('isMapSettled', () => {
     expect(isMapSettled(createMap({ isMoving: () => true }))).toBe(false);
   });
 
-  it('treats a void isStyleLoaded as ready', () => {
-    // MapLibre types this `boolean | void`; a void return must not stall the
-    // wait until its timeout on every single frame.
-    expect(isMapSettled(createMap({ isStyleLoaded: () => undefined }))).toBe(true);
+  it('does not accept a void style readiness result', () => {
+    expect(isMapSettled(createMap({ isStyleLoaded: () => undefined }))).toBe(false);
   });
 
   it('is not settled when the style reports false', () => {
     expect(isMapSettled(createMap({ isStyleLoaded: () => false }))).toBe(false);
+  });
+
+  it('can accept a moving camera whose animation clock is frozen', () => {
+    expect(isMapSettled(createMap({ isMoving: () => true }), { allowMoving: true })).toBe(true);
   });
 });
 
@@ -85,6 +87,24 @@ describe('waitForSettledFrame', () => {
     // The reading at render 1 is contradicted at render 2, so the wait must
     // continue rather than encode that frame.
     expect(harness.renders()).toBeGreaterThan(2);
+  });
+
+  it('settles transition tiles while the frozen camera still reports moving', async () => {
+    let renders = 0;
+    const result = await waitForSettledFrame(
+      createMap({ isMoving: () => true }),
+      {
+        allowMoving: true,
+        isCancelled: () => false,
+        nextTask: async () => {},
+        renderOnce: async () => { renders += 1; },
+        now: () => renders * 10,
+        timeoutMs: 1000,
+      },
+    );
+
+    expect(result.timedOut).toBe(false);
+    expect(renders).toBe(2);
   });
 
   it('reports a timeout instead of hanging when tiles never arrive', async () => {

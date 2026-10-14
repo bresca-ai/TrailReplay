@@ -79,4 +79,17 @@ describe('getActivePlaybackAnnotationId', () => {
     expect(getActivePlaybackAnnotationId({ annotations, currentTime: 10_000, totalDuration: 10_000, phase: 'playing' })).toBe('finish');
     expect(getActivePlaybackAnnotationId({ annotations, currentTime: 10_000, totalDuration: 10_000, phase: 'outro' })).toBeNull();
   });
+
+  it.each(['preloading', 'intro'] as const)('waits until playback before showing a start annotation during %s', (phase) => {
+    const annotations = [{ ...createAnnotation('start', 0), presentation: 'side-panel' as const, holdDuration: 7000 }];
+
+    expect(getActivePlaybackAnnotationId({ annotations, currentTime: 0, totalDuration: 10_000, phase })).toBeNull();
+    expect(getActivePlaybackAnnotationId({ annotations, currentTime: 0, totalDuration: 10_000, phase: 'playing' })).toBe('start');
+  });
+
+  it('keeps annotations available when the editor is paused away from the start', () => {
+    const annotations = [createAnnotation('middle', 0.5)];
+
+    expect(getActivePlaybackAnnotationId({ annotations, currentTime: 5_000, totalDuration: 10_000, phase: 'idle' })).toBe('middle');
+  });
 });

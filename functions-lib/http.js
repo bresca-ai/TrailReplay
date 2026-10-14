@@ -11,8 +11,8 @@ export const EXPORT_LINK_TTL_DAYS = 7;
  */
 export const MAX_UPLOAD_BYTES = 95 * 1024 * 1024;
 
-/** Jobs one IP may create per rolling day. */
-export const MAX_JOBS_PER_IP_PER_DAY = 5;
+/** Jobs one network may create in a rolling day unless the email is allowlisted. */
+export const MAX_JOBS_PER_IP_PER_DAY = 10;
 
 export function json(body, status = 200, headers = {}) {
   return Response.json(body, {

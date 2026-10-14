@@ -6,6 +6,7 @@
  * Start the app first (`npm run dev`), then run:
  *   npm run bench:export -- --duration 15 --json /tmp/export-profile.json
  *   npm run bench:export -- --duration 15 --output /tmp/trailreplay-export.mp4
+ *   npm run bench:export -- --duration 15 --studio --tile-delay 250 --output /tmp/trailreplay-studio.mp4
  *   npm run bench:export -- --duration 15 --terrain
  */
 
@@ -16,18 +17,26 @@ import { chromium } from 'playwright';
 function parseArgs(argv) {
   const args = {
     duration: 15,
+    fps: 30,
     headed: false,
+    quality: 'medium',
+    studio: false,
     terrain: false,
+    tileDelay: 0,
     timeout: 300_000,
     url: 'http://localhost:5173',
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === '--duration') args.duration = Number(argv[++index]);
+    else if (value === '--fps') args.fps = Number(argv[++index]);
     else if (value === '--headed') args.headed = true;
     else if (value === '--json') args.json = argv[++index];
     else if (value === '--output') args.output = argv[++index];
+    else if (value === '--quality') args.quality = argv[++index];
+    else if (value === '--studio') args.studio = true;
     else if (value === '--terrain') args.terrain = true;
+    else if (value === '--tile-delay') args.tileDelay = Number(argv[++index]);
     else if (value === '--timeout') args.timeout = Number(argv[++index]);
     else if (value === '--url') args.url = argv[++index];
     else throw new Error(`Unknown option: ${value}`);
@@ -35,8 +44,27 @@ function parseArgs(argv) {
   if (!Number.isFinite(args.duration) || args.duration < 15) {
     throw new Error('--duration must be at least 15 seconds (the app playback minimum)');
   }
+  if (![24, 30, 60].includes(args.fps)) throw new Error('--fps must be 24, 30, or 60');
+  if (!['low', 'medium', 'high', 'ultra'].includes(args.quality)) {
+    throw new Error('--quality must be low, medium, high, or ultra');
+  }
+  if (!Number.isFinite(args.tileDelay) || args.tileDelay < 0) {
+    throw new Error('--tile-delay must be a non-negative number of milliseconds');
+  }
   return args;
 }
+
+const longEdges = { low: 1280, medium: 1920, high: 2560, ultra: 3840 };
+const tileHosts = new Set([
+  'a.tile.opentopomap.org',
+  'cartodb-basemaps-a.global.ssl.fastly.net',
+  'clarity.maptiles.arcgis.com',
+  'cloud.sdsc.edu',
+  's3.amazonaws.com',
+  'server.arcgisonline.com',
+  'tile.openstreetmap.org',
+  'tiles.opensnowmap.org',
+]);
 
 const args = parseArgs(process.argv.slice(2));
 const browserArgs = ['--disable-dev-shm-usage'];
@@ -51,8 +79,19 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ acceptDownloads: true, viewport: { width: 1280, height: 800 } });
 const pageErrors = [];
+let delayedTileRequests = 0;
 page.on('pageerror', (error) => pageErrors.push(String(error)));
 if (!args.output) page.on('download', (download) => download.cancel().catch(() => undefined));
+if (args.tileDelay > 0) {
+  await page.route('**/*', async (route) => {
+    const url = new URL(route.request().url());
+    if (tileHosts.has(url.hostname)) {
+      delayedTileRequests += 1;
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, args.tileDelay));
+    }
+    await route.continue();
+  });
+}
 
 try {
   const url = new URL(args.url);
@@ -67,7 +106,7 @@ try {
     timeout: 60_000,
   });
 
-  await page.evaluate(({ durationMs, terrain }) => {
+  await page.evaluate(({ durationMs, fps, longEdges: resolutionLongEdges, quality, studio, terrain }) => {
     const state = window.__trailreplay.getState();
     const total = state.journeySegments.reduce((sum, segment) => sum + Math.max(0, segment.duration || 0), 0);
     let assigned = 0;
@@ -79,16 +118,26 @@ try {
     }));
     state.setSettings({ show3DTerrain: terrain });
     state.setVideoExportSettings({
-      fps: 30,
+      fps,
       format: 'mp4',
-      quality: 'medium',
-      qualityMode: 'standard',
-      resolution: { width: 1920, height: 1080 },
+      quality,
+      qualityMode: studio ? 'studio' : 'standard',
+      resolution: {
+        width: resolutionLongEdges[quality],
+        height: Math.round(resolutionLongEdges[quality] * 9 / 16),
+      },
       aspectRatio: '16:9',
     });
     state.setExportSubMode('video');
     state.setActivePanel('export');
-  }, { durationMs: args.duration * 1000, terrain: args.terrain });
+  }, {
+    durationMs: args.duration * 1000,
+    fps: args.fps,
+    quality: args.quality,
+    studio: args.studio,
+    terrain: args.terrain,
+    longEdges,
+  });
 
   const generate = page.getByRole('button', { name: 'Generate Video' });
   await generate.waitFor({ state: 'visible', timeout: 30_000 });
@@ -107,10 +156,25 @@ try {
     output = resolve(args.output);
     await download.saveAs(output);
   }
-  const result = { ...profile, pageErrors, ...(output && { output }) };
+  const result = {
+    ...profile,
+    delayedTileRequests,
+    requested: {
+      durationSeconds: args.duration,
+      fps: args.fps,
+      quality: args.quality,
+      qualityMode: args.studio ? 'studio' : 'standard',
+      tileDelayMs: args.tileDelay,
+    },
+    pageErrors,
+    ...(output && { output }),
+  };
   console.log(JSON.stringify(result, null, 2));
   if (args.json) writeFileSync(args.json, JSON.stringify(result, null, 2));
-  if (profile?.outcome !== 'completed' || pageErrors.length > 0) process.exitCode = 1;
+  if (profile?.outcome !== 'completed'
+    || profile?.metadata?.qualityMode !== (args.studio ? 'studio' : 'standard')
+    || pageErrors.length > 0
+    || (args.tileDelay > 0 && delayedTileRequests === 0)) process.exitCode = 1;
 } catch (error) {
   const diagnostics = await page.evaluate(() => ({
     body: document.body.innerText.slice(-2_000),

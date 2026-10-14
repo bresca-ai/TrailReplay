@@ -6,11 +6,19 @@ import {
   STATIC_BASEMAP_LAYER_IDS,
   STATIC_FALLBACK_LAYER_IDS,
 } from '@/components/map/mapStyle';
+import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
 import {
+  getOpeningPreloadProgresses,
   getPredictivePlaybackPoses,
   type ReplayCameraMode,
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
+import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import {
+  deduplicateCameraPoses,
+  getReplayWarmupPose,
+  sampleCameraTransition,
+} from '@/utils/replayCameraWarmupPlan';
 import { getMapLibreTileKey, type TilePreloadObserver } from '@/utils/tilePreloadObserver';
 import {
   getTilePriority,
@@ -34,6 +42,7 @@ interface UseReplayTileWarmupParams {
   allCoordinates: number[][];
   animationPhase: 'preloading' | 'intro' | 'playing' | 'idle' | 'outro' | 'ended';
   cameraMode: ReplayCameraMode | 'cinematic';
+  cinematicKeyframes?: PreparedCinematicKeyframe[];
   elevationData: Array<{ elevation: number; progress?: number }>;
   enabled: boolean;
   followBehindZoomLevel: number;
@@ -44,16 +53,6 @@ interface UseReplayTileWarmupParams {
   playbackSpeed: number;
   totalDurationMs: number;
   diagnostics: TilePreloadObserver;
-}
-
-function deduplicatePoses(poses: ReplayCameraPose[]): ReplayCameraPose[] {
-  const seen = new Set<string>();
-  return poses.filter((pose) => {
-    const key = `${pose.center[0].toFixed(5)}:${pose.center[1].toFixed(5)}:${pose.zoom.toFixed(1)}:${pose.pitch.toFixed(0)}:${pose.bearing.toFixed(0)}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }
 
 /**
@@ -155,6 +154,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           map.setLayoutProperty(layerId, 'visibility', activeLayers.has(layerId) ? 'visible' : 'none');
         }
       });
+      applyConsistentBasemapTileLod(map, latestParamsRef.current.mapStyle);
     };
 
     if (map.isStyleLoaded()) syncActiveBaseMap();
@@ -191,28 +191,69 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       if (isWarming) return;
       const map = warmupMapRef.current;
       const current = latestParamsRef.current;
-      if (!map || !map.loaded() || !current.isPlaying || current.cameraMode === 'overview') return;
+      if (
+        !map
+        || !map.loaded()
+        || (!current.isPlaying && current.animationPhase !== 'outro')
+        || current.cameraMode === 'overview'
+      ) return;
 
       isWarming = true;
 
-      // No cinematic-specific prediction yet — approximate with
-      // follow-behind, which sits at a similar zoom/pitch, rather than
-      // skipping predictive warmup for the mode entirely.
-      const poseCameraMode = current.cameraMode === 'cinematic' ? 'follow-behind' : current.cameraMode;
-      const isClose3D = poseCameraMode === 'follow-behind' && current.followBehindZoomLevel >= 66;
-      const poses = deduplicatePoses(getPredictivePlaybackPoses({
-        currentProgress: current.playbackProgress,
-        horizonMs: (isClose3D ? CLOSE_3D_HORIZON_MS : NORMAL_HORIZON_MS)
-          * Math.max(0.25, current.playbackSpeed),
-        options: {
-          cameraMode: poseCameraMode,
+      const isClose3D = current.cameraMode === 'follow-behind' && current.followBehindZoomLevel >= 66;
+      const horizonMs = (isClose3D ? CLOSE_3D_HORIZON_MS : NORMAL_HORIZON_MS)
+        * Math.max(0.25, current.playbackSpeed);
+      const sampleCount = isClose3D ? CLOSE_3D_SAMPLE_COUNT : NORMAL_SAMPLE_COUNT;
+      const playbackPoses = current.cameraMode === 'cinematic'
+        ? getOpeningPreloadProgresses(current.totalDurationMs || 60000, horizonMs, sampleCount)
+            .map((offset) => getReplayWarmupPose({
+              cameraMode: current.cameraMode,
+              cinematicKeyframes: current.cinematicKeyframes,
+              coordinates: current.allCoordinates,
+              elevationData: current.elevationData,
+              followBehindZoomLevel: current.followBehindZoomLevel,
+              progress: Math.min(1, current.playbackProgress + offset),
+            }))
+            .filter((pose): pose is ReplayCameraPose => pose !== null)
+        : getPredictivePlaybackPoses({
+            currentProgress: current.playbackProgress,
+            horizonMs,
+            options: {
+              cameraMode: current.cameraMode,
+              coordinates: current.allCoordinates,
+              elevationData: current.elevationData,
+              followBehindZoomLevel: current.followBehindZoomLevel,
+            },
+            sampleCount,
+            totalDurationMs: current.totalDurationMs || 60000,
+          });
+
+      const reachesOutro = current.animationPhase === 'outro'
+        || current.playbackProgress + (horizonMs / Math.max(1, current.totalDurationMs)) >= 1;
+      let outroPoses: ReplayCameraPose[] = [];
+      if (reachesOutro && current.allCoordinates.length > 0) {
+        const finalPose = getReplayWarmupPose({
+          cameraMode: current.cameraMode,
+          cinematicKeyframes: current.cinematicKeyframes,
           coordinates: current.allCoordinates,
           elevationData: current.elevationData,
           followBehindZoomLevel: current.followBehindZoomLevel,
-        },
-        sampleCount: isClose3D ? CLOSE_3D_SAMPLE_COUNT : NORMAL_SAMPLE_COUNT,
-        totalDurationMs: current.totalDurationMs || 60000,
-      }));
+          progress: 1,
+        });
+        const bounds = new maplibregl.LngLatBounds();
+        current.allCoordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
+        const outroCamera = map.cameraForBounds(bounds, { padding: 100, bearing: 0 });
+        const outroCenter = outroCamera?.center ? maplibregl.LngLat.convert(outroCamera.center) : null;
+        if (finalPose && outroCamera && outroCenter) {
+          outroPoses = sampleCameraTransition(finalPose, {
+            center: [outroCenter.lng, outroCenter.lat],
+            zoom: outroCamera.zoom ?? map.getZoom(),
+            pitch: 45,
+            bearing: 0,
+          });
+        }
+      }
+      const poses = deduplicateCameraPoses([...playbackPoses, ...outroPoses]);
 
       try {
         for (const [poseIndex, pose] of poses.entries()) {

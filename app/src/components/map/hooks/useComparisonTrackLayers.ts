@@ -1,6 +1,11 @@
 import { useEffect, useMemo, type MutableRefObject } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { ComparisonTrack } from '@/types';
+import { ANNOTATION_LAYER_IDS } from '@/components/map/hooks/useTextAnnotationsLayer';
+import {
+  LANDMARK_ICON_LAYER_ID,
+  LANDMARK_LABEL_LAYER_ID,
+} from '@/components/map/landmarkLayers';
 import {
   buildTrackTimeIndex,
   trackPositionAtTime,
@@ -71,6 +76,11 @@ export function useComparisonTrackLayers({
       const sources = sourceIds(comparisonTrack.id);
       const layers = layerIds(comparisonTrack.id);
       const coords = comparisonTrack.track.points.map((point) => [point.lon, point.lat]);
+      const beforeAnnotations = [
+        LANDMARK_ICON_LAYER_ID,
+        LANDMARK_LABEL_LAYER_ID,
+        ...ANNOTATION_LAYER_IDS,
+      ].find((layerId) => map.getLayer(layerId));
 
       map.addSource(sources.trail, {
         type: 'geojson',
@@ -82,7 +92,7 @@ export function useComparisonTrackLayers({
         source: sources.trail,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': comparisonTrack.color, 'line-width': 4, 'line-opacity': 0.5 },
-      });
+      }, beforeAnnotations);
 
       // A track with no timestamps gets its route drawn and nothing else:
       // there is no moment to put a marker at, and a marker frozen at the
@@ -99,7 +109,7 @@ export function useComparisonTrackLayers({
         source: sources.completed,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': comparisonTrack.color, 'line-width': 6 },
-      });
+      }, beforeAnnotations);
 
       map.addSource(sources.position, {
         type: 'geojson',
@@ -123,7 +133,7 @@ export function useComparisonTrackLayers({
           'circle-stroke-color': '#FFFFFF',
           'circle-stroke-opacity': ['case', ['get', 'active'], 1, 0.35],
         },
-      });
+      }, beforeAnnotations);
 
       map.addSource(sources.label, {
         type: 'geojson',
@@ -151,7 +161,7 @@ export function useComparisonTrackLayers({
           'text-halo-width': 2,
           'text-opacity': ['case', ['get', 'active'], 1, 0.45],
         },
-      });
+      }, beforeAnnotations);
     });
 
     return () => {

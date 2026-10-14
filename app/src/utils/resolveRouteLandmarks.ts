@@ -1,5 +1,6 @@
 import type { RouteLandmark } from '@/types/landmarks';
 import { calculateDistance } from '@/utils/journeyUtils';
+import { MAX_NEARBY_PLACES_TOTAL } from '@/utils/landmarkLookup';
 
 const SOURCE_WEIGHT = { user: 4, media: 3, enriched: 2, automatic: 1 } as const;
 
@@ -16,7 +17,7 @@ export function resolveRouteLandmarks(landmarks: RouteLandmark[], activeId?: str
     const corridorConflict = landmark.importance < 5 && selected.find((entry) => Math.abs((entry.routeDistanceMeters ?? -Infinity) - (landmark.routeDistanceMeters ?? Infinity)) < 250);
     if (corridorConflict) continue;
     selected.push(landmark);
-    if (selected.length === 40) break;
+    if (selected.length === MAX_NEARBY_PLACES_TOTAL) break;
   }
   return selected.sort((a, b) => (a.routeDistanceMeters ?? 0) - (b.routeDistanceMeters ?? 0));
 }
