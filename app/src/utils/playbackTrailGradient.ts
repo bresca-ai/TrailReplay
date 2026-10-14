@@ -155,7 +155,7 @@ export function buildPlaybackTrailGradient(params: {
   // trail and makes both sides of the marker look equally opaque.
   const completedColor = colorRamp.length > 3 ? colorRamp : stops[0].color;
 
-  return [
+  const cutoffColor = [
     'case',
     [
       '<=',
@@ -164,5 +164,20 @@ export function buildPlaybackTrailGradient(params: {
     ],
     completedColor,
     TRANSPARENT,
+  ];
+
+  // MapLibre only enables its adaptive high-resolution gradient texture and
+  // nearest-neighbour sampling when the root expression is `step`. With the
+  // dynamic cutoff as a root `case`, it otherwise uses a 256-pixel texture
+  // with linear filtering; on long routes that quantizes/softens the endpoint
+  // enough for it to visibly miss the marker. Repeating the same expression on
+  // both sides of an endpoint-only step is visually neutral, while selecting
+  // the sharper rendering path.
+  return [
+    'step',
+    ['line-progress'],
+    cutoffColor,
+    1,
+    cutoffColor,
   ] as unknown as ExpressionSpecification;
 }

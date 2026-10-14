@@ -25,10 +25,21 @@ describe('buildPlaybackTrailGradient', () => {
     });
 
     expect(expression).toEqual([
-      'case',
-      ['<=', ['line-progress'], ['coalesce', ['global-state', PLAYBACK_PROGRESS_GLOBAL_STATE], 0]],
-      '#00ff00',
-      'rgba(0, 0, 0, 0)',
+      'step',
+      ['line-progress'],
+      [
+        'case',
+        ['<=', ['line-progress'], ['coalesce', ['global-state', PLAYBACK_PROGRESS_GLOBAL_STATE], 0]],
+        '#00ff00',
+        'rgba(0, 0, 0, 0)',
+      ],
+      1,
+      [
+        'case',
+        ['<=', ['line-progress'], ['coalesce', ['global-state', PLAYBACK_PROGRESS_GLOBAL_STATE], 0]],
+        '#00ff00',
+        'rgba(0, 0, 0, 0)',
+      ],
     ]);
   });
 
@@ -69,7 +80,7 @@ describe('buildPlaybackTrailGradient', () => {
       ],
     });
 
-    expect(expression[2]).toEqual([
+    expect((expression[2] as unknown[])[2]).toEqual([
       'step',
       ['line-progress'],
       '#ff0000',
@@ -93,7 +104,7 @@ describe('buildPlaybackTrailGradient', () => {
       segmentTimings: [],
     });
 
-    expect(expression[2]).toEqual([
+    expect((expression[2] as unknown[])[2]).toEqual([
       'step',
       ['line-progress'],
       '#4ade80',
