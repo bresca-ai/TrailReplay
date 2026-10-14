@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { createPropertyExpression, latest } from '@maplibre/maplibre-gl-style-spec';
+import type { StylePropertySpecification } from '@maplibre/maplibre-gl-style-spec';
 import {
   buildPlaybackTrailGradient,
   PLAYBACK_PROGRESS_GLOBAL_STATE,
@@ -25,9 +27,33 @@ describe('buildPlaybackTrailGradient', () => {
     expect(expression).toEqual([
       'case',
       ['<=', ['line-progress'], ['coalesce', ['global-state', PLAYBACK_PROGRESS_GLOBAL_STATE], 0]],
-      ['step', ['line-progress'], '#00ff00'],
+      '#00ff00',
       'rgba(0, 0, 0, 0)',
     ]);
+  });
+
+  it('builds a MapLibre-valid gradient for a fixed-color route', () => {
+    const expression = buildPlaybackTrailGradient({
+      coordinates,
+      colorMode: 'fixed',
+      colorZones: [],
+      fallbackColor: '#00ff00',
+      heartRatePoints: [],
+      segmentTimings: [],
+    });
+
+    const parsed = createPropertyExpression(
+      expression,
+      'line-gradient',
+      latest.paint_line['line-gradient'] as StylePropertySpecification,
+      { [PLAYBACK_PROGRESS_GLOBAL_STATE]: 0.5 },
+    );
+
+    expect(parsed.result).toBe('success');
+    if (parsed.result === 'success') {
+      expect(parsed.value.evaluate({ lineProgress: 0.25 }).a).toBe(1);
+      expect(parsed.value.evaluate({ lineProgress: 0.75 }).a).toBe(0);
+    }
   });
 
   it('keeps per-segment colors in the completed route', () => {

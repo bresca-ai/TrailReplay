@@ -147,6 +147,14 @@ export function buildPlaybackTrailGradient(params: {
     }
   }
 
+  // `step` needs at least one input/output stop after its default value.
+  // A fixed-color route (or a route whose only color change lands exactly at
+  // the endpoint) has no interior stops, so passing the incomplete expression
+  // to MapLibre makes it reject `line-gradient` and keep the layer's original
+  // solid `line-color`. That paints the full completed route over the ghost
+  // trail and makes both sides of the marker look equally opaque.
+  const completedColor = colorRamp.length > 3 ? colorRamp : stops[0].color;
+
   return [
     'case',
     [
@@ -154,7 +162,7 @@ export function buildPlaybackTrailGradient(params: {
       ['line-progress'],
       ['coalesce', ['global-state', PLAYBACK_PROGRESS_GLOBAL_STATE], 0],
     ],
-    colorRamp,
+    completedColor,
     TRANSPARENT,
   ] as unknown as ExpressionSpecification;
 }
