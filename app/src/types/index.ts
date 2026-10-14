@@ -381,6 +381,10 @@ export interface AppSettings {
   dynamicElevationProfile: boolean;
   /** Route-specific boundary adjustments for automatically detected elevation sections. */
   elevationSectionOverrides: ElevationSectionOverride[];
+  /** User-authored zoom sections added from the paused elevation editor. */
+  customElevationSections: CustomElevationSection[];
+  /** Automatically detected sections removed by the user. */
+  hiddenElevationSectionIds: string[];
   /** Multiplier applied to landmark pins and their labels together. */
   landmarkScale: number;
   /** Fade landmark labels in with zoom instead of popping them in. */
@@ -393,6 +397,13 @@ export interface ElevationSectionOverride {
   kind: 'climb' | 'descent';
   detectedStartProgress: number;
   detectedEndProgress: number;
+  startProgress: number;
+  endProgress: number;
+}
+
+export interface CustomElevationSection {
+  id: string;
+  segmentIndex: number;
   startProgress: number;
   endProgress: number;
 }

@@ -66,6 +66,8 @@ export function createDefaultSettings(): AppSettings {
     showElevationProfile: true,
     dynamicElevationProfile: false,
     elevationSectionOverrides: [],
+    customElevationSections: [],
+    hiddenElevationSectionIds: [],
     landmarkScale: 1,
     landmarkLabelFade: true,
   };

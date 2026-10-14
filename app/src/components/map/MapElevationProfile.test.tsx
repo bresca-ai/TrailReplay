@@ -53,6 +53,9 @@ describe('MapElevationProfile dynamic sections', () => {
     useAppStore.setState((state) => {
       state.settings.showElevationProfile = true;
       state.settings.dynamicElevationProfile = true;
+      state.settings.elevationSectionOverrides = [];
+      state.settings.customElevationSections = [];
+      state.settings.hiddenElevationSectionIds = [];
       state.playback.currentTime = 0;
       state.playback.totalDuration = 10_000;
       state.playback.progress = 0;
@@ -142,5 +145,42 @@ describe('MapElevationProfile dynamic sections', () => {
     const overrides = useAppStore.getState().settings.elevationSectionOverrides;
     expect(overrides).toHaveLength(1);
     expect(overrides[0].endProgress).toBeCloseTo(0.65);
+  });
+
+  it('adds and removes zoom sections from the paused editor', () => {
+    const { container } = render(<MapElevationProfile />);
+
+    fireEvent.click(container.querySelector('[aria-label="Add zoom section"]')!);
+    const placement = container.querySelector(
+      '[aria-label="Place new zoom section"]',
+    ) as HTMLButtonElement;
+    vi.spyOn(placement, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 800,
+      bottom: 60,
+      width: 800,
+      height: 60,
+      toJSON: () => ({}),
+    });
+    fireEvent.click(placement, { clientX: 400 });
+
+    const [custom] = useAppStore.getState().settings.customElevationSections;
+    expect(custom).toBeDefined();
+    const customRange = container.querySelector(
+      `[data-elevation-section-range="${custom.id}"]`,
+    );
+    expect(customRange).toBeInTheDocument();
+
+    fireEvent.click(customRange!.querySelector('[aria-label^="Remove section"]')!);
+    expect(useAppStore.getState().settings.customElevationSections).toEqual([]);
+
+    const automaticRemove = container.querySelector(
+      '[data-elevation-section-range] [aria-label^="Remove section"]',
+    );
+    fireEvent.click(automaticRemove!);
+    expect(useAppStore.getState().settings.hiddenElevationSectionIds).toHaveLength(1);
   });
 });

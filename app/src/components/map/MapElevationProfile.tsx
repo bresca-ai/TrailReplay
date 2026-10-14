@@ -10,11 +10,8 @@ import { ElevationSectionEditor } from './ElevationSectionEditor';
 import { ElevationProfileChart } from './ElevationProfileChart';
 import { ElevationProfileLabels } from './ElevationProfileLabels';
 import { buildElevationProfileGeometry } from './elevationProfileGeometry';
-import {
-  applyElevationSectionOverrides,
-  resizeElevationSection,
-  upsertElevationSectionOverride,
-} from './elevationSectionOverrides';
+import { applyElevationSectionOverrides } from './elevationSectionOverrides';
+import { useElevationSectionEditing } from './useElevationSectionEditing';
 
 interface MapElevationProfileProps {
   className?: string;
@@ -69,9 +66,27 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       detectedFocusSections,
       settings.elevationSectionOverrides,
       elevationData,
+      settings.customElevationSections,
+      settings.hiddenElevationSectionIds,
     ),
-    [detectedFocusSections, elevationData, settings.elevationSectionOverrides],
+    [
+      detectedFocusSections,
+      elevationData,
+      settings.customElevationSections,
+      settings.elevationSectionOverrides,
+      settings.hiddenElevationSectionIds,
+    ],
   );
+  const {
+    addSection,
+    changeSectionBoundary,
+    removeSection,
+  } = useElevationSectionEditing({
+    detectedSections: detectedFocusSections,
+    elevationData,
+    settings,
+    setSettings,
+  });
   const isExportPreview = isExporting || activePanel === 'export';
   const isEditingSections = settings.dynamicElevationProfile
     && !playback.isPlaying
@@ -229,35 +244,6 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   const sectionColors = new Map(
     segmentPaths.map((segment) => [segment.segmentIndex, segment.color]),
   );
-  const changeSectionBoundary = (
-    adjustedSection: typeof focusSections[number],
-    edge: 'start' | 'end',
-    progress: number,
-  ) => {
-    const detected = detectedFocusSections.find((section) => section.id === adjustedSection.id);
-    if (!detected) return;
-    const minimumSpan = 0.005;
-    const requestedStart = edge === 'start'
-      ? Math.min(progress, adjustedSection.endProgress - minimumSpan)
-      : adjustedSection.startProgress;
-    const requestedEnd = edge === 'end'
-      ? Math.max(progress, adjustedSection.startProgress + minimumSpan)
-      : adjustedSection.endProgress;
-    const resized = resizeElevationSection(
-      adjustedSection,
-      elevationData,
-      requestedStart,
-      requestedEnd,
-    );
-    setSettings({
-      elevationSectionOverrides: upsertElevationSectionOverride(
-        settings.elevationSectionOverrides,
-        detected,
-        resized,
-      ),
-    });
-  };
-
   return (
     <div
       className={`absolute z-20 ${className}`}
@@ -299,6 +285,8 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             sections={focusSections}
             colors={sectionColors}
             onBoundaryChange={changeSectionBoundary}
+            onAdd={addSection}
+            onRemove={removeSection}
           />
         )}
 

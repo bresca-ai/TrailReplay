@@ -3,6 +3,7 @@ import type { ElevationSectionOverride } from '@/types';
 import type { ElevationFocusSection, ElevationSectionPoint } from './elevationSections';
 import {
   applyElevationSectionOverrides,
+  createCustomElevationSection,
   resizeElevationSection,
   upsertElevationSectionOverride,
 } from './elevationSectionOverrides';
@@ -68,5 +69,27 @@ describe('elevation section overrides', () => {
     };
 
     expect(applyElevationSectionOverrides([detected], [stale], points)[0]).toBe(detected);
+  });
+
+  it('creates a custom section around a selected profile point', () => {
+    const custom = createCustomElevationSection(points, 0.2, 'custom-1');
+
+    expect(custom).toMatchObject({ id: 'custom-1', segmentIndex: 0 });
+    expect(custom!.startProgress).toBeLessThan(0.2);
+    expect(custom!.endProgress).toBeGreaterThan(0.2);
+  });
+
+  it('combines custom sections with visible automatic sections', () => {
+    const result = applyElevationSectionOverrides(
+      [detected],
+      [],
+      points,
+      [{ id: 'custom-1', segmentIndex: 0, startProgress: 0.1, endProgress: 0.3 }],
+      [detected.id],
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ id: 'custom-1', startProgress: 0.1 });
+    expect(result[0].endProgress).toBeCloseTo(0.3);
   });
 });

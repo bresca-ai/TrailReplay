@@ -197,6 +197,13 @@ describe('hydrateProject', () => {
         startProgress: 0.15,
         endProgress: 0.55,
       }],
+      customElevationSections: [{
+        id: 'elevation-custom-1',
+        segmentIndex: 0,
+        startProgress: 0.2,
+        endProgress: 0.4,
+      }],
+      hiddenElevationSectionIds: ['elevation-0-descent-2'],
     });
 
     const blob = await buildReplayArchive(sourceStore.getState());
@@ -206,13 +213,21 @@ describe('hydrateProject', () => {
     hydrateProject({ ...parsed, project: parsed.project! }, restoredStore.getState());
     expect(restoredStore.getState().settings.dynamicElevationProfile).toBe(true);
     expect(restoredStore.getState().settings.elevationSectionOverrides).toHaveLength(1);
+    expect(restoredStore.getState().settings.customElevationSections).toHaveLength(1);
+    expect(restoredStore.getState().settings.hiddenElevationSectionIds).toEqual([
+      'elevation-0-descent-2',
+    ]);
 
     delete (parsed.project!.settings as Record<string, unknown>).dynamicElevationProfile;
     delete (parsed.project!.settings as Record<string, unknown>).elevationSectionOverrides;
+    delete (parsed.project!.settings as Record<string, unknown>).customElevationSections;
+    delete (parsed.project!.settings as Record<string, unknown>).hiddenElevationSectionIds;
     const legacyStore = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, legacyStore.getState());
     expect(legacyStore.getState().settings.dynamicElevationProfile).toBe(false);
     expect(legacyStore.getState().settings.elevationSectionOverrides).toEqual([]);
+    expect(legacyStore.getState().settings.customElevationSections).toEqual([]);
+    expect(legacyStore.getState().settings.hiddenElevationSectionIds).toEqual([]);
   });
 });
 
