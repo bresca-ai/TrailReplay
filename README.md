@@ -2,6 +2,12 @@
   <img src="./docs/branding-assets/SVG/logohorizontalfondo.svg" alt="TrailReplay" width="520">
 </p>
 
+<p align="center">
+  <a href="https://trailreplay.com">
+    <img src="./media/trailreplay-overview.gif" alt="TrailReplay app overview: turn a GPX route into an animated, shareable story" width="520">
+  </a>
+</p>
+
 [![CI](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml)
 [![License: attribution required](https://img.shields.io/badge/License-attribution%20required-yellow.svg)](./LICENSE)
 [![Live app](https://img.shields.io/badge/live-trailreplay.com-0B7285)](https://trailreplay.com)
