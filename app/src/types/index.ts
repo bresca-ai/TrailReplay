@@ -379,10 +379,22 @@ export interface AppSettings {
   showElevationProfile: boolean;
   /** Automatically focus the elevation chart on significant climbs and descents. */
   dynamicElevationProfile: boolean;
+  /** Route-specific boundary adjustments for automatically detected elevation sections. */
+  elevationSectionOverrides: ElevationSectionOverride[];
   /** Multiplier applied to landmark pins and their labels together. */
   landmarkScale: number;
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
+}
+
+export interface ElevationSectionOverride {
+  sectionId: string;
+  segmentIndex: number;
+  kind: 'climb' | 'descent';
+  detectedStartProgress: number;
+  detectedEndProgress: number;
+  startProgress: number;
+  endProgress: number;
 }
 
 export interface LiveStats {

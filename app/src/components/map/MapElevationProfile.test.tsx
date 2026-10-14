@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import type { SegmentTiming } from '@/utils/journeyUtils';
@@ -81,14 +81,18 @@ describe('MapElevationProfile dynamic sections', () => {
     expect(svg?.querySelector('[data-export-elevation-focus-section]')?.tagName).toBe('path');
     expect(svg?.querySelector('rect[data-export-elevation-focus-section]')).not.toBeInTheDocument();
     expect(svg?.querySelectorAll('circle')).toHaveLength(0);
+    expect(document.querySelector('[data-elevation-section-editor]')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Adjust section 1/ })).toHaveLength(2);
 
     act(() => {
       useAppStore.getState().setPlayback({
+        isPlaying: true,
         currentTime: 5_000,
         progress: 0.5,
       });
     });
     expect(svg?.querySelectorAll('[data-export-elevation-focus-section]')).toHaveLength(0);
+    expect(document.querySelector('[data-elevation-section-editor]')).not.toBeInTheDocument();
 
     await waitFor(() => {
       const [, , width] = (svg?.getAttribute('viewBox') ?? '').split(' ').map(Number);
@@ -109,5 +113,34 @@ describe('MapElevationProfile dynamic sections', () => {
 
     await waitFor(() => expect(svg).toHaveAttribute('viewBox', '0 0 800 60'));
     expect(screen.queryByText(/^\+\d+ m$/)).not.toBeInTheDocument();
+  });
+
+  it('lets a paused user drag a section boundary and stores the adjustment', () => {
+    const { container } = render(<MapElevationProfile />);
+
+    const editor = container.querySelector('[data-elevation-section-editor]') as HTMLDivElement;
+    vi.spyOn(editor, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 800,
+      bottom: 60,
+      width: 800,
+      height: 60,
+      toJSON: () => ({}),
+    });
+    const endHandle = container.querySelector(
+      '[aria-label="Adjust section 1 end"]',
+    ) as HTMLButtonElement;
+    Object.defineProperty(endHandle, 'setPointerCapture', { value: vi.fn() });
+    Object.defineProperty(endHandle, 'hasPointerCapture', { value: () => true });
+
+    fireEvent.pointerDown(endHandle, { pointerId: 1, clientX: 500 });
+    fireEvent.pointerMove(endHandle, { pointerId: 1, clientX: 520 });
+
+    const overrides = useAppStore.getState().settings.elevationSectionOverrides;
+    expect(overrides).toHaveLength(1);
+    expect(overrides[0].endProgress).toBeCloseTo(0.65);
   });
 });

@@ -186,7 +186,18 @@ describe('hydrateProject', () => {
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
-    sourceStore.getState().setSettings({ dynamicElevationProfile: true });
+    sourceStore.getState().setSettings({
+      dynamicElevationProfile: true,
+      elevationSectionOverrides: [{
+        sectionId: 'elevation-0-climb-1',
+        segmentIndex: 0,
+        kind: 'climb',
+        detectedStartProgress: 0.1,
+        detectedEndProgress: 0.5,
+        startProgress: 0.15,
+        endProgress: 0.55,
+      }],
+    });
 
     const blob = await buildReplayArchive(sourceStore.getState());
     const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
@@ -194,11 +205,14 @@ describe('hydrateProject', () => {
     const restoredStore = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, restoredStore.getState());
     expect(restoredStore.getState().settings.dynamicElevationProfile).toBe(true);
+    expect(restoredStore.getState().settings.elevationSectionOverrides).toHaveLength(1);
 
     delete (parsed.project!.settings as Record<string, unknown>).dynamicElevationProfile;
+    delete (parsed.project!.settings as Record<string, unknown>).elevationSectionOverrides;
     const legacyStore = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, legacyStore.getState());
     expect(legacyStore.getState().settings.dynamicElevationProfile).toBe(false);
+    expect(legacyStore.getState().settings.elevationSectionOverrides).toEqual([]);
   });
 });
 
