@@ -9,6 +9,7 @@ import {
   getCompletedCoordinates,
   getCompletedCoordinatesAtDistance,
   getJourneyDistanceAtProgress,
+  getJourneyCoordinateIndexAtDistance,
   getJourneyElevationData,
   getJourneyPointAtDistance,
   getJourneyPointAtProgress,
@@ -37,6 +38,26 @@ const journeyElevationCache = new WeakMap<ComputedJourney, Map<RouteTimingMode, 
 const trackElevationCache = new WeakMap<GPXTrack, ReturnType<typeof buildTrackElevationData>>();
 const journeyCameraPathCache = new WeakMap<ComputedJourney, Map<RouteTimingMode, number[][]>>();
 const trackCameraPathCache = new WeakMap<GPXTrack, number[][]>();
+
+function getTrackCoordinateIndexAtDistance(track: GPXTrack, distance: number): number {
+  if (track.points.length <= 1 || distance <= 0) return 0;
+  if (distance >= track.totalDistance) return track.points.length - 1;
+
+  let left = 1;
+  let right = track.points.length - 1;
+  while (left < right) {
+    const middle = Math.floor((left + right) / 2);
+    if (track.points[middle].distance < distance) left = middle + 1;
+    else right = middle;
+  }
+
+  const lowerIndex = left - 1;
+  const lowerDistance = track.points[lowerIndex].distance;
+  const upperDistance = track.points[left].distance;
+  const span = upperDistance - lowerDistance;
+  const ratio = span > 0 ? (distance - lowerDistance) / span : 0;
+  return lowerIndex + Math.max(0, Math.min(1, ratio));
+}
 
 function getCachedComputedJourney(journeySegments: JourneySegment[], tracks: GPXTrack[]) {
   let tracksCache = computedJourneyCache.get(journeySegments);
@@ -350,6 +371,21 @@ export function useComputedJourney() {
     return getSegmentAtProgress(playback.progress, computedJourney.segmentTimings);
   }, [computedJourney, journeyDistanceProfile, playback.progress, routeDistance, routeTimingMode]);
 
+  const routeCoordinateIndex = useMemo(() => {
+    if (computedJourney && currentSegment) {
+      if (routeTimingMode === 'uniform' && journeyDistanceProfile) {
+        return getJourneyCoordinateIndexAtDistance(journeyDistanceProfile, routeDistance);
+      }
+      const { segment, localProgress } = currentSegment;
+      return segment.startCoordIndex
+        + localProgress * (segment.endCoordIndex - segment.startCoordIndex);
+    }
+    if (!activeTrack) return 0;
+
+    const exactIndex = getTrackCoordinateIndexAtDistance(activeTrack, routeDistance);
+    return routeTimingMode === 'uniform' ? exactIndex : Math.ceil(exactIndex);
+  }, [activeTrack, computedJourney, currentSegment, journeyDistanceProfile, routeDistance, routeTimingMode]);
+
   // Get completed coordinates for trail rendering
   const completedCoordinates = useMemo<number[][]>(() => {
     if (!computedJourney) {
@@ -465,6 +501,7 @@ export function useComputedJourney() {
     totalDistance,
     routeDistance,
     routeProgress,
+    routeCoordinateIndex,
     routeTimingMode,
   };
 }

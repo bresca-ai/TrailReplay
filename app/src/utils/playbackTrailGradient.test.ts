@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { createPropertyExpression, latest } from '@maplibre/maplibre-gl-style-spec';
 import type { StylePropertySpecification } from '@maplibre/maplibre-gl-style-spec';
 import {
+  buildLineProgressFractions,
   buildPlaybackTrailGradient,
+  coordinateIndexToLineProgress,
   PLAYBACK_PROGRESS_GLOBAL_STATE,
 } from './playbackTrailGradient';
 
@@ -14,6 +16,24 @@ const coordinates = [
 ];
 
 describe('buildPlaybackTrailGradient', () => {
+  it('maps marker coordinate indices through MapLibre projected line distance', () => {
+    const fractions = buildLineProgressFractions([
+      [0, 0],
+      [0, 60],
+      [1, 60],
+    ]);
+
+    expect(fractions[0]).toBe(0);
+    expect(fractions[2]).toBe(1);
+    expect(coordinateIndexToLineProgress(1.5, fractions)).toBeCloseTo(
+      fractions[1] + (1 - fractions[1]) / 2,
+      10,
+    );
+    // Web Mercator stretches the north-south leg, so raw coordinate-index
+    // progress (75%) is not the line-progress value MapLibre paints here.
+    expect(coordinateIndexToLineProgress(1.5, fractions)).not.toBeCloseTo(0.75, 2);
+  });
+
   it('reveals the static line from render-time global state', () => {
     const expression = buildPlaybackTrailGradient({
       coordinates,

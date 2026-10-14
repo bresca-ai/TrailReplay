@@ -463,6 +463,22 @@ function findDistanceIndex(profile: JourneyDistanceProfile, distance: number): n
   return left;
 }
 
+export function getJourneyCoordinateIndexAtDistance(
+  profile: JourneyDistanceProfile,
+  distance: number,
+): number {
+  if (profile.cumulativeDistances.length <= 1) return 0;
+
+  const clampedDistance = clampDistance(distance, profile.totalDistance);
+  const upperIndex = Math.max(1, findDistanceIndex(profile, clampedDistance));
+  const lowerIndex = upperIndex - 1;
+  const lowerDistance = profile.cumulativeDistances[lowerIndex] ?? 0;
+  const upperDistance = profile.cumulativeDistances[upperIndex] ?? lowerDistance;
+  const span = upperDistance - lowerDistance;
+  const ratio = span > 0 ? (clampedDistance - lowerDistance) / span : 0;
+  return lowerIndex + Math.max(0, Math.min(1, ratio));
+}
+
 /**
  * Get the current segment and local progress based on global progress (0-1)
  */

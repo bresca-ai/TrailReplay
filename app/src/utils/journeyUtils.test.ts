@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { getJourneyElevationData, type JourneyPoint, type SegmentTiming } from './journeyUtils';
+import {
+  getJourneyCoordinateIndexAtDistance,
+  getJourneyElevationData,
+  type JourneyDistanceProfile,
+  type JourneyPoint,
+  type SegmentTiming,
+} from './journeyUtils';
 
 const timing = (segmentIndex: number, start: number, end: number, startCoordIndex: number, endCoordIndex: number): SegmentTiming => ({
   segmentId: `segment-${segmentIndex}`,
@@ -58,5 +64,20 @@ describe('getJourneyElevationData', () => {
     );
 
     expect(data.map((sample) => sample.progress)).toEqual([0, 0.2, 0.2, 1]);
+  });
+});
+
+describe('getJourneyCoordinateIndexAtDistance', () => {
+  it('returns the fractional coordinate index containing the marker', () => {
+    const coordinates = [point(0, 100), point(0, 200), point(0, 300)];
+    const profile: JourneyDistanceProfile = {
+      coordinates,
+      cumulativeDistances: [0, 100, 300],
+      totalDistance: 300,
+    };
+
+    expect(getJourneyCoordinateIndexAtDistance(profile, 200)).toBe(1.5);
+    expect(getJourneyCoordinateIndexAtDistance(profile, -10)).toBe(0);
+    expect(getJourneyCoordinateIndexAtDistance(profile, 400)).toBe(2);
   });
 });

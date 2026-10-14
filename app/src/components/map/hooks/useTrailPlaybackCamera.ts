@@ -1,9 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon } from '@/utils/activityIcons';
-import { PLAYBACK_PROGRESS_GLOBAL_STATE } from '@/utils/playbackTrailGradient';
+import {
+  buildLineProgressFractions,
+  coordinateIndexToLineProgress,
+  PLAYBACK_PROGRESS_GLOBAL_STATE,
+} from '@/utils/playbackTrailGradient';
 import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
@@ -74,7 +78,7 @@ interface UseTrailPlaybackCameraParams {
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
   markerRef: React.MutableRefObject<maplibregl.Marker | null>;
   playbackProgress: number;
-  routeProgress: number;
+  routeCoordinateIndex: number;
   setCameraPosition: (position: {
     lat: number;
     lon: number;
@@ -172,7 +176,7 @@ export function useTrailPlaybackCamera({
   mapRef,
   markerRef,
   playbackProgress,
-  routeProgress,
+  routeCoordinateIndex,
   setCameraPosition,
   smoothBearingRef,
   targetBearingRef,
@@ -183,6 +187,10 @@ export function useTrailPlaybackCamera({
   const smoothedCenterRef = useRef<[number, number] | null>(null);
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
+  const lineProgressFractions = useMemo(
+    () => buildLineProgressFractions(allCoordinates),
+    [allCoordinates],
+  );
 
   // Explicit distance/mode changes should take effect immediately instead of
   // being mistaken for terrain noise by the cinematic target filter.
@@ -197,7 +205,7 @@ export function useTrailPlaybackCamera({
     // camera and painted endpoint therefore consume the same animation frame.
     mapRef.current.setGlobalStateProperty(
       PLAYBACK_PROGRESS_GLOBAL_STATE,
-      Math.max(0, Math.min(1, routeProgress)),
+      coordinateIndexToLineProgress(routeCoordinateIndex, lineProgressFractions),
     );
 
     const shouldShowPlaybackAdornment = (trailStyle.showMarker || trailStyle.showTrackLabels) &&
@@ -575,7 +583,8 @@ export function useTrailPlaybackCamera({
     mapRef,
     markerRef,
     playbackProgress,
-    routeProgress,
+    routeCoordinateIndex,
+    lineProgressFractions,
     setCameraPosition,
     smoothBearingRef,
     targetBearingRef,
