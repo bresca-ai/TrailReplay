@@ -9,7 +9,12 @@ import { translate } from '@/i18n/translations';
 import { getPosterSize, renderSocialPoster, exportSocialPosterBlob } from './socialShareRenderer';
 import type { RenderInput } from './socialShareRenderer';
 import type { CanvasPoint, FitBox } from './socialShareRouteFit';
-import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
+import {
+  downsampleRoute,
+  fitRouteToBox,
+  getRouteBboxNorm,
+  transformCanvasRoute,
+} from './socialShareRouteFit';
 
 const BRAND_ORANGE = '#C1652F';
 
@@ -99,7 +104,12 @@ export function useSocialShareExport() {
             });
           }
         }
-        projectedRouteForMap = pts;
+        projectedRouteForMap = transformCanvasRoute(
+          pts,
+          posterW,
+          posterH,
+          settings.routeTransform,
+        );
       }
     } else {
       const pts: Array<{ lat: number; lon: number }> = [];
@@ -149,15 +159,7 @@ export function useSocialShareExport() {
       scale: settings.routeTransform.scale,
     });
     if (projected.length === 0) return null;
-    const xs = projected.map((p) => p.x);
-    const ys = projected.map((p) => p.y);
-    const pad = pw * 0.025;
-    return {
-      x: Math.max(0, (Math.min(...xs) - pad) / pw),
-      y: Math.max(0, (Math.min(...ys) - pad) / ph),
-      w: Math.min(1, (Math.max(...xs) - Math.min(...xs) + pad * 2) / pw),
-      h: Math.min(1, (Math.max(...ys) - Math.min(...ys) + pad * 2) / ph),
-    };
+    return getRouteBboxNorm(projected, pw, ph, pw * 0.025);
   }, [settings.aspectRatio, settings.routeTransform]);
 
   const generatePreview = useCallback(async () => {
@@ -206,9 +208,12 @@ export function useSocialShareExport() {
 
       const input = buildInput(preCapuredMapCanvas);
 
-      // Compute route bbox for photo-first interactive overlay
+      // Compute the same route bounds used by the renderer for either template.
       if (settings.template === 'photo-first' && input.routeLatLons) {
         setRouteBboxNorm(computeRouteBbox(input.routeLatLons));
+      } else if (input.projectedRouteForMap) {
+        const { w, h } = getPosterSize(settings.aspectRatio);
+        setRouteBboxNorm(getRouteBboxNorm(input.projectedRouteForMap, w, h, w * 0.025));
       } else {
         setRouteBboxNorm(null);
       }
@@ -220,7 +225,7 @@ export function useSocialShareExport() {
     } finally {
       setIsRendering(false);
     }
-  }, [buildInput, computeRouteBbox, settings.template, tracks.length]);
+  }, [buildInput, computeRouteBbox, settings.aspectRatio, settings.template, tracks.length]);
 
   useEffect(() => {
     void generatePreview();

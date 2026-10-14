@@ -50,7 +50,7 @@ export function SocialSharePreviewModal({
   const aspectStyle = settings.aspectRatio === '4:5' ? '4 / 5'
     : settings.aspectRatio === '9:16' ? '9 / 16' : '1 / 1';
 
-  const showRouteOverlay = settings.template === 'photo-first' && !!routeBboxNorm;
+  const showRouteOverlay = !!routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
   const hasAnyOverlay = showRouteOverlay || showPanelOverlay;
 
@@ -203,7 +203,7 @@ export function SocialSharePreviewModal({
               />
             )}
 
-            {/* Route overlay — rendered last (higher z-order), photo-first only */}
+            {/* Route overlay — rendered last (higher z-order) */}
             {showRouteOverlay && routeBboxNorm && (
               <div
                 className="absolute border-2 border-dashed border-[var(--trail-orange)] rounded select-none"

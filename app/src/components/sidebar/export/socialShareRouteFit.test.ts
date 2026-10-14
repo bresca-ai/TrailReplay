@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
+import {
+  downsampleRoute,
+  fitRouteToBox,
+  getRouteBboxNorm,
+  transformCanvasRoute,
+} from './socialShareRouteFit';
 
 describe('fitRouteToBox', () => {
   const box = { x: 0, y: 0, w: 200, h: 200 };
@@ -49,5 +54,26 @@ describe('downsampleRoute', () => {
   it('always includes the first element', () => {
     const pts = Array.from({ length: 50 }, (_, i) => i);
     expect(downsampleRoute(pts, 5)[0]).toBe(0);
+  });
+});
+
+describe('transformCanvasRoute', () => {
+  const points = [{ x: 20, y: 40 }, { x: 80, y: 60 }];
+
+  it('moves a map-projected route using normalized poster offsets', () => {
+    expect(transformCanvasRoute(points, 200, 100, { offsetX: 0.1, offsetY: -0.2, scale: 1 }))
+      .toEqual([{ x: 40, y: 20 }, { x: 100, y: 40 }]);
+  });
+
+  it('scales a map-projected route around its bounding-box center', () => {
+    expect(transformCanvasRoute(points, 200, 100, { offsetX: 0, offsetY: 0, scale: 2 }))
+      .toEqual([{ x: -10, y: 30 }, { x: 110, y: 70 }]);
+  });
+});
+
+describe('getRouteBboxNorm', () => {
+  it('returns normalized bounds with padding for preview controls', () => {
+    expect(getRouteBboxNorm([{ x: 20, y: 40 }, { x: 80, y: 60 }], 200, 100, 10))
+      .toEqual({ x: 0.05, y: 0.3, w: 0.4, h: 0.4 });
   });
 });
