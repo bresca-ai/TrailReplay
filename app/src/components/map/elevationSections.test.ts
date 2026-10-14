@@ -178,7 +178,7 @@ describe('detectElevationFocusSections', () => {
     ]);
   });
 
-  it('uses a later higher summit when an extended dip has low prominence', () => {
+  it('keeps nearby meaningful summit and valley points as separate sections', () => {
     const sections = detectElevationFocusSections(profile([
       100, 140, 180, 220, 260, 300, 340, 380, 420, 460, 500,
       494, 488, 482, 476, 470, 464, 458, 452, 446, 440,
@@ -190,16 +190,16 @@ describe('detectElevationFocusSections', () => {
       maxSections: 4,
     });
 
-    expect(sections).toHaveLength(1);
-    expect(sections[0]).toMatchObject({
-      kind: 'climb',
-      startDistance: 0,
-      endDistance: 2_800,
-    });
-    expect(sections[0].maxElevation).toBeGreaterThan(620);
+    expect(sections.map((section) => section.kind)).toEqual([
+      'climb',
+      'descent',
+      'climb',
+    ]);
+    expect(sections[0].startDistance).toBe(0);
+    expect(sections.at(-1)?.endDistance).toBe(2_800);
   });
 
-  it('uses a later lower valley when an extended bump has low prominence', () => {
+  it('keeps nearby meaningful valley and summit points in a descent', () => {
     const sections = detectElevationFocusSections(profile([
       640, 600, 560, 520, 480, 440, 400, 360, 320, 280, 240,
       246, 252, 258, 264, 270, 276, 282, 288, 294, 300,
@@ -211,13 +211,13 @@ describe('detectElevationFocusSections', () => {
       maxSections: 4,
     });
 
-    expect(sections).toHaveLength(1);
-    expect(sections[0]).toMatchObject({
-      kind: 'descent',
-      startDistance: 0,
-      endDistance: 2_800,
-    });
-    expect(sections[0].minElevation).toBeLessThan(120);
+    expect(sections.map((section) => section.kind)).toEqual([
+      'descent',
+      'climb',
+      'descent',
+    ]);
+    expect(sections[0].startDistance).toBe(0);
+    expect(sections.at(-1)?.endDistance).toBe(2_800);
   });
 
   it('keeps both directions represented when separated climbs and descents are available', () => {

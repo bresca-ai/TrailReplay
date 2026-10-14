@@ -186,14 +186,15 @@ function isMeaningfulCounterSlope(
   const lastChange = candidateChange(last);
   const interruptionChange = candidateChange(interruption);
 
-  // A turning point should only split the surrounding hill when it forms a
-  // meaningful valley or summit of its own. Judging prominence vertically as
-  // well as by distance prevents a short counter-slope from cutting a large
-  // climb/descent in two, regardless of the route's overall length.
+  // Start with the alternating low/high points found above. A turning point
+  // survives only when the terrain on both sides is independently useful and
+  // the reversal is at least a fifth as prominent as its smaller neighbour.
+  // That removes notches inside one hill without collapsing a real sequence
+  // of nearby summit → valley → summit sections into one oversized chapter.
   const prominence = interruptionChange / Math.max(1, Math.min(firstChange, lastChange));
   return interruptionDistance >= minDistance
     && interruptionChange >= minChange
-    && prominence >= 0.35;
+    && prominence >= 0.2;
 }
 
 function mergeInsignificantTurningPoints(
