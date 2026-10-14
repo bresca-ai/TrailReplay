@@ -51,8 +51,8 @@ describe('buildPlaybackTrailGradient', () => {
 
     expect(parsed.result).toBe('success');
     if (parsed.result === 'success') {
-      expect(parsed.value.evaluate({ lineProgress: 0.25 }).a).toBe(1);
-      expect(parsed.value.evaluate({ lineProgress: 0.75 }).a).toBe(0);
+      expect(parsed.value.evaluate({ zoom: 0, lineProgress: 0.25 }).a).toBe(1);
+      expect(parsed.value.evaluate({ zoom: 0, lineProgress: 0.75 }).a).toBe(0);
     }
   });
 
