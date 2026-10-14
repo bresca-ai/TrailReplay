@@ -1,4 +1,10 @@
 <p align="center">
+  <a href="https://trailreplay.com">
+    <img src="./media/trailreplay-overview.gif" alt="TrailReplay app overview: turn a GPX route into an animated, shareable story" width="520">
+  </a>
+</p>
+
+<p align="center">
   <img src="./docs/branding-assets/SVG/logohorizontalfondo.svg" alt="TrailReplay" width="520">
 </p>
 
