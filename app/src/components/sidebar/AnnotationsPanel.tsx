@@ -666,6 +666,30 @@ export function AnnotationsPanel() {
             <p className="text-xs text-[var(--evergreen-60)]">
               {t('annotations.dynamicElevationProfileHint')}
             </p>
+            {settings.dynamicElevationProfile && (
+              <div
+                className="space-y-2 rounded-lg border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-2.5"
+                role="note"
+              >
+                <p className="text-xs font-semibold text-[var(--evergreen)]">
+                  {t('annotations.dynamicElevationProfileGuideTitle')}
+                </p>
+                <ol className="space-y-1.5 text-[11px] leading-relaxed text-[var(--evergreen-60)]">
+                  {[
+                    t('annotations.dynamicElevationProfileGuideAutomatic'),
+                    t('annotations.dynamicElevationProfileGuideEdit'),
+                    t('annotations.dynamicElevationProfileGuideAddRemove'),
+                  ].map((instruction, index) => (
+                    <li key={instruction} className="flex gap-2">
+                      <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)] text-[9px] font-bold text-[var(--canvas)]">
+                        {index + 1}
+                      </span>
+                      <span>{instruction}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
         )}
         <p className="text-xs text-[var(--evergreen-60)]">{t('annotations.statsHint')}</p>
