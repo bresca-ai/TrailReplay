@@ -58,22 +58,23 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function cinematicEase(value: number): number {
+function cameraEase(value: number): number {
   const clamped = clamp(value, 0, 1);
-  // Smootherstep has zero velocity and acceleration at both ends. That makes
-  // the profile settle naturally before metrics appear and before it returns
-  // to the overview.
-  return clamped * clamped * clamped * (clamped * (clamped * 6 - 15) + 10);
+  // Smoothstep keeps zero velocity at both ends without the pronounced
+  // mid-transition acceleration of smootherstep. The profile reads as one
+  // continuous camera move rather than waiting and then rushing inward.
+  return clamped * clamped * (3 - 2 * clamped);
 }
 
 function interpolate(from: number, to: number, amount: number): number {
   return from + (to - from) * amount;
 }
 
-function interpolateDomain(
+function interpolateAnchoredDomain(
   from: [number, number],
   to: [number, number],
   amount: number,
+  anchor: number,
 ): [number, number] {
   if (amount <= 0) return from;
   if (amount >= 1) return to;
@@ -81,13 +82,16 @@ function interpolateDomain(
   const toSpan = to[1] - to[0];
   if (fromSpan <= 0 || toSpan <= 0) return to;
 
-  const fromCenter = (from[0] + from[1]) / 2;
-  const toCenter = (to[0] + to[1]) / 2;
-  const center = interpolate(fromCenter, toCenter, amount);
-  // Interpolate scale geometrically, as a camera zoom would. Interpolating
-  // the rectangle edges linearly makes the apparent scale rush at the end.
+  // Interpolate scale geometrically, then derive the camera origin from one
+  // terrain landmark. Mixing geometric scale with a linearly moving centre
+  // makes the profile drift and settle; keeping the section entrance anchored
+  // produces a coherent zoom and pan along one camera path.
   const span = fromSpan * ((toSpan / fromSpan) ** amount);
-  return [center - span / 2, center + span / 2];
+  const fromAnchorPosition = (anchor - from[0]) / fromSpan;
+  const toAnchorPosition = (anchor - to[0]) / toSpan;
+  const anchorPosition = interpolate(fromAnchorPosition, toAnchorPosition, amount);
+  const start = anchor - anchorPosition * span;
+  return [start, start + span];
 }
 
 function normalizeFullElevationDomain(
@@ -343,7 +347,7 @@ export function getDynamicElevationViewport({
       mode = 'transition-in';
       const duration = transitionInEndMs - transitionInStartMs;
       focusAmount = duration > 0
-        ? cinematicEase((safeCurrentTimeMs - transitionInStartMs) / duration)
+        ? cameraEase((safeCurrentTimeMs - transitionInStartMs) / duration)
         : 1;
     } else if (safeCurrentTimeMs <= group.endTimeMs) {
       mode = 'focused';
@@ -352,21 +356,25 @@ export function getDynamicElevationViewport({
       mode = 'transition-out';
       const duration = transitionOutEndMs - group.endTimeMs;
       focusAmount = duration > 0
-        ? 1 - cinematicEase((safeCurrentTimeMs - group.endTimeMs) / duration)
+        ? 1 - cameraEase((safeCurrentTimeMs - group.endTimeMs) / duration)
         : 0;
     }
 
     return {
       mode,
-      progressDomain: interpolateDomain(
+      progressDomain: interpolateAnchoredDomain(
         [0, 1],
         focusedDomains.progress,
         focusAmount,
+        group.startProgress,
       ),
-      elevationDomain: interpolateDomain(
+      elevationDomain: interpolateAnchoredDomain(
         fullElevationDomain,
         focusedDomains.elevation,
         focusAmount,
+        group.sections[0].kind === 'climb'
+          ? group.minElevation
+          : group.maxElevation,
       ),
       focusAmount,
       activeSection,

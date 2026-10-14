@@ -99,7 +99,7 @@ describe('dynamic elevation viewport', () => {
     expect(entered.focusAmount).toBe(1);
   });
 
-  it('uses cinematic interpolation for zoom-in and padded focus domains', () => {
+  it('uses an anchored camera path for zoom-in and padded focus domains', () => {
     const halfway = getDynamicElevationViewport({
       ...baseInput,
       currentTimeMs: 3_900,
@@ -107,10 +107,18 @@ describe('dynamic elevation viewport', () => {
 
     expect(halfway.mode).toBe('transition-in');
     expect(halfway.focusAmount).toBeCloseTo(0.5);
-    expect(halfway.progressDomain[0]).toBeCloseTo(0.17004);
-    expect(halfway.progressDomain[1]).toBeCloseTo(0.77996);
-    expect(halfway.elevationDomain[0]).toBeCloseTo(142.52);
-    expect(halfway.elevationDomain[1]).toBeCloseTo(457.48);
+    expect(halfway.progressDomain[0]).toBeCloseTo(0.179);
+    expect(halfway.progressDomain[1]).toBeCloseTo(0.78892);
+    expect(halfway.elevationDomain[0]).toBeCloseTo(145.39);
+    expect(halfway.elevationDomain[1]).toBeCloseTo(460.35);
+
+    const sectionEntrancePosition = (
+      0.3 - halfway.progressDomain[0]
+    ) / (
+      halfway.progressDomain[1] - halfway.progressDomain[0]
+    );
+    const finalEntrancePosition = (0.3 - 0.264) / (0.636 - 0.264);
+    expect(sectionEntrancePosition).toBeCloseTo((0.3 + finalEntrancePosition) / 2);
 
     const focused = getDynamicElevationViewport({
       ...baseInput,
@@ -138,9 +146,9 @@ describe('dynamic elevation viewport', () => {
     });
 
     expect(quarter.mode).toBe('transition-in');
-    expect(quarter.focusAmount).toBeCloseTo(0.103515625);
+    expect(quarter.focusAmount).toBeCloseTo(0.15625);
     expect(halfway.focusAmount).toBeCloseTo(0.5);
-    expect(threeQuarter.focusAmount).toBeCloseTo(0.896484375);
+    expect(threeQuarter.focusAmount).toBeCloseTo(0.84375);
     expect(quarter.progressDomain[0]).toBeLessThan(halfway.progressDomain[0]);
     expect(halfway.progressDomain[0]).toBeLessThan(threeQuarter.progressDomain[0]);
     expect(quarter.progressDomain[1]).toBeGreaterThan(halfway.progressDomain[1]);
@@ -159,8 +167,8 @@ describe('dynamic elevation viewport', () => {
     });
     expect(halfway.mode).toBe('transition-out');
     expect(halfway.focusAmount).toBeCloseTo(0.5);
-    expect(halfway.progressDomain[0]).toBeCloseTo(0.17004);
-    expect(halfway.progressDomain[1]).toBeCloseTo(0.77996);
+    expect(halfway.progressDomain[0]).toBeCloseTo(0.179);
+    expect(halfway.progressDomain[1]).toBeCloseTo(0.78892);
 
     const finished = getDynamicElevationViewport({
       ...baseInput,
