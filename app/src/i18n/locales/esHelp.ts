@@ -14,7 +14,7 @@ export const help = {
             },
             write: {
                 title: 'Escribe una receta',
-                body: 'Un JSON corto guardado junto a tus GPX. Describe los lugares por kilómetro — “el avituallamiento del km 6,5” — nunca por coordenadas, porque el mapa las calcula solo.',
+                body: 'Un JSON corto guardado junto a tus GPX. Describe los lugares por kilómetro, como “el avituallamiento del km 6,5”, nunca por coordenadas, porque el mapa las calcula solo.',
             },
             drop: {
                 title: 'Sueltas la carpeta',
@@ -28,6 +28,25 @@ export const help = {
             label: 'Instrucción',
             body: 'Lee https://trailreplay.com/llms.txt y la especificación del formato que enlaza. Después escribe un recipe.json en esta carpeta para los GPX que hay aquí, siguiendo lo que te describo abajo. No calcules coordenadas: ancla todo por kilómetro y deja que la app lo resuelva.',
             note: 'Después dile qué quieres de verdad: los avituallamientos de la web de la carrera, los refugios donde dormiste, un texto en la subida larga.',
+        },
+        camera: {
+            title: 'Distancia de cámara igual que en la web',
+            description: 'Seguimiento trasero no usa el zoom bruto del mapa. Las recetas utilizan las mismas posiciones que el control de la web, desde 0 para la vista más amplia hasta 100 para la más cercana.',
+            table: { preset: 'Preset de la web', value: 'Nivel de receta', result: 'Resultado' },
+            presets: {
+                far: { label: 'Lejos', body: 'La vista de Seguimiento trasero más amplia.' },
+                medium: { label: 'Medio', body: 'El valor equilibrado por defecto.' },
+                close: { label: 'Cerca', body: 'Mantiene la cámara más cerca del marcador.' },
+                veryClose: { label: 'Muy cerca', body: 'La vista de Seguimiento trasero más cerrada.' },
+            },
+            stopsLabel: 'Posiciones exactas:',
+            stopsBody: '0, 11, 22, 33, 49.5, 66, 83 y 100. Un valor bajo está más lejos; uno alto está más cerca.',
+            rulesTitle: '¿Qué valor de cámara debe escribir un agente?',
+            rules: {
+                preset: { title: 'Prioriza un preset con nombre', body: 'Usa followBehindPreset con far, medium, close o very-close. El importador mantiene el nivel numérico sincronizado automáticamente.' },
+                level: { title: 'Usa el nivel para una posición exacta', body: 'Define followBehindZoomLevel cuando necesites una de las ocho posiciones. Cualquier otro número se ajusta a la posición válida más cercana.' },
+                zoom: { title: 'No mezcles las dos escalas', body: 'cameraSettings.zoom no es la distancia de Seguimiento trasero. Los fotogramas clave Cinemáticos usan zoom 8-20 y deben crearse en Mapa y cámara después de importar.' },
+            },
         },
         examples: {
             title: 'Dos cosas que merece la pena delegar',

@@ -14,7 +14,7 @@ export const help = {
       },
       write: {
         title: 'Il écrit une recette',
-        body: 'Un court fichier JSON enregistré à côté de vos GPX. Il décrit les lieux par kilomètre — « le ravitaillement du km 6,5 » — jamais par coordonnées, car la carte les calcule elle-même.',
+        body: 'Un court fichier JSON enregistré à côté de vos GPX. Il décrit les lieux par kilomètre, par exemple « le ravitaillement du km 6,5 », jamais par coordonnées, car la carte les calcule elle-même.',
       },
       drop: {
         title: 'Vous déposez le dossier',
@@ -28,6 +28,25 @@ export const help = {
       label: 'Consigne',
       body: 'Lis https://trailreplay.com/llms.txt et la spécification du format qu’il référence. Puis écris un recipe.json dans ce dossier pour les GPX qui s’y trouvent, en suivant ce que je décris ci-dessous. Ne calcule pas de coordonnées : ancre tout par kilomètre et laisse l’application les résoudre.',
       note: 'Dites-lui ensuite ce que vous voulez vraiment : les ravitaillements d’une page de course, les refuges, une légende dans la grosse montée.',
+    },
+    camera: {
+      title: 'Une distance caméra identique au site',
+      description: 'Le Suivi arrière n’utilise pas le zoom brut de la carte. Les recettes utilisent les mêmes positions que le réglage du site, de 0 pour la vue la plus large à 100 pour la plus proche.',
+      table: { preset: 'Préréglage du site', value: 'Niveau de recette', result: 'Résultat' },
+      presets: {
+        far: { label: 'Loin', body: 'La vue Suivi arrière la plus large.' },
+        medium: { label: 'Moyen', body: 'Le réglage équilibré par défaut.' },
+        close: { label: 'Proche', body: 'Maintient la caméra plus près du marqueur.' },
+        veryClose: { label: 'Très proche', body: 'La vue Suivi arrière la plus serrée.' },
+      },
+      stopsLabel: 'Positions exactes :',
+      stopsBody: '0, 11, 22, 33, 49.5, 66, 83 et 100. Une valeur basse est plus éloignée, une valeur haute est plus proche.',
+      rulesTitle: 'Quelle valeur caméra un agent doit-il écrire ?',
+      rules: {
+        preset: { title: 'Préférez un préréglage nommé', body: 'Utilisez followBehindPreset avec far, medium, close ou very-close. L’importateur synchronise désormais automatiquement le niveau numérique.' },
+        level: { title: 'Utilisez un niveau pour une position exacte', body: 'Définissez followBehindZoomLevel pour l’une des huit positions. Toute autre valeur est ramenée à la position valide la plus proche.' },
+        zoom: { title: 'Ne mélangez pas les deux échelles', body: 'cameraSettings.zoom n’est pas la distance du Suivi arrière. Les images clés Cinématiques utilisent le zoom 8-20 et doivent être créées dans Carte et caméra après l’import.' },
+      },
     },
     examples: {
       title: 'Deux choses à déléguer',

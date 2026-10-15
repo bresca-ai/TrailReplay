@@ -14,7 +14,7 @@ export const help = {
             },
             write: {
                 title: 'Escriu una recepta',
-                body: 'Un JSON curt desat al costat dels teus GPX. Descriu els llocs per quilòmetre — “l’avituallament del km 6,5” — mai per coordenades, perquè el mapa ja les calcula.',
+                body: 'Un JSON curt desat al costat dels teus GPX. Descriu els llocs per quilòmetre, com ara “l’avituallament del km 6,5”, mai per coordenades, perquè el mapa ja les calcula.',
             },
             drop: {
                 title: 'Deixes anar la carpeta',
@@ -28,6 +28,25 @@ export const help = {
             label: 'Instrucció',
             body: 'Llegeix https://trailreplay.com/llms.txt i l’especificació del format que enllaça. Després escriu un recipe.json en aquesta carpeta per als GPX que hi ha aquí, seguint el que et descric a sota. No calculis coordenades: ancora-ho tot per quilòmetre i deixa que l’app ho resolgui.',
             note: 'Després digues-li què vols de debò: els avituallaments del web de la cursa, els refugis on vas dormir, un text a la pujada llarga.',
+        },
+        camera: {
+            title: 'Distància de càmera igual que al web',
+            description: 'Seguiment posterior no fa servir el zoom brut del mapa. Les receptes utilitzen les mateixes posicions que el regulador del web, de 0 per a la vista més ampla a 100 per a la més propera.',
+            table: { preset: 'Preset del web', value: 'Nivell de recepta', result: 'Resultat' },
+            presets: {
+                far: { label: 'Lluny', body: 'La vista de Seguiment posterior més ampla.' },
+                medium: { label: 'Mitjà', body: 'El valor equilibrat per defecte.' },
+                close: { label: 'A prop', body: 'Manté la càmera més a prop del marcador.' },
+                veryClose: { label: 'Molt a prop', body: 'La vista de Seguiment posterior més tancada.' },
+            },
+            stopsLabel: 'Posicions exactes:',
+            stopsBody: '0, 11, 22, 33, 49.5, 66, 83 i 100. Un valor baix és més lluny; un valor alt és més a prop.',
+            rulesTitle: 'Quin valor de càmera ha d’escriure un agent?',
+            rules: {
+                preset: { title: 'Prioritza un preset amb nom', body: 'Fes servir followBehindPreset amb far, medium, close o very-close. L’importador manté el nivell numèric sincronitzat automàticament.' },
+                level: { title: 'Fes servir el nivell per a una posició exacta', body: 'Defineix followBehindZoomLevel quan necessitis una de les vuit posicions. Qualsevol altre nombre s’ajusta a la posició vàlida més propera.' },
+                zoom: { title: 'No barregis les dues escales', body: 'cameraSettings.zoom no és la distància de Seguiment posterior. Els fotogrames clau Cinemàtics fan servir zoom 8-20 i s’han de crear a Mapa i càmera després d’importar.' },
+            },
         },
         examples: {
             title: 'Dues coses que val la pena delegar',

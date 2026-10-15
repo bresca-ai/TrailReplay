@@ -54,6 +54,14 @@ Opening files is a drag-and-drop onto <https://trailreplay.com> — the recipe a
 the GPX files together, selected and dropped at once — done by the person, not
 by you.
 
+For a Follow Behind camera, use `cameraSettings.followBehindPreset` with
+`far`, `medium`, `close`, or `very-close`. These are the same named positions
+as the website control. Only use `followBehindZoomLevel` for an exact slider
+stop: `0`, `11`, `22`, `33`, `49.5`, `66`, `83`, or `100`, from farthest to
+closest. Do not use `cameraSettings.zoom` for Follow Behind. Cinematic uses a
+separate map-zoom range of `8` to `20`, and its keyframes are authored in the
+website after the recipe is imported.
+
 ## About
 
 - [TrailReplay](https://trailreplay.com): the app itself.

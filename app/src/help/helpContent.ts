@@ -189,10 +189,10 @@ export function getAgentExamples(t: Translate): AgentExample[] {
     { "auto": "start-finish", "type": "trailhead", "icon": "town" }
   ],
   "annotations": [
-    { "km": 6.5,  "title": "Avituallament 1 — Collet de Barraques" },
-    { "km": 13,   "title": "Avituallament 2 — Torrent Gros" },
-    { "km": 17,   "title": "Avituallament 3 — Dòrria" },
-    { "km": 25,   "title": "Avituallament 4 — Les Casetes" }
+    { "km": 6.5,  "title": "Avituallament 1 - Collet de Barraques" },
+    { "km": 13,   "title": "Avituallament 2 - Torrent Gros" },
+    { "km": 17,   "title": "Avituallament 3 - Dòrria" },
+    { "km": 25,   "title": "Avituallament 4 - Les Casetes" }
   ]
 }`,
     },
