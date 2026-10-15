@@ -131,19 +131,29 @@ export const help = {
         videoDescription: 'Busca un momento, apunta el plano, guarda un fotograma clave y repite. TrailReplay enlaza los movimientos durante la reproducción.',
       },
       elevation: {
-        title: 'Sigue el perfil de elevación dinámico',
-        description: 'El perfil permanece sincronizado con el marcador para que el terreno también forme parte de los controles del replay.',
-        tips: {
-          progress: { title: 'El progreso avanza con el replay', body: 'El terreno completado se rellena mientras avanza el marcador.' },
-          seek: { title: 'Arrastra el perfil para navegar', body: 'Salta directamente a una subida, una bajada o cualquier otro momento.' },
-          climbs: { title: 'Lee las subidas antes de llegar', body: 'Usa el terreno que viene para preparar el ritmo y los cambios de cámara.' },
+        title: 'Usa el perfil de elevación de dos formas',
+        description: 'El perfil de la ruta completa se muestra por defecto. Las secciones dinámicas son un modo de enfoque opcional que da más espacio a las subidas y bajadas más importantes.',
+        default: {
+          badge: 'Por defecto',
+          title: 'Ve la ruta completa',
+          body: 'El perfil normal mantiene toda la historia de elevación en pantalla. Un marcador móvil y el relleno completado indican exactamente dónde está el replay en la ruta.',
         },
-        imageAlt: 'Exportación de TrailReplay con una ruta de montaña y un perfil de elevación sincronizado',
-        caption: 'El perfil resaltado muestra el terreno completado y la elevación actual sigue al marcador del replay.',
+        dynamic: {
+          badge: 'Opcional',
+          title: 'Enfoca el terreno clave',
+          body: 'Las secciones dinámicas detectan subidas y bajadas sostenidas, las marcan en el perfil y se acercan suavemente a cada sección cuando la reproducción llega a ella.',
+        },
+        howToTitle: 'Activa y ajusta las secciones dinámicas',
+        tips: {
+          enable: { title: 'Activa el modo de enfoque', body: 'Abre Estilo, activa Perfil de elevación y después Secciones dinámicas.' },
+          play: { title: 'Deja que enfoque automáticamente', body: 'Pulsa reproducir. El perfil pasa de la ruta completa a cada subida o bajada detectada, y el mismo movimiento aparece en la exportación.' },
+          edit: { title: 'Ajústalo con la reproducción pausada', body: 'Arrastra los tiradores de los extremos para cambiar el tamaño. Usa + y haz clic en el perfil para añadir una sección, o × para eliminarla.' },
+        },
       },
       watchExportsTitle: 'Mira exportaciones reales',
       watchExportsBody: 'Estos ejemplos se grabaron con el flujo de exportación de TrailReplay.',
       coversTitle: 'Lo que cubre TrailReplay hoy',
+      coversDescription: 'Los seis paneles laterales son el mapa más claro del producto. Avanza de izquierda a derecha o salta directamente a la parte del replay que quieras cambiar.',
       recommendedFirstRunTitle: 'Primera prueba recomendada',
       firstRun: {
         importLabel: '1. Importar',
@@ -183,29 +193,29 @@ export const help = {
         },
       },
       features: {
-        multiTrack: {
-          title: 'Recorridos con varias rutas',
-          body: 'Carga uno o varios archivos GPX, KML o FIT, reordénalos y construye una sola narrativa a partir de actividades separadas.',
+        routes: {
+          title: 'Rutas',
+          body: 'Importa GPX, KML, FIT, proyectos .replay guardados o una receta con sus rutas. Renombra y reordena tracks, o añade comparaciones para reproducir varios atletas juntos.',
         },
-        comparison: {
-          title: 'Modo comparación',
-          body: 'Suelta varios archivos a la vez y los grabados juntos —a la misma hora o, si no, en la misma ruta— se agrupan solos, para que todos corran en una sola reproducción. Con marcas de tiempo, cada marcador va donde esa persona estaba realmente en ese momento; un archivo sin ellas muestra su ruta pero sin marcador en movimiento, porque nada puede decir dónde estaba y cuándo. Usa “Export Original” (.fit) de Strava si un GPX no tiene horas. Desagrupa cualquier pista para devolverla a la línea de tiempo.',
+        timeline: {
+          title: 'Línea de tiempo',
+          body: 'Define la duración total, usa tiempos grabados o uniformes, reordena actividades, cambia duraciones individuales y añade transportes entre rutas.',
+        },
+        style: {
+          title: 'Estilo',
+          body: 'Configura colores y etiquetas, zonas de pulso o color, estadísticas en vivo, el perfil de elevación y el icono, tamaño, color y brillo del marcador.',
+        },
+        mapCamera: {
+          title: 'Mapa y cámara',
+          body: 'Elige mapa base, imágenes históricas, nombres de lugar, capas de esquí, pendiente u orientación, terreno 3D, filtros, puntos de interés y uno de los cuatro modos de cámara.',
         },
         media: {
-          title: 'Narrativa con medios',
-          body: 'Asocia imágenes a momentos del track, revisa su tiempo y mantenlas visibles en los vídeos exportados.',
+          title: 'Medios',
+          body: 'Añade fotos, momentos de vídeo sin sonido y anotaciones de ruta. Usa GPS o marcas de tiempo cuando existan, o coloca y ajusta cada elemento manualmente.',
         },
-        mapStyle: {
-          title: 'Estilo de mapa',
-          body: 'Cambia entre estilos de mapa, capas de terreno, etiquetas y presets de cámara cinematográfica.',
-        },
-        export: {
-          title: 'Exportación de vídeo',
-          body: 'Exporta vídeos 16:9, 1:1 o 9:16 con estadísticas, perfil de elevación y overlays de marca.',
-        },
-        journey: {
-          title: 'Edición del recorrido',
-          body: 'Añade tramos de transporte, controla duraciones y da forma al replay para que la historia coincida con el viaje real.',
+        generate: {
+          title: 'Generar',
+          body: 'Guarda un proyecto .replay editable, exporta imágenes o vídeos 16:9, 1:1 y 9:16, compón el diseño, elige calidad y fotogramas por segundo, y descarga o comparte.',
         },
       },
     },

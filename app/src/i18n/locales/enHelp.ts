@@ -131,19 +131,29 @@ export const help = {
         videoDescription: 'Scrub to a moment, aim the shot, save a keyframe, and repeat. TrailReplay blends the camera moves during playback.',
       },
       elevation: {
-        title: 'Follow the dynamic elevation profile',
-        description: 'The profile stays synchronized with the marker, so terrain becomes part of the replay controls.',
-        tips: {
-          progress: { title: 'Progress moves with the replay', body: 'Completed terrain fills in as the marker advances.' },
-          seek: { title: 'Drag the profile to seek', body: 'Jump directly to a climb, descent, or any other moment.' },
-          climbs: { title: 'Read climbs before they arrive', body: 'Use the terrain ahead to plan pacing and camera changes.' },
+        title: 'Use the elevation profile in two ways',
+        description: 'The full-route profile is visible by default. Dynamic sections are an optional focus mode for giving the strongest climbs and descents more screen space.',
+        default: {
+          badge: 'Default',
+          title: 'See the whole route',
+          body: 'The standard profile keeps the complete elevation story on screen. A moving marker and completed fill show exactly where the replay is along the route.',
         },
-        imageAlt: 'TrailReplay export showing a mountain route with a synchronized elevation profile',
-        caption: 'The highlighted profile shows completed terrain while current elevation follows the replay marker.',
+        dynamic: {
+          badge: 'Optional',
+          title: 'Focus on key terrain',
+          body: 'Dynamic sections detect sustained climbs and descents, mark them on the profile, then smoothly zoom into each section as playback reaches it.',
+        },
+        howToTitle: 'Turn on and refine Dynamic sections',
+        tips: {
+          enable: { title: 'Enable the focus mode', body: 'Open Style, turn on Elevation profile, then enable Dynamic sections.' },
+          play: { title: 'Let it focus automatically', body: 'Press play. The profile moves from the full route into each detected climb or descent, and the same motion is kept in the export.' },
+          edit: { title: 'Fine-tune while paused', body: 'Drag a section’s end handles to resize it. Use + and click the profile to add one, or × to remove one.' },
+        },
       },
       watchExportsTitle: 'Watch actual exports',
       watchExportsBody: 'These examples were recorded with the TrailReplay export flow.',
       coversTitle: 'What TrailReplay covers today',
+      coversDescription: 'The six sidebar panels are the clearest map of the product. Work from left to right, or jump straight to the part of the replay you want to change.',
       recommendedFirstRunTitle: 'Recommended first run',
       firstRun: {
         importLabel: '1. Import',
@@ -183,29 +193,29 @@ export const help = {
         },
       },
       features: {
-        multiTrack: {
-          title: 'Multi-track journeys',
-          body: 'Load one or many GPX, KML or FIT files, reorder them, and build a single narrative from separate activities.',
+        routes: {
+          title: 'Routes',
+          body: 'Import GPX, KML, FIT, saved .replay projects, or a recipe with its route files. Rename and reorder tracks, or add comparison tracks to replay athletes together.',
         },
-        comparison: {
-          title: 'Comparison mode',
-          body: 'Drop several files at once and the ones recorded together — same time window, or failing that the same route — are grouped automatically, so everyone runs in one replay. With timestamps each marker sits where that person actually was at that moment; a file without them shows its route but no moving marker, since nothing can say where it was when. Use Strava’s “Export Original” (.fit) when a GPX has no times. Ungroup any track to put it back on the timeline.',
+        timeline: {
+          title: 'Timeline',
+          body: 'Set the total replay length, use recorded or uniform route timing, reorder activities, change individual durations, and add transport between route segments.',
+        },
+        style: {
+          title: 'Style',
+          body: 'Set route colors and labels, heart-rate and custom color zones, live stats, the elevation profile, and the moving marker’s icon, size, color, and glow.',
+        },
+        mapCamera: {
+          title: 'Map & Camera',
+          body: 'Choose a basemap, historical imagery, place labels, ski, slope or aspect overlays, 3D terrain, map filters, landmarks, and any of the four camera modes.',
         },
         media: {
-          title: 'Media storytelling',
-          body: 'Attach images to moments in the track, review their timing, and keep them visible in video exports.',
+          title: 'Media',
+          body: 'Add photos, silent video moments, and route annotations. Use embedded GPS or timestamps when available, or place and retime each item manually.',
         },
-        mapStyle: {
-          title: 'Map styling',
-          body: 'Switch between map styles, terrain overlays, labels, and cinematic follow camera presets.',
-        },
-        export: {
-          title: 'Video export',
-          body: 'Export 16:9, 1:1, or 9:16 videos with stats, elevation profile, and branded overlays.',
-        },
-        journey: {
-          title: 'Journey editing',
-          body: 'Add transport segments, control durations, and shape the replay so the story matches the real trip.',
+        generate: {
+          title: 'Generate',
+          body: 'Save an editable .replay project, export still images or 16:9, 1:1 and 9:16 videos, compose the layout, choose quality and frame rate, then download or share.',
         },
       },
     },

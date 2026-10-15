@@ -131,19 +131,29 @@ export const help = {
         videoDescription: 'Ves a un moment, orienta el pla, desa un fotograma clau i repeteix. TrailReplay enllaça els moviments durant la reproducció.',
       },
       elevation: {
-        title: 'Segueix el perfil d’elevació dinàmic',
-        description: 'El perfil es manté sincronitzat amb el marcador perquè el terreny també formi part dels controls del replay.',
-        tips: {
-          progress: { title: 'El progrés avança amb el replay', body: 'El terreny completat s’omple mentre avança el marcador.' },
-          seek: { title: 'Arrossega el perfil per navegar', body: 'Salta directament a una pujada, una baixada o qualsevol altre moment.' },
-          climbs: { title: 'Llegeix les pujades abans d’arribar-hi', body: 'Fes servir el terreny que ve per preparar el ritme i els canvis de càmera.' },
+        title: 'Fes servir el perfil d’elevació de dues maneres',
+        description: 'El perfil de la ruta completa es mostra per defecte. Les seccions dinàmiques són un mode d’enfocament opcional que dona més espai a les pujades i baixades més importants.',
+        default: {
+          badge: 'Per defecte',
+          title: 'Mira tota la ruta',
+          body: 'El perfil normal manté tota la història d’elevació en pantalla. Un marcador mòbil i el farciment completat indiquen exactament on és el replay dins la ruta.',
         },
-        imageAlt: 'Exportació de TrailReplay amb una ruta de muntanya i un perfil d’elevació sincronitzat',
-        caption: 'El perfil ressaltat mostra el terreny completat i l’elevació actual segueix el marcador del replay.',
+        dynamic: {
+          badge: 'Opcional',
+          title: 'Enfoca el terreny clau',
+          body: 'Les seccions dinàmiques detecten pujades i baixades sostingudes, les marquen al perfil i s’apropen suaument a cada secció quan la reproducció hi arriba.',
+        },
+        howToTitle: 'Activa i ajusta les seccions dinàmiques',
+        tips: {
+          enable: { title: 'Activa el mode d’enfocament', body: 'Obre Estil, activa Perfil d’elevació i després Seccions dinàmiques.' },
+          play: { title: 'Deixa que enfoqui automàticament', body: 'Prem reproduir. El perfil passa de la ruta completa a cada pujada o baixada detectada, i el mateix moviment apareix a l’exportació.' },
+          edit: { title: 'Ajusta’l amb la reproducció pausada', body: 'Arrossega els tiradors dels extrems per canviar-ne la mida. Fes servir + i clica el perfil per afegir una secció, o × per eliminar-la.' },
+        },
       },
       watchExportsTitle: 'Mira exportacions reals',
       watchExportsBody: 'Aquests exemples es van gravar amb el flux d’exportació de TrailReplay.',
       coversTitle: 'Què cobreix TrailReplay avui',
+      coversDescription: 'Els sis panells laterals són el mapa més clar del producte. Avança d’esquerra a dreta o salta directament a la part del replay que vulguis canviar.',
       recommendedFirstRunTitle: 'Primera prova recomanada',
       firstRun: {
         importLabel: '1. Importar',
@@ -183,29 +193,29 @@ export const help = {
         },
       },
       features: {
-        multiTrack: {
-          title: 'Viatges amb diverses rutes',
-          body: 'Carrega un o diversos fitxers GPX, KML o FIT, reordena’ls i construeix una sola narrativa a partir d’activitats separades.',
+        routes: {
+          title: 'Rutes',
+          body: 'Importa GPX, KML, FIT, projectes .replay desats o una recepta amb les seves rutes. Reanomena i reordena tracks, o afegeix comparacions per reproduir diversos atletes alhora.',
         },
-        comparison: {
-          title: 'Mode comparació',
-          body: 'Deixa diversos fitxers alhora i els gravats junts —a la mateixa hora o, si no, en el mateix recorregut— s’agrupen sols, perquè tothom corri en una sola reproducció. Amb marques de temps, cada marcador va on aquella persona era realment en aquell moment; un fitxer sense elles mostra el seu recorregut però sense marcador en moviment, perquè res no pot dir on era i quan. Fes servir “Export Original” (.fit) de Strava si un GPX no té hores. Desagrupa qualsevol pista per tornar-la a la línia de temps.',
+        timeline: {
+          title: 'Línia de temps',
+          body: 'Defineix la durada total, fes servir temps gravats o uniformes, reordena activitats, canvia durades individuals i afegeix transports entre rutes.',
+        },
+        style: {
+          title: 'Estil',
+          body: 'Configura colors i etiquetes, zones de pols o color, estadístiques en viu, el perfil d’elevació i la icona, mida, color i brillantor del marcador.',
+        },
+        mapCamera: {
+          title: 'Mapa i càmera',
+          body: 'Tria mapa base, imatges històriques, noms de lloc, capes d’esquí, pendent o orientació, terreny 3D, filtres, punts d’interès i un dels quatre modes de càmera.',
         },
         media: {
-          title: 'Narrativa amb mèdia',
-          body: 'Associa imatges a moments del track, revisa’n el temps i mantén-les visibles als vídeos exportats.',
+          title: 'Mèdia',
+          body: 'Afegeix fotos, moments de vídeo sense so i anotacions de ruta. Fes servir GPS o marques de temps quan n’hi hagi, o col·loca i ajusta cada element manualment.',
         },
-        mapStyle: {
-          title: 'Estil de mapa',
-          body: 'Canvia entre estils de mapa, capes de terreny, etiquetes i presets de càmera cinematogràfica.',
-        },
-        export: {
-          title: 'Exportació de vídeo',
-          body: 'Exporta vídeos 16:9, 1:1 o 9:16 amb estadístiques, perfil d’elevació i overlays de marca.',
-        },
-        journey: {
-          title: 'Edició del viatge',
-          body: 'Afegeix trams de transport, controla durades i dona forma al replay perquè la història coincideixi amb el viatge real.',
+        generate: {
+          title: 'Generar',
+          body: 'Desa un projecte .replay editable, exporta imatges o vídeos 16:9, 1:1 i 9:16, compon el disseny, tria qualitat i fotogrames per segon, i descarrega o comparteix.',
         },
       },
     },

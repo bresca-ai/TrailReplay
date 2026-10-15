@@ -131,19 +131,29 @@ export const help = {
         videoDescription: 'Springen Sie zu einem Moment, richten Sie die Aufnahme aus, speichern Sie einen Keyframe und wiederholen Sie den Vorgang. TrailReplay verbindet die Kamerabewegungen während der Wiedergabe.',
       },
       elevation: {
-        title: 'Folgen Sie dem dynamischen Höhenprofil',
-        description: 'Das Profil bleibt mit dem Marker synchronisiert, sodass das Gelände Teil der Wiedergabesteuerung wird.',
-        tips: {
-          progress: { title: 'Der Fortschritt folgt der Wiedergabe', body: 'Das zurückgelegte Gelände füllt sich, während der Marker voranschreitet.' },
-          seek: { title: 'Ziehen Sie im Profil zum Navigieren', body: 'Springen Sie direkt zu einem Anstieg, einer Abfahrt oder einem anderen Moment.' },
-          climbs: { title: 'Erkennen Sie Anstiege im Voraus', body: 'Nutzen Sie das vorausliegende Gelände, um Tempo und Kamerawechsel zu planen.' },
+        title: 'Nutzen Sie das Höhenprofil auf zwei Arten',
+        description: 'Das Profil der gesamten Route ist standardmäßig sichtbar. Dynamische Abschnitte sind ein optionaler Fokusmodus, der den wichtigsten Anstiegen und Abfahrten mehr Platz gibt.',
+        default: {
+          badge: 'Standard',
+          title: 'Sehen Sie die gesamte Route',
+          body: 'Das normale Profil zeigt den vollständigen Höhenverlauf. Ein bewegter Marker und die Füllung der zurückgelegten Strecke zeigen genau, wo sich die Wiedergabe auf der Route befindet.',
         },
-        imageAlt: 'TrailReplay-Export mit einer Bergroute und einem synchronisierten Höhenprofil',
-        caption: 'Das hervorgehobene Profil zeigt das absolvierte Gelände, während die aktuelle Höhe dem Wiedergabemarker folgt.',
+        dynamic: {
+          badge: 'Optional',
+          title: 'Fokussieren Sie wichtiges Gelände',
+          body: 'Dynamische Abschnitte erkennen längere Anstiege und Abfahrten, markieren sie im Profil und zoomen während der Wiedergabe sanft in jeden Abschnitt hinein.',
+        },
+        howToTitle: 'Dynamische Abschnitte aktivieren und anpassen',
+        tips: {
+          enable: { title: 'Aktivieren Sie den Fokusmodus', body: 'Öffnen Sie Stil, aktivieren Sie Höhenprofil und anschließend Dynamische Abschnitte.' },
+          play: { title: 'Automatisch fokussieren lassen', body: 'Starten Sie die Wiedergabe. Das Profil wechselt von der gesamten Route zu jedem erkannten Anstieg oder jeder Abfahrt, und die Bewegung bleibt im Export erhalten.' },
+          edit: { title: 'Bei Pause fein abstimmen', body: 'Ziehen Sie die Endgriffe, um einen Abschnitt zu verändern. Mit + und einem Klick ins Profil fügen Sie einen hinzu, mit × entfernen Sie ihn.' },
+        },
       },
       watchExportsTitle: 'Sieh Dir die tatsächlichen Exporte an',
       watchExportsBody: 'Diese Beispiele wurden mit dem TrailReplay-Exportfluss aufgezeichnet.',
       coversTitle: 'Was TrailReplay heute abdeckt',
+      coversDescription: 'Die sechs Seitenleisten sind die klarste Übersicht über das Produkt. Arbeiten Sie von links nach rechts oder springen Sie direkt zu dem Teil der Wiedergabe, den Sie ändern möchten.',
       recommendedFirstRunTitle: 'Empfohlener erster Lauf',
       firstRun: {
         importLabel: '1. Importieren',
@@ -183,29 +193,29 @@ export const help = {
         },
       },
       features: {
-        multiTrack: {
-          title: 'Mehrspurige Fahrten',
-          body: 'Lade eine oder mehrere GPX-, KML- oder FIT-Dateien, ordne sie neu an und erstelle eine einzelne Erzählung aus separaten Aktivitäten.',
+        routes: {
+          title: 'Routen',
+          body: 'Importieren Sie GPX, KML, FIT, gespeicherte .replay-Projekte oder ein Rezept mit seinen Routendateien. Benennen und sortieren Sie Tracks oder fügen Sie Vergleichstracks für eine gemeinsame Wiedergabe hinzu.',
         },
-        comparison: {
-          title: 'Vergleichsmodus',
-          body: 'Lege mehrere Dateien auf einmal ab: gemeinsam aufgezeichnete — gleiches Zeitfenster oder sonst dieselbe Strecke — werden automatisch gruppiert, sodass alle in einer Wiedergabe laufen. Mit Zeitstempeln steht jeder Marker dort, wo diese Person in diesem Moment wirklich war; eine Datei ohne sie zeigt ihre Strecke, aber keinen bewegten Marker, da nichts sagen kann, wo sie wann war. Nutze Stravas „Original exportieren“ (.fit), wenn einem GPX die Zeiten fehlen. Hebe die Gruppierung eines Tracks auf, um ihn zurück in die Zeitleiste zu legen.',
+        timeline: {
+          title: 'Zeitleiste',
+          body: 'Legen Sie die Gesamtdauer fest, nutzen Sie aufgezeichnetes oder gleichmäßiges Timing, sortieren Sie Aktivitäten, ändern Sie einzelne Dauern und fügen Sie Transport zwischen Routen hinzu.',
+        },
+        style: {
+          title: 'Stil',
+          body: 'Bestimmen Sie Routenfarben und Beschriftungen, Herzfrequenz- oder Farbzonen, Live-Statistiken, das Höhenprofil sowie Symbol, Größe, Farbe und Leuchten des Markers.',
+        },
+        mapCamera: {
+          title: 'Karte und Kamera',
+          body: 'Wählen Sie Grundkarte, historische Bilder, Ortsnamen, Ski-, Hang- oder Ausrichtungsebenen, 3D-Gelände, Filter, Wegpunkte und einen der vier Kameramodi.',
         },
         media: {
-          title: 'Medien-Storytelling',
-          body: 'Hänge Bilder an Momente im Track an, überprüfe deren Timing und sorge dafür, dass sie in Videoexporten sichtbar bleiben.',
+          title: 'Medien',
+          body: 'Fügen Sie Fotos, stumme Videomomente und Routenanmerkungen hinzu. Nutzen Sie vorhandene GPS- oder Zeitdaten oder platzieren und takten Sie jedes Element manuell.',
         },
-        mapStyle: {
-          title: 'Kartenstil',
-          body: 'Wechsele zwischen Kartenstilen, Geländeüberlagerungen, Beschriftungen und filmischen Kameravoreinstellungen.',
-        },
-        export: {
-          title: 'Videoexport',
-          body: 'Exportiere Videos im Format 16:9, 1:1 oder 9:16 mit Statistiken, Höhenprofil und Marken-Overlays.',
-        },
-        journey: {
-          title: 'Reisebearbeitung',
-          body: 'Füge Transportsegmente hinzu, steuere die Dauer und gestalte die Wiedergabe so, dass die Geschichte mit der tatsächlichen Reise übereinstimmt.',
+        generate: {
+          title: 'Generieren',
+          body: 'Speichern Sie ein bearbeitbares .replay-Projekt, exportieren Sie Bilder oder Videos in 16:9, 1:1 und 9:16, gestalten Sie das Layout, wählen Sie Qualität und Bildrate und laden oder teilen Sie das Ergebnis.',
         },
       },
     },

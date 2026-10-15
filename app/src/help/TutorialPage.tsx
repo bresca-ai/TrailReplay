@@ -7,21 +7,21 @@ import {
   Eye,
   Film,
   ImageIcon,
-  Layers3,
   LocateFixed,
+  MapPin,
   Mountain,
   MousePointer2,
+  Palette,
   Play,
   Route,
   TimerReset,
-  TrendingUp,
 } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { HelpLayout } from './HelpLayout';
 import { getQuickStartSteps, getSampleTracks, getTutorialFeatures, getTutorialVideos } from './helpContent';
 import { trackEvent } from '@/utils/analytics';
 
-const featureIcons = [Route, Layers3, ImageIcon, Mountain, Film, TimerReset];
+const featureIcons = [MapPin, TimerReset, Palette, Mountain, ImageIcon, Film];
 
 export function TutorialPage() {
   const { t } = useI18n();
@@ -36,9 +36,9 @@ export function TutorialPage() {
     { key: 'cinematic', icon: Film, featured: true },
   ] as const;
   const elevationTips = [
-    { key: 'progress', icon: Play },
-    { key: 'seek', icon: MousePointer2 },
-    { key: 'climbs', icon: TrendingUp },
+    { key: 'enable', icon: Eye },
+    { key: 'play', icon: Play },
+    { key: 'edit', icon: MousePointer2 },
   ] as const;
 
   return (
@@ -212,12 +212,71 @@ export function TutorialPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-          <ol className="space-y-3">
-            {elevationTips.map(({ key, icon: Icon }) => (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <article className="rounded-[1.25rem] border border-[var(--evergreen)]/12 bg-[var(--canvas)] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold">{t('help.tutorial.elevation.default.title')}</h3>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--evergreen-60)]">
+                {t('help.tutorial.elevation.default.badge')}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-[var(--evergreen-60)]">{t('help.tutorial.elevation.default.body')}</p>
+            <div className="mt-5 overflow-hidden rounded-xl border border-[var(--evergreen)]/10 bg-[#17251d] p-4" aria-hidden="true">
+              <svg viewBox="0 0 600 150" className="h-auto w-full" role="img">
+                <defs>
+                  <linearGradient id="whole-profile-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f07b55" stopOpacity="0.55" />
+                    <stop offset="100%" stopColor="#f07b55" stopOpacity="0.04" />
+                  </linearGradient>
+                </defs>
+                <path d="M0 133 L0 116 L45 110 L85 92 L120 101 L160 58 L198 36 L233 72 L273 87 L312 42 L350 65 L388 112 L430 102 L470 68 L510 82 L552 47 L600 75 L600 133 Z" fill="url(#whole-profile-fill)" />
+                <path d="M0 116 L45 110 L85 92 L120 101 L160 58 L198 36 L233 72 L273 87 L312 42 L350 65 L388 112 L430 102 L470 68 L510 82 L552 47 L600 75" fill="none" stroke="#f3b133" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="255" y1="20" x2="255" y2="133" stroke="#ffffff" strokeWidth="2" strokeDasharray="5 6" opacity="0.8" />
+                <circle cx="255" cy="82" r="6" fill="#ffffff" stroke="#f07b55" strokeWidth="3" />
+                <line x1="0" y1="133" x2="600" y2="133" stroke="#ffffff" opacity="0.22" />
+              </svg>
+            </div>
+          </article>
+
+          <article className="rounded-[1.25rem] border border-[var(--trail-orange)]/45 bg-[var(--trail-orange-15)] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold">{t('help.tutorial.elevation.dynamic.title')}</h3>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--trail-orange)]">
+                {t('help.tutorial.elevation.dynamic.badge')}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-[var(--evergreen-80)]">{t('help.tutorial.elevation.dynamic.body')}</p>
+            <div className="mt-5 overflow-hidden rounded-xl border border-[var(--evergreen)]/10 bg-[#17251d] p-4" aria-hidden="true">
+              <svg viewBox="0 0 600 150" className="h-auto w-full" role="img">
+                <defs>
+                  <linearGradient id="focus-profile-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f07b55" stopOpacity="0.62" />
+                    <stop offset="100%" stopColor="#f07b55" stopOpacity="0.04" />
+                  </linearGradient>
+                </defs>
+                <path d="M0 133 L0 122 L58 117 L112 104 L170 84 L228 56 L282 29 L332 47 L382 70 L438 101 L498 115 L550 108 L600 98 L600 133 Z" fill="url(#focus-profile-fill)" />
+                <path d="M0 122 L58 117 L112 104 L170 84 L228 56 L282 29 L332 47 L382 70 L438 101 L498 115 L550 108 L600 98" fill="none" stroke="#f3b133" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="115" y1="13" x2="485" y2="13" stroke="#f07b55" strokeWidth="5" strokeLinecap="round" />
+                <circle cx="115" cy="13" r="8" fill="#f07b55" stroke="#ffffff" strokeWidth="3" />
+                <circle cx="485" cy="13" r="8" fill="#f07b55" stroke="#ffffff" strokeWidth="3" />
+                <line x1="304" y1="23" x2="304" y2="133" stroke="#ffffff" strokeWidth="2" strokeDasharray="5 6" opacity="0.8" />
+                <circle cx="304" cy="37" r="6" fill="#ffffff" stroke="#f07b55" strokeWidth="3" />
+                <line x1="0" y1="133" x2="600" y2="133" stroke="#ffffff" opacity="0.22" />
+              </svg>
+            </div>
+          </article>
+        </div>
+
+        <div className="mt-6">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--evergreen-60)]">
+            {t('help.tutorial.elevation.howToTitle')}
+          </p>
+          <ol className="grid gap-3 lg:grid-cols-3">
+            {elevationTips.map(({ key, icon: Icon }, index) => (
               <li key={key} className="flex gap-4 rounded-[1.15rem] border border-[var(--evergreen)]/10 bg-[var(--canvas)] p-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]">
+                <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--evergreen)] text-[var(--canvas)]">
                   <Icon className="h-4 w-4" aria-hidden="true" />
+                  <span className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-[var(--trail-orange)] text-[9px] font-bold text-white">{index + 1}</span>
                 </div>
                 <div>
                   <h3 className="text-sm font-bold">{t(`help.tutorial.elevation.tips.${key}.title`)}</h3>
@@ -226,19 +285,6 @@ export function TutorialPage() {
               </li>
             ))}
           </ol>
-
-          <figure className="overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/12 bg-[#17251d]">
-            <img
-              src="/media/images/seo/path-export-with-stats-poster.jpg"
-              alt={t('help.tutorial.elevation.imageAlt')}
-              className="aspect-[4/3] w-full object-contain object-center"
-              loading="lazy"
-              decoding="async"
-            />
-            <figcaption className="border-t border-white/10 px-4 py-3 text-xs leading-5 text-white/75">
-              {t('help.tutorial.elevation.caption')}
-            </figcaption>
-          </figure>
         </div>
       </section>
 
@@ -273,6 +319,7 @@ export function TutorialPage() {
 
       <section className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/75 p-6 shadow-sm">
         <h2 className="text-xl font-bold">{t('help.tutorial.coversTitle')}</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--evergreen-60)]">{t('help.tutorial.coversDescription')}</p>
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {tutorialFeatures.map((feature, index) => {
             const Icon = featureIcons[index];

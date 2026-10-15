@@ -131,19 +131,29 @@ export const help = {
       videoDescription: 'Placez-vous à un instant, cadrez le plan, enregistrez une image clé et recommencez. TrailReplay lie les mouvements pendant la lecture.',
     },
     elevation: {
-      title: 'Suivez le profil d\'élévation dynamique',
-      description: 'Le profil reste synchronisé avec le marqueur afin que le terrain fasse aussi partie des commandes du replay.',
-      tips: {
-        progress: { title: 'La progression suit le replay', body: 'Le terrain parcouru se remplit à mesure que le marqueur avance.' },
-        seek: { title: 'Faites glisser le profil pour naviguer', body: 'Accédez directement à une montée, une descente ou tout autre instant.' },
-        climbs: { title: 'Repérez les montées à l\'avance', body: 'Utilisez le terrain à venir pour préparer le rythme et les changements de caméra.' },
+      title: 'Utilisez le profil d\'altitude de deux façons',
+      description: 'Le profil du parcours complet est visible par défaut. Les sections dynamiques sont un mode de cadrage optionnel qui donne plus de place aux montées et descentes les plus importantes.',
+      default: {
+        badge: 'Par défaut',
+        title: 'Voyez tout le parcours',
+        body: 'Le profil standard garde toute l\'histoire du relief à l\'écran. Un marqueur mobile et le remplissage parcouru indiquent précisément la position du replay sur le parcours.',
       },
-      imageAlt: 'Export TrailReplay affichant un parcours de montagne et un profil d\'élévation synchronisé',
-      caption: 'Le profil surligné montre le terrain parcouru, tandis que l\'élévation actuelle suit le marqueur du replay.',
+      dynamic: {
+        badge: 'Optionnel',
+        title: 'Cadrez les reliefs clés',
+        body: 'Les sections dynamiques détectent les montées et descentes soutenues, les marquent sur le profil, puis zooment progressivement sur chacune lorsque la lecture les atteint.',
+      },
+      howToTitle: 'Activez et ajustez les sections dynamiques',
+      tips: {
+        enable: { title: 'Activez le mode de cadrage', body: 'Ouvrez Style, activez Profil d\'altitude, puis Sections dynamiques.' },
+        play: { title: 'Laissez-le cadrer automatiquement', body: 'Lancez la lecture. Le profil passe du parcours complet à chaque montée ou descente détectée, et ce mouvement est conservé dans l\'export.' },
+        edit: { title: 'Ajustez pendant la pause', body: 'Faites glisser les poignées d\'extrémité pour redimensionner une section. Utilisez + puis cliquez sur le profil pour en ajouter une, ou × pour la supprimer.' },
+      },
     },
     watchExportsTitle: 'Exemples de vidéos exportées',
     watchExportsBody: 'Ces vidéos ont été enregistrées directement avec l\'outil d\'exportation de TrailReplay.',
     coversTitle: 'Ce que TrailReplay permet aujourd\'hui',
+    coversDescription: 'Les six panneaux latéraux offrent la carte la plus claire du produit. Avancez de gauche à droite ou allez directement à la partie du replay que vous souhaitez modifier.',
     recommendedFirstRunTitle: 'Parcours de découverte recommandé',
     firstRun: {
       importLabel: '1. Importer',
@@ -183,29 +193,29 @@ export const help = {
       },
     },
     features: {
-      multiTrack: {
-        title: 'Parcours multiples',
-        body: 'Chargez un ou plusieurs fichiers GPX, KML ou FIT, réorganisez-les et créez un récit unique à partir de plusieurs activités.',
+      routes: {
+        title: 'Parcours',
+        body: 'Importez des fichiers GPX, KML, FIT, des projets .replay enregistrés ou une recette avec ses parcours. Renommez et réorganisez les traces, ou ajoutez des comparaisons pour rejouer plusieurs athlètes ensemble.',
       },
-      comparison: {
-        title: 'Mode comparaison',
-        body: 'Déposez plusieurs fichiers d’un coup : ceux enregistrés ensemble — même créneau horaire, ou à défaut même itinéraire — sont regroupés automatiquement, pour que tout le monde coure dans une seule lecture. Avec des horodatages, chaque marqueur se place là où la personne se trouvait réellement à cet instant ; un fichier sans eux affiche son itinéraire mais aucun marqueur mobile, puisque rien ne peut dire où il était et quand. Utilisez « Export original » (.fit) de Strava si un GPX n’a pas d’heures. Dissociez une trace pour la remettre dans la chronologie.',
+      timeline: {
+        title: 'Chronologie',
+        body: 'Réglez la durée totale, choisissez le timing enregistré ou uniforme, réorganisez les activités, modifiez leur durée et ajoutez des liaisons entre les parcours.',
+      },
+      style: {
+        title: 'Style',
+        body: 'Réglez couleurs et libellés, zones cardiaques ou personnalisées, statistiques en direct, profil d\'altitude, ainsi que l\'icône, la taille, la couleur et le halo du marqueur.',
+      },
+      mapCamera: {
+        title: 'Carte et caméra',
+        body: 'Choisissez un fond de carte, l\'imagerie historique, les noms de lieux, les couches ski, pente ou orientation, le relief 3D, les filtres, les repères et l\'un des quatre modes de caméra.',
       },
       media: {
-        title: 'Narration par les médias',
-        body: 'Associez des photos à des moments précis du parcours et conservez-les dans les vidéos exportées.',
+        title: 'Médias',
+        body: 'Ajoutez des photos, des séquences vidéo muettes et des annotations de parcours. Utilisez le GPS ou l\'horodatage disponibles, ou placez et recalez chaque élément manuellement.',
       },
-      mapStyle: {
-        title: 'Personnalisation de la carte',
-        body: 'Choisissez différents styles de carte, couches de terrain, étiquettes et modes de caméra.',
-      },
-      export: {
-        title: 'Exportation vidéo',
-        body: 'Exportez des vidéos aux formats 16:9, 1:1 ou 9:16 avec statistiques, profil d\'altitude et éléments visuels intégrés.',
-      },
-      journey: {
-        title: 'Édition de l\'itinéraire',
-        body: 'Ajoutez des segments de liaison, ajustez les durées et adaptez l\'animation à votre aventure réelle.',
+      generate: {
+        title: 'Générer',
+        body: 'Enregistrez un projet .replay modifiable, exportez des images ou des vidéos 16:9, 1:1 et 9:16, composez la mise en page, choisissez qualité et fréquence, puis téléchargez ou partagez.',
       },
     },
   },
