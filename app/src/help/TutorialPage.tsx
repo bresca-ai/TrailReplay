@@ -1,4 +1,21 @@
-import { Bot, BookOpen, Download, Film, ImageIcon, Layers3, Mountain, Route, TimerReset } from 'lucide-react';
+import {
+  Bot,
+  BookOpen,
+  Camera,
+  ChartNoAxesCombined,
+  Download,
+  Eye,
+  Film,
+  ImageIcon,
+  Layers3,
+  LocateFixed,
+  Mountain,
+  MousePointer2,
+  Play,
+  Route,
+  TimerReset,
+  TrendingUp,
+} from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { HelpLayout } from './HelpLayout';
 import { getQuickStartSteps, getSampleTracks, getTutorialFeatures, getTutorialVideos } from './helpContent';
@@ -12,6 +29,17 @@ export function TutorialPage() {
   const sampleTracks = getSampleTracks(t);
   const tutorialFeatures = getTutorialFeatures(t);
   const tutorialVideos = getTutorialVideos(t);
+  const cameraModes = [
+    { key: 'overview', icon: Eye, featured: false },
+    { key: 'follow', icon: LocateFixed, featured: false },
+    { key: 'followBehind', icon: Route, featured: false },
+    { key: 'cinematic', icon: Film, featured: true },
+  ] as const;
+  const elevationTips = [
+    { key: 'progress', icon: Play },
+    { key: 'seek', icon: MousePointer2 },
+    { key: 'climbs', icon: TrendingUp },
+  ] as const;
 
   return (
     <HelpLayout
@@ -33,7 +61,7 @@ export function TutorialPage() {
         },
       ]}
     >
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid items-start gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <article className="rounded-[1.5rem] border border-[var(--evergreen)]/12 bg-white/80 p-6 shadow-sm">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--trail-orange-15)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--trail-orange)]">
             <BookOpen className="h-4 w-4" />
@@ -128,6 +156,92 @@ export function TutorialPage() {
         </article>
       </section>
 
+      <section className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-5 shadow-sm sm:p-6" data-testid="camera-modes-tutorial">
+        <div className="mb-6 flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]">
+            <Camera className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{t('help.tutorial.camera.title')}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--evergreen-60)]">{t('help.tutorial.camera.description')}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {cameraModes.map(({ key, icon: Icon, featured }) => (
+              <article
+                key={key}
+                className={`rounded-[1.15rem] border p-4 ${featured
+                  ? 'border-[var(--trail-orange)]/55 bg-[var(--trail-orange-15)]'
+                  : 'border-[var(--evergreen)]/10 bg-[var(--canvas)]'}`}
+              >
+                <Icon className={`h-5 w-5 ${featured ? 'text-[var(--trail-orange)]' : 'text-[var(--evergreen)]'}`} />
+                <h3 className="mt-3 text-sm font-bold">{t(`help.tutorial.camera.modes.${key}.title`)}</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--evergreen-60)]">{t(`help.tutorial.camera.modes.${key}.body`)}</p>
+              </article>
+            ))}
+          </div>
+
+          <figure className="overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/12 bg-[var(--canvas)]">
+            <video
+              controls
+              preload="metadata"
+              poster="/media/images/seo/cinematic-camera-tutorial-poster.jpg"
+              className="aspect-video w-full bg-[#17251d] object-cover"
+              aria-label={t('help.tutorial.camera.videoLabel')}
+            >
+              <source src="/media/video/cinematic-camera-tutorial.mp4" type="video/mp4" />
+            </video>
+            <figcaption className="p-4 sm:p-5">
+              <h3 className="text-base font-semibold">{t('help.tutorial.camera.videoTitle')}</h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--evergreen-60)]">{t('help.tutorial.camera.videoDescription')}</p>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-5 shadow-sm sm:p-6" data-testid="elevation-profile-tutorial">
+        <div className="mb-6 flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]">
+            <ChartNoAxesCombined className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{t('help.tutorial.elevation.title')}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--evergreen-60)]">{t('help.tutorial.elevation.description')}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+          <ol className="space-y-3">
+            {elevationTips.map(({ key, icon: Icon }) => (
+              <li key={key} className="flex gap-4 rounded-[1.15rem] border border-[var(--evergreen)]/10 bg-[var(--canvas)] p-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">{t(`help.tutorial.elevation.tips.${key}.title`)}</h3>
+                  <p className="mt-1 text-xs leading-5 text-[var(--evergreen-60)]">{t(`help.tutorial.elevation.tips.${key}.body`)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <figure className="overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/12 bg-[#17251d]">
+            <img
+              src="/media/images/seo/path-export-with-stats-poster.jpg"
+              alt={t('help.tutorial.elevation.imageAlt')}
+              className="aspect-[4/3] w-full object-contain object-center"
+              loading="lazy"
+              decoding="async"
+            />
+            <figcaption className="border-t border-white/10 px-4 py-3 text-xs leading-5 text-white/75">
+              {t('help.tutorial.elevation.caption')}
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/75 p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]">
@@ -138,16 +252,16 @@ export function TutorialPage() {
             <p className="text-sm text-[var(--evergreen-60)]">{t('help.tutorial.watchExportsBody')}</p>
           </div>
         </div>
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {tutorialVideos.map((video) => (
-            <figure key={video.src} className="rounded-[1.25rem] border border-[var(--evergreen)]/10 bg-[var(--canvas)] p-4">
+            <figure key={video.src} className="flex h-full flex-col rounded-[1.25rem] border border-[var(--evergreen)]/10 bg-[var(--canvas)] p-4">
               <video controls preload="none" poster={video.poster} className="aspect-video w-full rounded-xl border border-[var(--evergreen)]/15 bg-black/80">
                 <source src={video.src} type="video/mp4" />
               </video>
-              <figcaption className="mt-4">
+              <figcaption className="mt-4 flex flex-1 flex-col">
                 <h3 className="text-base font-semibold">{video.title}</h3>
                 <p className="mt-1 text-sm leading-6 text-[var(--evergreen-60)]">{video.description}</p>
-                <a href={video.src} download className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--trail-orange)] hover:underline">
+                <a href={video.src} download className="mt-auto inline-flex items-center gap-2 pt-3 text-sm font-semibold text-[var(--trail-orange)] hover:underline">
                   <Download className="h-4 w-4" />
                   {video.downloadLabel}
                 </a>
