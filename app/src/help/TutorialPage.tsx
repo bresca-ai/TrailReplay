@@ -186,16 +186,27 @@ export function TutorialPage() {
           <figure className="overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/12 bg-[var(--canvas)]">
             <video
               controls
+              playsInline
               preload="metadata"
               poster="/media/images/seo/cinematic-camera-tutorial-poster.jpg"
               className="aspect-video w-full bg-[#17251d] object-cover"
               aria-label={t('help.tutorial.camera.videoLabel')}
             >
+              <source src="/media/video/cinematic-camera-tutorial.webm" type="video/webm" />
               <source src="/media/video/cinematic-camera-tutorial.mp4" type="video/mp4" />
             </video>
             <figcaption className="p-4 sm:p-5">
               <h3 className="text-base font-semibold">{t('help.tutorial.camera.videoTitle')}</h3>
               <p className="mt-1 text-sm leading-6 text-[var(--evergreen-60)]">{t('help.tutorial.camera.videoDescription')}</p>
+              <a
+                href="/media/video/cinematic-camera-tutorial.mp4"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--trail-orange)] hover:underline"
+              >
+                <Play className="h-4 w-4" aria-hidden="true" />
+                {t('help.tutorial.camera.openVideo')}
+              </a>
             </figcaption>
           </figure>
         </div>

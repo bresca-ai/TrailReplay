@@ -129,6 +129,7 @@ export const help = {
         videoLabel: 'Vídeo tutorial de la càmera cinematogràfica',
         videoTitle: 'Dirigeix un replay amb la càmera Cinemàtica',
         videoDescription: 'Ves a un moment, orienta el pla, desa un fotograma clau i repeteix. TrailReplay enllaça els moviments durant la reproducció.',
+        openVideo: 'Obre el vídeo directament',
       },
       elevation: {
         title: 'Fes servir el perfil d’elevació de dues maneres',

@@ -129,6 +129,7 @@ export const help = {
         videoLabel: 'Videoanleitung für die Cinematic-Kamera',
         videoTitle: 'Inszenieren Sie eine Wiedergabe mit der Cinematic-Kamera',
         videoDescription: 'Springen Sie zu einem Moment, richten Sie die Aufnahme aus, speichern Sie einen Keyframe und wiederholen Sie den Vorgang. TrailReplay verbindet die Kamerabewegungen während der Wiedergabe.',
+        openVideo: 'Video direkt öffnen',
       },
       elevation: {
         title: 'Nutzen Sie das Höhenprofil auf zwei Arten',

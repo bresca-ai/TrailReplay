@@ -129,6 +129,7 @@ export const help = {
         videoLabel: 'Cinematic camera tutorial video',
         videoTitle: 'Direct a replay with Cinematic camera',
         videoDescription: 'Scrub to a moment, aim the shot, save a keyframe, and repeat. TrailReplay blends the camera moves during playback.',
+        openVideo: 'Open video directly',
       },
       elevation: {
         title: 'Use the elevation profile in two ways',

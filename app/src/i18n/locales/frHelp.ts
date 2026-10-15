@@ -129,6 +129,7 @@ export const help = {
       videoLabel: 'Tutoriel vidéo de la caméra cinématique',
       videoTitle: 'Dirigez un replay avec la caméra Cinématique',
       videoDescription: 'Placez-vous à un instant, cadrez le plan, enregistrez une image clé et recommencez. TrailReplay lie les mouvements pendant la lecture.',
+      openVideo: 'Ouvrir directement la vidéo',
     },
     elevation: {
       title: 'Utilisez le profil d\'altitude de deux façons',
