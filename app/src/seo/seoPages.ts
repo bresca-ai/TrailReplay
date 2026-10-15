@@ -152,11 +152,12 @@ export const SEO_LANDING_PAGES: Record<SeoLandingSlug, SeoLandingPageConfig> = {
     detailTitle: 'Exporting from Garmin Connect',
     detailParagraphs: [
       'Use Garmin Connect in a desktop browser, open the activity detail, select the gear icon, and choose Export to GPX. The exact menu wording can vary as Garmin updates Connect.',
-      'GPX is ideal for route geometry and broadly compatible timestamps. If you only have a FIT file, export or convert it to GPX before importing it into TrailReplay.',
+      'GPX is ideal for route geometry and broadly compatible timestamps, and TrailReplay also imports FIT files directly. If you want the watch’s original recording and its extra sensor data, use Export Original and import the FIT file.',
     ],
     faq: [
       { question: 'Does this work with Garmin watches and bike computers?', answer: 'Yes. If the recorded activity appears in Garmin Connect and can be exported as GPX, TrailReplay can import it.' },
       { question: 'Do I need to install software?', answer: 'No. TrailReplay runs in a modern desktop browser.' },
+      { question: 'Can I import a FIT file from Garmin?', answer: 'Yes. TrailReplay imports FIT files directly. Choose Export Original in Garmin Connect when you want the watch’s original recording and sensor data.' },
       { question: 'Can I add photos to a Garmin route replay?', answer: 'Yes. Photos can be positioned using GPS or timestamps when metadata is available, or placed manually.' },
     ],
   },

@@ -50,21 +50,24 @@ describe('createStudioDeliveryJob', () => {
       },
     }, fetchImplementation)).resolves.toEqual(job);
 
-    expect(fetchImplementation).toHaveBeenCalledWith('/api/exports', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({
-        email: 'Alex@Example.com',
-        marketingConsent: true,
-        locale: 'en',
-        settings: {
-          quality: 'high',
-          qualityMode: 'studio',
-          aspectRatio: '16:9',
-          fps: 30,
-          durationMs: 60_000,
-        },
-      }),
-    }));
+    expect(fetchImplementation).toHaveBeenCalledWith('/api/exports', expect.objectContaining({ method: 'POST' }));
+    const requestBody = JSON.parse(fetchImplementation.mock.calls[0][1].body as string);
+    expect(requestBody).toMatchObject({
+      email: 'Alex@Example.com',
+      marketingConsent: true,
+      locale: 'en',
+      settings: {
+        quality: 'high',
+        qualityMode: 'studio',
+        aspectRatio: '16:9',
+        fps: 30,
+        durationMs: 60_000,
+      },
+      attribution: {
+        firstTouch: expect.any(Object),
+        lastTouch: expect.any(Object),
+      },
+    });
   });
 
   it('rejects malformed success payloads', async () => {
