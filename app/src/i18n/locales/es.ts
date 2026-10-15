@@ -775,6 +775,7 @@ export const es = {
     rendering: 'Generando…',
     previewDownload: 'Vista previa y descarga',
     posterPreview: 'Vista previa del póster',
+    dragMapHint: 'arrastra la ruta para mover el mapa · esquina para ampliar',
     dragHint: 'arrastra la ruta o las estadísticas · esquina para redimensionar',
     back: 'Atrás',
     downloadPng: 'Descargar PNG',

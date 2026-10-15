@@ -775,6 +775,7 @@ export const fr = {
     rendering: 'Génération…',
     previewDownload: 'Aperçu et téléchargement',
     posterPreview: 'Aperçu de l\'affiche',
+    dragMapHint: 'glisser le tracé pour déplacer la carte · coin pour zoomer',
     dragHint: 'glisser le tracé ou les stats · coin pour redimensionner',
     back: 'Retour',
     downloadPng: 'Télécharger PNG',

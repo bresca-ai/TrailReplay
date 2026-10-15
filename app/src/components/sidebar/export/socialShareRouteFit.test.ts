@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   downsampleRoute,
   fitRouteToBox,
+  getMapPanTargetPoint,
+  getMapZoomForScale,
   getRouteBboxNorm,
-  transformCanvasRoute,
 } from './socialShareRouteFit';
 
 describe('fitRouteToBox', () => {
@@ -57,23 +58,22 @@ describe('downsampleRoute', () => {
   });
 });
 
-describe('transformCanvasRoute', () => {
-  const points = [{ x: 20, y: 40 }, { x: 80, y: 60 }];
-
-  it('moves a map-projected route using normalized poster offsets', () => {
-    expect(transformCanvasRoute(points, 200, 100, { offsetX: 0.1, offsetY: -0.2, scale: 1 }))
-      .toEqual([{ x: 40, y: 20 }, { x: 100, y: 40 }]);
-  });
-
-  it('scales a map-projected route around its bounding-box center', () => {
-    expect(transformCanvasRoute(points, 200, 100, { offsetX: 0, offsetY: 0, scale: 2 }))
-      .toEqual([{ x: -10, y: 30 }, { x: 110, y: 70 }]);
-  });
-});
-
 describe('getRouteBboxNorm', () => {
   it('returns normalized bounds with padding for preview controls', () => {
     expect(getRouteBboxNorm([{ x: 20, y: 40 }, { x: 80, y: 60 }], 200, 100, 10))
       .toEqual({ x: 0.05, y: 0.3, w: 0.4, h: 0.4 });
+  });
+});
+
+describe('map-first route gestures', () => {
+  it('moves the map center opposite the drag so the route follows the pointer', () => {
+    expect(getMapPanTargetPoint({ x: 300, y: 200 }, 0.1, -0.2, 500, 400))
+      .toEqual({ x: 250, y: 280 });
+  });
+
+  it('converts route scale into map zoom and respects zoom limits', () => {
+    expect(getMapZoomForScale(10, 2, 0, 20)).toBe(11);
+    expect(getMapZoomForScale(10, 0.5, 0, 20)).toBe(9);
+    expect(getMapZoomForScale(19.5, 4, 0, 20)).toBe(20);
   });
 });

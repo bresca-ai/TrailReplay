@@ -775,6 +775,7 @@ export const en = {
     rendering: 'Rendering…',
     previewDownload: 'Preview & Download',
     posterPreview: 'Poster Preview',
+    dragMapHint: 'drag trail to pan map · corner to zoom',
     dragHint: 'drag trail or stats to reposition · corner to resize',
     back: 'Back',
     downloadPng: 'Download PNG',

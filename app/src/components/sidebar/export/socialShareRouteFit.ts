@@ -4,31 +4,26 @@ export interface FitBox { x: number; y: number; w: number; h: number; }
 
 export interface RouteTransformOpts { offsetX: number; offsetY: number; scale: number; }
 
-export function transformCanvasRoute(
-  points: ReadonlyArray<CanvasPoint>,
-  canvasWidth: number,
-  canvasHeight: number,
-  transform: RouteTransformOpts,
-): CanvasPoint[] {
-  if (points.length === 0) return [];
+export function getMapPanTargetPoint(
+  center: CanvasPoint,
+  deltaX: number,
+  deltaY: number,
+  cropWidth: number,
+  cropHeight: number,
+): CanvasPoint {
+  return {
+    x: center.x - deltaX * cropWidth,
+    y: center.y - deltaY * cropHeight,
+  };
+}
 
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const point of points) {
-    minX = Math.min(minX, point.x);
-    maxX = Math.max(maxX, point.x);
-    minY = Math.min(minY, point.y);
-    maxY = Math.max(maxY, point.y);
-  }
-
-  const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
-  const offsetX = transform.offsetX * canvasWidth;
-  const offsetY = transform.offsetY * canvasHeight;
-
-  return points.map((point) => ({
-    x: centerX + (point.x - centerX) * transform.scale + offsetX,
-    y: centerY + (point.y - centerY) * transform.scale + offsetY,
-  }));
+export function getMapZoomForScale(
+  currentZoom: number,
+  scaleFactor: number,
+  minZoom: number,
+  maxZoom: number,
+): number {
+  return Math.max(minZoom, Math.min(maxZoom, currentZoom + Math.log2(scaleFactor)));
 }
 
 export function getRouteBboxNorm(

@@ -12,8 +12,9 @@ import type { CanvasPoint, FitBox } from './socialShareRouteFit';
 import {
   downsampleRoute,
   fitRouteToBox,
+  getMapPanTargetPoint,
+  getMapZoomForScale,
   getRouteBboxNorm,
-  transformCanvasRoute,
 } from './socialShareRouteFit';
 
 const BRAND_ORANGE = '#C1652F';
@@ -21,6 +22,10 @@ const BRAND_ORANGE = '#C1652F';
 export interface RouteBboxNorm {
   x: number; y: number; w: number; h: number;
 }
+
+export type MapRouteGesture =
+  | { type: 'move'; deltaX: number; deltaY: number }
+  | { type: 'resize'; scaleFactor: number; anchorX: number; anchorY: number };
 
 export function useSocialShareExport() {
   const settings = useAppStore((s) => s.socialShareSettings);
@@ -104,12 +109,7 @@ export function useSocialShareExport() {
             });
           }
         }
-        projectedRouteForMap = transformCanvasRoute(
-          pts,
-          posterW,
-          posterH,
-          settings.routeTransform,
-        );
+        projectedRouteForMap = pts;
       }
     } else {
       const pts: Array<{ lat: number; lon: number }> = [];
@@ -227,6 +227,34 @@ export function useSocialShareExport() {
     }
   }, [buildInput, computeRouteBbox, settings.aspectRatio, settings.template, tracks.length]);
 
+  const transformMapViewport = useCallback(async (gesture: MapRouteGesture) => {
+    const map = mapGlobalRef.current;
+    const container = document.getElementById('map-capture-container');
+    if (!map || !container) return;
+
+    const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
+    const rect = container.getBoundingClientRect();
+    const { cropX, cropY, cropW, cropH } = getCropRegion(rect, posterW, posterH);
+
+    if (gesture.type === 'move') {
+      const centerPoint = map.project(map.getCenter());
+      const target = getMapPanTargetPoint(centerPoint, gesture.deltaX, gesture.deltaY, cropW, cropH);
+      const center = map.unproject([target.x, target.y]);
+      map.jumpTo({ center });
+    } else {
+      const anchor = map.unproject([
+        cropX + gesture.anchorX * cropW,
+        cropY + gesture.anchorY * cropH,
+      ]);
+      const zoom = getMapZoomForScale(
+        map.getZoom(), gesture.scaleFactor, map.getMinZoom(), map.getMaxZoom(),
+      );
+      map.zoomTo(zoom, { around: anchor, duration: 0 });
+    }
+
+    await generatePreview();
+  }, [generatePreview, settings.aspectRatio]);
+
   useEffect(() => {
     void generatePreview();
   }, [
@@ -329,5 +357,6 @@ export function useSocialShareExport() {
     hasTracks: tracks.length > 0,
     routeBboxNorm,
     dataPanelBboxNorm,
+    transformMapViewport,
   };
 }

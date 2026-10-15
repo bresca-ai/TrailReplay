@@ -775,6 +775,7 @@ export const de = {
     rendering: 'Rendern…',
     previewDownload: 'Vorschau & Download',
     posterPreview: 'Postervorschau',
+    dragMapHint: 'Trail ziehen, um die Karte zu verschieben · Ecke zum Zoomen',
     dragHint: 'Ziehe den Trail oder die Statistiken, um sie neu zu positionieren. · Ecke, um die Größe zu ändern',
     back: 'Zurück',
     downloadPng: 'PNG herunterladen',

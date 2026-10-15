@@ -775,6 +775,7 @@ export const ca = {
     rendering: 'Generant…',
     previewDownload: 'Previsualitza i descarrega',
     posterPreview: 'Previsualització del pòster',
+    dragMapHint: 'arrossega la ruta per moure el mapa · cantonada per ampliar',
     dragHint: 'arrossega la ruta o les estadístiques · cantonada per redimensionar',
     back: 'Enrere',
     downloadPng: 'Descarregar PNG',
