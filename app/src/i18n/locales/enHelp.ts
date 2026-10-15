@@ -10,11 +10,11 @@ export const help = {
         steps: {
             ask: {
                 title: 'Ask your agent',
-                body: 'Tell it what you want in plain words — the aid stations from a race page, the huts you slept in, the order of your days. Point it at trailreplay.com/llms.txt so it knows the format.',
+                body: 'Tell it what you want in plain words: the aid stations from a race page, the huts you slept in, or the order of your days. Point it at trailreplay.com/llms.txt so it knows the format.',
             },
             write: {
                 title: 'It writes a recipe',
-                body: 'A short JSON file saved next to your GPX files. It describes places by kilometre — “the aid station at km 6.5” — never coordinates, because the map works those out itself.',
+                body: 'A short JSON file saved next to your GPX files. It describes places by kilometre, such as “the aid station at km 6.5,” never by coordinates because the map works those out itself.',
             },
             drop: {
                 title: 'You drop the folder',
@@ -26,8 +26,27 @@ export const help = {
             title: 'What to say to your agent',
             intro: 'Any coding agent that can read a web page and write a file will do. This is enough to get a working recipe back.',
             label: 'Prompt',
-            body: 'Read https://trailreplay.com/llms.txt and the format spec it links to. Then write a recipe.json in this folder for the GPX files here, following what I describe below. Do not compute coordinates — anchor everything by kilometre and let the app resolve it.',
+            body: 'Read https://trailreplay.com/llms.txt and the format spec it links to. Then write a recipe.json in this folder for the GPX files here, following what I describe below. Do not compute coordinates. Anchor everything by kilometre and let the app resolve it.',
             note: 'Then say what you actually want: the aid stations off a race page, the huts you stayed in, a caption at the big climb.',
+        },
+        camera: {
+            title: 'Camera distance that matches the website',
+            description: 'Follow Behind does not use raw map zoom. Recipes use the same distance positions as the website slider, from 0 for the widest view to 100 for the closest.',
+            table: { preset: 'Website preset', value: 'Recipe level', result: 'Result' },
+            presets: {
+                far: { label: 'Far', body: 'The widest Follow Behind view.' },
+                medium: { label: 'Medium', body: 'The balanced default.' },
+                close: { label: 'Close', body: 'Keeps the camera nearer the marker.' },
+                veryClose: { label: 'Very close', body: 'The tightest Follow Behind view.' },
+            },
+            stopsLabel: 'Exact slider stops:',
+            stopsBody: '0, 11, 22, 33, 49.5, 66, 83, and 100. Lower is farther away; higher is closer.',
+            rulesTitle: 'Which camera value should an agent write?',
+            rules: {
+                preset: { title: 'Prefer a named preset', body: 'Use followBehindPreset for far, medium, close, or very-close. The importer now keeps its numeric level in sync automatically.' },
+                level: { title: 'Use a level only for an exact stop', body: 'Set followBehindZoomLevel when you need one of the eight slider positions. Other numbers snap to the nearest valid stop.' },
+                zoom: { title: 'Do not mix the two zoom scales', body: 'cameraSettings.zoom is not Follow Behind distance. Cinematic keyframes use map zoom 8-20 and must be authored in Map & Camera after import.' },
+            },
         },
         examples: {
             title: 'Two things worth handing over',
@@ -36,13 +55,13 @@ export const help = {
                 badge: 'A race with aid stations',
                 title: 'Every aid station, at the right kilometre',
                 problem: 'A race page lists its aid stations by kilometre. Placing them by hand means finding each point on the map, adding a note, and typing the contents four times over. An agent reads the page and writes them all.',
-                result: 'Each station becomes a card that rises as the runner approaches it and fades once past — so it reads as something met, not a pin left on the map.',
+                result: 'Each station becomes a card that rises as the runner approaches it and fades once past. It reads as something met, not a pin left on the map.',
             },
             trip: {
                 badge: 'A ten-day trip',
                 title: 'Ten files, in order, correctly sized',
                 problem: 'Ten days of walking is ten GPX files, out of order, and ten decisions about how long each should last on screen. Do it by hand and a 35 km day gets the same seconds as an 8 km one.',
-                result: 'Files ordered by their own timestamps, screen time shared by distance, and a pin at every place you slept — worked out from where one day ends and the next begins.',
+                result: 'Files ordered by their own timestamps, screen time shared by distance, and a pin at every place you slept, worked out from where one day ends and the next begins.',
             },
         },
         check: {
@@ -54,7 +73,7 @@ export const help = {
         sources: {
             badge: 'Getting the files',
             title: 'It can help you get the routes too',
-            intro: 'You do not need the GPX files in hand before you start. Ask, and a good agent works through these in order — the first two cost you nothing.',
+            intro: 'You do not need the GPX files in hand before you start. Ask, and a good agent works through these in order. The first two cost you nothing.',
             url: {
                 label: 'A public link',
                 body: 'Race organisers and clubs publish GPX files on their own site. If you name the race, the agent can usually just fetch it.',
@@ -65,7 +84,7 @@ export const help = {
             },
             export: {
                 label: 'An archive you request',
-                body: 'For everything at once, Strava and Garmin will email you your whole history. Note it arrives as a mix of GPX, FIT and TCX — TrailReplay reads GPX, KML and FIT, so only TCX needs converting.',
+                body: 'For everything at once, Strava and Garmin will email you your whole history. It arrives as a mix of GPX, FIT and TCX. TrailReplay reads GPX, KML and FIT, so only TCX needs converting.',
             },
             session: {
                 label: 'Your own browser',
@@ -117,9 +136,44 @@ export const help = {
       caminsUseBody: 'terrain contrast, steeper camera moves, and checking whether the stats/export crop feel balanced on a mountain course.',
       pedalsUseLabel: 'Use Pedals de Foc for',
       pedalsUseBody: 'long pacing, route overview, and validating how a denser endurance GPX reads in replay and export mode.',
+      camera: {
+        title: 'Choose the right camera',
+        description: 'Each mode tells the route differently. Start simple, then switch to Cinematic when you want directed shots.',
+        modes: {
+          overview: { title: 'Overview', body: 'Keep the full route in view.' },
+          follow: { title: 'Follow', body: 'Stay centered on the moving marker.' },
+          followBehind: { title: 'Follow Behind', body: 'Chase the route from a lower, angled view.' },
+          cinematic: { title: 'Cinematic', body: 'Place camera shots along the timeline and glide between them.' },
+        },
+        videoLabel: 'Cinematic camera tutorial video',
+        videoTitle: 'Direct a replay with Cinematic camera',
+        videoDescription: 'Scrub to a moment, aim the shot, save a keyframe, and repeat. TrailReplay blends the camera moves during playback.',
+        openVideo: 'Open video directly',
+      },
+      elevation: {
+        title: 'Use the elevation profile in two ways',
+        description: 'The full-route profile is visible by default. Dynamic sections are an optional focus mode for giving the strongest climbs and descents more screen space.',
+        default: {
+          badge: 'Default',
+          title: 'See the whole route',
+          body: 'The standard profile keeps the complete elevation story on screen. A moving marker and completed fill show exactly where the replay is along the route.',
+        },
+        dynamic: {
+          badge: 'Optional',
+          title: 'Focus on key terrain',
+          body: 'Dynamic sections detect sustained climbs and descents, mark them on the profile, then smoothly zoom into each section as playback reaches it.',
+        },
+        howToTitle: 'Turn on and refine Dynamic sections',
+        tips: {
+          enable: { title: 'Enable the focus mode', body: 'Open Style, turn on Elevation profile, then enable Dynamic sections.' },
+          play: { title: 'Let it focus automatically', body: 'Press play. The profile moves from the full route into each detected climb or descent, and the same motion is kept in the export.' },
+          edit: { title: 'Fine-tune while paused', body: 'Drag a section’s end handles to resize it. Use + and click the profile to add one, or × to remove one.' },
+        },
+      },
       watchExportsTitle: 'Watch actual exports',
       watchExportsBody: 'These examples were recorded with the TrailReplay export flow.',
       coversTitle: 'What TrailReplay covers today',
+      coversDescription: 'The six sidebar panels are the clearest map of the product. Work from left to right, or jump straight to the part of the replay you want to change.',
       recommendedFirstRunTitle: 'Recommended first run',
       firstRun: {
         importLabel: '1. Import',
@@ -159,29 +213,29 @@ export const help = {
         },
       },
       features: {
-        multiTrack: {
-          title: 'Multi-track journeys',
-          body: 'Load one or many GPX, KML or FIT files, reorder them, and build a single narrative from separate activities.',
+        routes: {
+          title: 'Routes',
+          body: 'Import GPX, KML, FIT, saved .replay projects, or a recipe with its route files. Rename and reorder tracks, or add comparison tracks to replay athletes together.',
         },
-        comparison: {
-          title: 'Comparison mode',
-          body: 'Drop several files at once and the ones recorded together — same time window, or failing that the same route — are grouped automatically, so everyone runs in one replay. With timestamps each marker sits where that person actually was at that moment; a file without them shows its route but no moving marker, since nothing can say where it was when. Use Strava’s “Export Original” (.fit) when a GPX has no times. Ungroup any track to put it back on the timeline.',
+        timeline: {
+          title: 'Timeline',
+          body: 'Set the total replay length, use recorded or uniform route timing, reorder activities, change individual durations, and add transport between route segments.',
+        },
+        style: {
+          title: 'Style',
+          body: 'Set route colors and labels, heart-rate and custom color zones, live stats, the elevation profile, and the moving marker’s icon, size, color, and glow.',
+        },
+        mapCamera: {
+          title: 'Map & Camera',
+          body: 'Choose a basemap, historical imagery, place labels, ski, slope or aspect overlays, 3D terrain, map filters, landmarks, and any of the four camera modes.',
         },
         media: {
-          title: 'Media storytelling',
-          body: 'Attach images to moments in the track, review their timing, and keep them visible in video exports.',
+          title: 'Media',
+          body: 'Add photos, silent video moments, and route annotations. Use embedded GPS or timestamps when available, or place and retime each item manually.',
         },
-        mapStyle: {
-          title: 'Map styling',
-          body: 'Switch between map styles, terrain overlays, labels, and cinematic follow camera presets.',
-        },
-        export: {
-          title: 'Video export',
-          body: 'Export 16:9, 1:1, or 9:16 videos with stats, elevation profile, and branded overlays.',
-        },
-        journey: {
-          title: 'Journey editing',
-          body: 'Add transport segments, control durations, and shape the replay so the story matches the real trip.',
+        generate: {
+          title: 'Generate',
+          body: 'Save an editable .replay project, export still images or 16:9, 1:1 and 9:16 videos, compose the layout, choose quality and frame rate, then download or share.',
         },
       },
     },

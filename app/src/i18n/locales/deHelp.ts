@@ -14,7 +14,7 @@ export const help = {
             },
             write: {
                 title: 'Er schreibt ein Rezept',
-                body: 'Eine kurze JSON-Datei neben deinen GPX-Dateien. Sie beschreibt Orte über Kilometer — „die Verpflegungsstelle bei km 6,5“ — nie über Koordinaten, denn die rechnet die Karte selbst aus.',
+                body: 'Eine kurze JSON-Datei neben deinen GPX-Dateien. Sie beschreibt Orte über Kilometer, zum Beispiel „die Verpflegungsstelle bei km 6,5“, nie über Koordinaten, denn die rechnet die Karte selbst aus.',
             },
             drop: {
                 title: 'Du legst den Ordner ab',
@@ -26,8 +26,27 @@ export const help = {
             title: 'Was du deinem Agenten sagst',
             intro: 'Jeder Agent, der eine Webseite lesen und eine Datei schreiben kann, reicht. Damit kommt ein funktionierendes Rezept zurück.',
             label: 'Anweisung',
-            body: 'Lies https://trailreplay.com/llms.txt und die dort verlinkte Formatspezifikation. Schreib dann eine recipe.json in diesen Ordner für die GPX-Dateien hier, nach dem, was ich unten beschreibe. Berechne keine Koordinaten — verankere alles über Kilometer und lass die App es auflösen.',
+            body: 'Lies https://trailreplay.com/llms.txt und die dort verlinkte Formatspezifikation. Schreib dann eine recipe.json in diesen Ordner für die GPX-Dateien hier, nach dem, was ich unten beschreibe. Berechne keine Koordinaten. Verankere alles über Kilometer und lass die App es auflösen.',
             note: 'Sag ihm dann, was du wirklich willst: die Verpflegungsstellen von der Rennseite, die Hütten, einen Text am langen Anstieg.',
+        },
+        camera: {
+            title: 'Kameradistanz wie auf der Website',
+            description: '„Von hinten folgen“ verwendet nicht den rohen Kartenzoom. Rezepte nutzen dieselben Positionen wie der Regler auf der Website, von 0 für die weiteste bis 100 für die nächste Ansicht.',
+            table: { preset: 'Website-Vorgabe', value: 'Rezeptwert', result: 'Ergebnis' },
+            presets: {
+                far: { label: 'Weit', body: 'Die weiteste Ansicht von hinten.' },
+                medium: { label: 'Mittel', body: 'Die ausgewogene Standardeinstellung.' },
+                close: { label: 'Nah', body: 'Hält die Kamera näher am Marker.' },
+                veryClose: { label: 'Sehr nah', body: 'Die engste Ansicht von hinten.' },
+            },
+            stopsLabel: 'Exakte Reglerpositionen:',
+            stopsBody: '0, 11, 22, 33, 49.5, 66, 83 und 100. Niedriger bedeutet weiter entfernt, höher bedeutet näher.',
+            rulesTitle: 'Welchen Kamerawert sollte ein Agent schreiben?',
+            rules: {
+                preset: { title: 'Benannte Vorgabe bevorzugen', body: 'Verwenden Sie followBehindPreset mit far, medium, close oder very-close. Der Import hält den Zahlenwert jetzt automatisch synchron.' },
+                level: { title: 'Einen Wert nur für eine exakte Position nutzen', body: 'Setzen Sie followBehindZoomLevel für eine der acht Reglerpositionen. Andere Zahlen werden auf die nächste gültige Position gerundet.' },
+                zoom: { title: 'Die beiden Zoomskalen nicht mischen', body: 'cameraSettings.zoom ist nicht die Distanz von „Von hinten folgen“. Cinematic-Keyframes nutzen Kartenzoom 8-20 und werden nach dem Import unter Karte und Kamera erstellt.' },
+            },
         },
         examples: {
             title: 'Zwei Dinge, die sich abzugeben lohnen',
@@ -36,25 +55,25 @@ export const help = {
                 badge: 'Ein Rennen mit Verpflegungsstellen',
                 title: 'Jede Verpflegungsstelle am richtigen Kilometer',
                 problem: 'Die Rennseite listet ihre Verpflegungsstellen nach Kilometer. Von Hand heißt das: jeden Punkt auf der Karte suchen, eine Notiz anlegen und den Inhalt viermal tippen. Ein Agent liest die Seite und schreibt alle.',
-                result: 'Jede Stelle wird zu einer Karte, die beim Näherkommen erscheint und nach dem Passieren verschwindet — sie liest sich als etwas, dem man begegnet, nicht als Nadel auf der Karte.',
+                result: 'Jede Stelle wird zu einer Karte, die beim Näherkommen erscheint und nach dem Passieren verschwindet. Sie liest sich als etwas, dem man begegnet, nicht als Nadel auf der Karte.',
             },
             trip: {
                 badge: 'Eine Zehn-Tage-Tour',
                 title: 'Zehn Dateien, sortiert und richtig getaktet',
                 problem: 'Zehn Wandertage sind zehn unsortierte GPX-Dateien und zehn Entscheidungen darüber, wie lange jede auf dem Bildschirm laufen soll. Von Hand bekommt ein 35-km-Tag genauso viele Sekunden wie ein 8-km-Tag.',
-                result: 'Dateien nach ihren eigenen Zeitstempeln sortiert, Bildschirmzeit nach Distanz verteilt, und ein Marker an jedem Ort, an dem du geschlafen hast — abgeleitet daraus, wo ein Tag endet und der nächste beginnt.',
+                result: 'Dateien nach ihren eigenen Zeitstempeln sortiert, Bildschirmzeit nach Distanz verteilt und ein Marker an jedem Ort, an dem du geschlafen hast. Alles wird daraus abgeleitet, wo ein Tag endet und der nächste beginnt.',
             },
         },
         check: {
             badge: 'Sie prüft die Arbeit',
             title: 'Du musst dem Agenten nicht glauben',
             body: 'Sobald der Ordner ankommt, listet TrailReplay alles Platzierte auf: den Kilometer entlang seiner Route, die Sekunden auf dem Bildschirm und wie weit der bewegte Marker in dem Moment von jedem Ort entfernt ist.',
-            note: 'Die letzte Zahl sollte in Metern stehen. Alles darüber heißt, der Eintrag ist auf den falschen Teil des Replays getaktet — und die App sagt es, bevor du auf Play drückst.',
+            note: 'Die letzte Zahl sollte in Metern stehen. Alles darüber heißt, der Eintrag ist auf den falschen Teil des Replays getaktet. Die App sagt es, bevor du auf Play drückst.',
         },
         sources: {
             badge: 'Die Dateien beschaffen',
             title: 'Er kann dir auch helfen, die Routen zu bekommen',
-            intro: 'Du brauchst die GPX-Dateien nicht vorab. Frag danach, und ein guter Agent geht das der Reihe nach durch — die ersten beiden kosten dich nichts.',
+            intro: 'Du brauchst die GPX-Dateien nicht vorab. Frag danach, und ein guter Agent geht das der Reihe nach durch. Die ersten beiden kosten dich nichts.',
             url: {
                 label: 'Ein öffentlicher Link',
                 body: 'Rennveranstalter und Vereine stellen GPX-Dateien auf ihre eigene Seite. Nenn das Rennen, und der Agent kann sie meist direkt holen.',
@@ -65,7 +84,7 @@ export const help = {
             },
             export: {
                 label: 'Ein Archiv, das du anforderst',
-                body: 'Für alles auf einmal schicken Strava und Garmin dir deine ganze Historie per E-Mail. Sie kommt gemischt als GPX, FIT und TCX — TrailReplay liest GPX, KML und FIT, nur TCX muss konvertiert werden.',
+                body: 'Für alles auf einmal schicken Strava und Garmin dir deine ganze Historie per E-Mail. Sie kommt gemischt als GPX, FIT und TCX. TrailReplay liest GPX, KML und FIT, nur TCX muss konvertiert werden.',
             },
             session: {
                 label: 'Dein eigener Browser',
@@ -117,9 +136,44 @@ export const help = {
       caminsUseBody: 'Geländekontrast, steilere Kamerabewegungen und Überprüfung, ob sich die Statistiken/Export-Ernte auf einer Bergstrecke ausgewogen anfühlen.',
       pedalsUseLabel: 'Verwende Pedals de Foc für',
       pedalsUseBody: 'Langes Tempo, Routenübersicht und Validierung, wie sich ein GPX mit höherer Ausdauer im Wiedergabe- und Exportmodus liest.',
+      camera: {
+        title: 'Wählen Sie die passende Kamera',
+        description: 'Jeder Modus erzählt die Route anders. Beginnen Sie mit einer einfachen Ansicht und wechseln Sie für inszenierte Aufnahmen zu Cinematic.',
+        modes: {
+          overview: { title: 'Übersicht', body: 'Behalten Sie die gesamte Route im Bild.' },
+          follow: { title: 'Folgen', body: 'Halten Sie den bewegten Marker in der Mitte.' },
+          followBehind: { title: 'Von hinten folgen', body: 'Verfolgen Sie die Route aus einer niedrigeren, geneigten Ansicht.' },
+          cinematic: { title: 'Cinematic', body: 'Setzen Sie Kameraaufnahmen auf der Zeitleiste und verbinden Sie sie fließend.' },
+        },
+        videoLabel: 'Videoanleitung für die Cinematic-Kamera',
+        videoTitle: 'Inszenieren Sie eine Wiedergabe mit der Cinematic-Kamera',
+        videoDescription: 'Springen Sie zu einem Moment, richten Sie die Aufnahme aus, speichern Sie einen Keyframe und wiederholen Sie den Vorgang. TrailReplay verbindet die Kamerabewegungen während der Wiedergabe.',
+        openVideo: 'Video direkt öffnen',
+      },
+      elevation: {
+        title: 'Nutzen Sie das Höhenprofil auf zwei Arten',
+        description: 'Das Profil der gesamten Route ist standardmäßig sichtbar. Dynamische Abschnitte sind ein optionaler Fokusmodus, der den wichtigsten Anstiegen und Abfahrten mehr Platz gibt.',
+        default: {
+          badge: 'Standard',
+          title: 'Sehen Sie die gesamte Route',
+          body: 'Das normale Profil zeigt den vollständigen Höhenverlauf. Ein bewegter Marker und die Füllung der zurückgelegten Strecke zeigen genau, wo sich die Wiedergabe auf der Route befindet.',
+        },
+        dynamic: {
+          badge: 'Optional',
+          title: 'Fokussieren Sie wichtiges Gelände',
+          body: 'Dynamische Abschnitte erkennen längere Anstiege und Abfahrten, markieren sie im Profil und zoomen während der Wiedergabe sanft in jeden Abschnitt hinein.',
+        },
+        howToTitle: 'Dynamische Abschnitte aktivieren und anpassen',
+        tips: {
+          enable: { title: 'Aktivieren Sie den Fokusmodus', body: 'Öffnen Sie Stil, aktivieren Sie Höhenprofil und anschließend Dynamische Abschnitte.' },
+          play: { title: 'Automatisch fokussieren lassen', body: 'Starten Sie die Wiedergabe. Das Profil wechselt von der gesamten Route zu jedem erkannten Anstieg oder jeder Abfahrt, und die Bewegung bleibt im Export erhalten.' },
+          edit: { title: 'Bei Pause fein abstimmen', body: 'Ziehen Sie die Endgriffe, um einen Abschnitt zu verändern. Mit + und einem Klick ins Profil fügen Sie einen hinzu, mit × entfernen Sie ihn.' },
+        },
+      },
       watchExportsTitle: 'Sieh Dir die tatsächlichen Exporte an',
       watchExportsBody: 'Diese Beispiele wurden mit dem TrailReplay-Exportfluss aufgezeichnet.',
       coversTitle: 'Was TrailReplay heute abdeckt',
+      coversDescription: 'Die sechs Seitenleisten sind die klarste Übersicht über das Produkt. Arbeiten Sie von links nach rechts oder springen Sie direkt zu dem Teil der Wiedergabe, den Sie ändern möchten.',
       recommendedFirstRunTitle: 'Empfohlener erster Lauf',
       firstRun: {
         importLabel: '1. Importieren',
@@ -159,29 +213,29 @@ export const help = {
         },
       },
       features: {
-        multiTrack: {
-          title: 'Mehrspurige Fahrten',
-          body: 'Lade eine oder mehrere GPX-, KML- oder FIT-Dateien, ordne sie neu an und erstelle eine einzelne Erzählung aus separaten Aktivitäten.',
+        routes: {
+          title: 'Routen',
+          body: 'Importieren Sie GPX, KML, FIT, gespeicherte .replay-Projekte oder ein Rezept mit seinen Routendateien. Benennen und sortieren Sie Tracks oder fügen Sie Vergleichstracks für eine gemeinsame Wiedergabe hinzu.',
         },
-        comparison: {
-          title: 'Vergleichsmodus',
-          body: 'Lege mehrere Dateien auf einmal ab: gemeinsam aufgezeichnete — gleiches Zeitfenster oder sonst dieselbe Strecke — werden automatisch gruppiert, sodass alle in einer Wiedergabe laufen. Mit Zeitstempeln steht jeder Marker dort, wo diese Person in diesem Moment wirklich war; eine Datei ohne sie zeigt ihre Strecke, aber keinen bewegten Marker, da nichts sagen kann, wo sie wann war. Nutze Stravas „Original exportieren“ (.fit), wenn einem GPX die Zeiten fehlen. Hebe die Gruppierung eines Tracks auf, um ihn zurück in die Zeitleiste zu legen.',
+        timeline: {
+          title: 'Zeitleiste',
+          body: 'Legen Sie die Gesamtdauer fest, nutzen Sie aufgezeichnetes oder gleichmäßiges Timing, sortieren Sie Aktivitäten, ändern Sie einzelne Dauern und fügen Sie Transport zwischen Routen hinzu.',
+        },
+        style: {
+          title: 'Stil',
+          body: 'Bestimmen Sie Routenfarben und Beschriftungen, Herzfrequenz- oder Farbzonen, Live-Statistiken, das Höhenprofil sowie Symbol, Größe, Farbe und Leuchten des Markers.',
+        },
+        mapCamera: {
+          title: 'Karte und Kamera',
+          body: 'Wählen Sie Grundkarte, historische Bilder, Ortsnamen, Ski-, Hang- oder Ausrichtungsebenen, 3D-Gelände, Filter, Wegpunkte und einen der vier Kameramodi.',
         },
         media: {
-          title: 'Medien-Storytelling',
-          body: 'Hänge Bilder an Momente im Track an, überprüfe deren Timing und sorge dafür, dass sie in Videoexporten sichtbar bleiben.',
+          title: 'Medien',
+          body: 'Fügen Sie Fotos, stumme Videomomente und Routenanmerkungen hinzu. Nutzen Sie vorhandene GPS- oder Zeitdaten oder platzieren und takten Sie jedes Element manuell.',
         },
-        mapStyle: {
-          title: 'Kartenstil',
-          body: 'Wechsele zwischen Kartenstilen, Geländeüberlagerungen, Beschriftungen und filmischen Kameravoreinstellungen.',
-        },
-        export: {
-          title: 'Videoexport',
-          body: 'Exportiere Videos im Format 16:9, 1:1 oder 9:16 mit Statistiken, Höhenprofil und Marken-Overlays.',
-        },
-        journey: {
-          title: 'Reisebearbeitung',
-          body: 'Füge Transportsegmente hinzu, steuere die Dauer und gestalte die Wiedergabe so, dass die Geschichte mit der tatsächlichen Reise übereinstimmt.',
+        generate: {
+          title: 'Generieren',
+          body: 'Speichern Sie ein bearbeitbares .replay-Projekt, exportieren Sie Bilder oder Videos in 16:9, 1:1 und 9:16, gestalten Sie das Layout, wählen Sie Qualität und Bildrate und laden oder teilen Sie das Ergebnis.',
         },
       },
     },

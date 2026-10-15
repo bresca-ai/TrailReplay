@@ -202,7 +202,7 @@ level: `activityIcon`, `routeTimingMode`, `showAutomaticLandmarks`,
 
 ```json
 "settings": { "mapStyle": "esri-clarity", "show3DTerrain": true },
-"cameraSettings": { "mode": "follow-behind", "pitch": 60 }
+"cameraSettings": { "mode": "follow-behind", "followBehindPreset": "medium" }
 ```
 
 ### What you get back
@@ -447,10 +447,34 @@ pushing.
 
 ### 5.6 `cameraSettings`
 
-`mode` (`overview` `follow` `follow-behind` `cinematic`), `zoom`, `pitch`
-(0 = straight down, 85 = near ground level), `bearing`, `followBehindPreset`
-(`very-close` `close` `medium` `far`), `followBehindZoomLevel`,
-`cameraStability` (`0` = smoothest, `1` = tightest tracking).
+`mode` is `overview`, `follow`, `follow-behind`, or `cinematic`.
+
+For `follow-behind`, prefer a named `followBehindPreset`. These names match the
+website's distance control exactly:
+
+| Preset | `followBehindZoomLevel` | Meaning |
+|---|---:|---|
+| `far` | `0` | Widest Follow Behind view |
+| `medium` | `33` | Default balanced view |
+| `close` | `66` | Closer to the moving marker |
+| `very-close` | `100` | Tightest Follow Behind view |
+
+The exact slider stops are `0`, `11`, `22`, `33`, `49.5`, `66`, `83`, and
+`100`, ordered from farthest to closest. If a recipe provides a value between
+stops, TrailReplay snaps it to the nearest website stop. If it provides both a
+preset and a level, the more precise level wins and the preset label is updated
+to match.
+
+Do not use `cameraSettings.zoom` to control Follow Behind. It is a raw map zoom,
+not the website's distance slider, and Follow Behind playback calculates its
+own terrain-aware zoom from `followBehindZoomLevel`. Cinematic keyframes use raw
+map zoom from `8` to `20`, but recipes do not author those keyframes. Set them in
+**Map & Camera -> Cinematic** after importing the recipe.
+
+`cameraStability` runs from `0` (smoothest) to `1` (tightest tracking).
+`pitch` runs from `0` (straight down) to `85` (near ground level), and `bearing`
+is in degrees. For Follow Behind, its computed camera pose takes precedence over
+raw `zoom`, `pitch`, and `bearing` values.
 
 ### 5.7 `videoExportSettings`
 
@@ -508,8 +532,8 @@ second of three equal legs sits past `0.333`.
 
 `pictures` and `videos` reference real media files that a `.replay` cannot
 carry — the app reopens them as placeholders, so authoring them from outside is
-not useful. `cinematicCameraKeyframes` belongs to a camera mode not yet reachable
-from the UI.
+not useful. `cinematicCameraKeyframes` is intentionally not part of recipe
+input. Import the recipe first, then author Cinematic shots in the website.
 
 ---
 

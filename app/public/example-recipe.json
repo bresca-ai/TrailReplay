@@ -55,5 +55,5 @@
   ],
 
   "settings": { "mapStyle": "esri-clarity", "show3DTerrain": true },
-  "cameraSettings": { "mode": "follow-behind" }
+  "cameraSettings": { "mode": "follow-behind", "followBehindPreset": "medium" }
 }

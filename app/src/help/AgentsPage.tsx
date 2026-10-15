@@ -7,6 +7,7 @@ import {
   FolderInput,
   Radar,
   Download,
+  SlidersHorizontal,
   Sparkles,
   Wand2,
 } from 'lucide-react';
@@ -16,6 +17,12 @@ import { getAgentExamples, getAgentResources, getAgentSources, getAgentSteps } f
 import { trackEvent } from '@/utils/analytics';
 
 const stepIcons = [Bot, Wand2, FolderInput];
+const cameraPresets = [
+  { key: 'far', level: 0 },
+  { key: 'medium', level: 33 },
+  { key: 'close', level: 66 },
+  { key: 'veryClose', level: 100 },
+] as const;
 
 /** Copy-to-clipboard that says what it did, since a silent button reads as broken. */
 function CopyButton({ text, label, event }: { text: string; label: string; event: string }) {
@@ -131,6 +138,71 @@ export function AgentsPage() {
         </p>
       </section>
 
+      <section
+        className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-6 shadow-sm"
+        data-testid="agent-camera-values"
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]">
+            <SlidersHorizontal className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{t('help.agents.camera.title')}</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--evergreen-80)]">
+              {t('help.agents.camera.description')}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+          <div className="overflow-hidden rounded-2xl border border-[var(--evergreen)]/12 bg-[var(--canvas)]">
+            <table className="w-full border-collapse text-left">
+              <thead className="bg-[var(--evergreen)] text-[var(--canvas)]">
+                <tr>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em]">{t('help.agents.camera.table.preset')}</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em]">{t('help.agents.camera.table.value')}</th>
+                  <th className="hidden px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] sm:table-cell">{t('help.agents.camera.table.result')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cameraPresets.map(({ key, level }) => (
+                  <tr key={key} className="border-t border-[var(--evergreen)]/10 first:border-t-0">
+                    <th className="px-4 py-3 text-sm font-semibold">{t(`help.agents.camera.presets.${key}.label`)}</th>
+                    <td className="px-4 py-3 font-mono text-sm font-bold text-[var(--trail-orange)]">{level}</td>
+                    <td className="hidden px-4 py-3 text-xs leading-5 text-[var(--evergreen-60)] sm:table-cell">{t(`help.agents.camera.presets.${key}.body`)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="border-t border-[var(--evergreen)]/12 px-4 py-3 text-xs leading-5 text-[var(--evergreen-60)]">
+              <strong className="text-[var(--evergreen)]">{t('help.agents.camera.stopsLabel')}</strong>{' '}
+              {t('help.agents.camera.stopsBody')}
+            </div>
+          </div>
+
+          <aside className="rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)] p-5 text-[var(--canvas)]">
+            <h3 className="text-base font-bold">{t('help.agents.camera.rulesTitle')}</h3>
+            <ol className="mt-4 space-y-3">
+              {(['preset', 'level', 'zoom'] as const).map((key, index) => (
+                <li key={key} className="flex gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--trail-orange)] text-[11px] font-bold text-white">{index + 1}</span>
+                  <div>
+                    <h4 className="text-sm font-semibold">{t(`help.agents.camera.rules.${key}.title`)}</h4>
+                    <p className="mt-1 text-xs leading-5 text-white/70">{t(`help.agents.camera.rules.${key}.body`)}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <pre className="mt-5 overflow-x-auto rounded-xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-[12px] leading-5 text-white/85">
+{`"cameraSettings": {
+  "mode": "follow-behind",
+  "followBehindPreset": "medium"
+}`}
+            </pre>
+          </aside>
+        </div>
+      </section>
+
       <section className="space-y-6">
         <div>
           <h2 className="text-xl font-bold">{t('help.agents.examples.title')}</h2>
@@ -209,8 +281,8 @@ export function AgentsPage() {
           {t('help.agents.check.body')}
         </p>
         <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-black/20 px-4 py-3 font-mono text-[13px] leading-6 text-white/85">
-{` 7.1 km   23–28s   Les Casetes
-25.0 km   42–47s   Les Casetes        marker 4.1 km away`}
+{` 7.1 km   23-28s   Les Casetes
+25.0 km   42-47s   Les Casetes        marker 4.1 km away`}
         </pre>
         <p className="mt-3 text-xs leading-5 text-white/60">{t('help.agents.check.note')}</p>
       </section>
