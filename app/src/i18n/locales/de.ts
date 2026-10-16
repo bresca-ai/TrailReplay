@@ -208,6 +208,8 @@ export const de = {
     },
     followPresets: {
       title: 'Distanzvoreinstellung',
+      extremeClose: 'Extrem nah',
+      ultraClose: 'Ultra nah',
       veryClose: 'Ganz in der Nähe',
       close: 'Schließen',
       medium: 'Medium',

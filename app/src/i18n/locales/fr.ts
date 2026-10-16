@@ -208,6 +208,8 @@ export const fr = {
     },
     followPresets: {
       title: 'Distance prédéfinie',
+      extremeClose: 'Extrêmement proche',
+      ultraClose: 'Ultra proche',
       veryClose: 'Très proche',
       close: 'Proche',
       medium: 'Moyenne',

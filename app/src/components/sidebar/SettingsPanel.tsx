@@ -56,6 +56,8 @@ const CAMERA_MODES: { id: CameraMode; nameKey: string; descriptionKey: string }[
 
 /** Label shown for the distance the slider currently sits nearest to. */
 const FOLLOW_PRESET_NAME_KEYS: Record<CameraSettings['followBehindPreset'], string> = {
+  'extreme-close': 'extremeClose',
+  'ultra-close': 'ultraClose',
   'very-close': 'veryClose',
   close: 'close',
   medium: 'medium',
@@ -411,7 +413,7 @@ export function SettingsPanel() {
             />
             <div className="flex justify-between text-[10px] text-[var(--evergreen-60)]">
               <span>{t('settings.followPresets.far')}</span>
-              <span>{t('settings.followPresets.veryClose')}</span>
+              <span>{t('settings.followPresets.extremeClose')}</span>
             </div>
           </div>
         )}

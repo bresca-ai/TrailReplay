@@ -208,6 +208,8 @@ export const ca = {
     },
     followPresets: {
       title: 'Preset de distància',
+      extremeClose: 'Extremadament a prop',
+      ultraClose: 'Ultra a prop',
       veryClose: 'Molt a prop',
       close: 'A prop',
       medium: 'Mitjà',

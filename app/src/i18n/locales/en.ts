@@ -208,6 +208,8 @@ export const en = {
     },
     followPresets: {
       title: 'Distance Preset',
+      extremeClose: 'Extreme Close',
+      ultraClose: 'Ultra Close',
       veryClose: 'Very Close',
       close: 'Close',
       medium: 'Medium',

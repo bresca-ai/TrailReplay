@@ -2,10 +2,10 @@ import type { CameraSettings } from '@/types';
 
 export const DEFAULT_FOLLOW_BEHIND_PRESET: CameraSettings['followBehindPreset'] = 'medium';
 export const FOLLOW_BEHIND_ZOOM_MIN = 0;
-export const FOLLOW_BEHIND_ZOOM_MAX = 100;
+export const FOLLOW_BEHIND_ZOOM_MAX = 140;
 
 type FollowBehindCameraAnchor = {
-  /** Only the four anchors that back a named preset carry an id. */
+  /** Named anchors are selectable distance presets. */
   id?: CameraSettings['followBehindPreset'];
   level: number;
   pitch: number;
@@ -23,9 +23,10 @@ type FollowBehindCameraProfile = 'intro' | 'playback';
  * than the old `very-close` is added at the other end. Every position is nearer
  * than the one that shared its place before.
  *
- * The four named presets keep their levels (0 / 33 / 66 / 100) so stored
- * settings and saved projects still land on a valid stop, but the framing each
- * one describes has moved in with everything else. The stops between them exist
+ * The original named presets keep their levels (0 / 33 / 66 / 100) so stored
+ * settings and saved projects still land on a valid stop. Two closer stops
+ * follow `very-close`, matching two presses of the map's + button. The stops
+ * between the original presets exist
  * because the old `far`-to-`medium` gap was three whole zoom levels, far too
  * coarse when the right framing lands in the middle.
  */
@@ -38,6 +39,9 @@ const PLAYBACK_CAMERA_ANCHORS: FollowBehindCameraAnchor[] = [
   { id: 'close', level: 66, zoom: 15.5, pitch: 48 },
   { level: 83, zoom: 16, pitch: 52 },
   { id: 'very-close', level: 100, zoom: 16.5, pitch: 56 },
+  // These match the next two + button presses after very-close.
+  { id: 'ultra-close', level: 120, zoom: 17.5, pitch: 60 },
+  { id: 'extreme-close', level: 140, zoom: 18.5, pitch: 64 },
 ];
 
 /**
@@ -57,6 +61,8 @@ const INTRO_CAMERA_ANCHORS: FollowBehindCameraAnchor[] = [
   { id: 'close', level: 66, zoom: 16.5, pitch: 56 },
   { level: 83, zoom: 17, pitch: 58 },
   { id: 'very-close', level: 100, zoom: 17.5, pitch: 60 },
+  { id: 'ultra-close', level: 120, zoom: 18.5, pitch: 64 },
+  { id: 'extreme-close', level: 140, zoom: 19.5, pitch: 68 },
 ];
 
 /** Levels of each stop, in order from furthest to closest. */

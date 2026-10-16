@@ -26,7 +26,9 @@ describe('follow-behind distance stops', () => {
   it('keeps every named preset on a level that still resolves to a stop', () => {
     // The framing each name describes has moved closer, but the levels saved in
     // existing projects must still land somewhere valid.
-    for (const preset of ['far', 'medium', 'close', 'very-close'] as const) {
+    for (const preset of [
+      'far', 'medium', 'close', 'very-close', 'ultra-close', 'extreme-close',
+    ] as const) {
       const level = getFollowBehindZoomLevelForPreset(preset);
       expect(getFollowBehindLevelForStopIndex(getFollowBehindStopIndexForLevel(level))).toBe(level);
     }
@@ -40,8 +42,9 @@ describe('follow-behind distance stops', () => {
     const zooms = Array.from({ length: FOLLOW_BEHIND_STOP_COUNT }, (_, index) =>
       getFollowBehindCameraTarget(getFollowBehindLevelForStopIndex(index), 'playback').zoom);
 
-    expect(zooms).toHaveLength(previousZooms.length);
-    zooms.forEach((zoom, index) => expect(zoom).toBeGreaterThan(previousZooms[index]));
+    expect(zooms).toHaveLength(previousZooms.length + 2);
+    zooms.slice(0, previousZooms.length)
+      .forEach((zoom, index) => expect(zoom).toBeGreaterThan(previousZooms[index]));
     expect(zooms[0]).toBeGreaterThanOrEqual(previousZooms[1]);
     expect(zooms[zooms.length - 1]).toBeGreaterThan(previousZooms[previousZooms.length - 1]);
   });
