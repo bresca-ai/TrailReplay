@@ -4,6 +4,64 @@ export interface FitBox { x: number; y: number; w: number; h: number; }
 
 export interface RouteTransformOpts { offsetX: number; offsetY: number; scale: number; }
 
+export interface CropRegion {
+  cropX: number;
+  cropY: number;
+  cropW: number;
+  cropH: number;
+}
+
+export interface MapFitPadding {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export function getMapFirstRouteSafeArea(options: {
+  posterWidth: number;
+  posterHeight: number;
+  showLocation: boolean;
+  showStats: boolean;
+  showElevation: boolean;
+}): FitBox {
+  const aspect = options.posterWidth / options.posterHeight;
+  const titleBottom = 0.04 * aspect
+    + 0.112 * aspect
+    + 0.01
+    + 0.05
+    + 0.04
+    + (options.showLocation ? 0.04 : 0);
+  const panelHeight = (options.showStats ? 0.115 : 0)
+    + (options.showElevation ? 0.105 : 0);
+  const bottom = 1 - panelHeight - 0.04;
+  const top = Math.min(0.32, titleBottom);
+
+  return {
+    x: 0.08,
+    y: top,
+    w: 0.84,
+    h: Math.max(0.2, bottom - top),
+  };
+}
+
+export function getMapFirstFitPadding(
+  containerWidth: number,
+  containerHeight: number,
+  crop: CropRegion,
+  safeArea: FitBox,
+): MapFitPadding {
+  const safeRight = crop.cropX + (safeArea.x + safeArea.w) * crop.cropW;
+  const safeBottom = crop.cropY + (safeArea.y + safeArea.h) * crop.cropH;
+
+  return {
+    top: crop.cropY + safeArea.y * crop.cropH,
+    right: containerWidth - safeRight,
+    bottom: containerHeight - safeBottom,
+    left: crop.cropX + safeArea.x * crop.cropW,
+  };
+}
+
 export function getMapPanTargetPoint(
   center: CanvasPoint,
   deltaX: number,

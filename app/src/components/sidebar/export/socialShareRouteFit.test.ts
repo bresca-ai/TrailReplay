@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   downsampleRoute,
   fitRouteToBox,
+  getMapFirstFitPadding,
+  getMapFirstRouteSafeArea,
   getMapPanTargetPoint,
   getMapZoomForScale,
   getRouteBboxNorm,
@@ -75,5 +77,36 @@ describe('map-first route gestures', () => {
     expect(getMapZoomForScale(10, 2, 0, 20)).toBe(11);
     expect(getMapZoomForScale(10, 0.5, 0, 20)).toBe(9);
     expect(getMapZoomForScale(19.5, 4, 0, 20)).toBe(20);
+  });
+});
+
+describe('map-first initial poster fit', () => {
+  it('reserves space for the title and data panel', () => {
+    const safeArea = getMapFirstRouteSafeArea({
+      posterWidth: 1080,
+      posterHeight: 1350,
+      showLocation: false,
+      showStats: true,
+      showElevation: true,
+    });
+
+    expect(safeArea.x).toBe(0.08);
+    expect(safeArea.x + safeArea.w).toBeCloseTo(0.92);
+    expect(safeArea.y).toBeCloseTo(0.2216);
+    expect(safeArea.y + safeArea.h).toBeCloseTo(0.74);
+  });
+
+  it('converts the poster safe area into map-container padding', () => {
+    const padding = getMapFirstFitPadding(
+      1000,
+      700,
+      { cropX: 220, cropY: 0, cropW: 560, cropH: 700 },
+      { x: 0.08, y: 0.22, w: 0.84, h: 0.52 },
+    );
+
+    expect(padding.top).toBeCloseTo(154);
+    expect(padding.right).toBeCloseTo(264.8);
+    expect(padding.bottom).toBeCloseTo(182);
+    expect(padding.left).toBeCloseTo(264.8);
   });
 });

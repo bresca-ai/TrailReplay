@@ -12,6 +12,8 @@ import type { CanvasPoint, FitBox } from './socialShareRouteFit';
 import {
   downsampleRoute,
   fitRouteToBox,
+  getMapFirstFitPadding,
+  getMapFirstRouteSafeArea,
   getMapPanTargetPoint,
   getMapZoomForScale,
   getRouteBboxNorm,
@@ -46,6 +48,7 @@ export function useSocialShareExport() {
   const logoRef = useRef<HTMLImageElement | null>(null);
   const photoRef = useRef<HTMLImageElement | null>(null);
   const photoIdRef = useRef<string | null>(null);
+  const lastMapFirstFitKeyRef = useRef<string | null>(null);
 
   const selectablePictures = pictures.filter((p) => !p.isPlaceholder);
   const selectedPicture = selectablePictures.find((p) => p.id === settings.selectedPictureId) ?? null;
@@ -162,7 +165,7 @@ export function useSocialShareExport() {
     return getRouteBboxNorm(projected, pw, ph, pw * 0.025);
   }, [settings.aspectRatio, settings.routeTransform]);
 
-  const generatePreview = useCallback(async () => {
+  const generatePreview = useCallback(async (options: { fitMapFirstRoute?: boolean } = {}) => {
     if (tracks.length === 0) { setPreviewUrl(null); return; }
     setIsRendering(true);
     try {
@@ -171,6 +174,54 @@ export function useSocialShareExport() {
       if (settings.template === 'map-first') {
         const map = mapGlobalRef.current;
         if (map) {
+          const container = document.getElementById('map-capture-container');
+          const visibleTracks = tracks.filter((track) => track.visible && track.points.length > 0);
+          const fitKey = [
+            settings.aspectRatio,
+            settings.showLocation,
+            settings.showStats,
+            settings.showElevationMiniChart,
+            ...visibleTracks.map((track) => `${track.id}:${track.points.length}`),
+          ].join('|');
+
+          if (options.fitMapFirstRoute && container && visibleTracks.length > 0
+            && lastMapFirstFitKeyRef.current !== fitKey) {
+            const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
+            const rect = container.getBoundingClientRect();
+            const crop = getCropRegion(rect, posterW, posterH);
+            const safeArea = getMapFirstRouteSafeArea({
+              posterWidth: posterW,
+              posterHeight: posterH,
+              showLocation: settings.showLocation,
+              showStats: settings.showStats,
+              showElevation: settings.showElevationMiniChart,
+            });
+            const padding = getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
+            let minLon = Infinity;
+            let maxLon = -Infinity;
+            let minLat = Infinity;
+            let maxLat = -Infinity;
+            for (const track of visibleTracks) {
+              for (const point of track.points) {
+                minLon = Math.min(minLon, point.lon);
+                maxLon = Math.max(maxLon, point.lon);
+                minLat = Math.min(minLat, point.lat);
+                maxLat = Math.max(maxLat, point.lat);
+              }
+            }
+            map.fitBounds(
+              [[minLon, minLat], [maxLon, maxLat]],
+              {
+                padding,
+                duration: 0,
+                maxZoom: 15,
+                bearing: map.getBearing(),
+                pitch: map.getPitch(),
+              },
+            );
+            lastMapFirstFitKeyRef.current = fitKey;
+          }
+
           // Copy WebGL pixels to a 2D canvas synchronously inside the render callback.
           // If tiles are still loading, wait for 'idle' first so we get a complete frame.
           preCapuredMapCanvas = await new Promise<HTMLCanvasElement | null>((resolve) => {
@@ -225,7 +276,16 @@ export function useSocialShareExport() {
     } finally {
       setIsRendering(false);
     }
-  }, [buildInput, computeRouteBbox, settings.aspectRatio, settings.template, tracks.length]);
+  }, [
+    buildInput,
+    computeRouteBbox,
+    settings.aspectRatio,
+    settings.showElevationMiniChart,
+    settings.showLocation,
+    settings.showStats,
+    settings.template,
+    tracks,
+  ]);
 
   const transformMapViewport = useCallback(async (gesture: MapRouteGesture) => {
     const map = mapGlobalRef.current;

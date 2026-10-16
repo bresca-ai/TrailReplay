@@ -288,7 +288,7 @@ export function SocialSharePanel() {
             template: settings.template,
             aspect_ratio: settings.aspectRatio,
           });
-          await generatePreview();
+          await generatePreview({ fitMapFirstRoute: settings.template === 'map-first' });
           setShowPreview(true);
         }}
         disabled={isRendering || !hasTracks}
