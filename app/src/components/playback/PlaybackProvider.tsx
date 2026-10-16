@@ -92,7 +92,10 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
   // intro timer. This fires after the warm-up rather than before it, so the intro
   // flyTo animates against an already-loaded tile cache (no white squares).
   useEffect(() => {
-    if (animationPhase !== 'intro') return;
+    // Deterministic exports advance the intro on the encoded timeline. Studio
+    // export can spend much longer than 2.5s waiting for map tiles, so a wall-
+    // clock timeout here would switch to playback before the intro frames finish.
+    if (animationPhase !== 'intro' || isDeterministicExport) return;
 
     introTimeoutRef.current = setTimeout(() => {
       setCinematicPlayed(true);
@@ -105,7 +108,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
         introTimeoutRef.current = null;
       }
     };
-  }, [animationPhase, setCinematicPlayed, setAnimationPhase]);
+  }, [animationPhase, isDeterministicExport, setCinematicPlayed, setAnimationPhase]);
 
   // Animation loop - only run when in 'playing' phase
   useEffect(() => {

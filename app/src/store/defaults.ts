@@ -23,7 +23,7 @@ export function createDefaultSettings(): AppSettings {
   return {
     language: getInitialLanguage(),
     unitSystem: 'metric',
-    mapStyle: 'esri-clarity',
+    mapStyle: 'satellite',
     mapFilter: 'none',
     show3DTerrain: true,
     showHeartRate: false,
