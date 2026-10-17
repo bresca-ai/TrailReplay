@@ -9,13 +9,25 @@ import { translate } from '@/i18n/translations';
 import { getPosterSize, renderSocialPoster, exportSocialPosterBlob } from './socialShareRenderer';
 import type { RenderInput } from './socialShareRenderer';
 import type { CanvasPoint, FitBox } from './socialShareRouteFit';
-import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
+import {
+  downsampleRoute,
+  fitRouteToBox,
+  getMapFirstFitPadding,
+  getMapFirstRouteSafeArea,
+  getMapPanTargetPoint,
+  getMapZoomForScale,
+  getRouteBboxNorm,
+} from './socialShareRouteFit';
 
 const BRAND_ORANGE = '#C1652F';
 
 export interface RouteBboxNorm {
   x: number; y: number; w: number; h: number;
 }
+
+export type MapRouteGesture =
+  | { type: 'move'; deltaX: number; deltaY: number }
+  | { type: 'resize'; scaleFactor: number; anchorX: number; anchorY: number };
 
 export function useSocialShareExport() {
   const settings = useAppStore((s) => s.socialShareSettings);
@@ -36,6 +48,7 @@ export function useSocialShareExport() {
   const logoRef = useRef<HTMLImageElement | null>(null);
   const photoRef = useRef<HTMLImageElement | null>(null);
   const photoIdRef = useRef<string | null>(null);
+  const lastMapFirstFitKeyRef = useRef<string | null>(null);
 
   const selectablePictures = pictures.filter((p) => !p.isPlaceholder);
   const selectedPicture = selectablePictures.find((p) => p.id === settings.selectedPictureId) ?? null;
@@ -149,18 +162,10 @@ export function useSocialShareExport() {
       scale: settings.routeTransform.scale,
     });
     if (projected.length === 0) return null;
-    const xs = projected.map((p) => p.x);
-    const ys = projected.map((p) => p.y);
-    const pad = pw * 0.025;
-    return {
-      x: Math.max(0, (Math.min(...xs) - pad) / pw),
-      y: Math.max(0, (Math.min(...ys) - pad) / ph),
-      w: Math.min(1, (Math.max(...xs) - Math.min(...xs) + pad * 2) / pw),
-      h: Math.min(1, (Math.max(...ys) - Math.min(...ys) + pad * 2) / ph),
-    };
+    return getRouteBboxNorm(projected, pw, ph, pw * 0.025);
   }, [settings.aspectRatio, settings.routeTransform]);
 
-  const generatePreview = useCallback(async () => {
+  const generatePreview = useCallback(async (options: { fitMapFirstRoute?: boolean } = {}) => {
     if (tracks.length === 0) { setPreviewUrl(null); return; }
     setIsRendering(true);
     try {
@@ -169,6 +174,54 @@ export function useSocialShareExport() {
       if (settings.template === 'map-first') {
         const map = mapGlobalRef.current;
         if (map) {
+          const container = document.getElementById('map-capture-container');
+          const visibleTracks = tracks.filter((track) => track.visible && track.points.length > 0);
+          const fitKey = [
+            settings.aspectRatio,
+            settings.showLocation,
+            settings.showStats,
+            settings.showElevationMiniChart,
+            ...visibleTracks.map((track) => `${track.id}:${track.points.length}`),
+          ].join('|');
+
+          if (options.fitMapFirstRoute && container && visibleTracks.length > 0
+            && lastMapFirstFitKeyRef.current !== fitKey) {
+            const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
+            const rect = container.getBoundingClientRect();
+            const crop = getCropRegion(rect, posterW, posterH);
+            const safeArea = getMapFirstRouteSafeArea({
+              posterWidth: posterW,
+              posterHeight: posterH,
+              showLocation: settings.showLocation,
+              showStats: settings.showStats,
+              showElevation: settings.showElevationMiniChart,
+            });
+            const padding = getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
+            let minLon = Infinity;
+            let maxLon = -Infinity;
+            let minLat = Infinity;
+            let maxLat = -Infinity;
+            for (const track of visibleTracks) {
+              for (const point of track.points) {
+                minLon = Math.min(minLon, point.lon);
+                maxLon = Math.max(maxLon, point.lon);
+                minLat = Math.min(minLat, point.lat);
+                maxLat = Math.max(maxLat, point.lat);
+              }
+            }
+            map.fitBounds(
+              [[minLon, minLat], [maxLon, maxLat]],
+              {
+                padding,
+                duration: 0,
+                maxZoom: 15,
+                bearing: map.getBearing(),
+                pitch: map.getPitch(),
+              },
+            );
+            lastMapFirstFitKeyRef.current = fitKey;
+          }
+
           // Copy WebGL pixels to a 2D canvas synchronously inside the render callback.
           // If tiles are still loading, wait for 'idle' first so we get a complete frame.
           preCapuredMapCanvas = await new Promise<HTMLCanvasElement | null>((resolve) => {
@@ -206,9 +259,12 @@ export function useSocialShareExport() {
 
       const input = buildInput(preCapuredMapCanvas);
 
-      // Compute route bbox for photo-first interactive overlay
+      // Compute the same route bounds used by the renderer for either template.
       if (settings.template === 'photo-first' && input.routeLatLons) {
         setRouteBboxNorm(computeRouteBbox(input.routeLatLons));
+      } else if (input.projectedRouteForMap) {
+        const { w, h } = getPosterSize(settings.aspectRatio);
+        setRouteBboxNorm(getRouteBboxNorm(input.projectedRouteForMap, w, h, w * 0.025));
       } else {
         setRouteBboxNorm(null);
       }
@@ -220,7 +276,44 @@ export function useSocialShareExport() {
     } finally {
       setIsRendering(false);
     }
-  }, [buildInput, computeRouteBbox, settings.template, tracks.length]);
+  }, [
+    buildInput,
+    computeRouteBbox,
+    settings.aspectRatio,
+    settings.showElevationMiniChart,
+    settings.showLocation,
+    settings.showStats,
+    settings.template,
+    tracks,
+  ]);
+
+  const transformMapViewport = useCallback(async (gesture: MapRouteGesture) => {
+    const map = mapGlobalRef.current;
+    const container = document.getElementById('map-capture-container');
+    if (!map || !container) return;
+
+    const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
+    const rect = container.getBoundingClientRect();
+    const { cropX, cropY, cropW, cropH } = getCropRegion(rect, posterW, posterH);
+
+    if (gesture.type === 'move') {
+      const centerPoint = map.project(map.getCenter());
+      const target = getMapPanTargetPoint(centerPoint, gesture.deltaX, gesture.deltaY, cropW, cropH);
+      const center = map.unproject([target.x, target.y]);
+      map.jumpTo({ center });
+    } else {
+      const anchor = map.unproject([
+        cropX + gesture.anchorX * cropW,
+        cropY + gesture.anchorY * cropH,
+      ]);
+      const zoom = getMapZoomForScale(
+        map.getZoom(), gesture.scaleFactor, map.getMinZoom(), map.getMaxZoom(),
+      );
+      map.zoomTo(zoom, { around: anchor, duration: 0 });
+    }
+
+    await generatePreview();
+  }, [generatePreview, settings.aspectRatio]);
 
   useEffect(() => {
     void generatePreview();
@@ -324,5 +417,6 @@ export function useSocialShareExport() {
     hasTracks: tracks.length > 0,
     routeBboxNorm,
     dataPanelBboxNorm,
+    transformMapViewport,
   };
 }

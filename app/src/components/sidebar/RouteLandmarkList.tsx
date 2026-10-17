@@ -5,13 +5,13 @@ import { useAllRouteLandmarks } from '@/hooks/useAllRouteLandmarks';
 import {
   LANDMARK_COLORS,
   LANDMARK_GLYPH_KEYS,
-  LANDMARK_GLYPH_LABELS,
   PINHEAD_PATHS,
   colorForLandmark,
   glyphForLandmark,
 } from '@/components/map/landmarkGlyphs';
 import { trackEvent } from '@/utils/analytics';
 import type { RouteLandmark } from '@/types/landmarks';
+import { useI18n } from '@/i18n/useI18n';
 
 function GlyphIcon({ glyph, color, size = 16 }: { glyph: string; color: string; size?: number }) {
   return (
@@ -27,6 +27,7 @@ function GlyphIcon({ glyph, color, size = 16 }: { glyph: string; color: string; 
  * map can be renamed, re-iconed, recolored or removed through the same form.
  */
 function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
+  const { t } = useI18n();
   const userLandmarks = useAppStore((state) => state.userLandmarks);
   const updateLandmark = useAppStore((state) => state.updateLandmark);
   const removeLandmark = useAppStore((state) => state.removeLandmark);
@@ -46,18 +47,18 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
   return (
     <div className="space-y-3 rounded-lg border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-[var(--evergreen)]">Edit landmark</span>
+        <span className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.editLandmark')}</span>
         <button
           onClick={() => selectLandmark(null)}
           className="rounded p-1 text-[var(--evergreen-60)] hover:text-[var(--evergreen)]"
-          aria-label="Close landmark editor"
+          aria-label={t('routeLandmarks.closeEditor')}
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
       <label className="block">
-        <span className="block text-[11px] text-[var(--evergreen-60)]">Name</span>
+        <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.name')}</span>
         <input
           type="text"
           value={landmark.title}
@@ -67,14 +68,14 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
       </label>
 
       <div>
-        <span className="block text-[11px] text-[var(--evergreen-60)]">Icon</span>
+        <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.icon')}</span>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {LANDMARK_GLYPH_KEYS.map((key) => (
             <button
               key={key}
               onClick={() => edit({ icon: key })}
-              title={LANDMARK_GLYPH_LABELS[key]}
-              aria-label={LANDMARK_GLYPH_LABELS[key]}
+              title={t(`routeLandmarks.glyphs.${key}`)}
+              aria-label={t(`routeLandmarks.glyphs.${key}`)}
               aria-pressed={glyph === key}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-colors ${
                 glyph === key
@@ -89,13 +90,13 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
       </div>
 
       <div>
-        <span className="block text-[11px] text-[var(--evergreen-60)]">Color</span>
+        <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.color')}</span>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {LANDMARK_COLORS.map((swatch) => (
             <button
               key={swatch}
               onClick={() => edit({ color: swatch })}
-              aria-label={`Use color ${swatch}`}
+              aria-label={t('routeLandmarks.useColor', { color: swatch })}
               aria-pressed={color.toLowerCase() === swatch.toLowerCase()}
               style={{ backgroundColor: swatch }}
               className={`h-6 w-6 rounded-full border-2 ${
@@ -120,13 +121,14 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
         className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/40 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-500/10"
       >
         <Trash2 className="h-3.5 w-3.5" />
-        Remove from map
+        {t('routeLandmarks.removeFromMap')}
       </button>
     </div>
   );
 }
 
 export function RouteLandmarkList() {
+  const { t } = useI18n();
   const landmarks = useAllRouteLandmarks();
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const selectLandmark = useAppStore((state) => state.selectLandmark);
@@ -150,7 +152,7 @@ export function RouteLandmarkList() {
   return (
     <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-[var(--evergreen)]">Landmarks on the map</p>
+        <p className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.onMap')}</p>
         <span className="text-[11px] text-[var(--evergreen-60)]">{ordered.length}</span>
       </div>
 
@@ -173,14 +175,14 @@ export function RouteLandmarkList() {
         }`}
       >
         {isPlacingLandmark ? <MapPin className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-        {isPlacingLandmark ? 'Click the map to place it' : 'Add landmark'}
+        {isPlacingLandmark ? t('routeLandmarks.clickMapToPlace') : t('routeLandmarks.addLandmark')}
       </button>
 
       {selected && <LandmarkEditor landmark={selected} />}
 
       {ordered.length === 0 ? (
         <p className="text-[11px] text-[var(--evergreen-60)]">
-          No landmarks yet. Turn on route moments or nearby places above, or add your own.
+          {t('routeLandmarks.empty')}
         </p>
       ) : (
         <ul className="max-h-64 space-y-1 overflow-y-auto">
@@ -213,7 +215,7 @@ export function RouteLandmarkList() {
           className="flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-[var(--evergreen-60)] hover:text-[var(--evergreen)]"
         >
           <Undo2 className="h-3 w-3" />
-          Restore {restorableCount} removed landmark{restorableCount === 1 ? '' : 's'}
+          {t(restorableCount === 1 ? 'routeLandmarks.restoreRemovedLandmark' : 'routeLandmarks.restoreRemovedLandmarks', { count: restorableCount })}
         </button>
       )}
     </div>

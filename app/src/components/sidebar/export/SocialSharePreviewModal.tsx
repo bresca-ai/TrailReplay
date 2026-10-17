@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Download, Loader2, X } from 'lucide-react';
 import type { SocialShareSettings } from '@/types';
-import type { RouteBboxNorm } from './useSocialShareExport';
+import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   onExport: () => void;
   settings: SocialShareSettings;
   setSocialShareSettings: (patch: Partial<SocialShareSettings>) => void;
+  onMapRouteGesture: (gesture: MapRouteGesture) => Promise<void>;
   routeBboxNorm: RouteBboxNorm | null;
   dataPanelBboxNorm: RouteBboxNorm | null;
 }
@@ -34,7 +35,7 @@ interface PanelDragState {
 
 export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport,
-  settings, setSocialShareSettings, routeBboxNorm, dataPanelBboxNorm,
+  settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm,
 }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,7 +51,7 @@ export function SocialSharePreviewModal({
   const aspectStyle = settings.aspectRatio === '4:5' ? '4 / 5'
     : settings.aspectRatio === '9:16' ? '9 / 16' : '1 / 1';
 
-  const showRouteOverlay = settings.template === 'photo-first' && !!routeBboxNorm;
+  const showRouteOverlay = !!routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
   const hasAnyOverlay = showRouteOverlay || showPanelOverlay;
 
@@ -92,26 +93,44 @@ export function SocialSharePreviewModal({
   const onRoutePointerUp = () => {
     const ds = routeDragRef.current;
     if (!ds) return;
-    setRouteDragVisual((prev) => {
+    const visual = routeDragVisual;
+    routeDragRef.current = null;
+    setRouteDragVisual({ dx: 0, dy: 0, sf: 1, active: false });
+
+    if (settings.template === 'map-first') {
       if (ds.type === 'move') {
-        setSocialShareSettings({
-          routeTransform: {
-            ...settings.routeTransform,
-            offsetX: ds.startOffsetX + prev.dx / ds.containerW,
-            offsetY: ds.startOffsetY + prev.dy / ds.containerH,
-          },
+        void onMapRouteGesture({
+          type: 'move',
+          deltaX: visual.dx / ds.containerW,
+          deltaY: visual.dy / ds.containerH,
         });
       } else {
-        setSocialShareSettings({
-          routeTransform: {
-            ...settings.routeTransform,
-            scale: Math.max(0.3, Math.min(4, ds.startScale * prev.sf)),
-          },
+        void onMapRouteGesture({
+          type: 'resize',
+          scaleFactor: visual.sf,
+          anchorX: (routeBboxNorm?.x ?? 0) + (routeBboxNorm?.w ?? 1) / 2,
+          anchorY: (routeBboxNorm?.y ?? 0) + (routeBboxNorm?.h ?? 1) / 2,
         });
       }
-      routeDragRef.current = null;
-      return { dx: 0, dy: 0, sf: 1, active: false };
-    });
+      return;
+    }
+
+    if (ds.type === 'move') {
+      setSocialShareSettings({
+        routeTransform: {
+          ...settings.routeTransform,
+          offsetX: ds.startOffsetX + visual.dx / ds.containerW,
+          offsetY: ds.startOffsetY + visual.dy / ds.containerH,
+        },
+      });
+    } else {
+      setSocialShareSettings({
+        routeTransform: {
+          ...settings.routeTransform,
+          scale: Math.max(0.3, Math.min(4, ds.startScale * visual.sf)),
+        },
+      });
+    }
   };
 
   // ── Panel drag handlers (pointer capture on the panel div) ────────────────
@@ -161,7 +180,7 @@ export function SocialSharePreviewModal({
             {t('imageExport.posterPreview')}
             {hasAnyOverlay && (
               <span className="ml-2 text-xs font-normal opacity-50 normal-case tracking-normal">
-                {t('imageExport.dragHint')}
+                {t(settings.template === 'map-first' ? 'imageExport.dragMapHint' : 'imageExport.dragHint')}
               </span>
             )}
           </h2>
@@ -203,7 +222,7 @@ export function SocialSharePreviewModal({
               />
             )}
 
-            {/* Route overlay — rendered last (higher z-order), photo-first only */}
+            {/* Route overlay — rendered last (higher z-order) */}
             {showRouteOverlay && routeBboxNorm && (
               <div
                 className="absolute border-2 border-dashed border-[var(--trail-orange)] rounded select-none"
