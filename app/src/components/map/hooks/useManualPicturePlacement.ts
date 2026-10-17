@@ -2,17 +2,11 @@ import { useEffect, type MutableRefObject } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { useAppStore } from '@/store/useAppStore';
 import type { PendingPicturePlacement, PictureAnnotation, VideoAnnotation } from '@/types';
-
-interface RoutePlacement {
-  lat: number;
-  lon: number;
-  progress: number;
-}
+import { useFindNearestRoutePoint } from '@/components/map/hooks/useFindNearestRoutePoint.ts';
 
 interface UseManualPicturePlacementParams {
   addPicture: (picture: PictureAnnotation) => void;
   addVideo: (video: VideoAnnotation) => void;
-  findNearestRoutePoint: (lat: number, lon: number) => RoutePlacement | null;
   isMapLoaded: boolean;
   mapRef: MutableRefObject<maplibregl.Map | null>;
   pendingPicturePlacements: PendingPicturePlacement[];
@@ -23,13 +17,14 @@ interface UseManualPicturePlacementParams {
 export function useManualPicturePlacement({
   addPicture,
   addVideo,
-  findNearestRoutePoint,
   isMapLoaded,
   mapRef,
   pendingPicturePlacements,
   removePendingPicturePlacement,
   t,
 }: UseManualPicturePlacementParams) {
+  const findNearestRoutePoint = useFindNearestRoutePoint();
+
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded) return;
 
