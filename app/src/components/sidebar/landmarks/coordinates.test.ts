@@ -34,7 +34,7 @@ describe('sanitizeCoordinates', () => {
   });
 
   it('ignores odd whitespace', () => {
-    const result = sanitizeCoordinates(' 12.34,56.78 ');
+    const result = sanitizeCoordinates(' 12.34 ,56.78 ');
 
     expect(result).toEqual([12.34, 56.78]);
   });
@@ -61,5 +61,23 @@ describe('sanitizeCoordinates', () => {
     const result = sanitizeCoordinates('12.34, 180.1');
 
     expect(result).toBeUndefined();
+  });
+
+  it('does not parse coordinates with garbage suffix', () => {
+    const result = sanitizeCoordinates('12.34, 56.78xyz');
+
+    expect(result).toBeUndefined();
+  });
+
+  it('parses 0, 0', () => {
+    const result = sanitizeCoordinates('0, 0');
+
+    expect(result).toEqual([0, 0]);
+  });
+
+  it('parses coordinates with degree symbol (°)', () => {
+    const result = sanitizeCoordinates('12.34°, 56.78°');
+
+    expect(result).toEqual([12.34, 56.78]);
   });
 });

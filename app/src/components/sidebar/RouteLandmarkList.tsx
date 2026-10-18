@@ -191,7 +191,11 @@ export function RouteLandmarkList() {
     }, delaySeconds * 1000));
   };
 
-  useEffect(() => () => clearDelayTimeout(), [clearDelayTimeout]);
+  useEffect(() => () => {
+    if (delayTimeout) {
+      clearTimeout(delayTimeout);
+    }
+  }, [delayTimeout]);
 
   return (
     <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
@@ -224,7 +228,7 @@ export function RouteLandmarkList() {
 
       {isPlacingLandmark && <label className="block">
         <div className="block text-[11px] text-[var(--evergreen-60)] flex items-center justify-start gap-2">
-          <span>Or paste coordinates here</span>
+          <span>{t('routeLandmarks.pasteCoordinates')}</span>
           {delayTimeout && <div
             className="mx-auto h-3 w-3 rounded-full border-1 border-[var(--trail-orange)] border-t-transparent animate-spin" />
           }
