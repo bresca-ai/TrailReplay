@@ -55,6 +55,12 @@ function createPendingPlacement(id: string): PendingPicturePlacement {
 }
 
 describe('createAppStore', () => {
+  it('defaults to the satellite map style', () => {
+    const useStore = createAppStore();
+
+    expect(useStore.getState().settings.mapStyle).toBe('satellite');
+  });
+
   it('creates the expected journey state when the first imported track is added', () => {
     const useStore = createAppStore();
     const track = createTrack();
@@ -197,7 +203,7 @@ describe('createAppStore', () => {
     useStore.getState().reset();
 
     const state = useStore.getState();
-    expect(state.settings.mapStyle).toBe('esri-clarity');
+    expect(state.settings.mapStyle).toBe('satellite');
     expect(state.settings.trailStyle.currentIcon).toBe(DEFAULT_ACTIVITY_ICON);
     expect(state.settings.trailStyle.markerColor).toBe('#56C596');
     expect(state.settings.trailStyle.trackLabel).toBe('Track 1');

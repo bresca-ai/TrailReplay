@@ -484,9 +484,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     stats.frames += 1;
     stats.waitedMs += result.waitedMs;
     if (result.timedOut) stats.timedOutFrames += 1;
-    if (result.timedOut) {
-      throw new Error(`Studio map tiles did not settle within ${STUDIO_FRAME_SETTLE_TIMEOUT_MS / 1000} seconds`);
-    }
+    // A slow or unavailable tile must not abort the whole export. Capture the
+    // best frame MapLibre currently has and report the count in the completed
+    // Studio status, so a timeout is visible without losing the finished video.
   }, [renderMapOnce, waitForMapFrame]);
 
   /**
