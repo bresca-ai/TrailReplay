@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Download, Loader2, X } from 'lucide-react';
+import { Check, Download, Loader2, Move, X } from 'lucide-react';
 import type { SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
@@ -14,6 +14,8 @@ interface Props {
   onMapRouteGesture: (gesture: MapRouteGesture) => Promise<void>;
   routeBboxNorm: RouteBboxNorm | null;
   dataPanelBboxNorm: RouteBboxNorm | null;
+  titleBboxNorm: RouteBboxNorm;
+  coverMode?: boolean;
 }
 
 interface RouteDragState {
@@ -33,9 +35,27 @@ interface PanelDragState {
   containerH: number;
 }
 
+interface TitleDragState {
+  startX: number;
+  startY: number;
+  startOffsetX: number;
+  startOffsetY: number;
+  containerW: number;
+  containerH: number;
+}
+
+interface PhotoDragState {
+  startX: number;
+  startY: number;
+  startOffsetX: number;
+  startOffsetY: number;
+  containerW: number;
+  containerH: number;
+}
+
 export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport,
-  settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm,
+  settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false,
 }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,13 +67,92 @@ export function SocialSharePreviewModal({
   // Panel overlay drag state
   const panelDragRef = useRef<PanelDragState | null>(null);
   const [panelDragVisual, setPanelDragVisual] = useState({ dy: 0, active: false });
+  const titleDragRef = useRef<TitleDragState | null>(null);
+  const [titleDragVisual, setTitleDragVisual] = useState({ dx: 0, dy: 0, active: false });
+  const photoDragRef = useRef<PhotoDragState | null>(null);
+  const [photoDragVisual, setPhotoDragVisual] = useState({ dx: 0, dy: 0, active: false });
+  const [photoEditMode, setPhotoEditMode] = useState(false);
 
-  const aspectStyle = settings.aspectRatio === '4:5' ? '4 / 5'
-    : settings.aspectRatio === '9:16' ? '9 / 16' : '1 / 1';
+  const aspectStyle = settings.aspectRatio === '16:9' ? '16 / 9'
+    : settings.aspectRatio === '4:5' ? '4 / 5'
+      : settings.aspectRatio === '9:16' ? '9 / 16' : '1 / 1';
 
   const showRouteOverlay = !!routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
-  const hasAnyOverlay = showRouteOverlay || showPanelOverlay;
+  const hasAnyOverlay = showRouteOverlay || showPanelOverlay || !!titleBboxNorm;
+
+  const onPhotoPointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
+    if (settings.template !== 'photo-first' || !photoEditMode) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const transform = settings.photoTransform ?? { offsetX: 0, offsetY: 0, scale: 1 };
+    photoDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffsetX: transform.offsetX,
+      startOffsetY: transform.offsetY,
+      containerW: rect.width,
+      containerH: rect.height,
+    };
+    setPhotoDragVisual({ dx: 0, dy: 0, active: true });
+  };
+
+  const onPhotoPointerMove = (e: React.PointerEvent<HTMLImageElement>) => {
+    const drag = photoDragRef.current;
+    if (!drag) return;
+    setPhotoDragVisual({ dx: e.clientX - drag.startX, dy: e.clientY - drag.startY, active: true });
+  };
+
+  const onPhotoPointerUp = () => {
+    const drag = photoDragRef.current;
+    if (!drag) return;
+    setSocialShareSettings({
+      photoTransform: {
+        ...(settings.photoTransform ?? { offsetX: 0, offsetY: 0, scale: 1 }),
+        offsetX: Math.max(-1, Math.min(1, drag.startOffsetX + photoDragVisual.dx / drag.containerW)),
+        offsetY: Math.max(-1, Math.min(1, drag.startOffsetY + photoDragVisual.dy / drag.containerH)),
+      },
+    });
+    photoDragRef.current = null;
+    setPhotoDragVisual({ dx: 0, dy: 0, active: false });
+  };
+
+  const onTitlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const container = containerRef.current;
+    if (!container) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = container.getBoundingClientRect();
+    titleDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffsetX: settings.titleOffsetX,
+      startOffsetY: settings.titleOffsetY,
+      containerW: rect.width,
+      containerH: rect.height,
+    };
+    setTitleDragVisual({ dx: 0, dy: 0, active: true });
+  };
+
+  const onTitlePointerMove = (e: React.PointerEvent) => {
+    const drag = titleDragRef.current;
+    if (!drag) return;
+    setTitleDragVisual({ dx: e.clientX - drag.startX, dy: e.clientY - drag.startY, active: true });
+  };
+
+  const onTitlePointerUp = () => {
+    const drag = titleDragRef.current;
+    if (!drag) return;
+    setSocialShareSettings({
+      titleOffsetX: Math.max(-0.03, Math.min(0.18, drag.startOffsetX + titleDragVisual.dx / drag.containerW)),
+      titleOffsetY: Math.max(-0.18, Math.min(0.28, drag.startOffsetY + titleDragVisual.dy / drag.containerH)),
+    });
+    titleDragRef.current = null;
+    setTitleDragVisual({ dx: 0, dy: 0, active: false });
+  };
 
   // ── Route drag handlers (pointer capture on the bbox div) ─────────────────
   const onRoutePointerDown = (e: React.PointerEvent, type: 'move' | 'resize') => {
@@ -158,12 +257,10 @@ export function SocialSharePreviewModal({
   const onPanelPointerUp = () => {
     const ds = panelDragRef.current;
     if (!ds) return;
-    setPanelDragVisual((prev) => {
-      const newOffsetY = Math.max(0, Math.min(0.85, ds.startOffsetY - prev.dy / ds.containerH));
-      setSocialShareSettings({ dataPanelOffsetY: newOffsetY });
-      panelDragRef.current = null;
-      return { dy: 0, active: false };
-    });
+    const newOffsetY = Math.max(0, Math.min(0.85, ds.startOffsetY - panelDragVisual.dy / ds.containerH));
+    setSocialShareSettings({ dataPanelOffsetY: newOffsetY });
+    panelDragRef.current = null;
+    setPanelDragVisual({ dy: 0, active: false });
   };
 
   return (
@@ -180,10 +277,20 @@ export function SocialSharePreviewModal({
             {t('imageExport.posterPreview')}
             {hasAnyOverlay && (
               <span className="ml-2 text-xs font-normal opacity-50 normal-case tracking-normal">
-                {t(settings.template === 'map-first' ? 'imageExport.dragMapHint' : 'imageExport.dragHint')}
+                {t(settings.template === 'map-first'
+                  ? 'imageExport.dragMapHint'
+                  : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
               </span>
             )}
           </h2>
+          {settings.template === 'photo-first' && (
+            <button type="button" onClick={() => setPhotoEditMode((active) => !active)}
+              aria-pressed={photoEditMode}
+              className={`ml-auto mr-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${photoEditMode ? 'bg-[var(--trail-orange)] text-white' : 'bg-black/5 hover:bg-black/10'}`}>
+              <Move className="h-3.5 w-3.5" />
+              {t(photoEditMode ? 'imageExport.doneEditingPhoto' : 'imageExport.editPhoto')}
+            </button>
+          )}
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded">
             <X className="w-4 h-4" />
           </button>
@@ -198,8 +305,31 @@ export function SocialSharePreviewModal({
             <img
               src={previewUrl}
               alt="Social share poster preview"
-              className="absolute inset-0 w-full h-full object-cover"
+              className={`absolute inset-0 w-full h-full object-cover ${photoEditMode ? (photoDragVisual.active ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
               draggable={false}
+              onPointerDown={onPhotoPointerDown}
+              onPointerMove={onPhotoPointerMove}
+              onPointerUp={onPhotoPointerUp}
+              onPointerCancel={onPhotoPointerUp}
+            />
+
+            <div
+              className="absolute rounded-md border-2 border-dashed border-white/85 bg-black/5 select-none"
+              style={{
+                left: `${titleBboxNorm.x * 100}%`,
+                top: `${titleBboxNorm.y * 100}%`,
+                width: `${titleBboxNorm.w * 100}%`,
+                height: `${titleBboxNorm.h * 100}%`,
+                transform: `translate(${titleDragVisual.active ? titleDragVisual.dx : 0}px, ${titleDragVisual.active ? titleDragVisual.dy : 0}px)`,
+                cursor: titleDragVisual.active ? 'grabbing' : 'grab',
+                touchAction: 'none',
+                pointerEvents: photoEditMode ? 'none' : 'auto',
+              }}
+              onPointerDown={onTitlePointerDown}
+              onPointerMove={onTitlePointerMove}
+              onPointerUp={onTitlePointerUp}
+              onPointerCancel={onTitlePointerUp}
+              aria-label={t('imageExport.dragTitle')}
             />
 
             {/* Panel overlay — rendered first (lower z-order) */}
@@ -214,6 +344,7 @@ export function SocialSharePreviewModal({
                   transform: `translateY(${panelDragVisual.active ? panelDragVisual.dy : 0}px)`,
                   cursor: panelDragVisual.active ? 'grabbing' : 'grab',
                   touchAction: 'none',
+                  pointerEvents: photoEditMode ? 'none' : 'auto',
                 }}
                 onPointerDown={onPanelPointerDown}
                 onPointerMove={onPanelPointerMove}
@@ -235,6 +366,7 @@ export function SocialSharePreviewModal({
                   transformOrigin: '50% 50%',
                   cursor: routeDragVisual.active ? 'grabbing' : 'grab',
                   touchAction: 'none',
+                  pointerEvents: photoEditMode ? 'none' : 'auto',
                 }}
                 onPointerDown={(e) => onRoutePointerDown(e, 'move')}
                 onPointerMove={onRoutePointerMove}
@@ -276,10 +408,8 @@ export function SocialSharePreviewModal({
           >
             {isRendering ? (
               <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            {t('imageExport.downloadPng')}
+            ) : coverMode ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+            {t(coverMode ? 'imageExport.useCover' : 'imageExport.downloadPng')}
           </button>
         </div>
       </div>

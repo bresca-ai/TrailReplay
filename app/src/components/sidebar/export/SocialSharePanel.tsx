@@ -1,25 +1,56 @@
-import { useState } from 'react';
-import { ImageIcon, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, ImagePlus, ImageIcon, Loader2, Minus, Plus, X } from 'lucide-react';
 import { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
-import type { SocialShareTemplate, SocialShareAspectRatio } from '@/types';
+import type { SocialShareTemplate, SocialShareAspectRatio, SocialShareStat, SocialShareStatMetric } from '@/types';
 
 const RATIOS: { value: SocialShareAspectRatio; label: string }[] = [
+  { value: '16:9', label: '16:9' },
   { value: '4:5', label: '4:5' },
   { value: '1:1', label: '1:1' },
   { value: '9:16', label: '9:16' },
 ];
 
-export function SocialSharePanel() {
+const STAT_OPTIONS: { value: SocialShareStatMetric; labelKey: string }[] = [
+  { value: 'distance', labelKey: 'imageExport.statDistance' },
+  { value: 'elevationGain', labelKey: 'imageExport.statElevGain' },
+  { value: 'duration', labelKey: 'imageExport.statTime' },
+  { value: 'movingDuration', labelKey: 'stats.movingDuration' },
+  { value: 'pace', labelKey: 'stats.avgPace' },
+  { value: 'heartRate', labelKey: 'stats.heartRateShort' },
+  { value: 'speed', labelKey: 'imageExport.statAvgSpeed' },
+  { value: 'altitude', labelKey: 'stats.altitude' },
+  { value: 'maxElevation', labelKey: 'imageExport.statMaxElevation' },
+  { value: 'elevationLoss', labelKey: 'imageExport.statElevationLoss' },
+  { value: 'maxSpeed', labelKey: 'imageExport.statMaxSpeed' },
+  { value: 'custom', labelKey: 'imageExport.statCustom' },
+];
+
+const DEFAULT_SOCIAL_STATS: SocialShareStat[] = [
+  { id: 'distance', metric: 'distance', label: '', value: '', visible: true },
+  { id: 'elevation', metric: 'elevationGain', label: '', value: '', visible: true },
+  { id: 'time', metric: 'duration', label: '', value: '', visible: true },
+];
+
+interface Props {
+  coverMode?: boolean;
+  aspectRatioOverride?: SocialShareAspectRatio;
+  onPosterReady?: (url: string) => void;
+  onUseCover?: () => void;
+  onAddPhoto?: () => void;
+}
+
+export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPosterReady, onUseCover, onAddPhoto }: Props) {
   const { t } = useI18n();
   const {
     previewUrl, isRendering, generatePreview, exportPng, fitTrackToMap,
     settings, setSocialShareSettings, pictures, hasTracks,
     routeBboxNorm, dataPanelBboxNorm,
     transformMapViewport,
+    titleBboxNorm,
   } = useSocialShareExport();
   const [showPreview, setShowPreview] = useState(false);
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
@@ -27,6 +58,33 @@ export function SocialSharePanel() {
 
   const setRouteTransform = (patch: Partial<typeof settings.routeTransform>) =>
     setSocialShareSettings({ routeTransform: { ...settings.routeTransform, ...patch } });
+  const photoTransform = settings.photoTransform ?? { offsetX: 0, offsetY: 0, scale: 1 };
+  const setPhotoTransform = (patch: Partial<typeof photoTransform>) =>
+    setSocialShareSettings({ photoTransform: { ...photoTransform, ...patch } });
+
+  const stats: SocialShareStat[] = settings.stats ?? DEFAULT_SOCIAL_STATS;
+  const updateStat = (index: number, patch: Partial<SocialShareStat>) => {
+    const next = [...stats];
+    next[index] = { ...next[index], ...patch };
+    setSocialShareSettings({ stats: next });
+  };
+  const moveStat = (index: number, offset: -1 | 1) => {
+    const target = index + offset;
+    if (target < 0 || target >= stats.length) return;
+    const next = [...stats];
+    [next[index], next[target]] = [next[target], next[index]];
+    setSocialShareSettings({ stats: next });
+  };
+
+  useEffect(() => {
+    if (aspectRatioOverride && settings.aspectRatio !== aspectRatioOverride) {
+      setSocialShareSettings({ aspectRatio: aspectRatioOverride });
+    }
+  }, [aspectRatioOverride, setSocialShareSettings, settings.aspectRatio]);
+
+  useEffect(() => {
+    if (coverMode && previewUrl) onPosterReady?.(previewUrl);
+  }, [coverMode, onPosterReady, previewUrl]);
 
   const handlePitch = (v: number) => {
     setPitch(v);
@@ -38,6 +96,25 @@ export function SocialSharePanel() {
     mapGlobalRef.current?.jumpTo({ bearing: v });
   };
 
+  const nudgeMap = (x: number, y: number) => {
+    const map = mapGlobalRef.current;
+    if (!map) return;
+    map.panBy([x, y], { duration: 0 });
+    window.setTimeout(() => { void generatePreview(); }, 100);
+  };
+
+  const zoomMap = (direction: 'in' | 'out') => {
+    const map = mapGlobalRef.current;
+    if (!map) return;
+    map[direction === 'in' ? 'zoomIn' : 'zoomOut']({ duration: 0 });
+    window.setTimeout(() => { void generatePreview(); }, 100);
+  };
+
+  const centerMap = () => {
+    fitTrackToMap();
+    window.setTimeout(() => { void generatePreview(); }, 700);
+  };
+
   const templates: { value: SocialShareTemplate; label: string }[] = [
     { value: 'map-first', label: t('imageExport.templateMapFirst') },
     { value: 'photo-first', label: t('imageExport.templatePhotoFirst') },
@@ -45,6 +122,19 @@ export function SocialSharePanel() {
 
   return (
     <div className="space-y-4 text-[var(--evergreen)]">
+      {coverMode && (
+        <div className="rounded-xl border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">{t('imageExport.videoCover')}</p>
+              <p className="mt-0.5 text-xs opacity-70">{t('imageExport.videoCoverHint')}</p>
+            </div>
+            <span className="shrink-0 rounded-full bg-[var(--evergreen)] px-2.5 py-1 text-[11px] font-semibold text-[var(--canvas)]">1 sec</span>
+          </div>
+          {onUseCover ? <button type="button" onClick={onUseCover} disabled={!previewUrl || isRendering} className="tr-btn tr-btn-primary mt-3 w-full py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">{t('imageExport.useCover')}</button> : null}
+        </div>
+      )}
+
       {/* Template */}
       <div>
         <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.template')}</div>
@@ -68,11 +158,12 @@ export function SocialSharePanel() {
       {/* Aspect ratio */}
       <div>
         <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.ratio')}</div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {RATIOS.map(({ value, label }) => (
             <button
               key={value}
-              onClick={() => setSocialShareSettings({ aspectRatio: value })}
+              onClick={() => !aspectRatioOverride && setSocialShareSettings({ aspectRatio: value })}
+              disabled={!!aspectRatioOverride}
               className={`py-2 rounded text-sm font-medium transition-colors ${
                 settings.aspectRatio === value
                   ? 'bg-[var(--trail-orange)] text-white'
@@ -87,26 +178,31 @@ export function SocialSharePanel() {
 
       {/* Photo chooser */}
       <div>
-        <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.photo')}</div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="text-xs uppercase tracking-wide opacity-60">{t('imageExport.photo')}</div>
+          {onAddPhoto ? <button type="button" onClick={onAddPhoto} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]"><ImagePlus className="h-3.5 w-3.5" />{t('imageExport.addPhoto')}</button> : null}
+        </div>
         {pictures.length === 0 ? (
-          <p className="text-xs opacity-50">{t('imageExport.noPhotos')}</p>
+          <button type="button" onClick={onAddPhoto} disabled={!onAddPhoto} className="flex min-h-24 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--evergreen)]/25 bg-black/[0.025] px-4 text-center text-xs opacity-70 hover:border-[var(--trail-orange)] hover:text-[var(--trail-orange)] disabled:cursor-default"><ImagePlus className="h-5 w-5" />{t('imageExport.addFirstPhoto')}</button>
         ) : (
-          <div className="grid grid-cols-5 gap-1.5 max-h-28 overflow-y-auto">
+          <div className="grid max-h-40 grid-cols-4 gap-2 overflow-y-auto">
             <button
               onClick={() => setSocialShareSettings({ selectedPictureId: null })}
-              className={`aspect-square rounded flex items-center justify-center text-lg border-2 transition-colors ${
+              aria-label={t('imageExport.noPhoto')}
+              className={`aspect-square rounded-lg flex items-center justify-center text-lg border-2 transition-colors ${
                 !settings.selectedPictureId
                   ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]'
                   : 'border-transparent bg-black/5 hover:bg-black/10'
               }`}
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
             {pictures.map((pic) => (
               <button
                 key={pic.id}
                 onClick={() => setSocialShareSettings({ selectedPictureId: pic.id })}
-                className={`aspect-square rounded overflow-hidden border-2 transition-colors ${
+                aria-label={pic.originalFileName ?? t('imageExport.photo')}
+                className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
                   settings.selectedPictureId === pic.id
                     ? 'border-[var(--trail-orange)]'
                     : 'border-transparent'
@@ -211,6 +307,70 @@ export function SocialSharePanel() {
         </label>
       </div>
 
+      {settings.showStats && (
+        <div className="space-y-2 rounded-xl border border-black/10 bg-black/[0.025] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.customizeStats')}</p>
+              <p className="mt-0.5 text-[11px] opacity-60">{t('imageExport.customizeStatsHint')}</p>
+            </div>
+            <div className="flex items-center gap-1" aria-label={t('imageExport.statColumns')}>
+              {([2, 3, 4] as const).map((count) => (
+                <button key={count} type="button" onClick={() => setSocialShareSettings({ statsLayout: count })}
+                  className={`rounded px-2 py-1 text-xs ${settings.statsLayout === count ? 'bg-[var(--trail-orange)] text-white' : 'bg-black/5 hover:bg-black/10'}`}>
+                  {count}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] opacity-60">{t('imageExport.statsStyle')}</span>
+            {(['minimal', 'cards', 'accent'] as const).map((style) => (
+              <button key={style} type="button" onClick={() => setSocialShareSettings({ statsStyle: style })}
+                className={`rounded px-2 py-1 text-[11px] ${settings.statsStyle === style ? 'bg-[var(--trail-orange)] text-white' : 'bg-black/5 hover:bg-black/10'}`}>
+                {t(`imageExport.statsStyle${style[0].toUpperCase()}${style.slice(1)}`)}
+              </button>
+            ))}
+            <label className="ml-auto flex items-center gap-1 text-[11px] opacity-70">
+              {t('imageExport.statsColor')}
+              <input type="color" value={settings.statsColor ?? '#FFFFFF'} onChange={(event) => setSocialShareSettings({ statsColor: event.target.value })}
+                aria-label={t('imageExport.statsColor')} className="h-6 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+            </label>
+          </div>
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="shrink-0 opacity-60">{t('imageExport.statsSize')}</span>
+            <input type="range" min={0.7} max={1.4} step={0.05} value={settings.statsScale ?? 1}
+              onChange={(event) => setSocialShareSettings({ statsScale: Number(event.target.value) })}
+              className="flex-1 accent-[var(--trail-orange)]" />
+            <span className="w-9 text-right tabular-nums opacity-60">{Math.round((settings.statsScale ?? 1) * 100)}%</span>
+          </div>
+          {stats.map((stat, index) => (
+            <div key={stat.id} className="space-y-1.5 rounded-lg bg-[var(--canvas)] p-2">
+              <div className="flex items-center gap-1.5">
+                <input type="checkbox" checked={stat.visible} onChange={(event) => updateStat(index, { visible: event.target.checked })}
+                  aria-label={t('imageExport.showStat')} className="accent-[var(--trail-orange)]" />
+                <select value={stat.metric} onChange={(event) => updateStat(index, { metric: event.target.value as SocialShareStatMetric })}
+                  className="min-w-0 flex-1 rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs">
+                  {STAT_OPTIONS.map(({ value, labelKey }) => <option key={value} value={value}>{t(labelKey)}</option>)}
+                </select>
+                <button type="button" onClick={() => moveStat(index, -1)} disabled={index === 0} aria-label={t('imageExport.moveStatUp')} className="rounded p-1 hover:bg-black/5 disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => moveStat(index, 1)} disabled={index === stats.length - 1} aria-label={t('imageExport.moveStatDown')} className="rounded p-1 hover:bg-black/5 disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => setSocialShareSettings({ stats: stats.filter((_, i) => i !== index) })} aria-label={t('imageExport.removeStat')} className="rounded p-1 text-red-600 hover:bg-red-500/10"><X className="h-3.5 w-3.5" /></button>
+              </div>
+              <input type="text" value={stat.label} onChange={(event) => updateStat(index, { label: event.target.value })}
+                placeholder={t('imageExport.statLabel')} className="w-full rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs" />
+              {stat.metric === 'custom' && <input type="text" value={stat.value} onChange={(event) => updateStat(index, { value: event.target.value })}
+                placeholder={t('imageExport.statValue')} className="w-full rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs" />}
+            </div>
+          ))}
+          <button type="button" disabled={stats.length >= 4}
+            onClick={() => setSocialShareSettings({ stats: [...stats, { id: `stat-${Date.now()}`, metric: 'custom', label: '', value: '', visible: true }] })}
+            className="w-full rounded-lg border border-dashed border-[var(--evergreen)]/25 px-2 py-1.5 text-xs font-medium hover:border-[var(--trail-orange)] disabled:opacity-40">
+            {t('imageExport.addStat')}
+          </button>
+        </div>
+      )}
+
       {/* Map camera controls (map-first only) */}
       {settings.template === 'map-first' && (
         <div>
@@ -244,6 +404,23 @@ export function SocialSharePanel() {
           >
             {t('imageExport.fitTrack')}
           </button>
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-black/[0.035] p-2.5">
+            <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.mapPosition')}>
+              <span />
+              <button type="button" onClick={() => nudgeMap(0, -72)} aria-label={t('imageExport.moveMapUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
+              <span />
+              <button type="button" onClick={() => nudgeMap(-72, 0)} aria-label={t('imageExport.moveMapLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
+              <button type="button" onClick={centerMap} aria-label={t('imageExport.centerMap')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
+              <button type="button" onClick={() => nudgeMap(72, 0)} aria-label={t('imageExport.moveMapRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
+              <span />
+              <button type="button" onClick={() => nudgeMap(0, 72)} aria-label={t('imageExport.moveMapDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
+              <span />
+            </div>
+            <div className="flex flex-col gap-1">
+              <button type="button" onClick={() => zoomMap('in')} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
+              <button type="button" onClick={() => zoomMap('out')} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -274,6 +451,29 @@ export function SocialSharePanel() {
               </div>
             ))}
           </div>
+          <div className="mt-3 rounded-xl bg-black/[0.035] p-2.5">
+            <div className="mb-2 flex items-center justify-between text-xs">
+              <span className="font-medium">{t('imageExport.photoPosition')}</span>
+              <span className="tabular-nums opacity-60">{photoTransform.scale.toFixed(1)}×</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.photoPosition')}>
+                <span />
+                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.max(-1, photoTransform.offsetY - 0.04) })} aria-label={t('imageExport.movePhotoUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
+                <span />
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.max(-1, photoTransform.offsetX - 0.04) })} aria-label={t('imageExport.movePhotoLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: 0, offsetY: 0, scale: 1 })} aria-label={t('imageExport.resetPhoto')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.min(1, photoTransform.offsetX + 0.04) })} aria-label={t('imageExport.movePhotoRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
+                <span />
+                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.min(1, photoTransform.offsetY + 0.04) })} aria-label={t('imageExport.movePhotoDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
+                <span />
+              </div>
+              <div className="flex flex-col gap-1">
+                <button type="button" onClick={() => setPhotoTransform({ scale: Math.min(3, photoTransform.scale + 0.1) })} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ scale: Math.max(1, photoTransform.scale - 0.1) })} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -299,7 +499,7 @@ export function SocialSharePanel() {
         ) : (
           <ImageIcon className="w-4 h-4" />
         )}
-        {isRendering ? t('imageExport.rendering') : t('imageExport.previewDownload')}
+        {isRendering ? t('imageExport.rendering') : t(coverMode ? 'imageExport.previewCover' : 'imageExport.previewDownload')}
       </button>
 
       {showPreview && previewUrl && (
@@ -307,12 +507,14 @@ export function SocialSharePanel() {
           previewUrl={previewUrl}
           isRendering={isRendering}
           onClose={() => setShowPreview(false)}
-          onExport={async () => { await exportPng(); setShowPreview(false); }}
+          onExport={async () => { if (coverMode) onUseCover?.(); else await exportPng(); setShowPreview(false); }}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
           onMapRouteGesture={transformMapViewport}
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
+          titleBboxNorm={titleBboxNorm}
+          coverMode={coverMode}
         />
       )}
     </div>

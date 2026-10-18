@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useProjectFile } from '@/hooks/useProjectFile';
@@ -13,9 +13,13 @@ export function ExportPanel() {
   const { t } = useI18n();
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
   const setVideoExportSettings = useAppStore((state) => state.setVideoExportSettings);
+  const setSocialShareSettings = useAppStore((state) => state.setSocialShareSettings);
+  const coverPreviewUrl = useAppStore((state) => state.videoCoverImageUrl);
+  const setCoverPreviewUrl = useAppStore((state) => state.setVideoCoverImageUrl);
   const playback = useAppStore((state) => state.playback);
   const exportMode = useAppStore((state) => state.exportSubMode);
   const setExportMode = useAppStore((state) => state.setExportSubMode);
+  const setActivePanel = useAppStore((state) => state.setActivePanel);
   const tracks = useAppStore((state) => state.tracks);
   const isAppExporting = useAppStore((state) => state.isExporting);
   const journeyName = useAppStore((state) => state.journey?.name);
@@ -72,8 +76,19 @@ export function ExportPanel() {
       email: studioDeliveryEmail,
       marketingConsent,
     },
+    coverImageUrl: videoExportSettings.includeCover ? coverPreviewUrl : null,
   });
   const studioEmailValid = localStudioDownload || isValidDeliveryEmail(studioDeliveryEmail);
+  const coverMode = exportMode === 'image' && videoExportSettings.includeCover;
+  const coverAspectRatio = videoExportSettings.aspectRatio;
+  const receiveCoverPoster = useCallback((url: string) => setCoverPreviewUrl(url), [setCoverPreviewUrl]);
+  const openCoverEditor = () => {
+    setCoverPreviewUrl(null);
+    setVideoExportSettings({ includeCover: true });
+    setSocialShareSettings({ aspectRatio: coverAspectRatio });
+    setExportMode('image');
+  };
+  const returnToVideo = () => setExportMode('video');
 
   // The Instagram share prompt used to be a small card buried in the
   // scrollable sidebar (easy to miss). Surface it as a centered overlay
@@ -146,7 +161,13 @@ export function ExportPanel() {
       </div>
 
       {exportMode === 'image' ? (
-        <SocialSharePanel />
+        <SocialSharePanel
+          coverMode={coverMode}
+          aspectRatioOverride={coverMode ? coverAspectRatio : undefined}
+          onPosterReady={coverMode ? receiveCoverPoster : undefined}
+          onUseCover={coverMode ? returnToVideo : undefined}
+          onAddPhoto={() => { setCoverPreviewUrl(null); setActivePanel('pictures'); }}
+        />
       ) : (
         <>
           <div className="bg-[var(--evergreen)] text-[var(--canvas)] p-4 rounded-lg">
@@ -214,9 +235,38 @@ export function ExportPanel() {
           </div>
 
           {!isExporting && !exportedBlob && (
+            <div className="rounded-xl border border-white/15 bg-white/[0.06] p-3">
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={videoExportSettings.includeCover}
+                  onChange={(event) => {
+                    if (event.target.checked) openCoverEditor();
+                    else {
+                      setVideoExportSettings({ includeCover: false });
+                      setCoverPreviewUrl(null);
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 accent-[var(--trail-orange)]"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">{t('export.addVideoCover')}</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-[var(--canvas)]/70">{t('export.addVideoCoverHint')}</span>
+                </span>
+              </label>
+              {videoExportSettings.includeCover ? (
+                <button type="button" onClick={openCoverEditor} className="mt-3 w-full rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/10">
+                  {coverPreviewUrl ? t('export.editVideoCover') : t('export.designVideoCover')}
+                </button>
+              ) : null}
+            </div>
+          )}
+
+          {!isExporting && !exportedBlob && (
             <button
               onClick={handleStartExport}
               disabled={playback.totalDuration === 0
+                || (videoExportSettings.includeCover && !coverPreviewUrl)
                 || (videoExportSettings.qualityMode === 'studio' && !studioEmailValid)}
               className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -224,6 +274,10 @@ export function ExportPanel() {
               {t('export.generateVideo')}
             </button>
           )}
+
+          {!isExporting && !exportedBlob && videoExportSettings.includeCover && !coverPreviewUrl ? (
+            <p className="text-center text-xs text-[var(--canvas)]/70">{t('export.designCoverBeforeExport')}</p>
+          ) : null}
 
           {playback.totalDuration === 0 && !isExporting && (
             <p className="text-xs text-center text-[var(--evergreen-60)]">

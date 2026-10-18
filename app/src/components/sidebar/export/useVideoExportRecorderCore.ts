@@ -69,11 +69,12 @@ function getHoldOverlayEvery(): number {
 
 export interface UseVideoExportRecorderOptions {
   studioDelivery?: StudioDeliveryRequest;
+  coverImageUrl?: string | null;
 }
 
 export function useVideoExportRecorderCore(options: UseVideoExportRecorderOptions = {}) {
   const { t, language } = useI18n();
-  const { studioDelivery } = options;
+  const { studioDelivery, coverImageUrl } = options;
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
   const configuredStats = useAppStore((state) => state.settings.visibleStats);
   const showElevationProfile = useAppStore((state) => state.settings.showElevationProfile);
@@ -266,6 +267,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordingStartTimeRef = useRef(0);
+  const coverImageRef = useRef<HTMLImageElement | null>(null);
+  const coverFrameStartTimeRef = useRef<number | null>(null);
   const isRecordingRef = useRef(false);
   const recordingCancelledRef = useRef(false);
   const mp4EncoderRef = useRef<Mp4CanvasEncoder | null>(null);
@@ -326,7 +329,36 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     });
   }, [preloadSvgMarkerIcon, tracks, trailStyle.currentIcon]);
 
+  const loadCoverImage = useCallback(async () => {
+    if (!videoExportSettings.includeCover) return;
+    if (!coverImageUrl) throw new Error(t('export.videoCoverMissing'));
+    const image = new Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error(t('export.videoCoverLoadFailed')));
+      image.src = coverImageUrl;
+    });
+    coverImageRef.current = image;
+  }, [coverImageUrl, t, videoExportSettings.includeCover]);
+
+  const drawVideoCoverFrame = useCallback(() => {
+    const canvas = recordingCanvasRef.current;
+    const context = recordingContextRef.current;
+    const image = coverImageRef.current;
+    if (!canvas || !context || !image) return false;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return true;
+  }, []);
+
   const captureFrame = useCallback(() => {
+    const coverStartedAt = coverFrameStartTimeRef.current;
+    if (
+      videoExportSettings.includeCover
+      && coverStartedAt !== null
+      && performance.now() - coverStartedAt < 1000
+      && drawVideoCoverFrame()
+    ) return;
     const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     drawExportFrame({
       recordingCanvasRef,
@@ -350,7 +382,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (profileStartedAt > 0) {
       markExportProfileStage('frameComposite', performance.now() - profileStartedAt);
     }
-  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayFramesSinceRefreshRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
+  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoCoverFrame, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayFramesSinceRefreshRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
@@ -784,6 +816,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
+    loadCoverImage, drawVideoCoverFrame, coverFrameStartTimeRef,
     applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   };

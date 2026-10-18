@@ -18,6 +18,7 @@ import {
   getMapZoomForScale,
   getRouteBboxNorm,
 } from './socialShareRouteFit';
+import { overlayCanvasFontFamily } from '@/utils/typography';
 
 const BRAND_ORANGE = '#C1652F';
 
@@ -39,6 +40,7 @@ export function useSocialShareExport() {
   const pictures = useAppStore((s) => s.pictures);
   const unitSystem = useAppStore((s) => s.settings.unitSystem);
   const language = useAppStore((s) => s.settings.language);
+  const overlayFont = useAppStore((s) => s.settings.trailStyle.overlayFont);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
@@ -132,8 +134,16 @@ export function useSocialShareExport() {
     const t = (key: string) => translate(language, key);
     const labels = {
       distance: t('imageExport.statDistance'),
-      elevGain: t('imageExport.statElevGain'),
-      time: t('imageExport.statTime'),
+      elevationGain: t('imageExport.statElevGain'),
+      duration: t('imageExport.statTime'),
+      movingDuration: t('stats.movingDuration'),
+      pace: t('stats.avgPace'),
+      heartRate: t('stats.heartRateShort'),
+      speed: t('imageExport.statAvgSpeed'),
+      altitude: t('stats.altitude'),
+      maxElevation: t('imageExport.statMaxElevation'),
+      elevationLoss: t('imageExport.statElevationLoss'),
+      maxSpeed: t('imageExport.statMaxSpeed'),
     };
 
     return {
@@ -144,10 +154,11 @@ export function useSocialShareExport() {
       routeLatLons,
       selectedPhoto: photoRef.current,
       logo: logoRef.current,
+      fontFamily: overlayCanvasFontFamily(overlayFont),
       routeColor,
       labels,
     };
-  }, [settings, tracks, activeTrackId, journey, journeySegments, unitSystem, language]);
+  }, [settings, tracks, activeTrackId, journey, journeySegments, unitSystem, language, overlayFont]);
 
   const computeRouteBbox = useCallback((
     latLons: Array<{ lat: number; lon: number }>,
@@ -176,10 +187,13 @@ export function useSocialShareExport() {
         if (map) {
           const container = document.getElementById('map-capture-container');
           const visibleTracks = tracks.filter((track) => track.visible && track.points.length > 0);
+          const visibleStatCount = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
+          const statsRows = visibleStatCount > 0 ? Math.ceil(visibleStatCount / (settings.statsLayout ?? 3)) : 0;
           const fitKey = [
             settings.aspectRatio,
             settings.showLocation,
             settings.showStats,
+            statsRows,
             settings.showElevationMiniChart,
             ...visibleTracks.map((track) => `${track.id}:${track.points.length}`),
           ].join('|');
@@ -193,7 +207,8 @@ export function useSocialShareExport() {
               posterWidth: posterW,
               posterHeight: posterH,
               showLocation: settings.showLocation,
-              showStats: settings.showStats,
+              showStats: settings.showStats && visibleStatCount > 0,
+              statsRows,
               showElevation: settings.showElevationMiniChart,
             });
             const padding = getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
@@ -257,6 +272,7 @@ export function useSocialShareExport() {
         }
       }
 
+      await document.fonts.ready;
       const input = buildInput(preCapuredMapCanvas);
 
       // Compute the same route bounds used by the renderer for either template.
@@ -282,6 +298,8 @@ export function useSocialShareExport() {
     settings.aspectRatio,
     settings.showElevationMiniChart,
     settings.showLocation,
+    settings.stats,
+    settings.statsLayout,
     settings.showStats,
     settings.template,
     tracks,
@@ -323,6 +341,8 @@ export function useSocialShareExport() {
     settings.selectedPictureId,
     settings.titleMode,
     settings.customTitle,
+    settings.titleOffsetX,
+    settings.titleOffsetY,
     settings.locationLabel,
     settings.showLocation,
     settings.showStats,
@@ -331,6 +351,7 @@ export function useSocialShareExport() {
     settings.routeTransform.offsetX,
     settings.routeTransform.offsetY,
     settings.routeTransform.opacity,
+    settings.routeGlow,
     tracks.length,
     photoVersion,
     generatePreview,
@@ -374,6 +395,7 @@ export function useSocialShareExport() {
           });
         }
       }
+      await document.fonts.ready;
       const blob = await exportSocialPosterBlob(buildInput(preCapuredMapCanvas));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -398,10 +420,28 @@ export function useSocialShareExport() {
     if (!settings.showStats && !settings.showElevationMiniChart) return null;
     const isPhotoFirst = settings.template === 'photo-first';
     const elevHNorm = settings.showElevationMiniChart ? (isPhotoFirst ? 0.155 : 0.105) : 0;
-    const statsHNorm = settings.showStats ? (isPhotoFirst ? 0.125 : 0.115) : 0;
+    const visibleStatCount = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
+    const statsRows = visibleStatCount > 0 ? Math.ceil(visibleStatCount / (settings.statsLayout ?? 3)) : 0;
+    const statsHNorm = settings.showStats ? (isPhotoFirst ? 0.125 : 0.115) * statsRows : 0;
     const panelH = elevHNorm + statsHNorm;
+    if (panelH <= 0) return null;
     const panelY = 1 - panelH - settings.dataPanelOffsetY;
     return { x: 0, y: Math.max(0, panelY), w: 1, h: panelH };
+  })();
+
+  const titleBboxNorm: RouteBboxNorm = (() => {
+    const { w, h } = getPosterSize(settings.aspectRatio);
+    const pad = Math.round(w * 0.04);
+    const logoWidth = Math.round(w * (settings.template === 'map-first' ? 0.28 : 0.30));
+    const logoHeight = Math.round(logoWidth / 2.5);
+    const titleSize = Math.round(h * (settings.template === 'map-first' ? 0.050 : 0.072));
+    const baseY = pad + logoHeight + Math.round(h * (settings.template === 'map-first' ? 0.010 : 0.018));
+    return {
+      x: Math.max(0, pad / w + settings.titleOffsetX),
+      y: Math.max(0, (baseY - titleSize * 0.8) / h + settings.titleOffsetY),
+      w: Math.min(0.94, settings.template === 'map-first' ? 0.74 : 0.92),
+      h: 0.23,
+    };
   })();
 
   return {
@@ -418,5 +458,6 @@ export function useSocialShareExport() {
     routeBboxNorm,
     dataPanelBboxNorm,
     transformMapViewport,
+    titleBboxNorm,
   };
 }

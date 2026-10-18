@@ -259,10 +259,20 @@ export interface VideoExportSettings {
   resolution: { width: number; height: number };
   aspectRatio: AspectRatio;
   includeAudio: boolean;
+  includeCover: boolean;
 }
 
 export type SocialShareTemplate = 'map-first' | 'photo-first';
-export type SocialShareAspectRatio = '4:5' | '1:1' | '9:16';
+export type SocialShareAspectRatio = '16:9' | '4:5' | '1:1' | '9:16';
+export type SocialShareStatMetric = 'distance' | 'elevationGain' | 'duration' | 'movingDuration' | 'pace' | 'heartRate' | 'speed' | 'altitude' | 'maxElevation' | 'elevationLoss' | 'maxSpeed' | 'custom';
+
+export interface SocialShareStat {
+  id: string;
+  metric: SocialShareStatMetric;
+  label: string;
+  value: string;
+  visible: boolean;
+}
 
 export interface SocialShareRouteTransform {
   offsetX: number;
@@ -271,17 +281,32 @@ export interface SocialShareRouteTransform {
   opacity: number;
 }
 
+export interface SocialSharePhotoTransform {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
 export interface SocialShareSettings {
   template: SocialShareTemplate;
   aspectRatio: SocialShareAspectRatio;
   selectedPictureId: string | null;
   titleMode: 'journey-name' | 'track-name' | 'custom';
   customTitle: string;
+  /** Normalized offsets for directly positioning the title layer in the poster editor. */
+  titleOffsetX: number;
+  titleOffsetY: number;
   locationLabel: string;
   showLocation: boolean;
   showStats: boolean;
+  stats: SocialShareStat[];
+  statsLayout: 2 | 3 | 4;
+  statsStyle: 'minimal' | 'cards' | 'accent';
+  statsColor: string;
+  statsScale: number;
   showElevationMiniChart: boolean;
   routeTransform: SocialShareRouteTransform;
+  photoTransform: SocialSharePhotoTransform;
   /** How far up the data panel (stats + elevation) is shifted from the bottom, as a fraction of poster height (0 = bottom). */
   dataPanelOffsetY: number;
   routeGlow: boolean;

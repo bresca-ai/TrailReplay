@@ -11,7 +11,13 @@ export interface SocialShareSummaryData {
   locationLabel: string;
   distanceMeters: number;
   durationSeconds: number;
+  movingDurationSeconds: number;
   elevationGainMeters: number;
+  elevationLossMeters: number;
+  maxElevationMeters: number;
+  averageSpeedMetersPerSecond: number;
+  maxSpeedMetersPerSecond: number;
+  averageHeartRate: number | null;
   elevation: ElevationStats;
   unitSystem: UnitSystem;
 }
@@ -33,8 +39,27 @@ export function buildSocialShareSummary(
 
   let distanceMeters = 0;
   let durationSeconds = 0;
+  let movingDurationSeconds = 0;
   let elevationGainMeters = 0;
   let primaryTrack: GPXTrack | undefined;
+  let elevationLossMeters = 0;
+  let maxElevationMeters = -Infinity;
+  let maxSpeedMetersPerSecond = 0;
+  let heartRateSum = 0;
+  let heartRateCount = 0;
+
+  const addTrackMetrics = (track: GPXTrack) => {
+    movingDurationSeconds += track.movingTime;
+    elevationLossMeters += track.elevationLoss;
+    maxElevationMeters = Math.max(maxElevationMeters, track.maxElevation);
+    maxSpeedMetersPerSecond = Math.max(maxSpeedMetersPerSecond, track.maxSpeed);
+    for (const point of track.points) {
+      if (point.heartRate !== null) {
+        heartRateSum += point.heartRate;
+        heartRateCount += 1;
+      }
+    }
+  };
 
   if (journey && journeySegments.length > 0) {
     primaryTrack = tracks[0];
@@ -45,6 +70,7 @@ export function buildSocialShareSummary(
       distanceMeters += track.totalDistance;
       durationSeconds += track.totalTime || track.movingTime;
       elevationGainMeters += track.elevationGain;
+      addTrackMetrics(track);
     }
   } else {
     primaryTrack = tracks.find((t) => t.id === activeTrackId) ?? tracks[0];
@@ -52,6 +78,7 @@ export function buildSocialShareSummary(
       distanceMeters = primaryTrack.totalDistance;
       durationSeconds = primaryTrack.totalTime || primaryTrack.movingTime;
       elevationGainMeters = primaryTrack.elevationGain;
+      addTrackMetrics(primaryTrack);
     }
   }
 
@@ -60,7 +87,13 @@ export function buildSocialShareSummary(
     locationLabel: settings.locationLabel,
     distanceMeters,
     durationSeconds,
+    movingDurationSeconds,
     elevationGainMeters,
+    elevationLossMeters,
+    maxElevationMeters: Number.isFinite(maxElevationMeters) ? maxElevationMeters : 0,
+    averageSpeedMetersPerSecond: movingDurationSeconds > 0 ? distanceMeters / movingDurationSeconds : (primaryTrack?.avgMovingSpeed ?? 0),
+    maxSpeedMetersPerSecond,
+    averageHeartRate: heartRateCount > 0 ? heartRateSum / heartRateCount : null,
     elevation: buildElevationStats(primaryTrack),
     unitSystem,
   };

@@ -1,6 +1,6 @@
 import type { SocialShareAspectRatio, SocialShareSettings } from '@/types';
 import { getCropRegion } from '@/utils/crop';
-import { metersToFeet } from '@/utils/units';
+import { formatPace, metersToFeet } from '@/utils/units';
 import type { SocialShareSummaryData } from './socialShareData';
 import type { CanvasPoint, FitBox } from './socialShareRouteFit';
 import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
@@ -12,7 +12,20 @@ const WHITE = 'rgba(255,255,255,0.95)';
 const WHITE_DIM = 'rgba(255,255,255,0.60)';
 const POSTER_W = 1080;
 
+function visibleStatCount(settings: SocialShareSettings) {
+  return settings.stats?.filter((stat) => stat.visible).length ?? 3;
+}
+
+function statsRowCount(settings: SocialShareSettings) {
+  return Math.ceil(visibleStatCount(settings) / Math.max(1, settings.statsLayout ?? 3));
+}
+
+function hasVisibleStats(settings: SocialShareSettings) {
+  return settings.showStats && visibleStatCount(settings) > 0;
+}
+
 export function getPosterSize(ratio: SocialShareAspectRatio): { w: number; h: number } {
+  if (ratio === '16:9') return { w: POSTER_W, h: 608 };
   if (ratio === '4:5') return { w: POSTER_W, h: 1350 };
   if (ratio === '1:1') return { w: POSTER_W, h: POSTER_W };
   return { w: POSTER_W, h: 1920 };
@@ -28,10 +41,11 @@ export interface RenderInput {
   routeLatLons: Array<{ lat: number; lon: number }> | null;
   selectedPhoto: HTMLImageElement | null;
   logo: HTMLImageElement | null;
+  fontFamily: string;
   /** Primary route color from track settings (hex). */
   routeColor: string;
   /** Translated stat labels for the stats bar. */
-  labels: { distance: string; elevGain: string; time: string };
+  labels: Record<string, string>;
 }
 
 export function renderSocialPoster(input: RenderInput): string {
@@ -146,6 +160,7 @@ function drawElevationChart(
   x: number, y: number, w: number, h: number,
   { profile, minElev, maxElev, unitSystem }: SocialShareSummaryData['elevation'] & { unitSystem: SocialShareSummaryData['unitSystem'] },
   color: string,
+  fontFamily: string,
 ) {
   if (profile.length < 2) return;
 
@@ -155,7 +170,7 @@ function drawElevationChart(
   const labelSize = Math.round(w * 0.027);
 
   // Grid lines + y-axis labels
-  ctx.font = `400 ${labelSize}px system-ui,-apple-system,sans-serif`;
+  ctx.font = `400 ${labelSize}px ${fontFamily}`;
   for (let i = 0; i < 3; i++) {
     const t = i / 2;
     const elev = minElev + t * (maxElev - minElev);
@@ -197,15 +212,29 @@ function drawElevationChart(
 function drawStatsBar(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, w: number, h: number,
-  { distanceMeters, durationSeconds, elevationGainMeters, unitSystem }: SocialShareSummaryData,
+  summary: SocialShareSummaryData,
+  settings: SocialShareSettings,
   labels: RenderInput['labels'],
+  fontFamily: string,
 ) {
+  const { distanceMeters, durationSeconds, movingDurationSeconds, elevationGainMeters, elevationLossMeters, maxElevationMeters, averageSpeedMetersPerSecond, maxSpeedMetersPerSecond, averageHeartRate, unitSystem } = summary;
   const isMetric = unitSystem === 'metric';
-  const colW = w / 3;
-  const labelSize = Math.round(h * 0.19);
-  const numSize = Math.round(h * 0.50);
-  const unitSize = Math.round(h * 0.27);
-  const baseline = y + h * 0.82;
+  const statsColor = settings.statsColor ?? '#FFFFFF';
+  const stats = settings.stats ?? [
+    { id: 'distance', metric: 'distance' as const, label: '', value: '', visible: true },
+    { id: 'elevation', metric: 'elevationGain' as const, label: '', value: '', visible: true },
+    { id: 'time', metric: 'duration' as const, label: '', value: '', visible: true },
+  ];
+  const visibleStats = stats.filter((stat) => stat.visible).slice(0, 4);
+  if (visibleStats.length === 0) return;
+  const columns = Math.min(visibleStats.length, Math.max(1, settings.statsLayout ?? 3));
+  const rows = Math.ceil(visibleStats.length / columns);
+  const colW = w / columns;
+  const rowH = h / rows;
+  const scale = Math.max(0.7, Math.min(1.4, settings.statsScale ?? 1));
+  const labelSize = Math.round(rowH * 0.19 * scale);
+  const numSize = Math.round(rowH * 0.50 * scale);
+  const unitSize = Math.round(rowH * 0.27 * scale);
 
   const distNum = isMetric
     ? (distanceMeters / 1000).toFixed(distanceMeters >= 10000 ? 1 : 2)
@@ -218,41 +247,76 @@ function drawStatsBar(
   const totalMins = Math.floor(durationSeconds / 60);
   const hrs = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
+  const movingMins = Math.floor(movingDurationSeconds / 60);
+  const movingHrs = Math.floor(movingMins / 60);
+  const movingMinsRemainder = movingMins % 60;
 
-  const stats = [
-    { label: labels.distance, num: distNum, unit: isMetric ? 'km' : 'mi' },
-    { label: labels.elevGain, num: elevNum, unit: isMetric ? 'm' : 'ft' },
-    { label: labels.time, num: hrs > 0 ? `${hrs}h` : `${mins}m`, unit: hrs > 0 ? `${mins}m` : '' },
-  ];
+  const formatSpeed = (mps: number) => `${(mps * (isMetric ? 3.6 : 2.23694)).toFixed(1)} ${isMetric ? 'km/h' : 'mph'}`;
+  const formatElevation = (meters: number) => `${Math.round(isMetric ? meters : metersToFeet(meters))} ${isMetric ? 'm' : 'ft'}`;
+  const values: Record<string, { num: string; unit: string }> = {
+    distance: { num: distNum, unit: isMetric ? 'km' : 'mi' },
+    elevationGain: { num: elevNum, unit: isMetric ? 'm' : 'ft' },
+    duration: { num: hrs > 0 ? `${hrs}h` : `${mins}m`, unit: hrs > 0 ? `${mins}m` : '' },
+    movingDuration: { num: movingHrs > 0 ? `${movingHrs}h` : `${movingMins}m`, unit: movingHrs > 0 ? `${movingMinsRemainder}m` : '' },
+    pace: { num: formatPace(averageSpeedMetersPerSecond, unitSystem), unit: '' },
+    heartRate: { num: averageHeartRate === null ? '—' : `${Math.round(averageHeartRate)} bpm`, unit: '' },
+    speed: { num: formatSpeed(averageSpeedMetersPerSecond), unit: '' },
+    altitude: { num: formatElevation(maxElevationMeters), unit: '' },
+    maxElevation: { num: formatElevation(maxElevationMeters), unit: '' },
+    elevationLoss: { num: formatElevation(elevationLossMeters), unit: '' },
+    maxSpeed: { num: formatSpeed(maxSpeedMetersPerSecond), unit: '' },
+  };
 
-  stats.forEach(({ label, num, unit }, i) => {
-    const cx = x + colW * i + colW / 2;
+  visibleStats.forEach((stat, i) => {
+    const { num, unit } = stat.metric === 'custom'
+      ? { num: stat.value, unit: '' }
+      : values[stat.metric] ?? { num: '', unit: '' };
+    const label = stat.label || labels[stat.metric] || '';
+    const row = Math.floor(i / columns);
+    const col = i % columns;
+    const cellsInRow = Math.min(columns, visibleStats.length - row * columns);
+    const rowOffset = ((columns - cellsInRow) * colW) / 2;
+    const cellX = x + rowOffset + colW * col;
+    const cellY = y + rowH * row;
+    const cx = cellX + colW / 2;
 
-    if (i > 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.fillRect(x + colW * i, y + h * 0.15, 1, h * 0.7);
+    if (settings.statsStyle === 'cards') {
+      ctx.fillStyle = 'rgba(0,0,0,0.30)';
+      ctx.fillRect(cellX + 5, cellY + 3, colW - 10, rowH - 6);
+    } else if (settings.statsStyle === 'accent') {
+      ctx.fillStyle = `${statsColor}28`;
+      ctx.fillRect(cellX + 5, cellY + 3, colW - 10, rowH - 6);
     }
 
-    ctx.font = `400 ${labelSize}px system-ui,-apple-system,sans-serif`;
-    ctx.fillStyle = WHITE_DIM;
-    ctx.textAlign = 'center';
-    ctx.fillText(label, cx, y + h * 0.30);
+    if (col > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(cellX, cellY + rowH * 0.15, 1, rowH * 0.7);
+    }
+    if (row > 0 && col === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(x + w * 0.1, cellY, w * 0.8, 1);
+    }
 
-    ctx.font = `700 ${numSize}px system-ui,-apple-system,sans-serif`;
+    ctx.font = `400 ${labelSize}px ${fontFamily}`;
+    ctx.fillStyle = `${statsColor}B0`;
+    ctx.textAlign = 'center';
+    ctx.fillText(label, cx, cellY + rowH * 0.30);
+
+    ctx.font = `700 ${numSize}px ${fontFamily}`;
     const numW = ctx.measureText(num).width;
-    ctx.font = `400 ${unitSize}px system-ui,-apple-system,sans-serif`;
+    ctx.font = `400 ${unitSize}px ${fontFamily}`;
     const unitW = unit ? ctx.measureText(` ${unit}`).width : 0;
     const startX = cx - (numW + unitW) / 2;
 
-    ctx.font = `700 ${numSize}px system-ui,-apple-system,sans-serif`;
-    ctx.fillStyle = WHITE;
+    ctx.font = `700 ${numSize}px ${fontFamily}`;
+    ctx.fillStyle = statsColor;
     ctx.textAlign = 'left';
-    ctx.fillText(num, startX, baseline);
+    ctx.fillText(num, startX, cellY + rowH * 0.82);
 
     if (unit) {
-      ctx.font = `400 ${unitSize}px system-ui,-apple-system,sans-serif`;
+      ctx.font = `400 ${unitSize}px ${fontFamily}`;
       ctx.fillStyle = WHITE_DIM;
-      ctx.fillText(` ${unit}`, startX + numW, baseline);
+      ctx.fillText(` ${unit}`, startX + numW, cellY + rowH * 0.82);
     }
   });
 }
@@ -272,9 +336,9 @@ function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, 
 function drawTitle(
   ctx: CanvasRenderingContext2D,
   title: string,
-  x: number, y: number, maxW: number, fontSize: number,
+  x: number, y: number, maxW: number, fontSize: number, fontFamily: string,
 ): number {
-  ctx.font = `800 ${fontSize}px system-ui,-apple-system,sans-serif`;
+  ctx.font = `800 ${fontSize}px ${fontFamily}`;
   ctx.fillStyle = WHITE;
   const words = title.split(' ');
   const lines: string[] = [];
@@ -294,39 +358,35 @@ function drawTitle(
   return lines.length;
 }
 
-function drawLocation(ctx: CanvasRenderingContext2D, location: string, x: number, y: number, size: number) {
+function drawLocation(ctx: CanvasRenderingContext2D, location: string, x: number, y: number, size: number, fontFamily: string) {
   if (!location) return;
-  ctx.font = `400 ${size}px system-ui,-apple-system,sans-serif`;
+  ctx.font = `400 ${size}px ${fontFamily}`;
   ctx.fillStyle = WHITE_DIM;
   ctx.textAlign = 'left';
   ctx.fillText(`📍 ${location}`, x, y);
 }
 
-function coverFit(
+function drawPhotoBackground(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
-  dx: number, dy: number, dw: number, dh: number,
-  clip?: () => void,
+  w: number,
+  h: number,
+  transform: SocialShareSettings['photoTransform'] | undefined,
 ) {
-  const imgAspect = img.naturalWidth / img.naturalHeight;
-  const boxAspect = dw / dh;
-  let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
-  if (imgAspect > boxAspect) {
-    sw = img.naturalHeight * boxAspect;
-    sx = (img.naturalWidth - sw) / 2;
-  } else {
-    sh = img.naturalWidth / boxAspect;
-    sy = (img.naturalHeight - sh) / 2;
-  }
-  if (clip) {
-    ctx.save();
-    clip();
-    ctx.clip();
-    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-    ctx.restore();
-  } else {
-    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-  }
+  const fitScale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const zoom = Math.max(1, Math.min(3, transform?.scale ?? 1));
+  const drawW = img.naturalWidth * fitScale * zoom;
+  const drawH = img.naturalHeight * fitScale * zoom;
+  const maxX = Math.max(0, (drawW - w) / 2);
+  const maxY = Math.max(0, (drawH - h) / 2);
+  const dx = (w - drawW) / 2 + Math.max(-maxX, Math.min(maxX, (transform?.offsetX ?? 0) * w));
+  const dy = (h - drawH) / 2 + Math.max(-maxY, Math.min(maxY, (transform?.offsetY ?? 0) * h));
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, w, h);
+  ctx.clip();
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+  ctx.restore();
 }
 
 
@@ -334,6 +394,7 @@ function coverFit(
 
 function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
   const { mapCanvas, summary, settings, logo, projectedRouteForMap } = input;
+  const showStats = hasVisibleStats(settings);
   const pad = Math.round(w * 0.04);
 
   // Fallback background (only visible if map capture failed)
@@ -373,17 +434,18 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
 
   // Title + location below logo
   const titleSize = Math.round(h * 0.050);
-  const titleY = pad + logoH + Math.round(h * 0.010) + titleSize;
-  const titleLines = drawTitle(ctx, summary.title, pad, titleY, w * 0.72, titleSize);
+  const titleX = pad + settings.titleOffsetX * w;
+  const titleY = pad + logoH + Math.round(h * 0.010) + titleSize + settings.titleOffsetY * h;
+  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w * 0.72, titleSize, input.fontFamily);
   if (settings.showLocation && summary.locationLabel) {
     const locSize = Math.round(h * 0.021);
-    drawLocation(ctx, summary.locationLabel, pad, titleY + titleLines * titleSize * 1.12 + locSize + 2, locSize);
+    drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 2, locSize, input.fontFamily);
   }
 
   // Bottom scrim + stats/elevation
-  if (settings.showStats || settings.showElevationMiniChart) {
+  if (showStats || settings.showElevationMiniChart) {
     const elevH = settings.showElevationMiniChart ? Math.round(h * 0.105) : 0;
-    const statsH = settings.showStats ? Math.round(h * 0.115) : 0;
+    const statsH = showStats ? Math.round(h * 0.115 * statsRowCount(settings)) : 0;
     const shift = Math.round(settings.dataPanelOffsetY * h);
     const scrimBottom = h - shift;
     const panelTop = scrimBottom - elevH - statsH;
@@ -414,22 +476,23 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
       ctx.fillRect(0, gradTop, w, totalH);
     }
 
-    if (settings.showStats) drawStatsBar(ctx, 0, panelTop, w, statsH, summary, input.labels);
+    if (showStats) drawStatsBar(ctx, 0, panelTop, w, statsH, summary, settings, input.labels, input.fontFamily);
     if (settings.showElevationMiniChart) {
-      drawElevationChart(ctx, pad, scrimBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor);
+      drawElevationChart(ctx, pad, scrimBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily);
     }
   }
 }
 
 function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
   const { summary, settings, logo, selectedPhoto, routeLatLons } = input;
+  const showStats = hasVisibleStats(settings);
   const pad = Math.round(w * 0.04);
 
   ctx.fillStyle = '#111';
   ctx.fillRect(0, 0, w, h);
 
   if (selectedPhoto) {
-    coverFit(ctx, selectedPhoto, 0, 0, w, h);
+    drawPhotoBackground(ctx, selectedPhoto, w, h, settings.photoTransform);
   }
 
   // Bottom dark gradient — ends at the data panel bottom so it doesn't bleed below when panel is moved up
@@ -472,22 +535,23 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
 
   // Title
   const titleSize = Math.round(h * 0.072);
-  const titleY = pad + logoH + Math.round(h * 0.018) + titleSize;
-  const titleLines = drawTitle(ctx, summary.title, pad, titleY, w - pad * 2, titleSize);
+  const titleX = pad + settings.titleOffsetX * w;
+  const titleY = pad + logoH + Math.round(h * 0.018) + titleSize + settings.titleOffsetY * h;
+  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w - pad * 2, titleSize, input.fontFamily);
 
   // Location
   if (settings.showLocation && summary.locationLabel) {
     const locSize = Math.round(h * 0.025);
-    drawLocation(ctx, summary.locationLabel, pad, titleY + titleLines * titleSize * 1.12 + locSize + 4, locSize);
+    drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 4, locSize, input.fontFamily);
   }
 
   // Stats + elevation (panelBottom and shift already computed above)
   const elevH = Math.round(h * 0.155);
-  const statsH = Math.round(h * 0.125);
+  const statsH = showStats ? Math.round(h * 0.125 * statsRowCount(settings)) : 0;
   const statsY = panelBottom - elevH - statsH;
 
-  if (settings.showStats) drawStatsBar(ctx, 0, statsY, w, statsH, summary, input.labels);
+  if (showStats) drawStatsBar(ctx, 0, statsY, w, statsH, summary, settings, input.labels, input.fontFamily);
   if (settings.showElevationMiniChart) {
-    drawElevationChart(ctx, pad, panelBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor);
+    drawElevationChart(ctx, pad, panelBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily);
   }
 }

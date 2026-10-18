@@ -94,6 +94,7 @@ export function createDefaultVideoExportSettings(): VideoExportSettings {
     resolution: { width: 1920, height: 1080 },
     aspectRatio: '16:9',
     includeAudio: false,
+    includeCover: false,
   };
 }
 
@@ -104,11 +105,23 @@ export function createDefaultSocialShareSettings(): SocialShareSettings {
     selectedPictureId: null,
     titleMode: 'journey-name',
     customTitle: '',
+    titleOffsetX: 0,
+    titleOffsetY: 0,
     locationLabel: '',
     showLocation: false,
     showStats: true,
+    stats: [
+      { id: 'distance', metric: 'distance', label: '', value: '', visible: true },
+      { id: 'elevation', metric: 'elevationGain', label: '', value: '', visible: true },
+      { id: 'time', metric: 'duration', label: '', value: '', visible: true },
+    ],
+    statsLayout: 3,
+    statsStyle: 'minimal',
+    statsColor: '#FFFFFF',
+    statsScale: 1,
     showElevationMiniChart: true,
     routeTransform: { offsetX: 0, offsetY: 0, scale: 1, opacity: 0.9 },
+    photoTransform: { offsetX: 0, offsetY: 0, scale: 1 },
     dataPanelOffsetY: 0,
     routeGlow: true,
   };
