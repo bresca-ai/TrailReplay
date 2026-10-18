@@ -127,6 +127,11 @@ export const help = {
         step4: 'Play through the route to validate pacing and picture timing.',
         step5: 'Open Export, preview the crop, and record the final video.',
       },
+      stravaImport: {
+        title: 'Get a Strava activity into TrailReplay faster',
+        body: 'Add the TrailReplay bookmark from the GPX guide to your bookmarks bar. On a Strava activity page, click it to open TrailReplay in a new tab and load the activity directly into the editor.',
+        link: 'Set up the Strava bookmark',
+      },
       sampleRoutesBadge: 'Catalonia sample routes',
       needGpxGuide: 'Need to export your own GPX first?',
       whyFilesTitle: 'Why these two files?',
@@ -285,6 +290,14 @@ export const help = {
           step4: 'Save the file and upload it directly into TrailReplay.',
           note1: '“Export Original” gives the file the watch wrote, usually a .fit, which TrailReplay reads directly — every point timestamped, plus heart rate, cadence, power and temperature. An activity’s “Export GPX” normally keeps those too.',
           note2: 'Public activities can sometimes be exported depending on privacy settings.',
+          bookmarklet: {
+            title: 'Send a Strava activity straight to TrailReplay',
+            description: 'Drag this button to your browser bookmarks bar. Open a Strava activity and click the saved bookmark. TrailReplay opens in a new tab and loads the GPX into the editor automatically.',
+            button: 'Send to TrailReplay',
+            dragLabel: 'Drag this button to your bookmarks bar to add the TrailReplay bookmarklet',
+            note: 'Desktop browser only. You must be signed in to Strava and allowed to export the activity. TrailReplay parses the GPX in your browser; it is not uploaded to our servers.',
+            invalidGpx: 'Strava did not return a valid GPX file. Check that you can export this activity, or use the regular GPX download.',
+          },
         },
       },
       otherProviders: {

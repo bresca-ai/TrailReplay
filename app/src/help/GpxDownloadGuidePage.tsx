@@ -3,6 +3,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { HelpLayout } from './HelpLayout';
 import { getGpxTips, getOtherProviders, getProviderGuides } from './helpContent';
 import { trackEvent } from '@/utils/analytics';
+import { StravaBookmarklet } from './StravaBookmarklet';
 
 export function GpxDownloadGuidePage() {
   const { t } = useI18n();
@@ -100,7 +101,7 @@ export function GpxDownloadGuidePage() {
 
       <section className="space-y-6">
         {providerGuides.map((provider) => (
-          <article key={provider.name} className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-6 shadow-sm">
+          <article id={provider.name === 'Strava' ? 'strava' : undefined} key={provider.name} className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--trail-orange-15)] text-2xl">
@@ -144,6 +145,7 @@ export function GpxDownloadGuidePage() {
                 </ul>
               </div>
             </div>
+            {provider.name === 'Strava' && <StravaBookmarklet />}
           </article>
         ))}
       </section>

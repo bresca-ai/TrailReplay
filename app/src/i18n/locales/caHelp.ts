@@ -127,6 +127,11 @@ export const help = {
         step4: 'Reprodueix la ruta per validar el ritme i el moment de les imatges.',
         step5: 'Obre Exportar, previsualitza el retall i grava el vídeo final.',
       },
+      stravaImport: {
+        title: 'Envia una activitat de Strava a TrailReplay més ràpid',
+        body: 'Afegeix el marcador de TrailReplay de la guia GPX a la barra d’adreces d’interès. En una activitat de Strava, fes-hi clic per obrir TrailReplay en una pestanya nova i carregar-hi la ruta directament.',
+        link: 'Configura el marcador de Strava',
+      },
       sampleRoutesBadge: 'Rutes de mostra de Catalunya',
       needGpxGuide: 'Necessites exportar primer el teu propi GPX?',
       whyFilesTitle: 'Per què aquests dos fitxers?',
@@ -285,6 +290,14 @@ export const help = {
           step4: 'Desa el fitxer i puja’l directament a TrailReplay.',
           note1: '“Export Original” dóna el fitxer que va escriure el rellotge, normalment un .fit, que TrailReplay llegeix directament: cada punt amb la seva hora, més pulsacions, cadència, potència i temperatura. L’“Export GPX” d’una activitat també sol conservar-los.',
           note2: 'Les activitats públiques a vegades es poden exportar segons la configuració de privacitat.',
+          bookmarklet: {
+            title: 'Envia una activitat de Strava directament a TrailReplay',
+            description: 'Arrossega aquest botó a la barra d’adreces d’interès. Obre una activitat de Strava i fes clic al marcador: TrailReplay s’obrirà en una pestanya nova i carregarà el GPX a l’editor.',
+            button: 'Envia a TrailReplay',
+            dragLabel: 'Arrossega aquest botó a la barra d’adreces d’interès per afegir el marcador de TrailReplay',
+            note: 'Només en navegador d’escriptori. Has d’haver iniciat sessió a Strava i tenir permís per exportar l’activitat. TrailReplay processa el GPX al navegador; no es puja als nostres servidors.',
+            invalidGpx: 'Strava no ha retornat un fitxer GPX vàlid. Comprova que pots exportar aquesta activitat o descarrega el GPX manualment.',
+          },
         },
       },
       otherProviders: {

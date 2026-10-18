@@ -127,6 +127,11 @@ export const help = {
         step4: 'Spiele die Route durch, um Tempo und Bild-Timing zu überprüfen.',
         step5: 'Öffne „Exportieren“, zeige eine Vorschau des Zuschnitts an und zeichne das endgültige Video auf.',
       },
+      stravaImport: {
+        title: 'Strava-Aktivitäten schneller in TrailReplay laden',
+        body: 'Füge das TrailReplay-Lesezeichen aus der GPX-Anleitung zur Lesezeichenleiste hinzu. Klicke auf einer Strava-Aktivitätsseite darauf: TrailReplay öffnet sich in einem neuen Tab und lädt die Route direkt in den Editor.',
+        link: 'Strava-Lesezeichen einrichten',
+      },
       sampleRoutesBadge: 'Beispielrouten für Katalonien',
       needGpxGuide: 'Musst Du zuerst Dein eigenes GPX exportieren?',
       whyFilesTitle: 'Warum diese beiden Dateien?',
@@ -285,6 +290,14 @@ export const help = {
           step4: 'Speichere die Datei und lade sie direkt in TrailReplay hoch.',
           note1: '„Original exportieren“ liefert die Datei, die die Uhr geschrieben hat, meist eine .fit, die TrailReplay direkt liest: jeder Punkt mit Zeitstempel, dazu Herzfrequenz, Trittfrequenz, Leistung und Temperatur. Der „GPX exportieren“ einer Aktivität behält diese normalerweise ebenfalls.',
           note2: 'Abhängig von den Datenschutzeinstellungen können öffentliche Aktivitäten manchmal exportiert werden.',
+          bookmarklet: {
+            title: 'Eine Strava-Aktivität direkt an TrailReplay senden',
+            description: 'Ziehe diese Schaltfläche in Deine Lesezeichenleiste. Öffne eine Strava-Aktivität und klicke auf das Lesezeichen: TrailReplay öffnet sich in einem neuen Tab und lädt die GPX-Datei automatisch in den Editor.',
+            button: 'An TrailReplay senden',
+            dragLabel: 'Ziehe diese Schaltfläche in die Lesezeichenleiste, um das TrailReplay-Lesezeichen hinzuzufügen',
+            note: 'Nur im Desktop-Browser. Du musst bei Strava angemeldet sein und die Aktivität exportieren dürfen. TrailReplay verarbeitet die GPX-Datei im Browser; sie wird nicht auf unsere Server hochgeladen.',
+            invalidGpx: 'Strava hat keine gültige GPX-Datei zurückgegeben. Prüfe, ob Du diese Aktivität exportieren kannst, oder lade die GPX-Datei manuell herunter.',
+          },
         },
       },
       otherProviders: {

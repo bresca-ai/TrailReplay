@@ -127,6 +127,11 @@ export const help = {
         step4: 'Reproduce la ruta para validar el ritmo y el momento de las imágenes.',
         step5: 'Abre Exportar, previsualiza el recorte y graba el vídeo final.',
       },
+      stravaImport: {
+        title: 'Pasa una actividad de Strava a TrailReplay más rápido',
+        body: 'Añade el marcador de TrailReplay de la guía GPX a la barra de marcadores. En una actividad de Strava, haz clic para abrir TrailReplay en otra pestaña y cargar la ruta directamente en el editor.',
+        link: 'Configurar el marcador de Strava',
+      },
       sampleRoutesBadge: 'Rutas de ejemplo de Cataluña',
       needGpxGuide: '¿Necesitas exportar primero tu propio GPX?',
       whyFilesTitle: '¿Por qué estos dos archivos?',
@@ -285,6 +290,14 @@ export const help = {
           step4: 'Guarda el archivo y súbelo directamente a TrailReplay.',
           note1: '“Export Original” entrega el archivo que escribió el reloj, normalmente un .fit, que TrailReplay lee directamente: cada punto con su hora, más pulso, cadencia, potencia y temperatura. El “Export GPX” de una actividad suele conservarlos también.',
           note2: 'Las actividades públicas a veces pueden exportarse según la configuración de privacidad.',
+          bookmarklet: {
+            title: 'Envía una actividad de Strava directamente a TrailReplay',
+            description: 'Arrastra este botón a la barra de marcadores. Abre una actividad de Strava y haz clic en el marcador: TrailReplay se abrirá en otra pestaña y cargará el GPX en el editor.',
+            button: 'Enviar a TrailReplay',
+            dragLabel: 'Arrastra este botón a la barra de marcadores para añadir el marcador de TrailReplay',
+            note: 'Solo funciona en navegadores de escritorio. Debes iniciar sesión en Strava y tener permiso para exportar la actividad. TrailReplay procesa el GPX en tu navegador; no se sube a nuestros servidores.',
+            invalidGpx: 'Strava no devolvió un GPX válido. Comprueba que puedes exportar esta actividad o descarga el GPX manualmente.',
+          },
         },
       },
       otherProviders: {

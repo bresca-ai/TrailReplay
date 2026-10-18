@@ -127,6 +127,11 @@ export const help = {
       step4: 'Lancez une lecture complète pour vérifier le rythme de l\'animation et l\'apparition des photos.',
       step5: 'Ouvrez l\'onglet Exportation, vérifiez le cadrage puis enregistrez la vidéo finale.',
     },
+      stravaImport: {
+        title: 'Importer une activité Strava dans TrailReplay plus vite',
+        body: 'Ajoutez le marque-page TrailReplay du guide GPX à la barre de favoris. Sur une activité Strava, cliquez dessus pour ouvrir TrailReplay dans un nouvel onglet et charger le parcours directement dans l’éditeur.',
+        link: 'Configurer le marque-page Strava',
+      },
     sampleRoutesBadge: 'Parcours d’exemple de Catalogne',
     needGpxGuide: 'Vous devez d\'abord exporter votre propre fichier GPX ?',
     whyFilesTitle: 'Pourquoi ces deux fichiers ?',
@@ -285,6 +290,14 @@ export const help = {
         step4: 'Téléchargez le fichier et importez-le dans TrailReplay.',
         note1: '« Export original » fournit le fichier écrit par la montre, généralement un .fit que TrailReplay lit directement : chaque point horodaté, plus fréquence cardiaque, cadence, puissance et température. L’« Export GPX » d’une activité les conserve normalement aussi.',
         note2: 'Les activités privées peuvent être limitées selon les réglages de confidentialité.',
+        bookmarklet: {
+          title: 'Envoyez une activité Strava directement vers TrailReplay',
+          description: 'Faites glisser ce bouton vers la barre de favoris. Ouvrez une activité Strava et cliquez sur le marque-page : TrailReplay s’ouvre dans un nouvel onglet et charge le GPX dans l’éditeur.',
+          button: 'Envoyer vers TrailReplay',
+          dragLabel: 'Faites glisser ce bouton dans la barre de favoris pour ajouter le marque-page TrailReplay',
+          note: 'Fonctionne uniquement sur ordinateur. Vous devez être connecté à Strava et autorisé à exporter l’activité. TrailReplay traite le GPX dans votre navigateur ; il n’est pas envoyé sur nos serveurs.',
+          invalidGpx: 'Strava n’a pas renvoyé de fichier GPX valide. Vérifiez que vous pouvez exporter cette activité ou téléchargez le GPX manuellement.',
+        },
       },
     },
     otherProviders: {
