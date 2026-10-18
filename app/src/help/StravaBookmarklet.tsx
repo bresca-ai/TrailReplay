@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { BookmarkPlus } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
-import { STRAVA_BOOKMARKLET_HREF } from '@/utils/stravaBookmarklet';
+import { createStravaBookmarkletHref } from '@/utils/stravaBookmarklet';
 
 export function StravaBookmarklet() {
   const { t } = useI18n();
@@ -10,7 +10,7 @@ export function StravaBookmarklet() {
   // React sanitizes javascript: hrefs. Assign it after render so browsers can
   // save this link as a bookmarklet when the user drags it to their bar.
   useEffect(() => {
-    if (linkRef.current) linkRef.current.href = STRAVA_BOOKMARKLET_HREF;
+    if (linkRef.current) linkRef.current.href = createStravaBookmarkletHref(window.location.origin);
   }, []);
 
   return (
