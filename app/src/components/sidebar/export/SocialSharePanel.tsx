@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, ImagePlus, ImageIcon, Loader2, Minus, Plus, X } from 'lucide-react';
 import { useSocialShareExport } from './useSocialShareExport';
@@ -57,6 +57,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
+  const cameraPreviewTimer = useRef<number | null>(null);
 
   const setRouteTransform = (patch: Partial<typeof settings.routeTransform>) =>
     setSocialShareSettings({ routeTransform: { ...settings.routeTransform, ...patch } });
@@ -88,14 +89,27 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
     if (coverMode && previewUrl) onPosterReady?.(previewUrl);
   }, [coverMode, onPosterReady, previewUrl]);
 
+  useEffect(() => () => {
+    if (cameraPreviewTimer.current !== null) window.clearTimeout(cameraPreviewTimer.current);
+  }, []);
+
+  const refreshCameraPreview = () => {
+    if (cameraPreviewTimer.current !== null) window.clearTimeout(cameraPreviewTimer.current);
+    cameraPreviewTimer.current = window.setTimeout(() => {
+      cameraPreviewTimer.current = null;
+      void generatePreview();
+    }, 180);
+  };
+
   const handlePitch = (v: number) => {
     setPitch(v);
-    // jumpTo is instant (no animation) so the canvas is settled when Preview captures it
     mapGlobalRef.current?.jumpTo({ pitch: v });
+    refreshCameraPreview();
   };
   const handleBearing = (v: number) => {
     setBearing(v);
     mapGlobalRef.current?.jumpTo({ bearing: v });
+    refreshCameraPreview();
   };
 
   const nudgeMap = (x: number, y: number) => {
@@ -414,7 +428,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             </div>
           </div>
           <button
-            onClick={fitTrackToMap}
+            onClick={centerMap}
             disabled={!hasTracks}
             className="w-full text-xs py-1.5 rounded bg-black/5 hover:bg-black/10 transition-colors disabled:opacity-40"
           >

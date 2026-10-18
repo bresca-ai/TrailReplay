@@ -97,7 +97,7 @@ function drawRoutePlain(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
+  ctx.lineWidth = Math.max(6, lineWidth * 0.6);
   tracePath(ctx, points);
   ctx.stroke();
   ctx.restore();
@@ -426,8 +426,11 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
 
   // Route glow (3-D layered) — full poster, no clipping
   if (projectedRouteForMap && projectedRouteForMap.length > 1) {
-    const drawRoute = settings.routeGlow ? drawRouteGlow : drawRoutePlain;
-    drawRoute(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
+    if (settings.routeGlow) {
+      drawRouteGlow(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
+    } else if (!mapCanvas) {
+      drawRoutePlain(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
+    }
   }
 
   drawBrandMark(ctx, w, input.fontFamily);

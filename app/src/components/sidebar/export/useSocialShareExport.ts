@@ -19,6 +19,7 @@ import {
   getRouteBboxNorm,
 } from './socialShareRouteFit';
 import { overlayCanvasFontFamily } from '@/utils/typography';
+import { captureSocialMap } from './captureSocialMap';
 
 const BRAND_ORANGE = '#C1652F';
 
@@ -235,37 +236,9 @@ export function useSocialShareExport() {
             lastMapFirstFitKeyRef.current = fitKey;
           }
 
-          // Copy WebGL pixels to a 2D canvas synchronously inside the render callback.
-          // If tiles are still loading, wait for 'idle' first so we get a complete frame.
-          preCapuredMapCanvas = await new Promise<HTMLCanvasElement | null>((resolve) => {
-            const timeout = setTimeout(() => resolve(null), 3000);
-
-            const capture = () => {
-              clearTimeout(timeout);
-              try {
-                const glCanvas = map.getCanvas();
-                const offscreen = document.createElement('canvas');
-                offscreen.width = glCanvas.width;
-                offscreen.height = glCanvas.height;
-                offscreen.getContext('2d')?.drawImage(glCanvas, 0, 0);
-                resolve(offscreen);
-              } catch (e) {
-                console.warn('[social] map capture failed:', e);
-                resolve(null);
-              }
-            };
-
-            const triggerCapture = () => {
-              map.once('render', capture);
-              map.triggerRepaint();
-            };
-
-            // Wait for tiles if map is still loading, otherwise capture immediately
-            if (map.areTilesLoaded()) {
-              triggerCapture();
-            } else {
-              map.once('idle', triggerCapture);
-            }
+          preCapuredMapCanvas = await captureSocialMap(map, {
+            routeGlow: settings.routeGlow,
+            routeOpacity: settings.routeTransform.opacity,
           });
         }
       }
@@ -299,6 +272,8 @@ export function useSocialShareExport() {
     settings.stats,
     settings.statsLayout,
     settings.showStats,
+    settings.routeGlow,
+    settings.routeTransform.opacity,
     settings.template,
     tracks,
   ]);
@@ -388,20 +363,9 @@ export function useSocialShareExport() {
       if (settings.template === 'map-first') {
         const map = mapGlobalRef.current;
         if (map) {
-          preCapuredMapCanvas = await new Promise<HTMLCanvasElement | null>((resolve) => {
-            const timeout = setTimeout(() => resolve(null), 1000);
-            map.once('render', () => {
-              clearTimeout(timeout);
-              try {
-                const glCanvas = map.getCanvas();
-                const offscreen = document.createElement('canvas');
-                offscreen.width = glCanvas.width;
-                offscreen.height = glCanvas.height;
-                offscreen.getContext('2d')?.drawImage(glCanvas, 0, 0);
-                resolve(offscreen);
-              } catch { resolve(null); }
-            });
-            map.triggerRepaint();
+          preCapuredMapCanvas = await captureSocialMap(map, {
+            routeGlow: settings.routeGlow,
+            routeOpacity: settings.routeTransform.opacity,
           });
         }
       }
