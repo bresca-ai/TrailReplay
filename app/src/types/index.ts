@@ -262,8 +262,9 @@ export interface VideoExportSettings {
   includeCover: boolean;
 }
 
-export type SocialShareTemplate = 'map-first' | 'photo-first';
+export type SocialShareTemplate = 'map-first' | 'photo-first' | 'split';
 export type SocialShareAspectRatio = '16:9' | '4:5' | '1:1' | '9:16';
+export type SocialShareLayoutPreset = 'classic' | 'long-way' | 'ridge-photo' | 'photo-grid';
 export type SocialShareStatMetric = 'distance' | 'elevationGain' | 'duration' | 'movingDuration' | 'pace' | 'heartRate' | 'speed' | 'altitude' | 'maxElevation' | 'elevationLoss' | 'maxSpeed' | 'custom';
 
 export interface SocialShareStat {
@@ -272,6 +273,19 @@ export interface SocialShareStat {
   label: string;
   value: string;
   visible: boolean;
+  icon?: string;
+}
+
+export interface SocialSharePhotoSlot {
+  id: string;
+  imageUrl: string | null;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
 }
 
 export interface SocialShareRouteTransform {
@@ -289,11 +303,14 @@ export interface SocialSharePhotoTransform {
 
 export interface SocialShareSettings {
   template: SocialShareTemplate;
+  layoutPreset: SocialShareLayoutPreset;
   aspectRatio: SocialShareAspectRatio;
   selectedPictureId: string | null;
+  photoSlots: SocialSharePhotoSlot[];
   titleMode: 'journey-name' | 'track-name' | 'custom';
   customTitle: string;
   titleScale: number;
+  titleWidth: number;
   titleColor: string;
   /** Normalized offsets for directly positioning the title layer in the poster editor. */
   titleOffsetX: number;
@@ -338,7 +355,7 @@ export interface ComparisonTrack {
 export type UnitSystem = 'metric' | 'imperial';
 
 export type ColorMode = 'fixed' | 'heartRate' | 'zones';
-export type OverlayFont = 'modern' | 'editorial' | 'technical' | 'condensed' | 'geometric';
+export type OverlayFont = 'modern' | 'editorial' | 'technical' | 'condensed' | 'geometric' | 'poster' | 'display';
 
 export interface TrailColorZone {
   id: string;

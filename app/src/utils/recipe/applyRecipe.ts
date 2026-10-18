@@ -9,6 +9,7 @@ import {
 } from '@/store/defaults';
 import type { Recipe } from './types';
 import type { ResolvedRecipe } from './resolveRecipe';
+import { createPhotoSlot, presetSettings } from '@/components/sidebar/export/socialSharePresets';
 import {
   getFollowBehindLevelForStopIndex,
   getFollowBehindStopIndexForLevel,
@@ -19,6 +20,9 @@ import {
 function mergeSettings(recipe: Recipe, activeColor: string, activeIcon: string): AppSettings {
   const defaults = createDefaultSettings();
   const saved = recipe.settings ?? {};
+  const coverFont = recipe.socialShareSettings?.layoutPreset === 'long-way' ? 'poster'
+    : recipe.socialShareSettings?.layoutPreset === 'ridge-photo' || recipe.socialShareSettings?.layoutPreset === 'photo-grid' ? 'condensed'
+      : defaults.trailStyle.overlayFont;
   return {
     ...defaults,
     ...saved,
@@ -29,6 +33,7 @@ function mergeSettings(recipe: Recipe, activeColor: string, activeIcon: string):
       trailColor: activeColor,
       markerColor: activeColor,
       currentIcon: activeIcon,
+      overlayFont: coverFont,
       ...saved.trailStyle,
     },
     mapOverlays: { ...defaults.mapOverlays, ...saved.mapOverlays },
@@ -75,6 +80,12 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
 
   const activeTrack = resolved.tracks.find((track) => track.id === resolved.activeTrackId)
     ?? resolved.tracks[0];
+  const defaultCover = createDefaultSocialShareSettings();
+  const authoredCover = recipe.socialShareSettings;
+  const coverPreset = authoredCover?.layoutPreset
+    ? presetSettings(authoredCover.layoutPreset, defaultCover)
+    : {};
+  const mergedCover = { ...defaultCover, ...coverPreset, ...authoredCover };
 
   store.hydrateState({
     // Kept so saving preserves where this came from, not only what it became.
@@ -112,8 +123,10 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     cameraSettings: mergeRecipeCameraSettings(recipe),
     videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
     socialShareSettings: {
-      ...createDefaultSocialShareSettings(),
-      ...recipe.socialShareSettings,
+      ...mergedCover,
+      ...(mergedCover.template === 'split' && !mergedCover.photoSlots?.length
+        ? { photoSlots: [createPhotoSlot('hero', 0, 0, 1, 0.66)] }
+        : {}),
       ...(recipe.socialShareSettings?.stats ? {
         stats: recipe.socialShareSettings.stats.map((stat, index) => ({
           id: stat.id || `recipe-stat-${index}`,
@@ -121,6 +134,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
           label: stat.label ?? '',
           value: stat.value ?? '',
           visible: stat.visible !== false,
+          icon: stat.icon,
         })),
       } : {}),
       ...(recipe.videoExportSettings?.includeCover

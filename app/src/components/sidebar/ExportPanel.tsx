@@ -13,8 +13,9 @@ import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Sa
 function AutomaticCoverRenderer({ onReady }: { onReady: (url: string) => void }) {
   const { previewUrl, settings, selectedPhotoReady } = useSocialShareExport();
   useEffect(() => {
-    if (previewUrl && (settings.template === 'map-first' || selectedPhotoReady)) onReady(previewUrl);
-  }, [onReady, previewUrl, selectedPhotoReady, settings.template]);
+    const splitReady = settings.template !== 'split' || (!!settings.photoSlots?.length && settings.photoSlots.every((slot) => !!slot.imageUrl));
+    if (previewUrl && splitReady && (settings.template !== 'photo-first' || selectedPhotoReady)) onReady(previewUrl);
+  }, [onReady, previewUrl, selectedPhotoReady, settings]);
   return null;
 }
 

@@ -1,12 +1,12 @@
-import type { SocialShareAspectRatio, SocialShareSettings } from '@/types';
+import type { SocialShareAspectRatio, SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import { getCropRegion } from '@/utils/crop';
+import { getActivityIconOption } from '@/utils/activityIcons';
 import { formatPace, metersToFeet } from '@/utils/units';
 import type { SocialShareSummaryData } from './socialShareData';
 import type { CanvasPoint, FitBox } from './socialShareRouteFit';
 import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
 import { getSocialShareLogoBox } from './socialShareBrand';
-
-// ponytail: layout geometry lives here; extract to socialShareLayout.ts if templates exceed 2
+import { getSplitMapBox } from './socialShareSplit';
 
 const DARK_BG = 'rgba(10,10,10,0.97)';
 const WHITE_DIM = 'rgba(255,255,255,0.60)';
@@ -40,6 +40,8 @@ export interface RenderInput {
   /** Raw lat/lon points for client-side fitting (photo-first). */
   routeLatLons: Array<{ lat: number; lon: number }> | null;
   selectedPhoto: HTMLImageElement | null;
+  slotImages: Record<string, HTMLImageElement>;
+  statIconImages: Record<string, HTMLImageElement>;
   fontFamily: string;
   brandLogo: HTMLImageElement;
   /** Primary route color from track settings (hex). */
@@ -54,7 +56,9 @@ export function renderSocialPoster(input: RenderInput): string {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d')!;
-  if (input.settings.template === 'map-first') {
+  if (input.settings.template === 'split') {
+    drawSplit(ctx, w, h, input);
+  } else if (input.settings.template === 'map-first') {
     drawMapFirst(ctx, w, h, input);
   } else {
     drawPhotoFirst(ctx, w, h, input);
@@ -68,7 +72,9 @@ export function exportSocialPosterBlob(input: RenderInput): Promise<Blob> {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d')!;
-  if (input.settings.template === 'map-first') {
+  if (input.settings.template === 'split') {
+    drawSplit(ctx, w, h, input);
+  } else if (input.settings.template === 'map-first') {
     drawMapFirst(ctx, w, h, input);
   } else {
     drawPhotoFirst(ctx, w, h, input);
@@ -216,6 +222,7 @@ function drawStatsBar(
   settings: SocialShareSettings,
   labels: RenderInput['labels'],
   fontFamily: string,
+  iconImages: RenderInput['statIconImages'],
 ) {
   const { distanceMeters, durationSeconds, movingDurationSeconds, elevationGainMeters, elevationLossMeters, maxElevationMeters, averageSpeedMetersPerSecond, maxSpeedMetersPerSecond, averageHeartRate, unitSystem } = summary;
   const isMetric = unitSystem === 'metric';
@@ -232,8 +239,9 @@ function drawStatsBar(
   const colW = w / columns;
   const rowH = h / rows;
   const scale = Math.max(0.7, Math.min(1.4, settings.statsScale ?? 1));
-  const labelSize = Math.round(rowH * 0.19 * scale);
-  const numSize = Math.round(rowH * 0.50 * scale);
+  const splitWide = settings.template === 'split' && w > h;
+  const labelSize = Math.round(rowH * (splitWide ? 0.29 : 0.19) * scale);
+  const numSize = Math.round(rowH * (splitWide ? 0.52 : settings.layoutPreset === 'ridge-photo' || settings.layoutPreset === 'photo-grid' ? 0.42 : 0.50) * scale);
   const unitSize = Math.round(rowH * 0.27 * scale);
 
   const distNum = isMetric
@@ -291,12 +299,36 @@ function drawStatsBar(
     }
 
     if (col > 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = statsColor;
       ctx.fillRect(cellX, cellY + rowH * 0.15, 1, rowH * 0.7);
+      ctx.globalAlpha = 1;
     }
     if (row > 0 && col === 0) {
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
       ctx.fillRect(x + w * 0.1, cellY, w * 0.8, 1);
+    }
+
+    const icon = stat.icon ? getActivityIconOption(stat.icon) : undefined;
+    const iconSize = Math.min(rowH * 0.36, colW * 0.16);
+    const iconX = cellX + colW * 0.12;
+    const iconY = cellY + rowH * 0.48;
+    if (icon?.kind === 'svg' && iconImages[stat.icon!]) {
+      const stencil = document.createElement('canvas');
+      stencil.width = Math.ceil(iconSize);
+      stencil.height = Math.ceil(iconSize);
+      const stencilCtx = stencil.getContext('2d');
+      if (stencilCtx) {
+        stencilCtx.drawImage(iconImages[stat.icon!], 0, 0, stencil.width, stencil.height);
+        stencilCtx.globalCompositeOperation = 'source-in';
+        stencilCtx.fillStyle = statsColor;
+        stencilCtx.fillRect(0, 0, stencil.width, stencil.height);
+        ctx.drawImage(stencil, iconX, iconY, iconSize, iconSize);
+      }
+    } else if (icon) {
+      ctx.font = `${Math.round(iconSize)}px sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText(icon.content, iconX, iconY + iconSize);
     }
 
     ctx.font = `400 ${labelSize}px ${fontFamily}`;
@@ -308,7 +340,7 @@ function drawStatsBar(
     const numW = ctx.measureText(num).width;
     ctx.font = `400 ${unitSize}px ${fontFamily}`;
     const unitW = unit ? ctx.measureText(` ${unit}`).width : 0;
-    const startX = cx - (numW + unitW) / 2;
+    const startX = cx - (numW + unitW) / 2 + (icon ? iconSize * 0.25 : 0);
 
     ctx.font = `700 ${numSize}px ${fontFamily}`;
     ctx.fillStyle = statsColor;
@@ -317,7 +349,7 @@ function drawStatsBar(
 
     if (unit) {
       ctx.font = `400 ${unitSize}px ${fontFamily}`;
-      ctx.fillStyle = WHITE_DIM;
+      ctx.fillStyle = `${statsColor}B8`;
       ctx.fillText(` ${unit}`, startX + numW, cellY + rowH * 0.82);
     }
   });
@@ -336,27 +368,29 @@ function drawBrandMark(ctx: CanvasRenderingContext2D, w: number, h: number, inpu
 function drawTitle(
   ctx: CanvasRenderingContext2D,
   title: string,
-  x: number, y: number, maxW: number, fontSize: number, fontFamily: string, color: string,
+  x: number, y: number, maxW: number, fontSize: number, fontFamily: string, color: string, shadow = true,
 ): number {
   ctx.font = `800 ${fontSize}px ${fontFamily}`;
   ctx.fillStyle = color;
-  ctx.shadowColor = 'rgba(0,0,0,0.8)';
-  ctx.shadowBlur = Math.round(fontSize * 0.25);
-  const words = title.split(' ');
+  ctx.shadowColor = shadow ? 'rgba(0,0,0,0.8)' : 'transparent';
+  ctx.shadowBlur = shadow ? Math.round(fontSize * 0.25) : 0;
   const lines: string[] = [];
-  let current = '';
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-    if (ctx.measureText(candidate).width > maxW && current) {
-      lines.push(current);
-      current = word;
-      if (lines.length >= 2) break;
-    } else {
-      current = candidate;
+  for (const paragraph of title.split('\n')) {
+    let current = '';
+    for (const word of paragraph.split(/\s+/)) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (ctx.measureText(candidate).width > maxW && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = candidate;
+      }
+      if (lines.length >= 5) break;
     }
+    if (current && lines.length < 5) lines.push(current);
+    if (lines.length >= 5) break;
   }
-  if (current && lines.length < 2) lines.push(current);
-  lines.forEach((l, i) => ctx.fillText(l, x, y + i * fontSize * 1.12, maxW));
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * fontSize * 1.04, maxW));
   ctx.shadowBlur = 0;
   return lines.length;
 }
@@ -416,6 +450,14 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
     }
   }
 
+  if (settings.layoutPreset === 'long-way') {
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = '#2B5337';
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
   // Subtle top scrim — only enough to make the logo + title readable
   const topGrad = ctx.createLinearGradient(0, 0, 0, h * 0.22);
   topGrad.addColorStop(0, 'rgba(0,0,0,0.62)');
@@ -423,12 +465,20 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
   ctx.fillStyle = topGrad;
   ctx.fillRect(0, 0, w, h * 0.22);
 
+  if (settings.layoutPreset === 'long-way') {
+    const titleScrim = ctx.createLinearGradient(0, 0, w * 0.88, 0);
+    titleScrim.addColorStop(0, 'rgba(3,18,13,0.84)');
+    titleScrim.addColorStop(1, 'rgba(3,18,13,0)');
+    ctx.fillStyle = titleScrim;
+    ctx.fillRect(0, h * 0.12, w, h * 0.72);
+  }
+
   // Route glow (3-D layered) — full poster, no clipping
   if (projectedRouteForMap && projectedRouteForMap.length > 1) {
     if (settings.routeGlow) {
       drawRouteGlow(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
-    } else if (!mapCanvas) {
-      drawRoutePlain(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
+    } else if (!mapCanvas || settings.layoutPreset === 'long-way') {
+      drawRoutePlain(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, settings.layoutPreset === 'long-way' ? '#FF7A1A' : input.routeColor);
     }
   }
 
@@ -438,7 +488,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
   const titleSize = Math.round(Math.min(w * 0.09, Math.max(h * 0.05, w * 0.055)) * (settings.titleScale ?? 1));
   const titleX = pad + settings.titleOffsetX * w;
   const titleY = pad + Math.round(h * 0.01) + titleSize + settings.titleOffsetY * h;
-  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w * 0.72, titleSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
+  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w * (settings.titleWidth ?? 0.74), titleSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
   if (settings.showLocation && summary.locationLabel) {
     const locSize = Math.round(h * 0.021);
     drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 2, locSize, input.fontFamily);
@@ -478,7 +528,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
       ctx.fillRect(0, gradTop, w, totalH);
     }
 
-    if (showStats) drawStatsBar(ctx, 0, panelTop, w, statsH, summary, settings, input.labels, input.fontFamily);
+    if (showStats) drawStatsBar(ctx, 0, panelTop, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
     if (settings.showElevationMiniChart) {
       drawElevationChart(ctx, pad, scrimBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily);
     }
@@ -535,7 +585,7 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
   const titleSize = Math.round(h * 0.072 * (settings.titleScale ?? 1));
   const titleX = pad + settings.titleOffsetX * w;
   const titleY = pad + Math.round(h * 0.018) + titleSize + settings.titleOffsetY * h;
-  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w - pad * 2, titleSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
+  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w * (settings.titleWidth ?? 0.92), titleSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
 
   // Location
   if (settings.showLocation && summary.locationLabel) {
@@ -548,8 +598,109 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
   const statsH = showStats ? Math.round(h * 0.125 * statsRowCount(settings)) : 0;
   const statsY = panelBottom - elevH - statsH;
 
-  if (showStats) drawStatsBar(ctx, 0, statsY, w, statsH, summary, settings, input.labels, input.fontFamily);
+  if (showStats) drawStatsBar(ctx, 0, statsY, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
   if (settings.showElevationMiniChart) {
     drawElevationChart(ctx, pad, panelBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily);
   }
+}
+
+function drawPhotoSlot(ctx: CanvasRenderingContext2D, slot: SocialSharePhotoSlot, image: HTMLImageElement | undefined, w: number, h: number) {
+  const box = { x: slot.x * w, y: slot.y * h, w: slot.w * w, h: slot.h * h };
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(box.x, box.y, box.w, box.h);
+  ctx.clip();
+  if (image) {
+    const coverScale = Math.max(box.w / image.naturalWidth, box.h / image.naturalHeight) * Math.max(1, slot.scale);
+    const imageW = image.naturalWidth * coverScale;
+    const imageH = image.naturalHeight * coverScale;
+    const availableX = Math.max(0, imageW - box.w);
+    const availableY = Math.max(0, imageH - box.h);
+    const x = box.x - availableX * (0.5 + Math.max(-0.5, Math.min(0.5, slot.offsetX)));
+    const y = box.y - availableY * (0.5 + Math.max(-0.5, Math.min(0.5, slot.offsetY)));
+    ctx.drawImage(image, x, y, imageW, imageH);
+  } else {
+    const grad = ctx.createLinearGradient(box.x, box.y, box.x + box.w, box.y + box.h);
+    grad.addColorStop(0, '#2d493d');
+    grad.addColorStop(1, '#132820');
+    ctx.fillStyle = grad;
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = `600 ${Math.max(20, Math.round(w * 0.025))}px sans-serif`;
+    ctx.fillText('＋ ADD PHOTO', box.x + box.w / 2, box.y + box.h / 2);
+  }
+  ctx.restore();
+}
+
+function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
+  const { settings, mapCanvas, summary } = input;
+  const pad = Math.round(w * 0.045);
+  ctx.fillStyle = '#F6F3E9';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(39, 73, 54, 0.09)';
+  ctx.lineWidth = Math.max(1, w * 0.001);
+  for (let line = 0; line < 7; line++) {
+    const y = h * (0.92 + line * 0.019);
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.08, y);
+    ctx.bezierCurveTo(w * 0.18, y - h * 0.05, w * 0.34, y + h * 0.07, w * 0.56, y + h * 0.012);
+    ctx.bezierCurveTo(w * 0.79, y - h * 0.04, w * 0.90, y + h * 0.035, w * 1.07, y - h * 0.02);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  for (const slot of settings.photoSlots ?? []) {
+    drawPhotoSlot(ctx, slot, input.slotImages[slot.id], w, h);
+  }
+
+  const mapBox = getSplitMapBox(w, h);
+  ctx.save();
+  ctx.shadowColor = 'rgba(11,31,23,0.30)';
+  ctx.shadowBlur = w * 0.035;
+  ctx.shadowOffsetY = w * 0.012;
+  ctx.fillStyle = '#183126';
+  ctx.beginPath();
+  ctx.roundRect(mapBox.x, mapBox.y, mapBox.w, mapBox.h, w * 0.05);
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(mapBox.x, mapBox.y, mapBox.w, mapBox.h, w * 0.05);
+  ctx.clip();
+  if (mapCanvas) {
+    const container = document.getElementById('map-capture-container');
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const { cropX, cropY, cropW, cropH } = getCropRegion(rect, mapBox.w, mapBox.h);
+      const px = mapCanvas.width / rect.width;
+      const py = mapCanvas.height / rect.height;
+      ctx.drawImage(mapCanvas, cropX * px, cropY * py, cropW * px, cropH * py, mapBox.x, mapBox.y, mapBox.w, mapBox.h);
+    }
+  } else {
+    ctx.fillStyle = '#183126';
+    ctx.fillRect(mapBox.x, mapBox.y, mapBox.w, mapBox.h);
+  }
+  if (input.projectedRouteForMap && input.projectedRouteForMap.length > 1) {
+    drawRoutePlain(ctx, input.projectedRouteForMap, Math.max(8, w * 0.01), settings.routeTransform.opacity, input.routeColor);
+  }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = Math.round(w * 0.003);
+  ctx.beginPath();
+  ctx.roundRect(mapBox.x, mapBox.y, mapBox.w, mapBox.h, w * 0.05);
+  ctx.stroke();
+
+  const titleSize = Math.round(Math.min(w * 0.095, h * 0.095) * (settings.titleScale ?? 1));
+  const titleX = pad + settings.titleOffsetX * w;
+  const titleY = h * 0.85 + settings.titleOffsetY * h;
+  drawTitle(ctx, summary.title, titleX, titleY, w * (settings.titleWidth ?? 0.92), titleSize, input.fontFamily, settings.titleColor ?? '#21372C', false);
+
+  if (hasVisibleStats(settings)) {
+    const wide = w > h;
+    drawStatsBar(ctx, pad, h * ((wide ? 0.88 : 0.905) - settings.dataPanelOffsetY), w - pad * 2, h * (wide ? 0.11 : 0.09) * statsRowCount(settings), summary, settings, input.labels, input.fontFamily, input.statIconImages);
+  }
+  drawBrandMark(ctx, w, h, input);
 }

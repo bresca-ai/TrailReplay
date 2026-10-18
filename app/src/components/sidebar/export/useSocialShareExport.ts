@@ -21,6 +21,8 @@ import {
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import { captureSocialMap } from './captureSocialMap';
 import { getSocialShareLogoBox, loadSocialShareLogo } from './socialShareBrand';
+import { loadPosterAssets } from './socialShareMedia';
+import { getSplitMapBox } from './socialShareSplit';
 
 const BRAND_ORANGE = '#C1652F';
 
@@ -83,7 +85,7 @@ export function useSocialShareExport() {
     img.src = selectedPicture.url;
   }, [selectedPicture]);
 
-  const buildInput = useCallback((brandLogo: HTMLImageElement, preCapuredMapCanvas: HTMLCanvasElement | null = null): RenderInput => {
+  const buildInput = useCallback((brandLogo: HTMLImageElement, assets: Awaited<ReturnType<typeof loadPosterAssets>>, preCapuredMapCanvas: HTMLCanvasElement | null = null): RenderInput => {
     const summary = buildSocialShareSummary(
       settings, tracks, activeTrackId, journey, journeySegments, unitSystem,
     );
@@ -92,7 +94,7 @@ export function useSocialShareExport() {
     let projectedRouteForMap: CanvasPoint[] | null = null;
     let routeLatLons: Array<{ lat: number; lon: number }> | null = null;
 
-    if (settings.template === 'map-first') {
+    if (settings.template !== 'photo-first') {
       // Use the pre-captured 2D snapshot — raw WebGL canvas is passed here only as a fallback
       mapCanvas = preCapuredMapCanvas;
 
@@ -101,7 +103,8 @@ export function useSocialShareExport() {
       if (map && container && tracks.length > 0) {
         const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
         const rect = container.getBoundingClientRect();
-        const { cropX, cropY, cropW, cropH } = getCropRegion(rect, posterW, posterH);
+        const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH) : null;
+        const { cropX, cropY, cropW, cropH } = getCropRegion(rect, splitBox?.w ?? posterW, splitBox?.h ?? posterH);
         const pts: CanvasPoint[] = [];
         for (const track of tracks) {
           if (!track.visible) continue;
@@ -110,8 +113,8 @@ export function useSocialShareExport() {
             const pt = track.points[i];
             const sp = map.project([pt.lon, pt.lat]);
             pts.push({
-              x: (sp.x - cropX) / cropW * posterW,
-              y: (sp.y - cropY) / cropH * posterH,
+              x: (sp.x - cropX) / cropW * (splitBox?.w ?? posterW) + (splitBox?.x ?? 0),
+              y: (sp.y - cropY) / cropH * (splitBox?.h ?? posterH) + (splitBox?.y ?? 0),
             });
           }
         }
@@ -156,6 +159,7 @@ export function useSocialShareExport() {
       selectedPhoto: photoRef.current,
       fontFamily: overlayCanvasFontFamily(overlayFont),
       brandLogo,
+      ...assets,
       routeColor,
       labels,
     };
@@ -183,7 +187,7 @@ export function useSocialShareExport() {
     try {
       let preCapuredMapCanvas: HTMLCanvasElement | null = null;
 
-      if (settings.template === 'map-first') {
+      if (settings.template !== 'photo-first') {
         const map = mapGlobalRef.current;
         if (map) {
           const container = document.getElementById('map-capture-container');
@@ -191,6 +195,7 @@ export function useSocialShareExport() {
           const visibleStatCount = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
           const statsRows = visibleStatCount > 0 ? Math.ceil(visibleStatCount / (settings.statsLayout ?? 3)) : 0;
           const fitKey = [
+            settings.template,
             settings.aspectRatio,
             settings.showLocation,
             settings.showStats,
@@ -212,7 +217,7 @@ export function useSocialShareExport() {
               statsRows,
               showElevation: settings.showElevationMiniChart,
             });
-            const padding = getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
+            const padding = settings.template === 'split' ? 80 : getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
             let minLon = Infinity;
             let maxLon = -Infinity;
             let minLat = Infinity;
@@ -239,17 +244,25 @@ export function useSocialShareExport() {
           }
 
           preCapuredMapCanvas = await captureSocialMap(map, {
-            routeGlow: settings.routeGlow,
+            routeGlow: settings.template === 'split' ? false : settings.routeGlow,
             routeOpacity: settings.routeTransform.opacity,
           });
         }
       }
 
-      const [, brandLogo] = await Promise.all([document.fonts.ready, loadSocialShareLogo()]);
-      const input = buildInput(brandLogo, preCapuredMapCanvas);
+      const [, brandLogo, assets] = await Promise.all([
+        document.fonts.load(`400 48px ${overlayCanvasFontFamily(overlayFont)}`),
+        loadSocialShareLogo(),
+        loadPosterAssets(settings),
+      ]);
+      const input = buildInput(brandLogo, assets, preCapuredMapCanvas);
 
       // Compute the same route bounds used by the renderer for either template.
-      if (settings.template === 'photo-first' && input.routeLatLons) {
+      if (settings.template === 'split') {
+        const { w, h } = getPosterSize(settings.aspectRatio);
+        const box = getSplitMapBox(w, h);
+        setRouteBboxNorm({ x: box.x / w, y: box.y / h, w: box.w / w, h: box.h / h });
+      } else if (settings.template === 'photo-first' && input.routeLatLons) {
         setRouteBboxNorm(computeRouteBbox(input.routeLatLons));
       } else if (input.projectedRouteForMap) {
         const { w, h } = getPosterSize(settings.aspectRatio);
@@ -268,16 +281,9 @@ export function useSocialShareExport() {
   }, [
     buildInput,
     computeRouteBbox,
-    settings.aspectRatio,
-    settings.showElevationMiniChart,
-    settings.showLocation,
-    settings.stats,
-    settings.statsLayout,
-    settings.showStats,
-    settings.routeGlow,
-    settings.routeTransform.opacity,
-    settings.template,
     tracks,
+    overlayFont,
+    settings,
   ]);
 
   const transformMapViewport = useCallback(async (gesture: MapRouteGesture) => {
@@ -287,7 +293,8 @@ export function useSocialShareExport() {
 
     const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
     const rect = container.getBoundingClientRect();
-    const { cropX, cropY, cropW, cropH } = getCropRegion(rect, posterW, posterH);
+    const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH) : null;
+    const { cropX, cropY, cropW, cropH } = getCropRegion(rect, splitBox?.w ?? posterW, splitBox?.h ?? posterH);
 
     if (gesture.type === 'move') {
       const centerPoint = map.project(map.getCenter());
@@ -306,11 +313,11 @@ export function useSocialShareExport() {
     }
 
     await generatePreview();
-  }, [generatePreview, settings.aspectRatio]);
+  }, [generatePreview, settings.aspectRatio, settings.template]);
 
   useEffect(() => {
-    const render = () => void generatePreview({ fitMapFirstRoute: settings.template === 'map-first' });
-    if (settings.template !== 'map-first' || mapGlobalRef.current) {
+    const render = () => void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first' });
+    if (settings.template === 'photo-first' || mapGlobalRef.current) {
       render();
       return;
     }
@@ -364,17 +371,21 @@ export function useSocialShareExport() {
     setIsRendering(true);
     try {
       let preCapuredMapCanvas: HTMLCanvasElement | null = null;
-      if (settings.template === 'map-first') {
+      if (settings.template !== 'photo-first') {
         const map = mapGlobalRef.current;
         if (map) {
           preCapuredMapCanvas = await captureSocialMap(map, {
-            routeGlow: settings.routeGlow,
+            routeGlow: settings.template === 'split' ? false : settings.routeGlow,
             routeOpacity: settings.routeTransform.opacity,
           });
         }
       }
-      const [, brandLogo] = await Promise.all([document.fonts.ready, loadSocialShareLogo()]);
-      const blob = await exportSocialPosterBlob(buildInput(brandLogo, preCapuredMapCanvas));
+      const [, brandLogo, assets] = await Promise.all([
+        document.fonts.load(`400 48px ${overlayCanvasFontFamily(overlayFont)}`),
+        loadSocialShareLogo(),
+        loadPosterAssets(settings),
+      ]);
+      const blob = await exportSocialPosterBlob(buildInput(brandLogo, assets, preCapuredMapCanvas));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -391,11 +402,16 @@ export function useSocialShareExport() {
     } finally {
       setIsRendering(false);
     }
-  }, [buildInput, settings, tracks.length]);
+  }, [buildInput, overlayFont, settings, tracks.length]);
 
   // Normalized bounding box for the data panel (stats + elevation) in poster coordinates
   const dataPanelBboxNorm: RouteBboxNorm | null = (() => {
     if (!settings.showStats && !settings.showElevationMiniChart) return null;
+    if (settings.template === 'split') {
+      const rows = Math.ceil((settings.stats?.filter((stat) => stat.visible).length ?? 0) / Math.max(1, settings.statsLayout));
+      const wide = settings.aspectRatio === '16:9';
+      return settings.showStats && rows > 0 ? { x: 0.045, y: (wide ? 0.88 : 0.905) - settings.dataPanelOffsetY, w: 0.91, h: (wide ? 0.11 : 0.09) * rows } : null;
+    }
     const isPhotoFirst = settings.template === 'photo-first';
     const elevHNorm = settings.showElevationMiniChart ? (isPhotoFirst ? 0.155 : 0.105) : 0;
     const visibleStatCount = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
@@ -410,15 +426,19 @@ export function useSocialShareExport() {
   const titleBboxNorm: RouteBboxNorm = (() => {
     const { w, h } = getPosterSize(settings.aspectRatio);
     const pad = Math.round(w * 0.04);
-    const titleSize = Math.round((settings.template === 'map-first'
+    const titleSize = Math.round((settings.template === 'split'
+      ? Math.min(w * 0.095, h * 0.095)
+      : settings.template === 'map-first'
       ? Math.min(w * 0.09, Math.max(h * 0.05, w * 0.055))
       : h * 0.072) * (settings.titleScale ?? 1));
-    const baseY = pad + Math.round(h * (settings.template === 'map-first' ? 0.010 : 0.018));
+    const baseY = settings.template === 'split' ? h * 0.85 : pad + Math.round(h * (settings.template === 'map-first' ? 0.010 : 0.018)) + titleSize;
+    const lines = settings.titleMode === 'custom' ? Math.min(5, settings.customTitle.split('\n').length) : 2;
+    const top = baseY - titleSize * 0.85 + settings.titleOffsetY * h;
     return {
       x: Math.max(0, pad / w + settings.titleOffsetX),
-      y: Math.max(0, (baseY - titleSize * 0.8) / h + settings.titleOffsetY),
-      w: Math.min(0.94, settings.template === 'map-first' ? 0.74 : 0.92),
-      h: 0.23,
+      y: Math.max(0, top / h),
+      w: Math.min(0.96, settings.titleWidth ?? 0.74),
+      h: Math.min(0.9, Math.max(0.08, titleSize * lines * 1.05 / h)),
     };
   })();
 

@@ -6,7 +6,12 @@ import { SocialSharePreviewModal } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
-import type { SocialShareTemplate, SocialShareAspectRatio, SocialShareStat, SocialShareStatMetric } from '@/types';
+import { ACTIVITY_ICONS, renderActivityIcon } from '@/utils/activityIcons';
+import { OVERLAY_FONT_OPTIONS, overlayFontFamily } from '@/utils/typography';
+import { useAppStore } from '@/store/useAppStore';
+import { compressCoverPhoto } from './socialShareMedia';
+import { arrangePhotoSlots, createPhotoSlot, PRESET_ORDER, presetSettings } from './socialSharePresets';
+import type { SocialShareTemplate, SocialShareAspectRatio, SocialShareStat, SocialShareStatMetric, SocialSharePhotoSlot } from '@/types';
 
 const RATIOS: { value: SocialShareAspectRatio; label: string }[] = [
   { value: '16:9', label: '16:9' },
@@ -46,6 +51,8 @@ interface Props {
 
 export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPosterReady, onUseCover, onAddPhoto }: Props) {
   const { t } = useI18n();
+  const overlayFont = useAppStore((state) => state.settings.trailStyle.overlayFont);
+  const setTrailStyle = useAppStore((state) => state.setTrailStyle);
   const {
     previewUrl, isRendering, generatePreview, exportPng, fitTrackToMap,
     settings, setSocialShareSettings, pictures, hasTracks,
@@ -59,6 +66,48 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
   const cameraPreviewTimer = useRef<number | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const targetPhotoSlotRef = useRef<string | null>(null);
+  const [activePhotoSlotId, setActivePhotoSlotId] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const applyPreset = (preset: typeof PRESET_ORDER[number]) => {
+    const patch = presetSettings(preset, settings);
+    setSocialShareSettings(patch);
+    if (preset === 'long-way') setTrailStyle({ overlayFont: 'poster' });
+    if (preset === 'ridge-photo' || preset === 'photo-grid') setTrailStyle({ overlayFont: 'condensed' });
+    setActivePhotoSlotId(patch.photoSlots?.[0]?.id ?? null);
+  };
+  const updatePhotoSlot = (id: string, patch: Partial<SocialSharePhotoSlot>) => {
+    const latestSlots = useAppStore.getState().socialShareSettings.photoSlots ?? [];
+    setSocialShareSettings({ photoSlots: latestSlots.map((slot) => slot.id === id ? { ...slot, ...patch } : slot) });
+  };
+  const openPhotoPicker = (id: string) => {
+    targetPhotoSlotRef.current = id;
+    setActivePhotoSlotId(id);
+    photoInputRef.current?.click();
+  };
+  const loadPhotoIntoSlot = async (id: string, file: File) => {
+    try {
+      setPhotoError(null);
+      const imageUrl = await compressCoverPhoto(file);
+      updatePhotoSlot(id, { imageUrl, offsetX: 0, offsetY: 0, scale: 1 });
+      setActivePhotoSlotId(id);
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : String(error));
+    }
+  };
+  const loadLibraryPhotoIntoSlot = async (id: string, pictureId: string) => {
+    const picture = pictures.find((item) => item.id === pictureId);
+    if (!picture) return;
+    try {
+      const response = await fetch(picture.url);
+      const blob = await response.blob();
+      await loadPhotoIntoSlot(id, new File([blob], picture.originalFileName ?? 'cover-photo.jpg', { type: blob.type || 'image/jpeg' }));
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : String(error));
+    }
+  };
 
   const setRouteTransform = (patch: Partial<typeof settings.routeTransform>) =>
     setSocialShareSettings({ routeTransform: { ...settings.routeTransform, ...patch } });
@@ -85,10 +134,6 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
       setSocialShareSettings({ aspectRatio: aspectRatioOverride });
     }
   }, [aspectRatioOverride, setSocialShareSettings, settings.aspectRatio]);
-
-  useEffect(() => {
-    if (coverMode && previewUrl) onPosterReady?.(previewUrl);
-  }, [coverMode, onPosterReady, previewUrl]);
 
   useEffect(() => () => {
     if (cameraPreviewTimer.current !== null) window.clearTimeout(cameraPreviewTimer.current);
@@ -135,6 +180,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
   const templates: { value: SocialShareTemplate; label: string }[] = [
     { value: 'map-first', label: t('imageExport.templateMapFirst') },
     { value: 'photo-first', label: t('imageExport.templatePhotoFirst') },
+    { value: 'split', label: t('imageExport.templateSplit') },
   ];
 
   return (
@@ -151,14 +197,38 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
         </div>
       )}
 
+      <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => {
+        const file = event.target.files?.[0];
+        const id = targetPhotoSlotRef.current;
+        if (file && id) void loadPhotoIntoSlot(id, file);
+        event.target.value = '';
+      }} />
+
+      <div>
+        <div className="mb-2 text-xs uppercase tracking-wide opacity-60">{t('imageExport.layoutPresets')}</div>
+        <div className="grid grid-cols-2 gap-2">
+          {PRESET_ORDER.map((preset) => (
+            <button key={preset} type="button" onClick={() => applyPreset(preset)}
+              aria-pressed={settings.layoutPreset === preset}
+              className={`min-h-20 overflow-hidden rounded-xl border text-left shadow-sm transition hover:-translate-y-0.5 ${settings.layoutPreset === preset ? 'border-[var(--trail-orange)] ring-2 ring-[var(--trail-orange)]/25' : 'border-black/10 hover:border-[var(--trail-orange)]/50'}`}>
+              <span className={`flex h-12 items-center justify-center px-3 text-center ${preset === 'long-way' ? 'bg-[#12281d] text-[#fff7e4] font-black text-xl leading-none' : preset === 'classic' ? 'bg-[#24382d] text-white font-semibold' : 'bg-[linear-gradient(115deg,#476a5d_55%,#f6f3e9_55%)] text-[#21372c] font-black'}`}
+                style={{ fontFamily: preset === 'long-way' ? "'Anton', Impact, sans-serif" : undefined }}>
+                {preset === 'long-way' ? 'THE LONG WAY' : preset === 'ridge-photo' ? 'PHOTO + MAP' : preset === 'photo-grid' ? 'TWO PHOTOS' : 'TRAILREPLAY'}
+              </span>
+              <span className="block px-2.5 py-1.5 text-xs font-semibold">{t(`imageExport.preset${preset === 'long-way' ? 'LongWay' : preset === 'ridge-photo' ? 'RidgePhoto' : preset === 'photo-grid' ? 'PhotoGrid' : 'Classic'}`)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Template */}
       <div>
         <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.template')}</div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {templates.map(({ value, label }) => (
             <button
               key={value}
-              onClick={() => setSocialShareSettings({ template: value })}
+              onClick={() => value === 'split' ? applyPreset('ridge-photo') : setSocialShareSettings({ template: value, layoutPreset: 'classic' })}
               className={`py-2 rounded text-sm font-medium transition-colors ${
                 settings.template === value
                   ? 'bg-[var(--trail-orange)] text-white'
@@ -169,6 +239,14 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-xs uppercase tracking-wide opacity-60" htmlFor="cover-font">{t('imageExport.coverTypography')}</label>
+        <select id="cover-font" value={overlayFont} onChange={(event) => setTrailStyle({ overlayFont: event.target.value as typeof overlayFont })}
+          className="w-full rounded-lg border border-black/10 bg-[var(--canvas)] px-3 py-2 text-sm">
+          {OVERLAY_FONT_OPTIONS.map((font) => <option key={font.id} value={font.id} style={{ fontFamily: overlayFontFamily(font.id) }}>{t(font.labelKey)}</option>)}
+        </select>
       </div>
 
       {/* Aspect ratio */}
@@ -192,8 +270,51 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
         </div>
       </div>
 
+      {settings.template === 'split' && (
+        <div className="space-y-2 rounded-xl border border-black/10 bg-black/[0.025] p-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.photoFrames')}</div>
+            <button type="button" disabled={(settings.photoSlots?.length ?? 0) >= 4} onClick={() => {
+              const id = `photo-${Date.now()}`;
+              setSocialShareSettings({ photoSlots: arrangePhotoSlots([...(settings.photoSlots ?? []), createPhotoSlot(id, 0, 0, 1, 0.66)]) });
+              setActivePhotoSlotId(id);
+            }} className="text-xs font-semibold text-[var(--trail-orange)] disabled:opacity-40">+ {t('imageExport.addFrame')}</button>
+          </div>
+          <p className="text-[11px] opacity-60">{t('imageExport.photoFramesHint')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {(settings.photoSlots ?? []).map((slot, index) => <button key={slot.id} type="button" onClick={() => slot.imageUrl ? setActivePhotoSlotId(slot.id) : openPhotoPicker(slot.id)}
+              className={`relative aspect-[4/3] overflow-hidden rounded-lg border-2 text-xs ${activePhotoSlotId === slot.id ? 'border-[var(--trail-orange)]' : 'border-black/15'}`}>
+              {slot.imageUrl ? <img src={slot.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full flex-col items-center justify-center gap-1"><ImagePlus className="h-5 w-5" />{t('imageExport.addPhoto')}</span>}
+              <span className="absolute bottom-1 left-1 rounded bg-black/65 px-1.5 py-0.5 text-[10px] text-white">{index + 1}</span>
+            </button>)}
+          </div>
+          {activePhotoSlotId && (settings.photoSlots ?? []).some((slot) => slot.id === activePhotoSlotId) && <div className="flex items-center gap-2">
+            <button type="button" onClick={() => openPhotoPicker(activePhotoSlotId)} className="rounded bg-black/5 px-2 py-1 text-xs">{t('imageExport.replacePhoto')}</button>
+            <label className="min-w-0 flex-1 text-xs">{t('imageExport.zoomPhoto')}
+              <input type="range" min={1} max={3} step={0.05} value={(settings.photoSlots ?? []).find((slot) => slot.id === activePhotoSlotId)?.scale ?? 1}
+                onChange={(event) => updatePhotoSlot(activePhotoSlotId, { scale: Number(event.target.value) })}
+                className="block w-full accent-[var(--trail-orange)]" />
+            </label>
+            {(settings.photoSlots?.length ?? 0) > 1 && <button type="button" onClick={() => {
+              const remaining = arrangePhotoSlots(settings.photoSlots.filter((slot) => slot.id !== activePhotoSlotId));
+              setSocialShareSettings({ photoSlots: remaining });
+              setActivePhotoSlotId(remaining[0]?.id ?? null);
+            }} aria-label={t('imageExport.removePhoto')} title={t('imageExport.removePhoto')} className="rounded p-1.5 text-red-600 hover:bg-red-500/10"><X className="h-4 w-4" /></button>}
+          </div>}
+          {pictures.length > 0 && <div className="flex gap-1.5 overflow-x-auto pt-1">
+            {pictures.map((picture) => <button key={picture.id} type="button" draggable
+              onDragStart={(event) => event.dataTransfer.setData('text/x-trailreplay-picture', picture.id)}
+              onClick={() => { const id = activePhotoSlotId ?? settings.photoSlots?.[0]?.id; if (id) void loadLibraryPhotoIntoSlot(id, picture.id); }}
+              className="h-12 w-12 shrink-0 overflow-hidden rounded border border-black/15" title={picture.originalFileName}>
+              <img src={picture.url} alt="" className="h-full w-full object-cover" />
+            </button>)}
+          </div>}
+          {photoError && <p className="text-xs text-red-600" role="alert">{photoError}</p>}
+        </div>
+      )}
+
       {/* Photo chooser */}
-      <div>
+      {settings.template === 'photo-first' && <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="text-xs uppercase tracking-wide opacity-60">{t('imageExport.photo')}</div>
           {onAddPhoto ? <button type="button" onClick={onAddPhoto} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]"><ImagePlus className="h-3.5 w-3.5" />{t('imageExport.addPhoto')}</button> : null}
@@ -229,7 +350,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Title */}
       <div>
@@ -254,18 +375,18 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           ))}
         </div>
         {settings.titleMode === 'custom' && (
-          <input
-            type="text"
+          <textarea
+            rows={3}
             value={settings.customTitle}
             onChange={(e) => setSocialShareSettings({ customTitle: e.target.value })}
             placeholder={t('imageExport.titlePlaceholder')}
-            className="w-full bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
+            className="w-full resize-y bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
           />
         )}
         <div className="mt-2 flex items-center gap-2 rounded-lg border border-black/10 bg-black/[0.025] p-2">
           <label className="min-w-0 flex-1 text-[11px] font-medium">
             {t('imageExport.titleSize')}
-            <input type="range" min={0.75} max={1.5} step={0.05} value={settings.titleScale ?? 1}
+            <input type="range" min={0.5} max={3.2} step={0.05} value={settings.titleScale ?? 1}
               onChange={(event) => setSocialShareSettings({ titleScale: Number(event.target.value) })}
               className="mt-1 block w-full accent-[var(--trail-orange)]" />
           </label>
@@ -276,10 +397,15 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
               aria-label={t('imageExport.titleColor')} className="mt-1 block h-7 w-full cursor-pointer rounded border-0 bg-transparent p-0" />
           </label>
         </div>
+        <label className="mt-2 block text-[11px] font-medium">{t('imageExport.titleWidth')}
+          <input type="range" min={0.3} max={0.96} step={0.02} value={settings.titleWidth ?? 0.74}
+            onChange={(event) => setSocialShareSettings({ titleWidth: Number(event.target.value) })}
+            className="mt-1 block w-full accent-[var(--trail-orange)]" />
+        </label>
       </div>
 
       {/* Location */}
-      <div>
+      {settings.template !== 'split' && <div>
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs uppercase tracking-wide opacity-60">{t('imageExport.location')}</div>
           <button
@@ -304,7 +430,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             className="w-full bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
           />
         )}
-      </div>
+      </div>}
 
       {/* Overlays toggles */}
       <div className="flex flex-wrap gap-3">
@@ -317,7 +443,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           />
           {t('imageExport.stats')}
         </label>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
+        {settings.template !== 'split' && <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
             checked={settings.showElevationMiniChart}
@@ -325,8 +451,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             className="accent-[var(--trail-orange)]"
           />
           {t('imageExport.elevation')}
-        </label>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
+        </label>}
+        {settings.template !== 'split' && <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
             checked={settings.routeGlow}
@@ -334,7 +460,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             className="accent-[var(--trail-orange)]"
           />
           {t('imageExport.routeGlow')}
-        </label>
+        </label>}
       </div>
 
       {settings.showStats && (
@@ -387,6 +513,15 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
                 <button type="button" onClick={() => moveStat(index, 1)} disabled={index === stats.length - 1} aria-label={t('imageExport.moveStatDown')} className="rounded p-1 hover:bg-black/5 disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => setSocialShareSettings({ stats: stats.filter((_, i) => i !== index) })} aria-label={t('imageExport.removeStat')} className="rounded p-1 text-red-600 hover:bg-red-500/10"><X className="h-3.5 w-3.5" /></button>
               </div>
+              <label className="flex items-center gap-2 text-[11px]">
+                <span className="w-8 shrink-0">{stat.icon ? renderActivityIcon(stat.icon, { size: 22, color: settings.statsColor }) : null}</span>
+                <span className="shrink-0">{t('imageExport.statIcon')}</span>
+                <select value={stat.icon ?? ''} onChange={(event) => updateStat(index, { icon: event.target.value || undefined })}
+                  className="min-w-0 flex-1 rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs">
+                  <option value="">{t('imageExport.noIcon')}</option>
+                  {ACTIVITY_ICONS.map((icon) => <option key={icon.value} value={icon.value}>{t(icon.labelKey)}</option>)}
+                </select>
+              </label>
               <input type="text" value={stat.label} onChange={(event) => updateStat(index, { label: event.target.value })}
                 placeholder={t('imageExport.statLabel')} className="w-full rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs" />
               <input type="text" value={stat.value} onChange={(event) => updateStat(index, { value: event.target.value })}
@@ -402,8 +537,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
         </div>
       )}
 
-      {/* Map camera controls (map-first only) */}
-      {settings.template === 'map-first' && (
+      {/* Map camera controls */}
+      {settings.template !== 'photo-first' && (
         <div>
           <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.mapCamera')}</div>
           <div className="space-y-2 mb-2">
@@ -518,10 +653,14 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           previewUrl={previewUrl}
           isRendering={isRendering}
           onClose={() => undefined}
-          onExport={() => onUseCover?.()}
+          onExport={() => { onPosterReady?.(previewUrl); onUseCover?.(); }}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
           onMapRouteGesture={transformMapViewport}
+          onPhotoSlotPick={openPhotoPicker}
+          onPhotoSlotFile={(id, file) => { void loadPhotoIntoSlot(id, file); }}
+          onPhotoSlotPicture={(id, pictureId) => { void loadLibraryPhotoIntoSlot(id, pictureId); }}
+          onPhotoSlotChange={updatePhotoSlot}
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}
@@ -540,7 +679,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             template: settings.template,
             aspect_ratio: settings.aspectRatio,
           });
-          await generatePreview({ fitMapFirstRoute: settings.template === 'map-first' });
+          await generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first' });
           setShowPreview(true);
         }}
         disabled={isRendering || !hasTracks}
@@ -563,6 +702,10 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
           onMapRouteGesture={transformMapViewport}
+          onPhotoSlotPick={openPhotoPicker}
+          onPhotoSlotFile={(id, file) => { void loadPhotoIntoSlot(id, file); }}
+          onPhotoSlotPicture={(id, pictureId) => { void loadLibraryPhotoIntoSlot(id, pictureId); }}
+          onPhotoSlotChange={updatePhotoSlot}
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}

@@ -487,9 +487,11 @@ video for one second. The cover uses the video's `aspectRatio` and the font in
 
 ### 5.8 `socialShareSettings`
 
-`template` (`map-first` \| `photo-first`), `aspectRatio` (`16:9` `4:5` `1:1` `9:16`),
+`template` (`map-first` \| `photo-first` \| `split`), `layoutPreset` (`classic`
+`long-way` `ridge-photo` `photo-grid`), `aspectRatio` (`16:9` `4:5` `1:1` `9:16`),
 `selectedPictureId`, `titleMode` (`journey-name` `track-name` `custom`),
-`customTitle`, `titleScale` (`0.75`–`1.5`), `titleColor` (hex),
+`customTitle` (use `\n` for stacked lines), `titleScale` (`0.5`–`3.2`),
+`titleWidth` (`0.3`–`0.96`), `titleColor` (hex),
 `titleOffsetX`, `titleOffsetY`, `logoPositionX`, `logoPositionY`, `locationLabel`, `showLocation`,
 `showStats`, `showElevationMiniChart`, `routeTransform` (`{ offsetX, offsetY,
 scale, opacity }`), `photoTransform` (`{ offsetX, offsetY, scale }`),
@@ -497,18 +499,32 @@ scale, opacity }`), `photoTransform` (`{ offsetX, offsetY, scale }`),
 the poster width or height. `logoPositionX` and `logoPositionY` set the top-left
 of the required white-backed TrailReplay logo as fractions of the poster size;
 the app keeps the logo inside the poster and always includes it in the output.
+Selecting `layoutPreset` in a recipe applies that design's default typography,
+colors, title placement, stats and photo frames. Other fields in the recipe
+override those defaults.
 
-`stats` is an ordered array of `{ id, metric, label, value, visible }`. Metrics
+`stats` is an ordered array of `{ id, metric, label, value, visible, icon? }`. Metrics
 are `distance`, `elevationGain`, `duration`, `movingDuration`, `pace`,
 `heartRate`, `speed`, `altitude`, `maxElevation`, `elevationLoss`, `maxSpeed`,
 or `custom`. A nonempty `value` overrides the calculated metric, and `label`
 overrides its translated label. Show up to four stats. `statsLayout` is `2`, `3`,
 or `4` columns; `statsStyle` is `minimal`, `cards`, or `accent`;
 `statsColor` is a hex color and `statsScale` ranges from `0.7` to `1.4`.
+`icon` accepts any value from the activity icon list, such as `svg-walking`,
+`svg-biking`, `🥾` or `🧗`.
 
-For an agent-authored video cover, use `map-first`: the recipe already has the
-route and needs no image file. A `photo-first` cover needs a photo selected in
-the website after import because recipe files do not import pictures.
+The split layout uses `photoSlots`, an array of `{ id, imageUrl, x, y, w, h,
+offsetX, offsetY, scale }`. Coordinates are poster fractions. An omitted or
+`null` `imageUrl` creates a clickable empty frame in the cover editor; users can
+upload or drop a photo directly into each frame, then pan and zoom its crop.
+The `ridge-photo` preset uses one frame and `photo-grid` uses two. A recipe
+with `template: "split"` and no slots gets one empty frame automatically.
+The new `poster` (Anton) and `display` (Bebas Neue) values for
+`settings.trailStyle.overlayFont` apply to both video overlays and the cover.
+
+For an agent-authored video cover, `map-first` needs no image file. A
+`photo-first` or `split` cover needs photos selected in the editor after import;
+recipe files do not import pictures.
 
 ```json
 {

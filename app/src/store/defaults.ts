@@ -101,11 +101,14 @@ export function createDefaultVideoExportSettings(): VideoExportSettings {
 export function createDefaultSocialShareSettings(): SocialShareSettings {
   return {
     template: 'map-first',
+    layoutPreset: 'classic',
     aspectRatio: '4:5',
     selectedPictureId: null,
+    photoSlots: [],
     titleMode: 'journey-name',
     customTitle: '',
     titleScale: 1,
+    titleWidth: 0.74,
     titleColor: '#FFFFFF',
     titleOffsetX: 0,
     titleOffsetY: 0,
