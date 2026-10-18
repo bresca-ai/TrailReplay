@@ -37,6 +37,11 @@ places we slept"), and have them drop it on the page together with their GPX
 files. The app resolves the rest with its own track maths and reports back what
 it placed.
 
+For a one-second video cover, set `videoExportSettings.includeCover` to `true`
+and describe its title, map layout and stats in `socialShareSettings`. Use
+`map-first` for a recipe that only includes route files; see the format guide
+below for cover fields and an example.
+
 - [Giving TrailReplay a route](https://trailreplay.com/replay-file.md): the
   recipe format, the derived sets (`overnight-stops`, `start-finish`), and the
   `.replay` project format. Read this before writing anything.

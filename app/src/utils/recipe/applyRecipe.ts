@@ -111,7 +111,22 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     settings: mergeSettings(recipe, activeTrack.color, activeTrack.activityIcon),
     cameraSettings: mergeRecipeCameraSettings(recipe),
     videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
-    socialShareSettings: { ...createDefaultSocialShareSettings(), ...recipe.socialShareSettings },
+    socialShareSettings: {
+      ...createDefaultSocialShareSettings(),
+      ...recipe.socialShareSettings,
+      ...(recipe.socialShareSettings?.stats ? {
+        stats: recipe.socialShareSettings.stats.map((stat, index) => ({
+          id: stat.id || `recipe-stat-${index}`,
+          metric: stat.metric || 'custom',
+          label: stat.label ?? '',
+          value: stat.value ?? '',
+          visible: stat.visible !== false,
+        })),
+      } : {}),
+      ...(recipe.videoExportSettings?.includeCover
+        ? { aspectRatio: recipe.videoExportSettings.aspectRatio ?? createDefaultVideoExportSettings().aspectRatio }
+        : {}),
+    },
     activePanel: 'tracks',
   });
 }

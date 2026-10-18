@@ -763,6 +763,8 @@ export const ca = {
     titleModeTrack: 'Ruta',
     titleModeCustom: 'Personalitzat',
     titlePlaceholder: 'Escriu un títol…',
+    titleSize: 'Mida del títol',
+    titleColor: 'Color',
     location: 'Ubicació',
     locationPlaceholder: 'Ciutat, País…',
     stats: 'Estadístiques',

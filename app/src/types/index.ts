@@ -293,6 +293,8 @@ export interface SocialShareSettings {
   selectedPictureId: string | null;
   titleMode: 'journey-name' | 'track-name' | 'custom';
   customTitle: string;
+  titleScale: number;
+  titleColor: string;
   /** Normalized offsets for directly positioning the title layer in the poster editor. */
   titleOffsetX: number;
   titleOffsetY: number;

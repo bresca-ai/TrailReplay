@@ -7,7 +7,16 @@ import { QUALITY_OPTIONS } from './export/exportConfig';
 import { useVideoExportRecorder } from './export/useVideoExportRecorder';
 import { isValidDeliveryEmail, localStudioDownload } from './export/studioDelivery';
 import { SocialSharePanel } from './export/SocialSharePanel';
+import { useSocialShareExport } from './export/useSocialShareExport';
 import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
+
+function AutomaticCoverRenderer({ onReady }: { onReady: (url: string) => void }) {
+  const { previewUrl, settings, selectedPhotoReady } = useSocialShareExport();
+  useEffect(() => {
+    if (previewUrl && (settings.template === 'map-first' || selectedPhotoReady)) onReady(previewUrl);
+  }, [onReady, previewUrl, selectedPhotoReady, settings.template]);
+  return null;
+}
 
 export function ExportPanel() {
   const { t } = useI18n();
@@ -110,6 +119,9 @@ export function ExportPanel() {
 
   return (
     <div className="space-y-4">
+      {exportMode === 'video' && videoExportSettings.includeCover && !coverPreviewUrl && tracks.length > 0 && (
+        <AutomaticCoverRenderer onReady={receiveCoverPoster} />
+      )}
       {/* Save Project */}
       <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3">
         <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('export.saveProjectTitle')}</h3>

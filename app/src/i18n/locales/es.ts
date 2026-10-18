@@ -763,6 +763,8 @@ export const es = {
     titleModeTrack: 'Ruta',
     titleModeCustom: 'Personalizado',
     titlePlaceholder: 'Escribe un título…',
+    titleSize: 'Tamaño del título',
+    titleColor: 'Color',
     location: 'Ubicación',
     locationPlaceholder: 'Ciudad, País…',
     stats: 'Estadísticas',

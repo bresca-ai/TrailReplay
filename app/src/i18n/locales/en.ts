@@ -763,6 +763,8 @@ export const en = {
     titleModeTrack: 'Track',
     titleModeCustom: 'Custom',
     titlePlaceholder: 'Enter title…',
+    titleSize: 'Title size',
+    titleColor: 'Color',
     location: 'Location',
     locationPlaceholder: 'City, Country…',
     stats: 'Stats',

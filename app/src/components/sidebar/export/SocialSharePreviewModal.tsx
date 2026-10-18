@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Download, Loader2, Move, X } from 'lucide-react';
 import type { SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
@@ -16,6 +16,7 @@ interface Props {
   dataPanelBboxNorm: RouteBboxNorm | null;
   titleBboxNorm: RouteBboxNorm;
   coverMode?: boolean;
+  inline?: boolean;
 }
 
 interface RouteDragState {
@@ -55,10 +56,12 @@ interface PhotoDragState {
 
 export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport,
-  settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false,
+  settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
 }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
 
   // Route overlay drag state
   const routeDragRef = useRef<RouteDragState | null>(null);
@@ -76,6 +79,20 @@ export function SocialSharePreviewModal({
   const aspectStyle = settings.aspectRatio === '16:9' ? '16 / 9'
     : settings.aspectRatio === '4:5' ? '4 / 5'
       : settings.aspectRatio === '9:16' ? '9 / 16' : '1 / 1';
+  const aspectNumber = settings.aspectRatio === '16:9' ? 16 / 9
+    : settings.aspectRatio === '4:5' ? 4 / 5
+      : settings.aspectRatio === '9:16' ? 9 / 16 : 1;
+  const canvasWidth = Math.min(stageSize.width, stageSize.height * aspectNumber);
+
+  useEffect(() => {
+    if (!inline || !stageRef.current) return;
+    const stage = stageRef.current;
+    const update = () => setStageSize({ width: Math.max(0, stage.clientWidth - 32), height: Math.max(0, stage.clientHeight - 32) });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [inline]);
 
   const showRouteOverlay = !!routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
@@ -265,18 +282,22 @@ export function SocialSharePreviewModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-      onClick={onClose}
+      className={inline
+        ? 'absolute inset-0 z-40 flex items-center justify-center bg-[#101916] p-3 sm:p-6'
+        : 'fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4'}
+      onClick={inline ? undefined : onClose}
     >
       <div
-        className="bg-[var(--canvas)] rounded-xl shadow-2xl max-h-[94vh] w-full max-w-md flex flex-col overflow-hidden"
+        className={inline
+          ? 'flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#17231e] shadow-2xl'
+          : 'bg-[var(--canvas)] rounded-xl shadow-2xl max-h-[94vh] w-full max-w-md flex flex-col overflow-hidden'}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 shrink-0">
-          <h2 className="font-bold text-sm uppercase tracking-wide text-[var(--evergreen)]">
-            {t('imageExport.posterPreview')}
-            {hasAnyOverlay && (
-              <span className="ml-2 text-xs font-normal opacity-50 normal-case tracking-normal">
+        <div className={`flex items-center justify-between gap-3 px-4 py-3 shrink-0 ${inline ? 'border-b border-white/10 text-white' : 'border-b border-black/10'}`}>
+          <h2 className={`font-bold text-sm uppercase tracking-wide ${inline ? 'text-white' : 'text-[var(--evergreen)]'}`}>
+            {inline ? t(coverMode ? 'imageExport.videoCover' : 'imageExport.posterPreview') : t('imageExport.posterPreview')}
+            {!inline && hasAnyOverlay && (
+              <span className="ml-2 text-xs font-normal opacity-60 normal-case tracking-normal">
                 {t(settings.template === 'map-first'
                   ? 'imageExport.dragMapHint'
                   : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
@@ -286,21 +307,23 @@ export function SocialSharePreviewModal({
           {settings.template === 'photo-first' && (
             <button type="button" onClick={() => setPhotoEditMode((active) => !active)}
               aria-pressed={photoEditMode}
-              className={`ml-auto mr-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${photoEditMode ? 'bg-[var(--trail-orange)] text-white' : 'bg-black/5 hover:bg-black/10'}`}>
+              className={`ml-auto mr-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${photoEditMode ? 'bg-[var(--trail-orange)] text-white' : inline ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-black/5 hover:bg-black/10'}`}>
               <Move className="h-3.5 w-3.5" />
               {t(photoEditMode ? 'imageExport.doneEditingPhoto' : 'imageExport.editPhoto')}
             </button>
           )}
-          <button onClick={onClose} className="p-1 hover:bg-black/5 rounded">
+          {!inline && <button onClick={onClose} className="p-1 hover:bg-black/5 rounded">
             <X className="w-4 h-4" />
-          </button>
+          </button>}
         </div>
 
-        <div className="overflow-y-auto flex-1 p-4 flex justify-center items-start">
+        <div ref={stageRef} className={`min-h-0 flex-1 p-4 flex justify-center items-center ${inline ? 'bg-[radial-gradient(circle_at_center,#30463a_0%,#101916_75%)]' : 'overflow-y-auto'}`}>
           <div
             ref={containerRef}
-            className="relative rounded-lg overflow-hidden shadow-lg w-full"
-            style={{ aspectRatio: aspectStyle, maxHeight: '70vh' }}
+            className={`relative overflow-hidden shadow-2xl ${inline ? 'shrink-0 rounded-sm ring-1 ring-white/20' : 'w-full rounded-lg'}`}
+            style={inline
+              ? { aspectRatio: aspectStyle, width: canvasWidth, height: canvasWidth / aspectNumber }
+              : { aspectRatio: aspectStyle, maxHeight: '70vh' }}
           >
             <img
               src={previewUrl}
@@ -397,14 +420,17 @@ export function SocialSharePreviewModal({
           </div>
         </div>
 
-        <div className="px-4 py-3 border-t border-black/10 flex gap-2 shrink-0">
-          <button onClick={onClose} className="tr-btn tr-btn-secondary flex-1">
+        <div className={`px-4 py-3 flex gap-2 shrink-0 ${inline ? 'border-t border-white/10 text-white' : 'border-t border-black/10'}`}>
+          {inline && <p className="min-w-0 self-center text-xs leading-4 text-white/60">
+            {t(settings.template === 'map-first' ? 'imageExport.dragMapHint' : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
+          </p>}
+          {!inline && <button onClick={onClose} className="tr-btn tr-btn-secondary flex-1">
             {t('imageExport.back')}
-          </button>
+          </button>}
           <button
             onClick={onExport}
             disabled={isRendering}
-            className="tr-btn tr-btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-60"
+            className={`tr-btn tr-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 ${inline ? 'ml-auto min-w-36' : 'flex-1'}`}
           >
             {isRendering ? (
               <Loader2 className="w-4 h-4 animate-spin" />

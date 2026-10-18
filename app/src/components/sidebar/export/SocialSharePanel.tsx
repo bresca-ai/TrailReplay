@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, ImagePlus, ImageIcon, Loader2, Minus, Plus, X } from 'lucide-react';
 import { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal } from './SocialSharePreviewModal';
@@ -53,6 +54,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
     titleBboxNorm,
   } = useSocialShareExport();
   const [showPreview, setShowPreview] = useState(false);
+  const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
 
@@ -131,7 +133,6 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             </div>
             <span className="shrink-0 rounded-full bg-[var(--evergreen)] px-2.5 py-1 text-[11px] font-semibold text-[var(--canvas)]">1 sec</span>
           </div>
-          {onUseCover ? <button type="button" onClick={onUseCover} disabled={!previewUrl || isRendering} className="tr-btn tr-btn-primary mt-3 w-full py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">{t('imageExport.useCover')}</button> : null}
         </div>
       )}
 
@@ -246,6 +247,20 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
             className="w-full bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
           />
         )}
+        <div className="mt-2 flex items-center gap-2 rounded-lg border border-black/10 bg-black/[0.025] p-2">
+          <label className="min-w-0 flex-1 text-[11px] font-medium">
+            {t('imageExport.titleSize')}
+            <input type="range" min={0.75} max={1.5} step={0.05} value={settings.titleScale ?? 1}
+              onChange={(event) => setSocialShareSettings({ titleScale: Number(event.target.value) })}
+              className="mt-1 block w-full accent-[var(--trail-orange)]" />
+          </label>
+          <span className="w-9 text-right text-[11px] tabular-nums opacity-60">{Math.round((settings.titleScale ?? 1) * 100)}%</span>
+          <label className="shrink-0 text-[11px] font-medium">
+            {t('imageExport.titleColor')}
+            <input type="color" value={settings.titleColor ?? '#FFFFFF'} onChange={(event) => setSocialShareSettings({ titleColor: event.target.value })}
+              aria-label={t('imageExport.titleColor')} className="mt-1 block h-7 w-full cursor-pointer rounded border-0 bg-transparent p-0" />
+          </label>
+        </div>
       </div>
 
       {/* Location */}
@@ -359,8 +374,9 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
               </div>
               <input type="text" value={stat.label} onChange={(event) => updateStat(index, { label: event.target.value })}
                 placeholder={t('imageExport.statLabel')} className="w-full rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs" />
-              {stat.metric === 'custom' && <input type="text" value={stat.value} onChange={(event) => updateStat(index, { value: event.target.value })}
-                placeholder={t('imageExport.statValue')} className="w-full rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs" />}
+              <input type="text" value={stat.value} onChange={(event) => updateStat(index, { value: event.target.value })}
+                placeholder={t('imageExport.statValue')} aria-label={t('imageExport.statValue')}
+                className="w-full rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs" />
             </div>
           ))}
           <button type="button" disabled={stats.length >= 4}
@@ -481,8 +497,28 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
         <p className="text-xs opacity-50 text-center">{t('imageExport.noTrackHint')}</p>
       )}
 
-      {/* Preview button — always re-renders so camera changes are captured */}
-      <button
+      {/* The cover canvas stays in the main map area while its controls remain in the sidebar. */}
+      {coverMode && editorHost && createPortal(
+        previewUrl ? <SocialSharePreviewModal
+          previewUrl={previewUrl}
+          isRendering={isRendering}
+          onClose={() => undefined}
+          onExport={() => onUseCover?.()}
+          settings={settings}
+          setSocialShareSettings={setSocialShareSettings}
+          onMapRouteGesture={transformMapViewport}
+          routeBboxNorm={routeBboxNorm}
+          dataPanelBboxNorm={dataPanelBboxNorm}
+          titleBboxNorm={titleBboxNorm}
+          coverMode
+          inline
+        /> : <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#101916] text-sm text-white/70">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('imageExport.rendering')}
+        </div>,
+        editorHost,
+      )}
+
+      {!coverMode && <button
         onClick={async () => {
           trackEvent('social_share_preview_opened', {
             template: settings.template,
@@ -500,9 +536,9 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           <ImageIcon className="w-4 h-4" />
         )}
         {isRendering ? t('imageExport.rendering') : t(coverMode ? 'imageExport.previewCover' : 'imageExport.previewDownload')}
-      </button>
+      </button>}
 
-      {showPreview && previewUrl && (
+      {!coverMode && showPreview && previewUrl && (
         <SocialSharePreviewModal
           previewUrl={previewUrl}
           isRendering={isRendering}

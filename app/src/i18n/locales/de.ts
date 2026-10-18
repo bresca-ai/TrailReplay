@@ -763,6 +763,8 @@ export const de = {
     titleModeTrack: 'Track',
     titleModeCustom: 'Eingeben…',
     titlePlaceholder: 'Titel eingeben…',
+    titleSize: 'Titelgröße',
+    titleColor: 'Farbe',
     location: 'Standort',
     locationPlaceholder: 'Stadt, Land…',
     stats: 'Statistiken',

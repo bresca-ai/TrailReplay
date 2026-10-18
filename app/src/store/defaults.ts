@@ -105,6 +105,8 @@ export function createDefaultSocialShareSettings(): SocialShareSettings {
     selectedPictureId: null,
     titleMode: 'journey-name',
     customTitle: '',
+    titleScale: 1,
+    titleColor: '#FFFFFF',
     titleOffsetX: 0,
     titleOffsetY: 0,
     locationLabel: '',

@@ -480,15 +480,56 @@ raw `zoom`, `pitch`, and `bearing` values.
 
 `format` (`mp4` \| `webm`), `quality` (`low` `medium` `high` `ultra`), `fps`,
 `resolution` (`{ width, height }`), `aspectRatio` (`16:9` `1:1` `9:16`),
-`includeAudio`.
+`includeAudio`, `includeCover` (boolean). When `includeCover` is `true`, the app
+renders the cover from `socialShareSettings` and places it at the start of the
+video for one second. The cover uses the video's `aspectRatio` and the font in
+`settings.trailStyle.overlayFont`.
 
 ### 5.8 `socialShareSettings`
 
-`template` (`map-first` \| `photo-first`), `aspectRatio` (`4:5` `1:1` `9:16`),
+`template` (`map-first` \| `photo-first`), `aspectRatio` (`16:9` `4:5` `1:1` `9:16`),
 `selectedPictureId`, `titleMode` (`journey-name` `track-name` `custom`),
-`customTitle`, `locationLabel`, `showLocation`, `showStats`,
-`showElevationMiniChart`, `routeTransform` (`{ offsetX, offsetY, scale,
-opacity }`), `dataPanelOffsetY`, `routeGlow`.
+`customTitle`, `titleScale` (`0.75`–`1.5`), `titleColor` (hex),
+`titleOffsetX`, `titleOffsetY`, `locationLabel`, `showLocation`,
+`showStats`, `showElevationMiniChart`, `routeTransform` (`{ offsetX, offsetY,
+scale, opacity }`), `photoTransform` (`{ offsetX, offsetY, scale }`),
+`dataPanelOffsetY`, `routeGlow`. The title and position offsets are fractions of
+the poster width or height.
+
+`stats` is an ordered array of `{ id, metric, label, value, visible }`. Metrics
+are `distance`, `elevationGain`, `duration`, `movingDuration`, `pace`,
+`heartRate`, `speed`, `altitude`, `maxElevation`, `elevationLoss`, `maxSpeed`,
+or `custom`. A nonempty `value` overrides the calculated metric, and `label`
+overrides its translated label. Show up to four stats. `statsLayout` is `2`, `3`,
+or `4` columns; `statsStyle` is `minimal`, `cards`, or `accent`;
+`statsColor` is a hex color and `statsScale` ranges from `0.7` to `1.4`.
+
+For an agent-authored video cover, use `map-first`: the recipe already has the
+route and needs no image file. A `photo-first` cover needs a photo selected in
+the website after import because recipe files do not import pictures.
+
+```json
+{
+  "name": "Mountain Traverse",
+  "tracks": [{ "file": "route.gpx" }],
+  "settings": { "trailStyle": { "overlayFont": "condensed" } },
+  "videoExportSettings": { "aspectRatio": "9:16", "includeCover": true },
+  "socialShareSettings": {
+    "template": "map-first",
+    "titleMode": "custom",
+    "customTitle": "Three summits. One day.",
+    "showStats": true,
+    "statsLayout": 2,
+    "statsStyle": "cards",
+    "statsColor": "#FFFFFF",
+    "stats": [
+      { "id": "distance", "metric": "distance", "label": "DISTANCE", "value": "", "visible": true },
+      { "id": "climb", "metric": "elevationGain", "label": "CLIMB", "value": "", "visible": true },
+      { "id": "summits", "metric": "custom", "label": "SUMMITS", "value": "3", "visible": true }
+    ]
+  }
+}
+```
 
 ### 5.9 Route and playback
 

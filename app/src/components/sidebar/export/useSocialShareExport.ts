@@ -45,9 +45,9 @@ export function useSocialShareExport() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(0);
+  const [photoReadyId, setPhotoReadyId] = useState<string | null>(null);
   const [routeBboxNorm, setRouteBboxNorm] = useState<RouteBboxNorm | null>(null);
 
-  const logoRef = useRef<HTMLImageElement | null>(null);
   const photoRef = useRef<HTMLImageElement | null>(null);
   const photoIdRef = useRef<string | null>(null);
   const lastMapFirstFitKeyRef = useRef<string | null>(null);
@@ -56,26 +56,25 @@ export function useSocialShareExport() {
   const selectedPicture = selectablePictures.find((p) => p.id === settings.selectedPictureId) ?? null;
 
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => { logoRef.current = img; };
-    img.src = '/media/images/logohorizontalfondo.svg';
-  }, []);
-
-  useEffect(() => {
     if (!selectedPicture) {
       photoRef.current = null;
       photoIdRef.current = null;
+      setPhotoReadyId(null);
       setPhotoVersion((v) => v + 1);
       return;
     }
     if (photoIdRef.current === selectedPicture.id && photoRef.current) return;
+
+    photoRef.current = null;
+    photoIdRef.current = null;
+    setPhotoReadyId(null);
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       photoRef.current = img;
       photoIdRef.current = selectedPicture.id;
+      setPhotoReadyId(selectedPicture.id);
       setPhotoVersion((v) => v + 1);
     };
     img.onerror = () => setPhotoVersion((v) => v + 1);
@@ -153,7 +152,6 @@ export function useSocialShareExport() {
       projectedRouteForMap,
       routeLatLons,
       selectedPhoto: photoRef.current,
-      logo: logoRef.current,
       fontFamily: overlayCanvasFontFamily(overlayFont),
       routeColor,
       labels,
@@ -334,7 +332,19 @@ export function useSocialShareExport() {
   }, [generatePreview, settings.aspectRatio]);
 
   useEffect(() => {
-    void generatePreview();
+    const render = () => void generatePreview({ fitMapFirstRoute: settings.template === 'map-first' });
+    if (settings.template !== 'map-first' || mapGlobalRef.current) {
+      render();
+      return;
+    }
+    // A recipe can open Export before MapLibre finishes mounting. Wait for its
+    // canvas so an automatic video cover never captures the fallback background.
+    const timer = window.setInterval(() => {
+      if (!mapGlobalRef.current) return;
+      window.clearInterval(timer);
+      render();
+    }, 150);
+    return () => window.clearInterval(timer);
   }, [
     settings.template,
     settings.aspectRatio,
@@ -432,10 +442,10 @@ export function useSocialShareExport() {
   const titleBboxNorm: RouteBboxNorm = (() => {
     const { w, h } = getPosterSize(settings.aspectRatio);
     const pad = Math.round(w * 0.04);
-    const logoWidth = Math.round(w * (settings.template === 'map-first' ? 0.28 : 0.30));
-    const logoHeight = Math.round(logoWidth / 2.5);
-    const titleSize = Math.round(h * (settings.template === 'map-first' ? 0.050 : 0.072));
-    const baseY = pad + logoHeight + Math.round(h * (settings.template === 'map-first' ? 0.010 : 0.018));
+    const titleSize = Math.round((settings.template === 'map-first'
+      ? Math.min(w * 0.09, Math.max(h * 0.05, w * 0.055))
+      : h * 0.072) * (settings.titleScale ?? 1));
+    const baseY = pad + Math.round(h * (settings.template === 'map-first' ? 0.010 : 0.018));
     return {
       x: Math.max(0, pad / w + settings.titleOffsetX),
       y: Math.max(0, (baseY - titleSize * 0.8) / h + settings.titleOffsetY),
@@ -448,6 +458,7 @@ export function useSocialShareExport() {
     previewUrl,
     isRendering,
     selectedPicture,
+    selectedPhotoReady: !!selectedPicture && photoReadyId === selectedPicture.id,
     generatePreview,
     exportPng,
     fitTrackToMap,

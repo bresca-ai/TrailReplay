@@ -8,7 +8,6 @@ import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
 // ponytail: layout geometry lives here; extract to socialShareLayout.ts if templates exceed 2
 
 const DARK_BG = 'rgba(10,10,10,0.97)';
-const WHITE = 'rgba(255,255,255,0.95)';
 const WHITE_DIM = 'rgba(255,255,255,0.60)';
 const POSTER_W = 1080;
 
@@ -40,7 +39,6 @@ export interface RenderInput {
   /** Raw lat/lon points for client-side fitting (photo-first). */
   routeLatLons: Array<{ lat: number; lon: number }> | null;
   selectedPhoto: HTMLImageElement | null;
-  logo: HTMLImageElement | null;
   fontFamily: string;
   /** Primary route color from track settings (hex). */
   routeColor: string;
@@ -268,9 +266,11 @@ function drawStatsBar(
   };
 
   visibleStats.forEach((stat, i) => {
-    const { num, unit } = stat.metric === 'custom'
-      ? { num: stat.value, unit: '' }
-      : values[stat.metric] ?? { num: '', unit: '' };
+    const { num, unit } = stat.value.trim()
+      ? { num: stat.value.trim(), unit: '' }
+      : stat.metric === 'custom'
+        ? { num: '', unit: '' }
+        : values[stat.metric] ?? { num: '', unit: '' };
     const label = stat.label || labels[stat.metric] || '';
     const row = Math.floor(i / columns);
     const col = i % columns;
@@ -321,25 +321,28 @@ function drawStatsBar(
   });
 }
 
-function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, x: number, y: number, w: number) {
-  if (!logo) return;
-  // Use intrinsic SVG ratio (500×200 viewBox → 2.5:1); fall back gracefully
-  const aspect = logo.naturalWidth > 0 && logo.naturalHeight > 0
-    ? logo.naturalWidth / logo.naturalHeight
-    : 2.5;
+function drawBrandMark(ctx: CanvasRenderingContext2D, w: number, fontFamily: string) {
+  const pad = Math.round(w * 0.04);
+  const size = Math.round(w * 0.025);
   ctx.save();
-  ctx.globalAlpha = 1;
-  ctx.drawImage(logo, x, y, w, Math.round(w / aspect));
+  ctx.textAlign = 'right';
+  ctx.font = `700 ${size}px ${fontFamily}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = size * 0.4;
+  ctx.fillText('TRAILREPLAY', w - pad, pad + size);
   ctx.restore();
 }
 
 function drawTitle(
   ctx: CanvasRenderingContext2D,
   title: string,
-  x: number, y: number, maxW: number, fontSize: number, fontFamily: string,
+  x: number, y: number, maxW: number, fontSize: number, fontFamily: string, color: string,
 ): number {
   ctx.font = `800 ${fontSize}px ${fontFamily}`;
-  ctx.fillStyle = WHITE;
+  ctx.fillStyle = color;
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = Math.round(fontSize * 0.25);
   const words = title.split(' ');
   const lines: string[] = [];
   let current = '';
@@ -355,6 +358,7 @@ function drawTitle(
   }
   if (current && lines.length < 2) lines.push(current);
   lines.forEach((l, i) => ctx.fillText(l, x, y + i * fontSize * 1.12, maxW));
+  ctx.shadowBlur = 0;
   return lines.length;
 }
 
@@ -393,7 +397,7 @@ function drawPhotoBackground(
 // --- Template renderers ---
 
 function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
-  const { mapCanvas, summary, settings, logo, projectedRouteForMap } = input;
+  const { mapCanvas, summary, settings, projectedRouteForMap } = input;
   const showStats = hasVisibleStats(settings);
   const pad = Math.round(w * 0.04);
 
@@ -426,17 +430,13 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
     drawRoute(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
   }
 
-  // Logo (top-left)
-  const logoW = Math.round(w * 0.28);
-  const logoAspect = logo && logo.naturalWidth > 0 && logo.naturalHeight > 0 ? logo.naturalWidth / logo.naturalHeight : 2.5;
-  const logoH = Math.round(logoW / logoAspect);
-  drawLogo(ctx, logo, pad, pad, logoW);
+  drawBrandMark(ctx, w, input.fontFamily);
 
   // Title + location below logo
-  const titleSize = Math.round(h * 0.050);
+  const titleSize = Math.round(Math.min(w * 0.09, Math.max(h * 0.05, w * 0.055)) * (settings.titleScale ?? 1));
   const titleX = pad + settings.titleOffsetX * w;
-  const titleY = pad + logoH + Math.round(h * 0.010) + titleSize + settings.titleOffsetY * h;
-  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w * 0.72, titleSize, input.fontFamily);
+  const titleY = pad + Math.round(h * 0.01) + titleSize + settings.titleOffsetY * h;
+  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w * 0.72, titleSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
   if (settings.showLocation && summary.locationLabel) {
     const locSize = Math.round(h * 0.021);
     drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 2, locSize, input.fontFamily);
@@ -484,7 +484,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
 }
 
 function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
-  const { summary, settings, logo, selectedPhoto, routeLatLons } = input;
+  const { summary, settings, selectedPhoto, routeLatLons } = input;
   const showStats = hasVisibleStats(settings);
   const pad = Math.round(w * 0.04);
 
@@ -527,17 +527,13 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
     drawRoute(ctx, projected, Math.round(w * 0.012), opacity, input.routeColor);
   }
 
-  // Logo
-  const logoW = Math.round(w * 0.30);
-  const logoAspect = logo && logo.naturalWidth > 0 && logo.naturalHeight > 0 ? logo.naturalWidth / logo.naturalHeight : 2.5;
-  const logoH = Math.round(logoW / logoAspect);
-  drawLogo(ctx, logo, pad, pad, logoW);
+  drawBrandMark(ctx, w, input.fontFamily);
 
   // Title
-  const titleSize = Math.round(h * 0.072);
+  const titleSize = Math.round(h * 0.072 * (settings.titleScale ?? 1));
   const titleX = pad + settings.titleOffsetX * w;
-  const titleY = pad + logoH + Math.round(h * 0.018) + titleSize + settings.titleOffsetY * h;
-  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w - pad * 2, titleSize, input.fontFamily);
+  const titleY = pad + Math.round(h * 0.018) + titleSize + settings.titleOffsetY * h;
+  const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w - pad * 2, titleSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
 
   // Location
   if (settings.showLocation && summary.locationLabel) {

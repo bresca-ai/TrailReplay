@@ -763,6 +763,8 @@ export const fr = {
     titleModeTrack: 'Itinéraire',
     titleModeCustom: 'Personnalisé',
     titlePlaceholder: 'Entrez un titre…',
+    titleSize: 'Taille du titre',
+    titleColor: 'Couleur',
     location: 'Lieu',
     locationPlaceholder: 'Ville, Pays…',
     stats: 'Statistiques',
