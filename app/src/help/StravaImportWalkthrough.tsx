@@ -72,6 +72,9 @@ export function StravaImportWalkthrough() {
           <p className="mb-4 max-w-3xl text-sm leading-6 text-[var(--evergreen-80)]">
             {t('help.gpxGuide.providers.strava.bookmarklet.walkthroughIntro')}
           </p>
+          <div className="mb-5">
+            <StravaBookmarklet />
+          </div>
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             <div>
               <ol className="space-y-3">
@@ -138,8 +141,11 @@ export function StravaImportWalkthrough() {
               </div>
             </div>
           </div>
-          <div className="mt-5">
-            <StravaBookmarklet />
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--evergreen)]/10 bg-white/70 p-4">
+            <p className="text-sm font-medium text-[var(--evergreen-80)]">
+              {t('help.gpxGuide.providers.strava.bookmarklet.bottomCta')}
+            </p>
+            <StravaBookmarklet placement="bottom" />
           </div>
         </div>
       )}

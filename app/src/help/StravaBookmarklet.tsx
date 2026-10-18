@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BookmarkPlus } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { createStravaBookmarkletHref } from '@/utils/stravaBookmarklet';
 
-export function StravaBookmarklet() {
+export function StravaBookmarklet({ placement = 'top' }: { placement?: 'top' | 'bottom' }) {
   const { t } = useI18n();
   const linkRef = useRef<HTMLAnchorElement>(null);
+  const [copied, setCopied] = useState(false);
 
   // React sanitizes javascript: hrefs. Assign it after render so browsers can
   // save this link as a bookmarklet when the user drags it to their bar.
@@ -14,26 +15,44 @@ export function StravaBookmarklet() {
   }, []);
 
   return (
-    <div className="mt-5 rounded-2xl border border-[var(--trail-orange)]/25 bg-white/80 p-5">
-      <div className="flex items-start gap-3">
-        <BookmarkPlus className="mt-0.5 h-5 w-5 shrink-0 text-[var(--trail-orange)]" />
+    <div className={placement === 'top' ? 'rounded-2xl border border-[var(--trail-orange)]/25 bg-white/80 p-4' : 'flex justify-end'}>
+      <div className={placement === 'top' ? 'flex items-start gap-3' : ''}>
+        {placement === 'top' && <BookmarkPlus className="mt-0.5 h-5 w-5 shrink-0 text-[var(--trail-orange)]" />}
         <div>
-          <h3 className="text-base font-bold">{t('help.gpxGuide.providers.strava.bookmarklet.title')}</h3>
-          <p className="mt-1 text-sm leading-6 text-[var(--evergreen-80)]">
-            {t('help.gpxGuide.providers.strava.bookmarklet.description')}
-          </p>
+          {placement === 'top' && (
+            <>
+              <h3 className="text-base font-bold">{t('help.gpxGuide.providers.strava.bookmarklet.title')}</h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--evergreen-80)]">
+                {t('help.gpxGuide.providers.strava.bookmarklet.description')}
+              </p>
+            </>
+          )}
           <a
             ref={linkRef}
             draggable="true"
-            className="tr-btn tr-btn-primary mt-4 inline-flex cursor-grab items-center gap-2"
+            onClick={(event) => {
+              event.preventDefault();
+              const bookmarklet = linkRef.current?.href;
+              if (!bookmarklet || !navigator.clipboard?.writeText) {
+                setCopied(false);
+                return;
+              }
+              void navigator.clipboard.writeText(bookmarklet).then(() => setCopied(true)).catch(() => setCopied(false));
+            }}
+            className="tr-btn tr-btn-primary inline-flex cursor-grab items-center gap-2"
             aria-label={t('help.gpxGuide.providers.strava.bookmarklet.dragLabel')}
+            title={t('help.gpxGuide.providers.strava.bookmarklet.dragLabel')}
           >
             <BookmarkPlus className="h-4 w-4" />
             {t('help.gpxGuide.providers.strava.bookmarklet.button')}
           </a>
-          <p className="mt-3 text-xs leading-5 text-[var(--evergreen-60)]">
-            {t('help.gpxGuide.providers.strava.bookmarklet.note')}
-          </p>
+          {placement === 'top' && (
+            <p className="mt-3 text-xs leading-5 text-[var(--evergreen-60)]" aria-live="polite">
+              {copied
+                ? t('help.gpxGuide.providers.strava.bookmarklet.copied')
+                : t('help.gpxGuide.providers.strava.bookmarklet.copyHint')}
+            </p>
+          )}
         </div>
       </div>
     </div>
