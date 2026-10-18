@@ -119,6 +119,9 @@ export const help = {
     description: 'Ce guide présente l\'expérience TrailReplay actuelle : importation de traces, création d\'un itinéraire, ajout de médias, prévisualisation du cadrage d\'exportation et enregistrement d\'un replay final.',
     headerAction: 'Guide GPX',
     agentsAction: 'Pour les agents',
+    importRouteEyebrow: "Importer un itinéraire",
+    importRouteTitle: "Comment importer un itinéraire",
+    importRouteIntro: "Choisissez Strava ou Wikiloc, puis suivez les étapes pour importer un itinéraire dans TrailReplay.",
     quickStart: {
       badge: 'Démarrage rapide',
       step1: 'Ouvrez TrailReplay puis importez l\'un des parcours d\'exemple ou votre propre fichier GPX, KML ou FIT.',

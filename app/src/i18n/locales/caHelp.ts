@@ -119,6 +119,9 @@ export const help = {
       description: 'Aquesta guia se centra en l’experiència actual de TrailReplay: importar rutes, donar forma al viatge, afegir mèdia, previsualitzar el retall d’exportació i gravar un replay polit.',
       headerAction: 'Guia GPX',
       agentsAction: 'Per a agents',
+      importRouteEyebrow: "Importar una ruta",
+      importRouteTitle: "Com importar una ruta",
+      importRouteIntro: "Tria Strava o Wikiloc i segueix els passos per portar una ruta a TrailReplay.",
       quickStart: {
         badge: 'Inici ràpid',
         step1: 'Obre TrailReplay i puja una de les rutes de mostra o el teu propi fitxer GPX, KML o FIT.',

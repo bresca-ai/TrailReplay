@@ -119,6 +119,9 @@ export const help = {
       description: 'This guide focuses on the current TrailReplay experience: importing tracks, shaping a journey, adding media, previewing the export crop, and recording a polished replay.',
       headerAction: 'GPX guide',
       agentsAction: 'For agents',
+      importRouteEyebrow: 'Import a route',
+      importRouteTitle: 'How to import a route',
+      importRouteIntro: 'Choose Strava or Wikiloc, then follow the steps to bring a route into TrailReplay.',
       quickStart: {
         badge: 'Quick start',
         step1: 'Open TrailReplay and upload one of the sample races or your own GPX, KML or FIT file.',
