@@ -77,6 +77,7 @@ export function TrailMap(_props: TrailMapProps) {
   const isPlacingLandmark = useAppStore((state) => state.isPlacingLandmark);
   const selectLandmark = useAppStore((state) => state.selectLandmark);
   const setActivePanel = useAppStore((state) => state.setActivePanel);
+  const inactiveAnnotationsOpacity = useAppStore((state) => state.settings.inactiveAnnotationsOpacity);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [showZoomButtonsHint, setShowZoomButtonsHint] = useState(false);
@@ -154,6 +155,7 @@ export function TrailMap(_props: TrailMapProps) {
     unitSystem: settings.unitSystem,
     language: settings.language,
     overlayFont: trailStyle.overlayFont,
+    inactiveAnnotationsOpacity,
   });
 
   const handleSelectLandmark = useCallback((landmarkId: string) => {
