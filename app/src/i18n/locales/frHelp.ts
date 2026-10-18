@@ -287,13 +287,15 @@ export const help = {
         step1: 'Connectez-vous à Strava et ouvrez l’activité à exporter.',
         step2: 'Cliquez sur le menu (trois points) de l’activité.',
         step3: 'Sélectionnez « Exporter GPX », ou « Export original » pour l’enregistrement de la montre.',
-        step4: 'Pour importer manuellement, téléchargez le fichier puis importez-le dans TrailReplay. Pour éviter le téléchargement, utilisez le marque-page en un clic ci-dessous.',
+        step4: 'Sélectionnez le fichier GPX téléchargé et importez-le dans TrailReplay.',
         note1: '« Export original » fournit le fichier écrit par la montre, généralement un .fit que TrailReplay lit directement : chaque point horodaté, plus fréquence cardiaque, cadence, puissance et température. L’« Export GPX » d’une activité les conserve normalement aussi.',
         note2: 'Les activités privées peuvent être limitées selon les réglages de confidentialité.',
         bookmarklet: {
           title: 'Envoyez une activité Strava directement vers TrailReplay',
           description: 'Faites glisser ce bouton vers la barre de favoris. Ouvrez une activité Strava et cliquez sur le marque-page : TrailReplay s’ouvre dans un nouvel onglet et charge le GPX dans l’éditeur.',
           walkthroughLabel: 'Import Strava en un clic',
+            manualTab: 'Manuel',
+            automaticTab: 'Automatique',
           walkthroughTitle: 'D’une activité Strava à un projet TrailReplay',
           walkthroughIntro: 'Ajoutez le marque-page une seule fois. Ensuite, un clic envoie le GPX de Strava vers TrailReplay et ouvre le parcours prêt à être modifié.',
           steps: {

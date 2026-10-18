@@ -122,30 +122,35 @@ export function GpxDownloadGuidePage() {
               </a>
             </div>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.72fr]">
-              <ol className="space-y-3">
-                {provider.steps.map((step, index) => (
-                  <li key={step} className="flex gap-4 rounded-2xl border border-[var(--evergreen)]/10 bg-[var(--canvas)] px-4 py-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)] text-sm font-bold text-[var(--canvas)]">
-                      {index + 1}
-                    </div>
-                    <p className="text-sm leading-6 text-[var(--evergreen-80)]">{step}</p>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="rounded-[1.25rem] border border-[var(--evergreen)]/10 bg-[var(--trail-orange-15)] p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--trail-orange)]">{t('help.gpxGuide.notesLabel')}</p>
-                <ul className="mt-3 space-y-3">
-                  {provider.notes.map((note) => (
-                    <li key={note} className="text-sm leading-6 text-[var(--evergreen-80)]">
-                      {note}
+            {provider.name === 'Strava' ? (
+              <div className="mt-6">
+                <StravaImportWalkthrough />
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.72fr]">
+                <ol className="space-y-3">
+                  {provider.steps.map((step, index) => (
+                    <li key={step} className="flex gap-4 rounded-2xl border border-[var(--evergreen)]/10 bg-[var(--canvas)] px-4 py-4">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)] text-sm font-bold text-[var(--canvas)]">
+                        {index + 1}
+                      </div>
+                      <p className="text-sm leading-6 text-[var(--evergreen-80)]">{step}</p>
                     </li>
                   ))}
-                </ul>
+                </ol>
+
+                <div className="rounded-[1.25rem] border border-[var(--evergreen)]/10 bg-[var(--trail-orange-15)] p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--trail-orange)]">{t('help.gpxGuide.notesLabel')}</p>
+                  <ul className="mt-3 space-y-3">
+                    {provider.notes.map((note) => (
+                      <li key={note} className="text-sm leading-6 text-[var(--evergreen-80)]">
+                        {note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            </div>
-            {provider.name === 'Strava' && <StravaImportWalkthrough />}
+            )}
           </article>
         ))}
       </section>

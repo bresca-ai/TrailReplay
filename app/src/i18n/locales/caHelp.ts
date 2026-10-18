@@ -287,13 +287,15 @@ export const help = {
           step1: 'Inicia sessió a strava.com i obre l’activitat que vols exportar.',
           step2: 'Obre el menú de tres punts de l’activitat a la part superior dreta.',
           step3: 'Tria “Export GPX”, o “Export Original” per a la gravació original del rellotge.',
-          step4: 'Per importar-lo manualment, desa el fitxer i puja’l a TrailReplay. Per saltar-te la baixada, fes servir el marcador d’un clic que hi ha a sota.',
+          step4: 'Selecciona el fitxer GPX que has baixat i puja’l a TrailReplay.',
           note1: '“Export Original” dóna el fitxer que va escriure el rellotge, normalment un .fit, que TrailReplay llegeix directament: cada punt amb la seva hora, més pulsacions, cadència, potència i temperatura. L’“Export GPX” d’una activitat també sol conservar-los.',
           note2: 'Les activitats públiques a vegades es poden exportar segons la configuració de privacitat.',
           bookmarklet: {
             title: 'Envia una activitat de Strava directament a TrailReplay',
             description: 'Arrossega aquest botó a la barra d’adreces d’interès. Obre una activitat de Strava i fes clic al marcador: TrailReplay s’obrirà en una pestanya nova i carregarà el GPX a l’editor.',
             walkthroughLabel: 'Importació de Strava amb un clic',
+            manualTab: 'Manual',
+            automaticTab: 'Automàtica',
             walkthroughTitle: 'D’una activitat de Strava a un projecte de TrailReplay',
             walkthroughIntro: 'Afegeix el marcador una sola vegada. Després, un clic envia el GPX de Strava a TrailReplay i obre la ruta a punt per editar.',
             steps: {

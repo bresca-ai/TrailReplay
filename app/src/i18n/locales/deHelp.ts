@@ -287,13 +287,15 @@ export const help = {
           step1: 'Melde Dich bei strava.com an und öffne die Aktivität, die Du exportieren möchtest.',
           step2: 'Öffne das Aktivitätsmenü mit den drei Punkten im oberen rechten Bereich.',
           step3: 'Wähle „GPX exportieren“ oder „Original exportieren“, um Zeitstempel zu erhalten.',
-          step4: 'Für den manuellen Import speichere die Datei und lade sie in TrailReplay hoch. Um den Download zu überspringen, verwende das Lesezeichen unten.',
+          step4: 'Wähle die heruntergeladene GPX-Datei aus und lade sie in TrailReplay hoch.',
           note1: '„Original exportieren“ liefert die Datei, die die Uhr geschrieben hat, meist eine .fit, die TrailReplay direkt liest: jeder Punkt mit Zeitstempel, dazu Herzfrequenz, Trittfrequenz, Leistung und Temperatur. Der „GPX exportieren“ einer Aktivität behält diese normalerweise ebenfalls.',
           note2: 'Abhängig von den Datenschutzeinstellungen können öffentliche Aktivitäten manchmal exportiert werden.',
           bookmarklet: {
             title: 'Eine Strava-Aktivität direkt an TrailReplay senden',
             description: 'Ziehe diese Schaltfläche in Deine Lesezeichenleiste. Öffne eine Strava-Aktivität und klicke auf das Lesezeichen: TrailReplay öffnet sich in einem neuen Tab und lädt die GPX-Datei automatisch in den Editor.',
             walkthroughLabel: 'Strava-Import mit einem Klick',
+            manualTab: 'Manuell',
+            automaticTab: 'Automatisch',
             walkthroughTitle: 'Von einer Strava-Aktivität zum TrailReplay-Projekt',
             walkthroughIntro: 'Füge das Lesezeichen einmal hinzu. Danach sendet ein Klick die GPX-Datei von Strava an TrailReplay und öffnet die Route direkt im Editor.',
             steps: {
