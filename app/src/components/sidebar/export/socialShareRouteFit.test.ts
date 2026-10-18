@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
+import {
+  downsampleRoute,
+  fitRouteToBox,
+  getMapFirstFitPadding,
+  getMapFirstRouteSafeArea,
+  getMapPanTargetPoint,
+  getMapZoomForScale,
+  getRouteBboxNorm,
+} from './socialShareRouteFit';
 
 describe('fitRouteToBox', () => {
   const box = { x: 0, y: 0, w: 200, h: 200 };
@@ -49,5 +57,56 @@ describe('downsampleRoute', () => {
   it('always includes the first element', () => {
     const pts = Array.from({ length: 50 }, (_, i) => i);
     expect(downsampleRoute(pts, 5)[0]).toBe(0);
+  });
+});
+
+describe('getRouteBboxNorm', () => {
+  it('returns normalized bounds with padding for preview controls', () => {
+    expect(getRouteBboxNorm([{ x: 20, y: 40 }, { x: 80, y: 60 }], 200, 100, 10))
+      .toEqual({ x: 0.05, y: 0.3, w: 0.4, h: 0.4 });
+  });
+});
+
+describe('map-first route gestures', () => {
+  it('moves the map center opposite the drag so the route follows the pointer', () => {
+    expect(getMapPanTargetPoint({ x: 300, y: 200 }, 0.1, -0.2, 500, 400))
+      .toEqual({ x: 250, y: 280 });
+  });
+
+  it('converts route scale into map zoom and respects zoom limits', () => {
+    expect(getMapZoomForScale(10, 2, 0, 20)).toBe(11);
+    expect(getMapZoomForScale(10, 0.5, 0, 20)).toBe(9);
+    expect(getMapZoomForScale(19.5, 4, 0, 20)).toBe(20);
+  });
+});
+
+describe('map-first initial poster fit', () => {
+  it('reserves space for the title and data panel', () => {
+    const safeArea = getMapFirstRouteSafeArea({
+      posterWidth: 1080,
+      posterHeight: 1350,
+      showLocation: false,
+      showStats: true,
+      showElevation: true,
+    });
+
+    expect(safeArea.x).toBe(0.08);
+    expect(safeArea.x + safeArea.w).toBeCloseTo(0.92);
+    expect(safeArea.y).toBeCloseTo(0.2216);
+    expect(safeArea.y + safeArea.h).toBeCloseTo(0.74);
+  });
+
+  it('converts the poster safe area into map-container padding', () => {
+    const padding = getMapFirstFitPadding(
+      1000,
+      700,
+      { cropX: 220, cropY: 0, cropW: 560, cropH: 700 },
+      { x: 0.08, y: 0.22, w: 0.84, h: 0.52 },
+    );
+
+    expect(padding.top).toBeCloseTo(154);
+    expect(padding.right).toBeCloseTo(264.8);
+    expect(padding.bottom).toBeCloseTo(182);
+    expect(padding.left).toBeCloseTo(264.8);
   });
 });

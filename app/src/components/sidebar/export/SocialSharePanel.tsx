@@ -19,6 +19,7 @@ export function SocialSharePanel() {
     previewUrl, isRendering, generatePreview, exportPng, fitTrackToMap,
     settings, setSocialShareSettings, pictures, hasTracks,
     routeBboxNorm, dataPanelBboxNorm,
+    transformMapViewport,
   } = useSocialShareExport();
   const [showPreview, setShowPreview] = useState(false);
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
@@ -287,7 +288,7 @@ export function SocialSharePanel() {
             template: settings.template,
             aspect_ratio: settings.aspectRatio,
           });
-          await generatePreview();
+          await generatePreview({ fitMapFirstRoute: settings.template === 'map-first' });
           setShowPreview(true);
         }}
         disabled={isRendering || !hasTracks}
@@ -309,6 +310,7 @@ export function SocialSharePanel() {
           onExport={async () => { await exportPng(); setShowPreview(false); }}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
+          onMapRouteGesture={transformMapViewport}
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
         />
