@@ -570,6 +570,8 @@ export const en = {
     percentOfJourney: '{percent}% of journey',
     displayDuration: '{seconds}s display',
     editDuration: 'Edit duration',
+    pictureAnnotationLabel: 'Small note on the photo',
+    pictureAnnotationHint: 'Add a short moment or place note…',
     displayFor: 'Display for:',
     seconds: 'seconds',
     trailPictureAlt: 'Trail picture',

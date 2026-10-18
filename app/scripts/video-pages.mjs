@@ -20,6 +20,13 @@ export const VIDEO_PAGES = [
   {
     path: '/tutorial',
     videos: [
+      {
+        title: 'Cinematic camera tutorial',
+        description: 'Learn how to scrub the replay timeline, aim a shot, save camera keyframes, and let TrailReplay blend the moves.',
+        contentUrl: 'https://trailreplay.com/media/video/cinematic-camera-tutorial.mp4',
+        thumbnailUrl: 'https://trailreplay.com/media/images/seo/cinematic-camera-tutorial-poster.jpg',
+        durationSeconds: 30,
+      },
       { title: 'Path export with stats', description: 'A full route replay with live stats, elevation, and export-ready framing.', ...HERO_VIDEO },
       {
         title: 'Comparison mode demo',

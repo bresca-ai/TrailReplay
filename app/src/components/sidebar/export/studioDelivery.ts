@@ -1,4 +1,5 @@
 import type { VideoExportSettings, VideoQualityMode } from '@/types';
+import { getLeadAttribution, trackEvent } from '@/utils/analytics';
 
 export const MAX_STUDIO_DELIVERY_BYTES = 95 * 1024 * 1024;
 /** Local Vite has no Cloudflare D1/R2/email bindings. Keep Studio rendering usable there. */
@@ -64,6 +65,7 @@ export async function createStudioDeliveryJob(
       marketingConsent: input.marketingConsent,
       locale: input.locale,
       settings: input.settings,
+      attribution: getLeadAttribution(),
     }),
   });
   const body = await readJson(response);
@@ -72,6 +74,20 @@ export async function createStudioDeliveryJob(
   if (!isStudioDeliveryJob(body)) {
     throw new StudioDeliveryError('invalid_response', 'The delivery service returned an invalid response.');
   }
+  const attribution = getLeadAttribution();
+  const first = attribution?.firstTouch;
+  const last = attribution?.lastTouch;
+  trackEvent('generate_lead', {
+    lead_type: 'studio_export',
+    lead_first_source: first?.source ?? 'unknown',
+    lead_first_medium: first?.medium ?? 'unknown',
+    lead_first_campaign: first?.campaign ?? '',
+    lead_first_landing_page: first?.landingPage ?? '/',
+    lead_last_source: last?.source ?? 'unknown',
+    lead_last_medium: last?.medium ?? 'unknown',
+    lead_last_campaign: last?.campaign ?? '',
+    lead_last_landing_page: last?.landingPage ?? '/',
+  });
   return body;
 }
 

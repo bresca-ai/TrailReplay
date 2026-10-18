@@ -14,7 +14,7 @@ export const help = {
       },
       write: {
         title: 'Il écrit une recette',
-        body: 'Un court fichier JSON enregistré à côté de vos GPX. Il décrit les lieux par kilomètre — « le ravitaillement du km 6,5 » — jamais par coordonnées, car la carte les calcule elle-même.',
+        body: 'Un court fichier JSON enregistré à côté de vos GPX. Il décrit les lieux par kilomètre, par exemple « le ravitaillement du km 6,5 », jamais par coordonnées, car la carte les calcule elle-même.',
       },
       drop: {
         title: 'Vous déposez le dossier',
@@ -28,6 +28,25 @@ export const help = {
       label: 'Consigne',
       body: 'Lis https://trailreplay.com/llms.txt et la spécification du format qu’il référence. Puis écris un recipe.json dans ce dossier pour les GPX qui s’y trouvent, en suivant ce que je décris ci-dessous. Ne calcule pas de coordonnées : ancre tout par kilomètre et laisse l’application les résoudre.',
       note: 'Dites-lui ensuite ce que vous voulez vraiment : les ravitaillements d’une page de course, les refuges, une légende dans la grosse montée.',
+    },
+    camera: {
+      title: 'Une distance caméra identique au site',
+      description: 'Le Suivi arrière n’utilise pas le zoom brut de la carte. Les recettes utilisent les mêmes positions que le réglage du site, de 0 pour la vue la plus large à 100 pour la plus proche.',
+      table: { preset: 'Préréglage du site', value: 'Niveau de recette', result: 'Résultat' },
+      presets: {
+        far: { label: 'Loin', body: 'La vue Suivi arrière la plus large.' },
+        medium: { label: 'Moyen', body: 'Le réglage équilibré par défaut.' },
+        close: { label: 'Proche', body: 'Maintient la caméra plus près du marqueur.' },
+        veryClose: { label: 'Très proche', body: 'La vue Suivi arrière la plus serrée.' },
+      },
+      stopsLabel: 'Positions exactes :',
+      stopsBody: '0, 11, 22, 33, 49.5, 66, 83 et 100. Une valeur basse est plus éloignée, une valeur haute est plus proche.',
+      rulesTitle: 'Quelle valeur caméra un agent doit-il écrire ?',
+      rules: {
+        preset: { title: 'Préférez un préréglage nommé', body: 'Utilisez followBehindPreset avec far, medium, close ou very-close. L’importateur synchronise désormais automatiquement le niveau numérique.' },
+        level: { title: 'Utilisez un niveau pour une position exacte', body: 'Définissez followBehindZoomLevel pour l’une des huit positions. Toute autre valeur est ramenée à la position valide la plus proche.' },
+        zoom: { title: 'Ne mélangez pas les deux échelles', body: 'cameraSettings.zoom n’est pas la distance du Suivi arrière. Les images clés Cinématiques utilisent le zoom 8-20 et doivent être créées dans Carte et caméra après l’import.' },
+      },
     },
     examples: {
       title: 'Deux choses à déléguer',
@@ -117,9 +136,44 @@ export const help = {
     caminsUseBody: 'tester le relief, les mouvements de caméra dynamiques et le rendu des statistiques sur un parcours de montagne exigeant.',
     pedalsUseLabel: 'Utilisez Pedals de Foc pour',
     pedalsUseBody: 'évaluer les longues distances, la vue d\'ensemble de l\'itinéraire et la lisibilité d\'une trace d\'endurance plus dense.',
+    camera: {
+      title: 'Choisissez la bonne caméra',
+      description: 'Chaque mode raconte le parcours différemment. Commencez par une vue simple, puis passez au mode Cinématique pour diriger vos plans.',
+      modes: {
+        overview: { title: 'Vue d\'ensemble', body: 'Gardez tout le parcours dans le cadre.' },
+        follow: { title: 'Suivi', body: 'Gardez le marqueur mobile au centre.' },
+        followBehind: { title: 'Suivi arrière', body: 'Suivez le parcours depuis une vue plus basse et inclinée.' },
+        cinematic: { title: 'Cinématique', body: 'Placez des plans sur la timeline et enchaînez-les avec fluidité.' },
+      },
+      videoLabel: 'Tutoriel vidéo de la caméra cinématique',
+      videoTitle: 'Dirigez un replay avec la caméra Cinématique',
+      videoDescription: 'Placez-vous à un instant, cadrez le plan, enregistrez une image clé et recommencez. TrailReplay lie les mouvements pendant la lecture.',
+      openVideo: 'Ouvrir directement la vidéo',
+    },
+    elevation: {
+      title: 'Utilisez le profil d\'altitude de deux façons',
+      description: 'Le profil du parcours complet est visible par défaut. Les sections dynamiques sont un mode de cadrage optionnel qui donne plus de place aux montées et descentes les plus importantes.',
+      default: {
+        badge: 'Par défaut',
+        title: 'Voyez tout le parcours',
+        body: 'Le profil standard garde toute l\'histoire du relief à l\'écran. Un marqueur mobile et le remplissage parcouru indiquent précisément la position du replay sur le parcours.',
+      },
+      dynamic: {
+        badge: 'Optionnel',
+        title: 'Cadrez les reliefs clés',
+        body: 'Les sections dynamiques détectent les montées et descentes soutenues, les marquent sur le profil, puis zooment progressivement sur chacune lorsque la lecture les atteint.',
+      },
+      howToTitle: 'Activez et ajustez les sections dynamiques',
+      tips: {
+        enable: { title: 'Activez le mode de cadrage', body: 'Ouvrez Style, activez Profil d\'altitude, puis Sections dynamiques.' },
+        play: { title: 'Laissez-le cadrer automatiquement', body: 'Lancez la lecture. Le profil passe du parcours complet à chaque montée ou descente détectée, et ce mouvement est conservé dans l\'export.' },
+        edit: { title: 'Ajustez pendant la pause', body: 'Faites glisser les poignées d\'extrémité pour redimensionner une section. Utilisez + puis cliquez sur le profil pour en ajouter une, ou × pour la supprimer.' },
+      },
+    },
     watchExportsTitle: 'Exemples de vidéos exportées',
     watchExportsBody: 'Ces vidéos ont été enregistrées directement avec l\'outil d\'exportation de TrailReplay.',
     coversTitle: 'Ce que TrailReplay permet aujourd\'hui',
+    coversDescription: 'Les six panneaux latéraux offrent la carte la plus claire du produit. Avancez de gauche à droite ou allez directement à la partie du replay que vous souhaitez modifier.',
     recommendedFirstRunTitle: 'Parcours de découverte recommandé',
     firstRun: {
       importLabel: '1. Importer',
@@ -159,29 +213,29 @@ export const help = {
       },
     },
     features: {
-      multiTrack: {
-        title: 'Parcours multiples',
-        body: 'Chargez un ou plusieurs fichiers GPX, KML ou FIT, réorganisez-les et créez un récit unique à partir de plusieurs activités.',
+      routes: {
+        title: 'Parcours',
+        body: 'Importez des fichiers GPX, KML, FIT, des projets .replay enregistrés ou une recette avec ses parcours. Renommez et réorganisez les traces, ou ajoutez des comparaisons pour rejouer plusieurs athlètes ensemble.',
       },
-      comparison: {
-        title: 'Mode comparaison',
-        body: 'Déposez plusieurs fichiers d’un coup : ceux enregistrés ensemble — même créneau horaire, ou à défaut même itinéraire — sont regroupés automatiquement, pour que tout le monde coure dans une seule lecture. Avec des horodatages, chaque marqueur se place là où la personne se trouvait réellement à cet instant ; un fichier sans eux affiche son itinéraire mais aucun marqueur mobile, puisque rien ne peut dire où il était et quand. Utilisez « Export original » (.fit) de Strava si un GPX n’a pas d’heures. Dissociez une trace pour la remettre dans la chronologie.',
+      timeline: {
+        title: 'Chronologie',
+        body: 'Réglez la durée totale, choisissez le timing enregistré ou uniforme, réorganisez les activités, modifiez leur durée et ajoutez des liaisons entre les parcours.',
+      },
+      style: {
+        title: 'Style',
+        body: 'Réglez couleurs et libellés, zones cardiaques ou personnalisées, statistiques en direct, profil d\'altitude, ainsi que l\'icône, la taille, la couleur et le halo du marqueur.',
+      },
+      mapCamera: {
+        title: 'Carte et caméra',
+        body: 'Choisissez un fond de carte, l\'imagerie historique, les noms de lieux, les couches ski, pente ou orientation, le relief 3D, les filtres, les repères et l\'un des quatre modes de caméra.',
       },
       media: {
-        title: 'Narration par les médias',
-        body: 'Associez des photos à des moments précis du parcours et conservez-les dans les vidéos exportées.',
+        title: 'Médias',
+        body: 'Ajoutez des photos, des séquences vidéo muettes et des annotations de parcours. Utilisez le GPS ou l\'horodatage disponibles, ou placez et recalez chaque élément manuellement.',
       },
-      mapStyle: {
-        title: 'Personnalisation de la carte',
-        body: 'Choisissez différents styles de carte, couches de terrain, étiquettes et modes de caméra.',
-      },
-      export: {
-        title: 'Exportation vidéo',
-        body: 'Exportez des vidéos aux formats 16:9, 1:1 ou 9:16 avec statistiques, profil d\'altitude et éléments visuels intégrés.',
-      },
-      journey: {
-        title: 'Édition de l\'itinéraire',
-        body: 'Ajoutez des segments de liaison, ajustez les durées et adaptez l\'animation à votre aventure réelle.',
+      generate: {
+        title: 'Générer',
+        body: 'Enregistrez un projet .replay modifiable, exportez des images ou des vidéos 16:9, 1:1 et 9:16, composez la mise en page, choisissez qualité et fréquence, puis téléchargez ou partagez.',
       },
     },
   },

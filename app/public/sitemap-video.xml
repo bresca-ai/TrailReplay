@@ -40,6 +40,14 @@
   <url>
     <loc>https://trailreplay.com/tutorial</loc>
     <video:video>
+      <video:thumbnail_loc>https://trailreplay.com/media/images/seo/cinematic-camera-tutorial-poster.jpg</video:thumbnail_loc>
+      <video:title>Cinematic camera tutorial</video:title>
+      <video:description>Learn how to scrub the replay timeline, aim a shot, save camera keyframes, and let TrailReplay blend the moves.</video:description>
+      <video:content_loc>https://trailreplay.com/media/video/cinematic-camera-tutorial.mp4</video:content_loc>
+      <video:duration>30</video:duration>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
       <video:thumbnail_loc>https://trailreplay.com/media/images/seo/path-export-with-stats-poster.jpg</video:thumbnail_loc>
       <video:title>Path export with stats</video:title>
       <video:description>A full route replay with live stats, elevation, and export-ready framing.</video:description>

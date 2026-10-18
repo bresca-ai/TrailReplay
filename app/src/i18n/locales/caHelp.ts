@@ -14,7 +14,7 @@ export const help = {
             },
             write: {
                 title: 'Escriu una recepta',
-                body: 'Un JSON curt desat al costat dels teus GPX. Descriu els llocs per quilòmetre — “l’avituallament del km 6,5” — mai per coordenades, perquè el mapa ja les calcula.',
+                body: 'Un JSON curt desat al costat dels teus GPX. Descriu els llocs per quilòmetre, com ara “l’avituallament del km 6,5”, mai per coordenades, perquè el mapa ja les calcula.',
             },
             drop: {
                 title: 'Deixes anar la carpeta',
@@ -28,6 +28,25 @@ export const help = {
             label: 'Instrucció',
             body: 'Llegeix https://trailreplay.com/llms.txt i l’especificació del format que enllaça. Després escriu un recipe.json en aquesta carpeta per als GPX que hi ha aquí, seguint el que et descric a sota. No calculis coordenades: ancora-ho tot per quilòmetre i deixa que l’app ho resolgui.',
             note: 'Després digues-li què vols de debò: els avituallaments del web de la cursa, els refugis on vas dormir, un text a la pujada llarga.',
+        },
+        camera: {
+            title: 'Distància de càmera igual que al web',
+            description: 'Seguiment posterior no fa servir el zoom brut del mapa. Les receptes utilitzen les mateixes posicions que el regulador del web, de 0 per a la vista més ampla a 100 per a la més propera.',
+            table: { preset: 'Preset del web', value: 'Nivell de recepta', result: 'Resultat' },
+            presets: {
+                far: { label: 'Lluny', body: 'La vista de Seguiment posterior més ampla.' },
+                medium: { label: 'Mitjà', body: 'El valor equilibrat per defecte.' },
+                close: { label: 'A prop', body: 'Manté la càmera més a prop del marcador.' },
+                veryClose: { label: 'Molt a prop', body: 'La vista de Seguiment posterior més tancada.' },
+            },
+            stopsLabel: 'Posicions exactes:',
+            stopsBody: '0, 11, 22, 33, 49.5, 66, 83 i 100. Un valor baix és més lluny; un valor alt és més a prop.',
+            rulesTitle: 'Quin valor de càmera ha d’escriure un agent?',
+            rules: {
+                preset: { title: 'Prioritza un preset amb nom', body: 'Fes servir followBehindPreset amb far, medium, close o very-close. L’importador manté el nivell numèric sincronitzat automàticament.' },
+                level: { title: 'Fes servir el nivell per a una posició exacta', body: 'Defineix followBehindZoomLevel quan necessitis una de les vuit posicions. Qualsevol altre nombre s’ajusta a la posició vàlida més propera.' },
+                zoom: { title: 'No barregis les dues escales', body: 'cameraSettings.zoom no és la distància de Seguiment posterior. Els fotogrames clau Cinemàtics fan servir zoom 8-20 i s’han de crear a Mapa i càmera després d’importar.' },
+            },
         },
         examples: {
             title: 'Dues coses que val la pena delegar',
@@ -117,9 +136,44 @@ export const help = {
       caminsUseBody: 'contrast de terreny, moviments de càmera més marcats i comprovar si les estadístiques i el retall es veuen equilibrats en un recorregut de muntanya.',
       pedalsUseLabel: 'Fes servir Pedals de Foc per a',
       pedalsUseBody: 'ritmes llargs, visió global de la ruta i validar com es llegeix un GPX d’endurança més dens en replay i exportació.',
+      camera: {
+        title: 'Tria la càmera adequada',
+        description: 'Cada mode explica la ruta de manera diferent. Comença amb una vista senzilla i passa a Cinemàtic quan vulguis dirigir els plans.',
+        modes: {
+          overview: { title: 'Vista general', body: 'Mantén tota la ruta dins de l’enquadrament.' },
+          follow: { title: 'Seguiment', body: 'Mantén el marcador en moviment al centre.' },
+          followBehind: { title: 'Seguiment posterior', body: 'Segueix la ruta des d’una vista més baixa i inclinada.' },
+          cinematic: { title: 'Cinemàtic', body: 'Col·loca plans a la línia de temps i enllaça’ls amb fluïdesa.' },
+        },
+        videoLabel: 'Vídeo tutorial de la càmera cinematogràfica',
+        videoTitle: 'Dirigeix un replay amb la càmera Cinemàtica',
+        videoDescription: 'Ves a un moment, orienta el pla, desa un fotograma clau i repeteix. TrailReplay enllaça els moviments durant la reproducció.',
+        openVideo: 'Obre el vídeo directament',
+      },
+      elevation: {
+        title: 'Fes servir el perfil d’elevació de dues maneres',
+        description: 'El perfil de la ruta completa es mostra per defecte. Les seccions dinàmiques són un mode d’enfocament opcional que dona més espai a les pujades i baixades més importants.',
+        default: {
+          badge: 'Per defecte',
+          title: 'Mira tota la ruta',
+          body: 'El perfil normal manté tota la història d’elevació en pantalla. Un marcador mòbil i el farciment completat indiquen exactament on és el replay dins la ruta.',
+        },
+        dynamic: {
+          badge: 'Opcional',
+          title: 'Enfoca el terreny clau',
+          body: 'Les seccions dinàmiques detecten pujades i baixades sostingudes, les marquen al perfil i s’apropen suaument a cada secció quan la reproducció hi arriba.',
+        },
+        howToTitle: 'Activa i ajusta les seccions dinàmiques',
+        tips: {
+          enable: { title: 'Activa el mode d’enfocament', body: 'Obre Estil, activa Perfil d’elevació i després Seccions dinàmiques.' },
+          play: { title: 'Deixa que enfoqui automàticament', body: 'Prem reproduir. El perfil passa de la ruta completa a cada pujada o baixada detectada, i el mateix moviment apareix a l’exportació.' },
+          edit: { title: 'Ajusta’l amb la reproducció pausada', body: 'Arrossega els tiradors dels extrems per canviar-ne la mida. Fes servir + i clica el perfil per afegir una secció, o × per eliminar-la.' },
+        },
+      },
       watchExportsTitle: 'Mira exportacions reals',
       watchExportsBody: 'Aquests exemples es van gravar amb el flux d’exportació de TrailReplay.',
       coversTitle: 'Què cobreix TrailReplay avui',
+      coversDescription: 'Els sis panells laterals són el mapa més clar del producte. Avança d’esquerra a dreta o salta directament a la part del replay que vulguis canviar.',
       recommendedFirstRunTitle: 'Primera prova recomanada',
       firstRun: {
         importLabel: '1. Importar',
@@ -159,29 +213,29 @@ export const help = {
         },
       },
       features: {
-        multiTrack: {
-          title: 'Viatges amb diverses rutes',
-          body: 'Carrega un o diversos fitxers GPX, KML o FIT, reordena’ls i construeix una sola narrativa a partir d’activitats separades.',
+        routes: {
+          title: 'Rutes',
+          body: 'Importa GPX, KML, FIT, projectes .replay desats o una recepta amb les seves rutes. Reanomena i reordena tracks, o afegeix comparacions per reproduir diversos atletes alhora.',
         },
-        comparison: {
-          title: 'Mode comparació',
-          body: 'Deixa diversos fitxers alhora i els gravats junts —a la mateixa hora o, si no, en el mateix recorregut— s’agrupen sols, perquè tothom corri en una sola reproducció. Amb marques de temps, cada marcador va on aquella persona era realment en aquell moment; un fitxer sense elles mostra el seu recorregut però sense marcador en moviment, perquè res no pot dir on era i quan. Fes servir “Export Original” (.fit) de Strava si un GPX no té hores. Desagrupa qualsevol pista per tornar-la a la línia de temps.',
+        timeline: {
+          title: 'Línia de temps',
+          body: 'Defineix la durada total, fes servir temps gravats o uniformes, reordena activitats, canvia durades individuals i afegeix transports entre rutes.',
+        },
+        style: {
+          title: 'Estil',
+          body: 'Configura colors i etiquetes, zones de pols o color, estadístiques en viu, el perfil d’elevació i la icona, mida, color i brillantor del marcador.',
+        },
+        mapCamera: {
+          title: 'Mapa i càmera',
+          body: 'Tria mapa base, imatges històriques, noms de lloc, capes d’esquí, pendent o orientació, terreny 3D, filtres, punts d’interès i un dels quatre modes de càmera.',
         },
         media: {
-          title: 'Narrativa amb mèdia',
-          body: 'Associa imatges a moments del track, revisa’n el temps i mantén-les visibles als vídeos exportats.',
+          title: 'Mèdia',
+          body: 'Afegeix fotos, moments de vídeo sense so i anotacions de ruta. Fes servir GPS o marques de temps quan n’hi hagi, o col·loca i ajusta cada element manualment.',
         },
-        mapStyle: {
-          title: 'Estil de mapa',
-          body: 'Canvia entre estils de mapa, capes de terreny, etiquetes i presets de càmera cinematogràfica.',
-        },
-        export: {
-          title: 'Exportació de vídeo',
-          body: 'Exporta vídeos 16:9, 1:1 o 9:16 amb estadístiques, perfil d’elevació i overlays de marca.',
-        },
-        journey: {
-          title: 'Edició del viatge',
-          body: 'Afegeix trams de transport, controla durades i dona forma al replay perquè la història coincideixi amb el viatge real.',
+        generate: {
+          title: 'Generar',
+          body: 'Desa un projecte .replay editable, exporta imatges o vídeos 16:9, 1:1 i 9:16, compon el disseny, tria qualitat i fotogrames per segon, i descarrega o comparteix.',
         },
       },
     },
