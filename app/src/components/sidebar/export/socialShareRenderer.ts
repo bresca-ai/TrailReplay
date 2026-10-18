@@ -4,6 +4,7 @@ import { formatPace, metersToFeet } from '@/utils/units';
 import type { SocialShareSummaryData } from './socialShareData';
 import type { CanvasPoint, FitBox } from './socialShareRouteFit';
 import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
+import { getSocialShareLogoBox } from './socialShareBrand';
 
 // ponytail: layout geometry lives here; extract to socialShareLayout.ts if templates exceed 2
 
@@ -40,6 +41,7 @@ export interface RenderInput {
   routeLatLons: Array<{ lat: number; lon: number }> | null;
   selectedPhoto: HTMLImageElement | null;
   fontFamily: string;
+  brandLogo: HTMLImageElement;
   /** Primary route color from track settings (hex). */
   routeColor: string;
   /** Translated stat labels for the stats bar. */
@@ -321,16 +323,13 @@ function drawStatsBar(
   });
 }
 
-function drawBrandMark(ctx: CanvasRenderingContext2D, w: number, fontFamily: string) {
-  const pad = Math.round(w * 0.04);
-  const size = Math.round(w * 0.025);
+function drawBrandMark(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
+  const box = getSocialShareLogoBox(input.settings, w, h);
   ctx.save();
-  ctx.textAlign = 'right';
-  ctx.font = `700 ${size}px ${fontFamily}`;
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.shadowColor = 'rgba(0,0,0,0.85)';
-  ctx.shadowBlur = size * 0.4;
-  ctx.fillText('TRAILREPLAY', w - pad, pad + size);
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = Math.round(w * 0.018);
+  ctx.shadowOffsetY = Math.round(w * 0.005);
+  ctx.drawImage(input.brandLogo, box.x, box.y, box.w, box.h);
   ctx.restore();
 }
 
@@ -433,7 +432,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
     }
   }
 
-  drawBrandMark(ctx, w, input.fontFamily);
+  drawBrandMark(ctx, w, h, input);
 
   // Title + location below logo
   const titleSize = Math.round(Math.min(w * 0.09, Math.max(h * 0.05, w * 0.055)) * (settings.titleScale ?? 1));
@@ -530,7 +529,7 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
     drawRoute(ctx, projected, Math.round(w * 0.012), opacity, input.routeColor);
   }
 
-  drawBrandMark(ctx, w, input.fontFamily);
+  drawBrandMark(ctx, w, h, input);
 
   // Title
   const titleSize = Math.round(h * 0.072 * (settings.titleScale ?? 1));

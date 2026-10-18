@@ -793,6 +793,7 @@ export const ca = {
     dragHint: 'arrossega la ruta o les estadístiques · cantonada per redimensionar',
     back: 'Enrere',
     dragTitle: 'Arrossega el títol per col·locar-lo',
+    dragLogo: 'Arrossega el logotip de TrailReplay per col·locar-lo',
     useCover: 'Fes servir com a portada del vídeo',
     videoCover: 'Portada del vídeo',
     videoCoverHint: 'Dissenya el primer fotograma del vídeo. Es mostrarà durant 1 segon abans de l’animació.',

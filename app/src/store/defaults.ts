@@ -109,6 +109,8 @@ export function createDefaultSocialShareSettings(): SocialShareSettings {
     titleColor: '#FFFFFF',
     titleOffsetX: 0,
     titleOffsetY: 0,
+    logoPositionX: 0.76,
+    logoPositionY: 0.04,
     locationLabel: '',
     showLocation: false,
     showStats: true,

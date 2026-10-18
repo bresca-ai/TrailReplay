@@ -793,6 +793,7 @@ export const en = {
     dragHint: 'drag trail or stats to reposition · corner to resize',
     back: 'Back',
     dragTitle: 'Drag the title to place it',
+    dragLogo: 'Drag the TrailReplay logo to place it',
     useCover: 'Use as video cover',
     videoCover: 'Video cover',
     videoCoverHint: 'Design the opening frame of your video. It will show for 1 second before the animation.',

@@ -793,6 +793,7 @@ export const fr = {
     dragHint: 'glisser le tracé ou les stats · coin pour redimensionner',
     back: 'Retour',
     dragTitle: 'Faites glisser le titre pour le placer',
+    dragLogo: 'Faites glisser le logo TrailReplay pour le placer',
     useCover: 'Utiliser comme couverture vidéo',
     videoCover: 'Couverture vidéo',
     videoCoverHint: 'Créez la première image de la vidéo. Elle s’affichera pendant 1 seconde avant l’animation.',

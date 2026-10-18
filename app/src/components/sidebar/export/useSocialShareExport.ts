@@ -20,6 +20,7 @@ import {
 } from './socialShareRouteFit';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import { captureSocialMap } from './captureSocialMap';
+import { getSocialShareLogoBox, loadSocialShareLogo } from './socialShareBrand';
 
 const BRAND_ORANGE = '#C1652F';
 
@@ -82,7 +83,7 @@ export function useSocialShareExport() {
     img.src = selectedPicture.url;
   }, [selectedPicture]);
 
-  const buildInput = useCallback((preCapuredMapCanvas: HTMLCanvasElement | null = null): RenderInput => {
+  const buildInput = useCallback((brandLogo: HTMLImageElement, preCapuredMapCanvas: HTMLCanvasElement | null = null): RenderInput => {
     const summary = buildSocialShareSummary(
       settings, tracks, activeTrackId, journey, journeySegments, unitSystem,
     );
@@ -154,6 +155,7 @@ export function useSocialShareExport() {
       routeLatLons,
       selectedPhoto: photoRef.current,
       fontFamily: overlayCanvasFontFamily(overlayFont),
+      brandLogo,
       routeColor,
       labels,
     };
@@ -243,8 +245,8 @@ export function useSocialShareExport() {
         }
       }
 
-      await document.fonts.ready;
-      const input = buildInput(preCapuredMapCanvas);
+      const [, brandLogo] = await Promise.all([document.fonts.ready, loadSocialShareLogo()]);
+      const input = buildInput(brandLogo, preCapuredMapCanvas);
 
       // Compute the same route bounds used by the renderer for either template.
       if (settings.template === 'photo-first' && input.routeLatLons) {
@@ -328,6 +330,8 @@ export function useSocialShareExport() {
     settings.customTitle,
     settings.titleOffsetX,
     settings.titleOffsetY,
+    settings.logoPositionX,
+    settings.logoPositionY,
     settings.locationLabel,
     settings.showLocation,
     settings.showStats,
@@ -369,8 +373,8 @@ export function useSocialShareExport() {
           });
         }
       }
-      await document.fonts.ready;
-      const blob = await exportSocialPosterBlob(buildInput(preCapuredMapCanvas));
+      const [, brandLogo] = await Promise.all([document.fonts.ready, loadSocialShareLogo()]);
+      const blob = await exportSocialPosterBlob(buildInput(brandLogo, preCapuredMapCanvas));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -418,6 +422,12 @@ export function useSocialShareExport() {
     };
   })();
 
+  const logoBboxNorm: RouteBboxNorm = (() => {
+    const { w, h } = getPosterSize(settings.aspectRatio);
+    const box = getSocialShareLogoBox(settings, w, h);
+    return { x: box.x / w, y: box.y / h, w: box.w / w, h: box.h / h };
+  })();
+
   return {
     previewUrl,
     isRendering,
@@ -434,5 +444,6 @@ export function useSocialShareExport() {
     dataPanelBboxNorm,
     transformMapViewport,
     titleBboxNorm,
+    logoBboxNorm,
   };
 }

@@ -793,6 +793,7 @@ export const de = {
     dragHint: 'Ziehe den Trail oder die Statistiken, um sie neu zu positionieren. · Ecke, um die Größe zu ändern',
     back: 'Zurück',
     dragTitle: 'Ziehe den Titel an die gewünschte Stelle',
+    dragLogo: 'Ziehe das TrailReplay-Logo an die gewünschte Stelle',
     useCover: 'Als Videocover verwenden',
     videoCover: 'Videocover',
     videoCoverHint: 'Gestalte das erste Videobild. Es wird 1 Sekunde vor der Animation angezeigt.',

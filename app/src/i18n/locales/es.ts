@@ -793,6 +793,7 @@ export const es = {
     dragHint: 'arrastra la ruta o las estadísticas · esquina para redimensionar',
     back: 'Atrás',
     dragTitle: 'Arrastra el título para colocarlo',
+    dragLogo: 'Arrastra el logo de TrailReplay para colocarlo',
     useCover: 'Usar como portada del vídeo',
     videoCover: 'Portada del vídeo',
     videoCoverHint: 'Diseña el primer fotograma del vídeo. Aparecerá durante 1 segundo antes de la animación.',

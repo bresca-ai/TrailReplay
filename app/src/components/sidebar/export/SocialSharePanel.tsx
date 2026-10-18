@@ -52,6 +52,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
     routeBboxNorm, dataPanelBboxNorm,
     transformMapViewport,
     titleBboxNorm,
+    logoBboxNorm,
   } = useSocialShareExport();
   const [showPreview, setShowPreview] = useState(false);
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
@@ -524,6 +525,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}
+          logoBboxNorm={logoBboxNorm}
           coverMode
           inline
         /> : <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#101916] text-sm text-white/70">
@@ -564,6 +566,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}
+          logoBboxNorm={logoBboxNorm}
           coverMode={coverMode}
         />
       )}

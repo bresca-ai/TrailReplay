@@ -15,6 +15,7 @@ interface Props {
   routeBboxNorm: RouteBboxNorm | null;
   dataPanelBboxNorm: RouteBboxNorm | null;
   titleBboxNorm: RouteBboxNorm;
+  logoBboxNorm: RouteBboxNorm;
   coverMode?: boolean;
   inline?: boolean;
 }
@@ -57,6 +58,7 @@ interface PhotoDragState {
 export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport,
   settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
+  logoBboxNorm,
 }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,6 +74,8 @@ export function SocialSharePreviewModal({
   const [panelDragVisual, setPanelDragVisual] = useState({ dy: 0, active: false });
   const titleDragRef = useRef<TitleDragState | null>(null);
   const [titleDragVisual, setTitleDragVisual] = useState({ dx: 0, dy: 0, active: false });
+  const logoDragRef = useRef<TitleDragState | null>(null);
+  const [logoDragVisual, setLogoDragVisual] = useState({ dx: 0, dy: 0, active: false });
   const photoDragRef = useRef<PhotoDragState | null>(null);
   const [photoDragVisual, setPhotoDragVisual] = useState({ dx: 0, dy: 0, active: false });
   const [photoEditMode, setPhotoEditMode] = useState(false);
@@ -96,7 +100,7 @@ export function SocialSharePreviewModal({
 
   const showRouteOverlay = !!routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
-  const hasAnyOverlay = showRouteOverlay || showPanelOverlay || !!titleBboxNorm;
+  const hasAnyOverlay = showRouteOverlay || showPanelOverlay || !!titleBboxNorm || !!logoBboxNorm;
 
   const onPhotoPointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
     if (settings.template !== 'photo-first' || !photoEditMode) return;
@@ -169,6 +173,40 @@ export function SocialSharePreviewModal({
     });
     titleDragRef.current = null;
     setTitleDragVisual({ dx: 0, dy: 0, active: false });
+  };
+
+  const onLogoPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    logoDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffsetX: logoBboxNorm.x,
+      startOffsetY: logoBboxNorm.y,
+      containerW: rect.width,
+      containerH: rect.height,
+    };
+    setLogoDragVisual({ dx: 0, dy: 0, active: true });
+  };
+
+  const onLogoPointerMove = (e: React.PointerEvent) => {
+    const drag = logoDragRef.current;
+    if (!drag) return;
+    setLogoDragVisual({ dx: e.clientX - drag.startX, dy: e.clientY - drag.startY, active: true });
+  };
+
+  const onLogoPointerUp = (e: React.PointerEvent) => {
+    const drag = logoDragRef.current;
+    if (!drag) return;
+    setSocialShareSettings({
+      logoPositionX: Math.max(0, Math.min(1 - logoBboxNorm.w, drag.startOffsetX + (e.clientX - drag.startX) / drag.containerW)),
+      logoPositionY: Math.max(0, Math.min(1 - logoBboxNorm.h, drag.startOffsetY + (e.clientY - drag.startY) / drag.containerH)),
+    });
+    logoDragRef.current = null;
+    setLogoDragVisual({ dx: 0, dy: 0, active: false });
   };
 
   // ── Route drag handlers (pointer capture on the bbox div) ─────────────────
@@ -411,6 +449,26 @@ export function SocialSharePreviewModal({
                 </div>
               </div>
             )}
+
+            <div
+              className="absolute z-10 rounded-sm border border-transparent hover:border-white/90 hover:ring-2 hover:ring-black/40 select-none"
+              style={{
+                left: `${logoBboxNorm.x * 100}%`,
+                top: `${logoBboxNorm.y * 100}%`,
+                width: `${logoBboxNorm.w * 100}%`,
+                height: `${logoBboxNorm.h * 100}%`,
+                transform: `translate(${logoDragVisual.active ? logoDragVisual.dx : 0}px, ${logoDragVisual.active ? logoDragVisual.dy : 0}px)`,
+                cursor: logoDragVisual.active ? 'grabbing' : 'grab',
+                touchAction: 'none',
+                pointerEvents: photoEditMode ? 'none' : 'auto',
+              }}
+              onPointerDown={onLogoPointerDown}
+              onPointerMove={onLogoPointerMove}
+              onPointerUp={onLogoPointerUp}
+              onPointerCancel={onLogoPointerUp}
+              aria-label={t('imageExport.dragLogo')}
+              title={t('imageExport.dragLogo')}
+            />
 
             {isRendering && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">

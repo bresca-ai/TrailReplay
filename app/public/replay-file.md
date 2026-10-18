@@ -490,11 +490,13 @@ video for one second. The cover uses the video's `aspectRatio` and the font in
 `template` (`map-first` \| `photo-first`), `aspectRatio` (`16:9` `4:5` `1:1` `9:16`),
 `selectedPictureId`, `titleMode` (`journey-name` `track-name` `custom`),
 `customTitle`, `titleScale` (`0.75`–`1.5`), `titleColor` (hex),
-`titleOffsetX`, `titleOffsetY`, `locationLabel`, `showLocation`,
+`titleOffsetX`, `titleOffsetY`, `logoPositionX`, `logoPositionY`, `locationLabel`, `showLocation`,
 `showStats`, `showElevationMiniChart`, `routeTransform` (`{ offsetX, offsetY,
 scale, opacity }`), `photoTransform` (`{ offsetX, offsetY, scale }`),
 `dataPanelOffsetY`, `routeGlow`. The title and position offsets are fractions of
-the poster width or height.
+the poster width or height. `logoPositionX` and `logoPositionY` set the top-left
+of the required white-backed TrailReplay logo as fractions of the poster size;
+the app keeps the logo inside the poster and always includes it in the output.
 
 `stats` is an ordered array of `{ id, metric, label, value, visible }`. Metrics
 are `distance`, `elevationGain`, `duration`, `movingDuration`, `pace`,

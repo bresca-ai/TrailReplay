@@ -298,6 +298,9 @@ export interface SocialShareSettings {
   /** Normalized offsets for directly positioning the title layer in the poster editor. */
   titleOffsetX: number;
   titleOffsetY: number;
+  /** Normalized top-left position of the required TrailReplay logo on the poster. */
+  logoPositionX: number;
+  logoPositionY: number;
   locationLabel: string;
   showLocation: boolean;
   showStats: boolean;
