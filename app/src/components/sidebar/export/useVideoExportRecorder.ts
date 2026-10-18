@@ -702,8 +702,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       if (useWebCodecsRef.current) {
         void runDeterministicExport().catch((error) => {
           console.error('Deterministic export failed', error);
-          // A failed Studio readiness barrier must never finalize and expose a
-          // partial-quality file as a successful export.
+          // Runtime and encoder failures still cancel the deterministic export.
+          // A map-tile timeout is counted and surfaced as a partial Studio
+          // completion by the readiness barrier instead.
           recordingCancelledRef.current = true;
           finishRecording();
           setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
