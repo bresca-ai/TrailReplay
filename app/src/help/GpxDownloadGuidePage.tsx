@@ -3,7 +3,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { HelpLayout } from './HelpLayout';
 import { getGpxTips, getOtherProviders, getProviderGuides } from './helpContent';
 import { trackEvent } from '@/utils/analytics';
-import { StravaBookmarklet } from './StravaBookmarklet';
+import { StravaImportWalkthrough } from './StravaImportWalkthrough';
 
 export function GpxDownloadGuidePage() {
   const { t } = useI18n();
@@ -145,7 +145,7 @@ export function GpxDownloadGuidePage() {
                 </ul>
               </div>
             </div>
-            {provider.name === 'Strava' && <StravaBookmarklet />}
+            {provider.name === 'Strava' && <StravaImportWalkthrough />}
           </article>
         ))}
       </section>

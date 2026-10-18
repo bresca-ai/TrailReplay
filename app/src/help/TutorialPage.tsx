@@ -20,6 +20,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { HelpLayout } from './HelpLayout';
 import { getQuickStartSteps, getSampleTracks, getTutorialFeatures, getTutorialVideos } from './helpContent';
 import { trackEvent } from '@/utils/analytics';
+import { StravaImportWalkthrough } from './StravaImportWalkthrough';
 
 const featureIcons = [MapPin, TimerReset, Palette, Mountain, ImageIcon, Film];
 
@@ -119,22 +120,7 @@ export function TutorialPage() {
         </aside>
       </section>
 
-      <section className="rounded-[1.5rem] border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-6 shadow-sm" data-testid="strava-bookmarklet-tutorial">
-        <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/80 text-[var(--trail-orange)]">
-            <Download className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold">{t('help.tutorial.stravaImport.title')}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--evergreen-80)]">
-              {t('help.tutorial.stravaImport.body')}
-            </p>
-            <a href="/gpx-download-guide#strava" className="mt-3 inline-flex text-sm font-semibold text-[var(--trail-orange)] hover:underline">
-              {t('help.tutorial.stravaImport.link')}
-            </a>
-          </div>
-        </div>
-      </section>
+      <StravaImportWalkthrough />
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <article className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/75 p-6 shadow-sm">
