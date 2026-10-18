@@ -8,19 +8,23 @@ describe('overlay typography', () => {
     expect(overlayFontFamily('technical')).toContain('JetBrains Mono');
     expect(overlayFontFamily('condensed')).toContain('Barlow Condensed');
     expect(overlayFontFamily('geometric')).toContain('Montserrat');
+    expect(overlayFontFamily('poster')).toContain('Anton');
+    expect(overlayFontFamily('display')).toContain('Bebas Neue');
   });
 
   it('keeps legacy projects on the original technical style', () => {
     expect(overlayFontFamily(undefined)).toContain('JetBrains Mono');
   });
 
-  it('offers five distinct open-source font choices', () => {
+  it('offers seven distinct open-source font choices', () => {
     expect(OVERLAY_FONT_OPTIONS.map((option) => option.id)).toEqual([
       'modern',
       'editorial',
       'technical',
       'condensed',
       'geometric',
+      'poster',
+      'display',
     ]);
   });
 });
