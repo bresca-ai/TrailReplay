@@ -60,3 +60,42 @@ export function normalizeLocale(value) {
   const normalized = value.trim().slice(0, 10);
   return /^[a-zA-Z-]+$/.test(normalized) ? normalized.toLowerCase() : null;
 }
+
+function normalizeAttributionToken(value) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 80);
+  return normalized || null;
+}
+
+function normalizeAttributionHost(value) {
+  if (typeof value !== 'string') return null;
+  const host = value.trim().toLowerCase().replace(/^www\./, '').slice(0, 120);
+  return /^[a-z0-9.-]+$/.test(host) ? host : null;
+}
+
+function normalizeAttributionPath(value) {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.includes('?') || value.includes('#')) {
+    return null;
+  }
+  return value.slice(0, 180);
+}
+
+function normalizeAttributionTouch(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return {
+    source: normalizeAttributionToken(value.source),
+    medium: normalizeAttributionToken(value.medium),
+    campaign: normalizeAttributionToken(value.campaign),
+    referrerHost: normalizeAttributionHost(value.referrerHost),
+    landingPage: normalizeAttributionPath(value.landingPage),
+  };
+}
+
+/** Keep lead acquisition data low-cardinality and free of full URLs/query data. */
+export function normalizeLeadAttribution(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return {
+    firstTouch: normalizeAttributionTouch(value.firstTouch),
+    lastTouch: normalizeAttributionTouch(value.lastTouch),
+  };
+}

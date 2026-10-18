@@ -9,6 +9,12 @@ import {
 } from '@/store/defaults';
 import type { Recipe } from './types';
 import type { ResolvedRecipe } from './resolveRecipe';
+import {
+  getFollowBehindLevelForStopIndex,
+  getFollowBehindStopIndexForLevel,
+  getFollowBehindZoomLevelForPreset,
+  getNearestFollowBehindPreset,
+} from '@/utils/followBehindCamera';
 
 function mergeSettings(recipe: Recipe, activeColor: string, activeIcon: string): AppSettings {
   const defaults = createDefaultSettings();
@@ -29,8 +35,29 @@ function mergeSettings(recipe: Recipe, activeColor: string, activeIcon: string):
   } as AppSettings;
 }
 
-function mergeCamera(recipe: Recipe): CameraSettings {
-  return { ...createDefaultCameraSettings(), ...recipe.cameraSettings };
+export function mergeRecipeCameraSettings(recipe: Recipe): CameraSettings {
+  const defaults = createDefaultCameraSettings();
+  const authored = recipe.cameraSettings ?? {};
+  const merged = { ...defaults, ...authored };
+
+  if (authored.followBehindZoomLevel !== undefined) {
+    const stopIndex = getFollowBehindStopIndexForLevel(authored.followBehindZoomLevel);
+    const level = getFollowBehindLevelForStopIndex(stopIndex);
+    return {
+      ...merged,
+      followBehindZoomLevel: level,
+      followBehindPreset: getNearestFollowBehindPreset(level),
+    };
+  }
+
+  if (authored.followBehindPreset !== undefined) {
+    return {
+      ...merged,
+      followBehindZoomLevel: getFollowBehindZoomLevelForPreset(authored.followBehindPreset),
+    };
+  }
+
+  return merged;
 }
 
 /**
@@ -82,7 +109,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
       routeTimingMode: recipe.routeTimingMode ?? 'recorded',
     },
     settings: mergeSettings(recipe, activeTrack.color, activeTrack.activityIcon),
-    cameraSettings: mergeCamera(recipe),
+    cameraSettings: mergeRecipeCameraSettings(recipe),
     videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
     socialShareSettings: { ...createDefaultSocialShareSettings(), ...recipe.socialShareSettings },
     activePanel: 'tracks',

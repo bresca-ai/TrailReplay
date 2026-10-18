@@ -570,6 +570,8 @@ export const es = {
     percentOfJourney: '{percent}% del recorrido',
     displayDuration: '{seconds}s en pantalla',
     editDuration: 'Editar duración',
+    pictureAnnotationLabel: 'Nota breve sobre la foto',
+    pictureAnnotationHint: 'Añade una nota sobre el momento o el lugar…',
     displayFor: 'Mostrar durante:',
     seconds: 'segundos',
     trailPictureAlt: 'Foto de la ruta',

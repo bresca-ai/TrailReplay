@@ -45,6 +45,7 @@ The current repository already sends GA4 events from the web app for:
 - `photo_import_completed`
 - `export_started`
 - `export_completed`
+- `generate_lead` (new Studio delivery email captured; no email address is sent to GA4)
 - `export_failed`
 - `export_cancelled`
 - `web_vital`
@@ -360,8 +361,20 @@ Mark these as key events after rollout:
 | `support_clicked` | Optional, only if support behavior matters commercially |
 | `project_save_completed` | Direct answer to "how many users download a `.replay` file" |
 | `project_open_completed` | Direct answer to "how many users reopen a project instead of importing a fresh GPX" |
+| `generate_lead` | A Studio video delivery was successfully registered with an email address |
 
 Do not mark low-intent events like `page_view`, `playback_started`, or `help_cta_clicked` as key events.
+
+The Studio registration endpoint stores normalized first- and last-touch source,
+medium, campaign, referring host, and landing-page path with the lead record.
+Browser attribution expires after 90 days. Direct visits without a measurable
+referrer are labeled `unknown`, since an AI or other app may have removed the
+referrer. The `generate_lead` event carries only non-identifying first/last-touch
+parameters; email addresses and route data must never be sent to GA4. The D1
+`leads` table is the source of truth for unique captured emails; `generate_lead`
+counts successful Studio delivery registrations, so repeat exports can produce
+more GA4 events than new D1 lead rows. GA4 event counts can also differ when
+Analytics is blocked.
 
 ## Recommended Audiences
 

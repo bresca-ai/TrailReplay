@@ -21,6 +21,7 @@ import { createToken, hashToken } from '../../functions-lib/tokens.js';
 import {
   isDisposableEmail,
   normalizeEmail,
+  normalizeLeadAttribution,
   normalizeLocale,
   sanitizeRenderSettings,
 } from '../../functions-lib/validation.js';
@@ -65,14 +66,18 @@ export async function onRequest({ request, env }) {
   const settings = sanitizeRenderSettings(body.settings);
   const createdAt = nowIso();
   const expiresAt = isoDaysFromNow(EXPORT_LINK_TTL_DAYS);
-
+  const attribution = normalizeLeadAttribution(body.attribution);
+  const firstTouch = attribution?.firstTouch ?? {};
+  const lastTouch = attribution?.lastTouch ?? {};
   const statements = [
     env.LEADS_DB.prepare(`
       INSERT INTO leads (
         email, created_at, locale, country,
         marketing_opted_in_at, consent_text_version, consent_default_ticked, consent_ip,
-        export_count, last_export_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+        export_count, last_export_at,
+        first_touch_source, first_touch_medium, first_touch_campaign, first_touch_referrer_host, first_touch_landing_page,
+        last_touch_source, last_touch_medium, last_touch_campaign, last_touch_referrer_host, last_touch_landing_page
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(email) DO UPDATE SET
         export_count = export_count + 1,
         last_export_at = excluded.last_export_at,
@@ -92,7 +97,17 @@ export async function onRequest({ request, env }) {
         consent_default_ticked = CASE
           WHEN excluded.marketing_opted_in_at IS NOT NULL THEN excluded.consent_default_ticked
           ELSE leads.consent_default_ticked END,
-        consent_ip = COALESCE(excluded.consent_ip, leads.consent_ip)
+        consent_ip = COALESCE(excluded.consent_ip, leads.consent_ip),
+        first_touch_source = COALESCE(leads.first_touch_source, excluded.first_touch_source),
+        first_touch_medium = COALESCE(leads.first_touch_medium, excluded.first_touch_medium),
+        first_touch_campaign = COALESCE(leads.first_touch_campaign, excluded.first_touch_campaign),
+        first_touch_referrer_host = COALESCE(leads.first_touch_referrer_host, excluded.first_touch_referrer_host),
+        first_touch_landing_page = COALESCE(leads.first_touch_landing_page, excluded.first_touch_landing_page),
+        last_touch_source = COALESCE(excluded.last_touch_source, leads.last_touch_source),
+        last_touch_medium = COALESCE(excluded.last_touch_medium, leads.last_touch_medium),
+        last_touch_campaign = COALESCE(excluded.last_touch_campaign, leads.last_touch_campaign),
+        last_touch_referrer_host = COALESCE(excluded.last_touch_referrer_host, leads.last_touch_referrer_host),
+        last_touch_landing_page = COALESCE(excluded.last_touch_landing_page, leads.last_touch_landing_page)
     `).bind(
       email,
       createdAt,
@@ -103,6 +118,16 @@ export async function onRequest({ request, env }) {
       marketingOptIn && preTickAllowed ? 1 : 0,
       marketingOptIn ? clientIp : null,
       createdAt,
+      firstTouch.source ?? null,
+      firstTouch.medium ?? null,
+      firstTouch.campaign ?? null,
+      firstTouch.referrerHost ?? null,
+      firstTouch.landingPage ?? null,
+      lastTouch.source ?? null,
+      lastTouch.medium ?? null,
+      lastTouch.campaign ?? null,
+      lastTouch.referrerHost ?? null,
+      lastTouch.landingPage ?? null,
     ),
     env.LEADS_DB.prepare(`
       INSERT INTO export_jobs (
