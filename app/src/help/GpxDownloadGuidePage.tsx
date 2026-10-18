@@ -4,6 +4,7 @@ import { HelpLayout } from './HelpLayout';
 import { getGpxTips, getOtherProviders, getProviderGuides } from './helpContent';
 import { trackEvent } from '@/utils/analytics';
 import { StravaImportWalkthrough } from './StravaImportWalkthrough';
+import { WikilocImportWalkthrough } from './WikilocImportWalkthrough';
 
 export function GpxDownloadGuidePage() {
   const { t } = useI18n();
@@ -101,7 +102,7 @@ export function GpxDownloadGuidePage() {
 
       <section className="space-y-6">
         {providerGuides.map((provider) => (
-          <article id={provider.name === 'Strava' ? 'strava' : undefined} key={provider.name} className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-6 shadow-sm">
+          <article id={provider.name === 'Strava' ? 'strava' : provider.name === 'Wikiloc' ? 'wikiloc' : undefined} key={provider.name} className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--trail-orange-15)] text-2xl">
@@ -125,6 +126,10 @@ export function GpxDownloadGuidePage() {
             {provider.name === 'Strava' ? (
               <div className="mt-6">
                 <StravaImportWalkthrough />
+              </div>
+            ) : provider.name === 'Wikiloc' ? (
+              <div className="mt-6">
+                <WikilocImportWalkthrough />
               </div>
             ) : (
               <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.72fr]">

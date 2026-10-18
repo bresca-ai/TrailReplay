@@ -21,6 +21,7 @@ import { HelpLayout } from './HelpLayout';
 import { getQuickStartSteps, getSampleTracks, getTutorialFeatures, getTutorialVideos } from './helpContent';
 import { trackEvent } from '@/utils/analytics';
 import { StravaImportWalkthrough } from './StravaImportWalkthrough';
+import { WikilocImportWalkthrough } from './WikilocImportWalkthrough';
 
 const featureIcons = [MapPin, TimerReset, Palette, Mountain, ImageIcon, Film];
 
@@ -121,6 +122,7 @@ export function TutorialPage() {
       </section>
 
       <StravaImportWalkthrough />
+      <WikilocImportWalkthrough />
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <article className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/75 p-6 shadow-sm">

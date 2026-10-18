@@ -208,27 +208,46 @@ function App() {
     [parseFiles, setShowSidebar, t]
   );
 
-  // The Strava bookmarklet opens this tab synchronously, then transfers the
-  // exported GPX with postMessage. Accept it only from a Strava page that
-  // opened this tab, and feed it into the same local file import path.
+  // Provider bookmarklets open this tab synchronously, then transfer the GPX
+  // with postMessage. Accept it only from the matching provider page that
+  // opened this tab, and feed it into the local file import path.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('stravaImport') !== '1') return;
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get('stravaImport') === '1'
+      ? 'strava'
+      : params.get('wikilocImport') === '1'
+        ? 'wikiloc'
+        : null;
+    if (!source) return;
 
     const stravaOrigins = new Set(['https://www.strava.com', 'https://strava.com']);
+    const isProviderOrigin = source === 'strava'
+      ? (origin: string) => stravaOrigins.has(origin)
+      : (origin: string) => {
+        try {
+          const hostname = new URL(origin).hostname;
+          return hostname === 'wikiloc.com' || hostname.endsWith('.wikiloc.com');
+        } catch {
+          return false;
+        }
+      };
+    const messageType = `trailreplay:${source}-gpx`;
     let received = false;
-    const onStravaMessage = (event: MessageEvent) => {
-      if (received || !stravaOrigins.has(event.origin) || event.source !== window.opener) return;
+    const onProviderMessage = (event: MessageEvent) => {
+      if (received || !isProviderOrigin(event.origin) || event.source !== window.opener) return;
       const payload = event.data as { type?: unknown; fileName?: unknown; gpx?: unknown } | null;
-      if (payload?.type !== 'trailreplay:strava-gpx' || typeof payload.gpx !== 'string') return;
+      if (payload?.type !== messageType || typeof payload.gpx !== 'string') return;
       if (payload.gpx.length === 0 || payload.gpx.length > 50 * 1024 * 1024 || !/<gpx(?:\s|>)/i.test(payload.gpx)) {
-        toast.error(t('help.gpxGuide.providers.strava.bookmarklet.invalidGpx'));
+        toast.error(t(`help.gpxGuide.providers.${source}.bookmarklet.invalidGpx`));
         return;
       }
 
       received = true;
-      const fileName = typeof payload.fileName === 'string' && /^strava-\d+\.gpx$/.test(payload.fileName)
+      const expectedFileName = source === 'strava' ? /^strava-\d+\.gpx$/ : /^wikiloc-\d+\.gpx$/;
+      const fallbackFileName = source === 'strava' ? 'strava-activity.gpx' : 'wikiloc-trail.gpx';
+      const fileName = typeof payload.fileName === 'string' && expectedFileName.test(payload.fileName)
         ? payload.fileName
-        : 'strava-activity.gpx';
+        : fallbackFileName;
       const file = new File([payload.gpx], fileName, { type: 'application/gpx+xml' });
       void parseFiles([file], 'file_picker')
         .then((importedTracks) => {
@@ -243,11 +262,11 @@ function App() {
         });
     };
 
-    window.addEventListener('message', onStravaMessage);
+    window.addEventListener('message', onProviderMessage);
     // This readiness ping contains no user data; the bookmarklet also checks
     // the sender's origin and window before sending the GPX.
     window.opener?.postMessage({ type: 'trailreplay:ready' }, '*');
-    return () => window.removeEventListener('message', onStravaMessage);
+    return () => window.removeEventListener('message', onProviderMessage);
   }, [parseFiles, setShowSidebar, t]);
 
   // Trigger file picker
