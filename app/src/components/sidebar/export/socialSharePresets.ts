@@ -57,5 +57,5 @@ export function presetSettings(preset: SocialShareLayoutPreset, current: SocialS
     showElevationMiniChart: false,
     routeGlow: false,
   };
-  return { layoutPreset: 'classic', template: 'map-first', titleScale: 1, titleWidth: 0.74, titleOffsetX: 0, titleOffsetY: 0, titleColor: '#FFFFFF', statsColor: '#FFFFFF' };
+  return { layoutPreset: 'classic', template: 'map-first', titleScale: 1, titleWidth: 0.74, titleOffsetX: 0, titleOffsetY: 0, titleColor: '#FFFFFF', statsColor: '#FFFFFF', routeGlow: false };
 }

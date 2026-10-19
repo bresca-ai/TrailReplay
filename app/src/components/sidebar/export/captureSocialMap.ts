@@ -6,13 +6,14 @@ const CASING_LAYER = 'social-cover-route-casing';
 /** Capture a clean poster frame while leaving the live map's styling intact. */
 export function captureSocialMap(
   map: maplibregl.Map,
-  options: { routeGlow: boolean; routeOpacity: number },
+  options: { routeGlow: boolean; routeOpacity: number; highlightRoute?: boolean },
 ): Promise<HTMLCanvasElement | null> {
   const capture = async (): Promise<HTMLCanvasElement | null> => {
     const hiddenLayers: string[] = [];
     const trail = map.getLayer('trail-line');
     const trailOpacity = trail ? map.getPaintProperty('trail-line', 'line-opacity') : undefined;
     const trailWidth = trail ? map.getPaintProperty('trail-line', 'line-width') : undefined;
+    const trailColor = trail ? map.getPaintProperty('trail-line', 'line-color') : undefined;
     let casingAdded = false;
 
     try {
@@ -36,13 +37,14 @@ export function captureSocialMap(
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': '#171c19',
-            'line-width': 11,
+            'line-width': options.highlightRoute ? 14 : 11,
             'line-opacity': options.routeOpacity * 0.72,
           },
         }, 'trail-line');
         casingAdded = true;
-        map.setPaintProperty('trail-line', 'line-width', 7);
+        map.setPaintProperty('trail-line', 'line-width', options.highlightRoute ? 9 : 7);
         map.setPaintProperty('trail-line', 'line-opacity', options.routeOpacity);
+        if (options.highlightRoute) map.setPaintProperty('trail-line', 'line-color', '#FF7A1A');
       }
 
       return await new Promise<HTMLCanvasElement | null>((resolve) => {
@@ -85,6 +87,7 @@ export function captureSocialMap(
         if (!options.routeGlow) {
           map.setPaintProperty('trail-line', 'line-width', trailWidth);
           map.setPaintProperty('trail-line', 'line-opacity', trailOpacity);
+          if (options.highlightRoute) map.setPaintProperty('trail-line', 'line-color', trailColor);
         }
       }
       map.triggerRepaint();

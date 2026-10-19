@@ -246,6 +246,7 @@ export function useSocialShareExport() {
           preCapuredMapCanvas = await captureSocialMap(map, {
             routeGlow: settings.template === 'split' ? false : settings.routeGlow,
             routeOpacity: settings.routeTransform.opacity,
+            highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
           });
         }
       }
@@ -377,6 +378,7 @@ export function useSocialShareExport() {
           preCapuredMapCanvas = await captureSocialMap(map, {
             routeGlow: settings.template === 'split' ? false : settings.routeGlow,
             routeOpacity: settings.routeTransform.opacity,
+            highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
           });
         }
       }

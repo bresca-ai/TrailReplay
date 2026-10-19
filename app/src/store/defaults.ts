@@ -130,7 +130,7 @@ export function createDefaultSocialShareSettings(): SocialShareSettings {
     routeTransform: { offsetX: 0, offsetY: 0, scale: 1, opacity: 0.9 },
     photoTransform: { offsetX: 0, offsetY: 0, scale: 1 },
     dataPanelOffsetY: 0,
-    routeGlow: true,
+    routeGlow: false,
   };
 }
 
