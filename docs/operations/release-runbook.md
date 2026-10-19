@@ -7,13 +7,12 @@ TrailReplay uses a continuous deployment model: merges to `main` are production 
 1. Merge only reviewed pull requests with successful CI and Cloudflare Pages checks.
 2. Test the deployed `main` revision on trailreplay.com: page load, GPX import, map render, replay controls, and the relevant changed workflow.
 3. Date the current version's `CHANGELOG.md` section and bump the same SemVer value in `package.json`, `app/package.json`, `app/package-lock.json`, and `APP_VERSION`.
-4. Produce a short, captioned video of the shipped changes. Use actual TrailReplay output and interface footage, check it on a phone, and save the final MP4 at `media/releases/vVERSION-highlights.mp4`. Keep source media licensed for publication and private route data out of the video. The release workflow attaches this file to the GitHub Release.
-5. Run `npm run lint`, `npm run test`, `npm run build`, and `npm run verify:release -- --publish` locally or in CI. Check the release video plays from start to finish with its captions inside the visible frame.
-6. Merge the release-preparation pull request into `main` and verify the Cloudflare Pages production check for that exact commit.
+4. Run `npm run lint`, `npm run test`, `npm run build`, and `npm run verify:release -- --publish` locally or in CI.
+5. Merge the release-preparation pull request into `main` and verify the Cloudflare Pages production check for that exact commit.
 
 ## Publish the GitHub Release
 
-In GitHub Actions, run **Release → Tag and publish GitHub Release** from `main`. Enter the package version without `v`, such as `1.0.1`. The workflow validates metadata and the release video, rebuilds the app, creates an immutable `v1.0.1` tag at the deployed `main` commit, generates GitHub release notes, and attaches the highlights MP4.
+In GitHub Actions, run **Release → Tag and publish GitHub Release** from `main`. Enter the package version without `v`, such as `1.0.1`. The workflow validates metadata, rebuilds the app, creates an immutable `v1.0.1` tag at the deployed `main` commit, and generates GitHub release notes.
 
 Never move, reuse, or delete a published release tag. Publish a new patch version to correct a release.
 

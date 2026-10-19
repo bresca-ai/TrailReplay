@@ -55,16 +55,6 @@ jobs:
             exit 1
           fi
 
-      - name: Confirm release video is ready
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
-        run: |
-          video="media/releases/v${RELEASE_VERSION}-highlights.mp4"
-          test -s "$video" || {
-            echo "Missing release highlights video: $video"
-            exit 1
-          }
-
       - name: Confirm CI passed and Cloudflare deployed this commit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -83,10 +73,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          video="media/releases/v${RELEASE_VERSION}-highlights.mp4"
           gh release create "v$RELEASE_VERSION" \
             --target "$GITHUB_SHA" \
             --title "TrailReplay v$RELEASE_VERSION" \
             --notes "$(node ./scripts/release-notes.mjs "$RELEASE_VERSION")" \
-            --generate-notes \
-            "$video#TrailReplay v$RELEASE_VERSION highlights"
+            --generate-notes
