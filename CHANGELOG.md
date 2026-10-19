@@ -2,6 +2,25 @@
 
 All notable user-facing changes are recorded here. TrailReplay follows [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-10-19
+
+### Added
+
+- Design an optional one-second opening cover for video exports directly over the map. Four starting layouts, including Long Way and two photo-and-map designs, support movable and resizable map, title, stats, and photo frames. Photos can be added from the project or dropped into frames, then cropped and zoomed.
+- Customize cover stats with activity icons, labels, values, colors, order, and layout. The cover shares the selected video typography and can be configured by agent recipes.
+- Dynamic elevation sections focus the profile on notable climbs and descents during replay and Studio export, with section markers and gain or loss labels.
+- Import a Strava activity GPX through a browser bookmarklet, with a guided setup and import walkthrough.
+- Paste or enter coordinates when adding a route landmark.
+- Choose from additional bundled typography styles, including bold condensed options for covers.
+
+### Improved
+
+- Real Pace follows GPX and FIT timestamps, including pauses and stationary periods, so the marker, media, annotations, camera, and exports stay synchronized.
+- Studio export uses deterministic map timing, waits for tiles before encoding, and produces higher-bitrate, more compatible H.264 video.
+- Annotation text scales more clearly on mobile and portrait videos, and large route imports show progress while processing off the main interface thread.
+- Map First poster editing pans and zooms the underlying map while keeping the trail aligned; route landmarks are localized across the five supported languages.
+- Fresh projects start with the satellite map style, and the tutorial now covers camera modes and dynamic elevation more clearly.
+
 ## [1.2.0] - 2026-10-06
 
 ### Added
@@ -78,6 +97,7 @@ Version 1.0.1 was prepared but never published as a release; its changes ship he
 
 - TrailReplay remains available under its existing attribution license. Apps using the software must display the attribution described in `LICENSE`.
 
+[1.3.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.3.0
 [1.2.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.2.0
 [1.1.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.1.0
 [1.0.2]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.2
