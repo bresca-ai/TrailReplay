@@ -250,7 +250,7 @@ export const help = {
   gpxGuide: {
     eyebrow: 'Guide GPX',
     title: 'Comment importer des fichiers GPX dans TrailReplay',
-    description: 'Utilisez cette page si votre parcours se trouve encore sur Strava, Wikiloc, Garmin Connect ou une autre plateforme. L’objectif est simple : exporter un fichier GPX propre et l’importer directement dans TrailReplay.',
+    description: 'Importez une activité Strava ou un itinéraire Wikiloc dans TrailReplay avec un seul favori, ou suivez les étapes manuelles pour obtenir un GPX.',
     headerAction: 'Tutoriel',
     goodGpxTitle: 'Qu’est-ce qu’un bon fichier GPX ?',
     beforeExportTitle: 'Avant l’exportation',
@@ -264,7 +264,7 @@ export const help = {
     otherPlatformsTitle: 'Autres plateformes',
     otherPlatformsBody: 'Le vocabulaire change, mais le principe reste le même : ouvrir l’activité et exporter au format GPX.',
     nextStepTitle: 'Étape suivante',
-    nextStepBody: 'Une fois le fichier GPX téléchargé, ouvrez TrailReplay, importez-le, vérifiez votre itinéraire puis utilisez le tutoriel pour finaliser votre export.',
+    nextStepBody: 'Une fois le parcours dans TrailReplay, vérifiez-le et utilisez le tutoriel pour réaliser votre premier export.',
     beforeCards: {
       chooseGpxLabel: 'GPX, FIT et KML s’importent tous',
       chooseGpxBody: 'GPX, KML et FIT s’importent directement. Seul le TCX doit encore être converti.',
@@ -275,7 +275,31 @@ export const help = {
       checkPrivacyLabel: 'Vérifier la confidentialité',
       checkPrivacyBody: 'Assurez-vous que les paramètres de partage sont corrects avant d’exporter vos activités.',
     },
-    providers: {
+      importer: {
+        title: 'Un seul favori pour Strava et Wikiloc',
+        description: 'Enregistrez Envoyer vers TrailReplay une seule fois. Il reconnaît le site ouvert et charge le parcours dans un nouvel onglet TrailReplay.',
+        intro: 'Utilisez le même favori sur une activité Strava ou un itinéraire Wikiloc. Choisissez Automatique pour l’enregistrer ou Manuel pour les étapes propres à chaque site.',
+        automaticTab: 'Automatique',
+        manualTab: 'Manuel',
+        manualIntro: 'Choisissez le site où se trouve votre parcours, puis suivez les étapes de téléchargement.',
+        steps: {
+          install: { title: 'Enregistrez un seul favori', body: 'Faites glisser Envoyer vers TrailReplay dans la barre des favoris. Remplacez les anciens importateurs Strava ou Wikiloc.' },
+          openPage: { title: 'Ouvrez votre parcours', body: 'Ouvrez une activité Strava ou un itinéraire Wikiloc sur ordinateur. Connectez-vous à Strava ; sur Wikiloc, attendez que la carte se charge.' },
+          clickBookmark: { title: 'Cliquez sur Envoyer vers TrailReplay', body: 'Le favori reconnaît le site et ouvre TrailReplay dans un nouvel onglet avec le parcours chargé.' },
+          useRoute: { title: 'Commencez le montage', body: 'Vérifiez le parcours importé, ajoutez votre récit et les mouvements de caméra, puis exportez la vidéo.' },
+        },
+        privacyNote: 'Le favori lit le parcours dans votre navigateur et transmet le GPX entre les onglets. TrailReplay ne l’envoie pas à nos serveurs.',
+        videoPlaceholder: 'Vidéo explicative bientôt disponible',
+        videoTitle: 'Vidéo : importer depuis Strava ou Wikiloc',
+        videoDescription: 'Découvrez comment enregistrer un seul favori et l’utiliser sur les deux sites.',
+        requirements: 'Utilisez un navigateur sur ordinateur et autorisez le nouvel onglet TrailReplay. Strava exige une session autorisée à exporter ; Wikiloc exige une carte chargée.',
+        copyHint: 'Faites glisser ce bouton dans la barre des favoris. Remplacez les anciens importateurs Strava ou Wikiloc. Un clic copie le code pour une configuration manuelle.',
+        copied: 'Code copié. Créez un favori, modifiez son URL et collez-y le code.',
+        bottomCta: 'Favori enregistré ? Ouvrez une activité Strava ou un itinéraire Wikiloc et cliquez dessus.',
+        button: 'Envoyer vers TrailReplay',
+        dragLabel: 'Faites glisser Envoyer vers TrailReplay dans la barre des favoris pour l’enregistrer',
+      },
+      providers: {
       wikiloc: {
         subtitle: 'Itinéraires outdoor partagés par la communauté',
         step1: "Ouvrez la page Wikiloc de l’itinéraire à importer. Il n’est pas nécessaire d’ouvrir votre profil.",

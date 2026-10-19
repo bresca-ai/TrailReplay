@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { BookmarkPlus } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
-import { createWikilocBookmarkletHref } from '@/utils/wikilocBookmarklet';
+import { createRouteImportBookmarkletHref } from '@/utils/routeImportBookmarklet';
 
-export function WikilocBookmarklet({ placement = 'top' }: { placement?: 'top' | 'bottom' }) {
+export function RouteImportBookmarklet({ placement = 'top' }: { placement?: 'top' | 'bottom' }) {
   const { t } = useI18n();
   const linkRef = useRef<HTMLAnchorElement>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (linkRef.current) linkRef.current.href = createWikilocBookmarkletHref(window.location.origin);
+    if (linkRef.current) linkRef.current.href = createRouteImportBookmarkletHref(window.location.origin);
   }, []);
 
   return (
@@ -19,9 +19,9 @@ export function WikilocBookmarklet({ placement = 'top' }: { placement?: 'top' | 
         <div>
           {placement === 'top' && (
             <>
-              <h3 className="text-base font-bold">{t('help.gpxGuide.providers.wikiloc.bookmarklet.title')}</h3>
+              <h3 className="text-base font-bold">{t('help.gpxGuide.importer.title')}</h3>
               <p className="mt-1 text-sm leading-6 text-[var(--evergreen-80)]">
-                {t('help.gpxGuide.providers.wikiloc.bookmarklet.description')}
+                {t('help.gpxGuide.importer.description')}
               </p>
             </>
           )}
@@ -38,17 +38,17 @@ export function WikilocBookmarklet({ placement = 'top' }: { placement?: 'top' | 
               void navigator.clipboard.writeText(bookmarklet).then(() => setCopied(true)).catch(() => setCopied(false));
             }}
             className="tr-btn tr-btn-primary inline-flex cursor-grab items-center gap-2"
-            aria-label={t('help.gpxGuide.providers.wikiloc.bookmarklet.dragLabel')}
-            title={t('help.gpxGuide.providers.wikiloc.bookmarklet.dragLabel')}
+            aria-label={t('help.gpxGuide.importer.dragLabel')}
+            title={t('help.gpxGuide.importer.dragLabel')}
           >
             <BookmarkPlus className="h-4 w-4" />
-            {t('help.gpxGuide.providers.wikiloc.bookmarklet.button')}
+            {t('help.gpxGuide.importer.button')}
           </a>
           {placement === 'top' && (
             <p className="mt-3 text-xs leading-5 text-[var(--evergreen-60)]" aria-live="polite">
               {copied
-                ? t('help.gpxGuide.providers.wikiloc.bookmarklet.copied')
-                : t('help.gpxGuide.providers.wikiloc.bookmarklet.copyHint')}
+                ? t('help.gpxGuide.importer.copied')
+                : t('help.gpxGuide.importer.copyHint')}
             </p>
           )}
         </div>

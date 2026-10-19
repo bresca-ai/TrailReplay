@@ -1,10 +1,10 @@
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
-import { createWikilocBookmarkletHref } from './wikilocBookmarklet';
+import { createRouteImportBookmarkletHref } from './routeImportBookmarklet';
 
-describe('createWikilocBookmarkletHref', () => {
+describe('createRouteImportBookmarkletHref', () => {
   it('converts the full Wikiloc map track into GPX and sends it to TrailReplay', () => {
-    const source = decodeURIComponent(createWikilocBookmarkletHref('https://trailreplay.example').slice('javascript:'.length));
+    const source = decodeURIComponent(createRouteImportBookmarkletHref('https://trailreplay.example').slice('javascript:'.length));
     const app = { postMessage: vi.fn(), close: vi.fn() };
     const listeners = new Map<string, (event: unknown) => void>();
     const alert = vi.fn();
@@ -45,5 +45,32 @@ describe('createWikilocBookmarkletHref', () => {
     expect(payload.gpx).toContain('<name>Aneto &amp; Coronas</name>');
     expect(payload.gpx).toContain('<trkpt lat="42.631753" lon="0.646152"><ele>2912.9</ele><time>2024-01-01T00:00:00.000Z</time></trkpt>');
     expect(payload.gpx).toContain('<trkpt lat="42.6318" lon="0.6462"><ele>2914.1</ele><time>2024-01-01T00:00:02.000Z</time></trkpt>');
+  });
+
+  it('exports a Strava activity through the same bookmark', async () => {
+    const source = decodeURIComponent(createRouteImportBookmarkletHref('https://trailreplay.example').slice('javascript:'.length));
+    const app = { postMessage: vi.fn(), close: vi.fn() };
+    const listeners = new Map<string, (event: unknown) => Promise<void> | void>();
+    const gpx = '<gpx version="1.1"><trk><name>Run</name></trk></gpx>';
+    const fetch = vi.fn(async () => ({ ok: true, text: async () => gpx }));
+    const window = {
+      open: vi.fn(() => app),
+      addEventListener: vi.fn((name: string, listener: (event: unknown) => Promise<void> | void) => listeners.set(name, listener)),
+      removeEventListener: vi.fn((name: string) => listeners.delete(name)),
+    };
+
+    runInNewContext(source, {
+      window,
+      location: { origin: 'https://www.strava.com', hostname: 'www.strava.com', pathname: '/activities/123456' },
+      alert: vi.fn(),
+      fetch,
+      setTimeout: () => 1,
+      clearTimeout: () => undefined,
+    });
+    await listeners.get('message')?.({ origin: 'https://trailreplay.example', source: app, data: { type: 'trailreplay:ready' } });
+
+    expect(window.open).toHaveBeenCalledWith('https://trailreplay.example/?stravaImport=1', '_blank');
+    expect(fetch).toHaveBeenCalledWith('https://www.strava.com/activities/123456/export_gpx', { credentials: 'include' });
+    expect(app.postMessage).toHaveBeenCalledWith({ type: 'trailreplay:strava-gpx', fileName: 'strava-123456.gpx', gpx }, 'https://trailreplay.example');
   });
 });

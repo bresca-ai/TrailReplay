@@ -1,12 +1,12 @@
-const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
-  if(!/(^|\\.)wikiloc\\.com$/i.test(location.hostname)){
-    alert("Open a Wikiloc trail page before using the TrailReplay bookmark.");return
-  }
-  const match=location.pathname.match(/-(\\d+)(?:\\/|$)/);
-  if(!match){alert("Open a Wikiloc trail page before using the TrailReplay bookmark.");return}
+const createRouteImportBookmarkletSource = (appOrigin: string) => `(()=>{
+  const isStrava=/^(www\\.)?strava\\.com$/i.test(location.hostname);
+  const isWikiloc=/(^|\\.)wikiloc\\.com$/i.test(location.hostname);
+  if(!isStrava&&!isWikiloc){alert("Open a Strava activity or Wikiloc trail before using Send to TrailReplay.");return}
+  const match=isStrava?location.pathname.match(/^\\/activities\\/(\\d+)/):location.pathname.match(/-(\\d+)(?:\\/|$)/);
+  if(!match){alert(isStrava?"Open a Strava activity before using Send to TrailReplay.":"Open a Wikiloc trail before using Send to TrailReplay.");return}
   const id=match[1],appOrigin=${JSON.stringify(appOrigin)};
-  const app=window.open(appOrigin+"/?wikilocImport=1","_blank");
-  if(!app){alert("Allow pop-ups for Wikiloc, then click the TrailReplay bookmark again.");return}
+  const app=window.open(appOrigin+(isStrava?"/?stravaImport=1":"/?wikilocImport=1"),"_blank");
+  if(!app){alert("Allow pop-ups for this site, then click Send to TrailReplay again.");return}
   let timeout;
   const cleanup=()=>{window.removeEventListener("message",onMessage);clearTimeout(timeout)};
   const escapeXml=value=>String(value).replace(/[&<>"']/g,char=>char==="&"?"&amp;":char==="<"?"&lt;":char===">"?"&gt;":char==='"'?"&quot;":"&apos;");
@@ -36,17 +36,25 @@ const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
     }).join('');
     return '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="TrailReplay" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+escapeXml(trail.nom||'Wikiloc trail')+'</name><trkseg>'+track+'</trkseg></trk></gpx>'
   };
-  const onMessage=event=>{
+  const fetchStravaGpx=async()=>{
+    const response=await fetch(location.origin+"/activities/"+id+"/export_gpx",{credentials:"include"});
+    if(!response.ok)throw new Error("Strava could not export this activity ("+response.status+").");
+    const gpx=await response.text();
+    if(!/<gpx(?:\\s|>)/i.test(gpx))throw new Error("Strava did not return a GPX file. Check that you can export this activity.");
+    return gpx
+  };
+  const onMessage=async event=>{
     if(event.origin!==appOrigin||event.source!==app||event.data?.type!=="trailreplay:ready")return;
     cleanup();
     try{
-      const gpx=makeGpx();
-      app.postMessage({type:"trailreplay:wikiloc-gpx",fileName:"wikiloc-"+id+".gpx",gpx},appOrigin)
-    }catch(error){alert(error instanceof Error?error.message:"Could not import this Wikiloc trail.");app.close()}
+      const gpx=isStrava?await fetchStravaGpx():makeGpx();
+      const provider=isStrava?"strava":"wikiloc";
+      app.postMessage({type:"trailreplay:"+provider+"-gpx",fileName:provider+"-"+id+".gpx",gpx},appOrigin)
+    }catch(error){alert(error instanceof Error?error.message:"Could not import this route.");app.close()}
   };
   window.addEventListener("message",onMessage);
   timeout=setTimeout(()=>{cleanup();app.close();alert("TrailReplay did not respond. Please try again.")},30000)
 })();`;
 
-export const createWikilocBookmarkletHref = (appOrigin: string) =>
-  `javascript:${encodeURIComponent(createWikilocBookmarkletSource(appOrigin))}`;
+export const createRouteImportBookmarkletHref = (appOrigin: string) =>
+  `javascript:${encodeURIComponent(createRouteImportBookmarkletSource(appOrigin))}`;
