@@ -188,6 +188,12 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
           </div>
         </aside>
 
+        {localizedPage.slug === 'strava-to-video' && (
+          <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:pt-16">
+            <RouteImportWalkthrough />
+          </div>
+        )}
+
         <section id="how-it-works" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <h2 className="max-w-3xl text-3xl font-bold tracking-[-0.04em] sm:text-4xl">{localizedPage.stepsTitle}</h2>
           <p className="mt-4 max-w-[65ch] leading-7 text-[var(--evergreen-60)]">{localizedPage.stepsIntro}</p>
@@ -204,12 +210,6 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             ))}
           </ol>
         </section>
-
-        {localizedPage.slug === 'strava-to-video' && (
-          <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:pb-28">
-            <RouteImportWalkthrough />
-          </div>
-        )}
 
         <section className="border-y-2 border-[var(--evergreen)] bg-[var(--canvas)]">
           <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:py-28">

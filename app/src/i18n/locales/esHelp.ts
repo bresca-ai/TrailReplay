@@ -279,8 +279,8 @@ export const help = {
         title: 'Un marcador para Strava y Wikiloc',
         description: 'Guarda Enviar a TrailReplay una vez. Reconoce la página abierta y carga la ruta en una nueva pestaña de TrailReplay.',
         intro: 'Usa el mismo marcador en una actividad de Strava o una ruta de Wikiloc. Elige Automática para guardarlo o Manual para ver los pasos de exportación de cada plataforma.',
-        automaticTab: 'Automática',
-        manualTab: 'Manual',
+        automaticTab: 'Marcador automático',
+        manualTab: 'Descarga manual de GPX',
         manualIntro: 'Elige dónde está tu ruta y sigue los pasos para descargarla.',
         steps: {
           install: { title: 'Guarda un solo marcador', body: 'Elige una de las dos opciones de instalación de arriba. Sustituye los importadores antiguos de Strava o Wikiloc.' },

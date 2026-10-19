@@ -279,8 +279,8 @@ export const help = {
         title: 'Un marcador per a Strava i Wikiloc',
         description: 'Desa Envia a TrailReplay una sola vegada. Reconeix la pàgina oberta i carrega la ruta en una pestanya nova de TrailReplay.',
         intro: 'Fes servir el mateix marcador en una activitat de Strava o una ruta de Wikiloc. Tria Automàtica per desar-lo o Manual per veure els passos de cada plataforma.',
-        automaticTab: 'Automàtica',
-        manualTab: 'Manual',
+        automaticTab: 'Marcador automàtic',
+        manualTab: 'Descàrrega manual de GPX',
         manualIntro: 'Tria on tens la ruta i segueix els passos per baixar-la.',
         steps: {
           install: { title: 'Desa un sol marcador', body: 'Tria una de les dues opcions de configuració de dalt. Substitueix els importadors antics de Strava o Wikiloc.' },

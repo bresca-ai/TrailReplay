@@ -279,8 +279,8 @@ export const help = {
         title: 'Ein Lesezeichen für Strava und Wikiloc',
         description: 'Speichere An TrailReplay senden einmal. Es erkennt die geöffnete Seite und lädt die Route in einem neuen TrailReplay-Tab.',
         intro: 'Verwende dasselbe Lesezeichen für eine Strava-Aktivität oder eine Wikiloc-Route. Wähle Automatisch zum Einrichten oder Manuell für die Schritte der jeweiligen Plattform.',
-        automaticTab: 'Automatisch',
-        manualTab: 'Manuell',
+        automaticTab: 'Automatisches Lesezeichen',
+        manualTab: 'GPX manuell herunterladen',
         manualIntro: 'Wähle die Plattform deiner Route und folge den Download-Schritten.',
         steps: {
           install: { title: 'Ein Lesezeichen speichern', body: 'Wähle oben eine der beiden Einrichtungsoptionen. Ersetze ältere Strava- oder Wikiloc-Importer.' },

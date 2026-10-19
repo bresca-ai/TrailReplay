@@ -279,8 +279,8 @@ export const help = {
         title: 'Un seul favori pour Strava et Wikiloc',
         description: 'Enregistrez Envoyer vers TrailReplay une seule fois. Il reconnaît le site ouvert et charge le parcours dans un nouvel onglet TrailReplay.',
         intro: 'Utilisez le même favori sur une activité Strava ou un itinéraire Wikiloc. Choisissez Automatique pour l’enregistrer ou Manuel pour les étapes propres à chaque site.',
-        automaticTab: 'Automatique',
-        manualTab: 'Manuel',
+        automaticTab: 'Favori automatique',
+        manualTab: 'Téléchargement manuel du GPX',
         manualIntro: 'Choisissez le site où se trouve votre parcours, puis suivez les étapes de téléchargement.',
         steps: {
           install: { title: 'Enregistrez un seul favori', body: 'Choisissez l’une des deux méthodes de configuration ci-dessus. Remplacez les anciens importateurs Strava ou Wikiloc.' },

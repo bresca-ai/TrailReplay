@@ -24,6 +24,8 @@ export function GpxDownloadGuidePage() {
         },
       ]}
     >
+      <RouteImportWalkthrough defaultMethod="manual" />
+
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <article className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-[linear-gradient(160deg,var(--evergreen),#24372a)] p-6 text-[var(--canvas)] shadow-sm">
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[var(--trail-orange)]">
@@ -97,8 +99,6 @@ export function GpxDownloadGuidePage() {
           </div>
         </div>
       </section>
-
-      <RouteImportWalkthrough />
 
       <section className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-3">

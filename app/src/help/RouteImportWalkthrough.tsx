@@ -9,10 +9,10 @@ type Provider = 'Strava' | 'Wikiloc';
 
 const automaticSteps = ['install', 'openPage', 'clickBookmark', 'useRoute'] as const;
 
-export function RouteImportWalkthrough() {
+export function RouteImportWalkthrough({ defaultMethod = 'automatic' }: { defaultMethod?: Method }) {
   const { t } = useI18n();
   const id = useId();
-  const [method, setMethod] = useState<Method>('automatic');
+  const [method, setMethod] = useState<Method>(defaultMethod);
   const [provider, setProvider] = useState<Provider>('Strava');
   const videoRef = useRef<HTMLVideoElement>(null);
   const guide = getProviderGuides(t).find((item) => item.name === provider);
@@ -73,7 +73,7 @@ export function RouteImportWalkthrough() {
         </div>
       </div>
 
-      <div role="tablist" aria-label={t('help.tutorial.importRouteTitle')} className="mb-5 inline-flex rounded-full border border-[var(--evergreen)]/10 bg-white/60 p-1">
+      <div role="tablist" aria-label={t('help.tutorial.importRouteTitle')} className="mb-5 grid w-full max-w-xl grid-cols-2 rounded-2xl border border-[var(--evergreen)]/10 bg-white/60 p-1">
         {(['automatic', 'manual'] as const).map((choice) => (
           <button
             key={choice}
@@ -83,7 +83,7 @@ export function RouteImportWalkthrough() {
             aria-selected={method === choice}
             aria-controls={`${id}-${choice}-panel`}
             onClick={() => setMethod(choice)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${method === choice ? 'bg-[var(--evergreen)] text-white shadow-sm' : 'text-[var(--evergreen-80)] hover:bg-white/70'}`}
+            className={`rounded-xl px-3 py-2 text-center text-sm font-semibold leading-5 transition ${method === choice ? 'bg-[var(--evergreen)] text-white shadow-sm' : 'text-[var(--evergreen-80)] hover:bg-white/70'}`}
           >
             {t(`${content}.${choice}Tab`)}
           </button>

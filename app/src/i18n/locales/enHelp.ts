@@ -279,8 +279,8 @@ export const help = {
         title: 'One bookmark for Strava and Wikiloc',
         description: 'Save Send to TrailReplay once. It recognizes the open site and loads the route in a new TrailReplay tab.',
         intro: 'Use the same bookmark on a Strava activity or a Wikiloc trail. Choose Automatic to save it, or Manual for platform-specific export steps.',
-        automaticTab: 'Automatic',
-        manualTab: 'Manual',
+        automaticTab: 'Automatic bookmark',
+        manualTab: 'Manual GPX download',
         manualIntro: 'Choose where your route is stored, then follow its download steps.',
         steps: {
           install: { title: 'Save one bookmark', body: 'Choose either setup option above. Replace any older Strava or Wikiloc importer bookmarks.' },
