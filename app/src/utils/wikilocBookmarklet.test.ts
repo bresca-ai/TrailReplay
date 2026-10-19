@@ -13,9 +13,10 @@ describe('createWikilocBookmarkletHref', () => {
     expect(source).toContain('/wikiloc/downloadToFile.do');
     expect(source).toContain('fetchOriginalGpx()');
     expect(source).toContain('/original/i');
+    expect(source).toContain('response.headers.get("content-type")');
+    expect(source).toContain('slice(0,140)');
     expect(source).toContain('fetchGpx("simplified500")');
     expect(source).toContain('Wikiloc returned no GPX. ');
-    expect(source).toContain('HTTP "+response.status+" ("');
     expect(source).toContain('Please send these details so I can fix the importer.');
     expect(source).toContain('simplified},appOrigin');
     expect(source).toContain('trailreplay:wikiloc-gpx');

@@ -14,7 +14,10 @@ const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
     if(response.ok&&/<gpx(?:\\s|>)/i.test(gpx))return {gpx,error:null};
     const title=(gpx.match(/<title[^>]*>([^<]{1,120})</i)||[])[1]?.replace(/\\s+/g," ").trim();
     const path=new URL(response.url).pathname;
-    return {gpx:null,error:label+": HTTP "+response.status+" ("+(title||path)+")"};
+    const bodyText=new DOMParser().parseFromString(gpx,"text/html").body.textContent||"";
+    const excerpt=bodyText.replace(/\\s+/g," ").trim().slice(0,140);
+    const contentType=response.headers.get("content-type")||"unknown content type";
+    return {gpx:null,error:label+": HTTP "+response.status+", "+contentType+" ("+(title||path)+")"+(excerpt?" — "+excerpt:"")};
   };
   const fetchOriginalGpx=async()=>{
     const pageResponse=await fetch(location.origin+"/wikiloc/download.do?id="+encodeURIComponent(id)+"&event=file",{credentials:"include"});
