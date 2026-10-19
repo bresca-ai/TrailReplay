@@ -84,19 +84,6 @@ function drawRoutePlain(
   ctx.globalAlpha = opacity;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-
-  // Crisp casing keeps the route readable across both light and dark map tiles
-  // without the blurred halo used by the optional glow treatment.
-  ctx.strokeStyle = 'rgba(0,0,0,0.82)';
-  ctx.lineWidth = lineWidth * 1.75;
-  tracePath(ctx, points);
-  ctx.stroke();
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.92)';
-  ctx.lineWidth = lineWidth * 1.35;
-  tracePath(ctx, points);
-  ctx.stroke();
-
   ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
   tracePath(ctx, points);
@@ -375,8 +362,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
   // Route glow (3-D layered) — full poster, no clipping
   if (projectedRouteForMap && projectedRouteForMap.length > 1) {
     const drawRoute = settings.routeGlow ? drawRouteGlow : drawRoutePlain;
-    const lineWidth = Math.round(w * (settings.routeGlow ? 0.014 : 0.018));
-    drawRoute(ctx, projectedRouteForMap, lineWidth, settings.routeTransform.opacity, input.routeColor);
+    drawRoute(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
   }
 
   // Logo (top-left)
@@ -475,8 +461,7 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
       scale,
     });
     const drawRoute = settings.routeGlow ? drawRouteGlow : drawRoutePlain;
-    const lineWidth = Math.round(w * (settings.routeGlow ? 0.012 : 0.016));
-    drawRoute(ctx, projected, lineWidth, opacity, input.routeColor);
+    drawRoute(ctx, projected, Math.round(w * 0.012), opacity, input.routeColor);
   }
 
   // Logo
