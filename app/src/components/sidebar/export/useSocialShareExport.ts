@@ -428,23 +428,22 @@ export function useSocialShareExport() {
     }
   }, [buildInput, overlayFont, settings, tracks.length]);
 
-  // Normalized bounding box for the data panel (stats + elevation) in poster coordinates
+  // Normalized box for direct manipulation of stats (or elevation when stats are hidden).
   const dataPanelBboxNorm: RouteBboxNorm | null = (() => {
     if (!settings.showStats && !settings.showElevationMiniChart) return null;
+    const visibleStatCount = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
+    if (settings.showStats && visibleStatCount > 0 && settings.statsFrame) return settings.statsFrame;
     if (settings.template === 'split') {
-      const rows = Math.ceil((settings.stats?.filter((stat) => stat.visible).length ?? 0) / Math.max(1, settings.statsLayout));
+      const rows = Math.ceil(visibleStatCount / Math.max(1, settings.statsLayout));
       const wide = settings.aspectRatio === '16:9';
       return settings.showStats && rows > 0 ? { x: 0.045, y: (wide ? 0.88 : 0.905) - settings.dataPanelOffsetY, w: 0.91, h: (wide ? 0.11 : 0.09) * rows } : null;
     }
     const isPhotoFirst = settings.template === 'photo-first';
     const elevHNorm = settings.showElevationMiniChart ? (isPhotoFirst ? 0.155 : 0.105) : 0;
-    const visibleStatCount = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
     const statsRows = visibleStatCount > 0 ? Math.ceil(visibleStatCount / (settings.statsLayout ?? 3)) : 0;
     const statsHNorm = settings.showStats ? (isPhotoFirst ? 0.125 : 0.115) * statsRows : 0;
-    const panelH = elevHNorm + statsHNorm;
-    if (panelH <= 0) return null;
-    const panelY = 1 - panelH - settings.dataPanelOffsetY;
-    return { x: 0, y: Math.max(0, panelY), w: 1, h: panelH };
+    if (statsHNorm > 0) return { x: 0, y: Math.max(0, 1 - elevHNorm - statsHNorm - settings.dataPanelOffsetY), w: 1, h: statsHNorm };
+    return elevHNorm > 0 ? { x: 0, y: Math.max(0, 1 - elevHNorm - settings.dataPanelOffsetY), w: 1, h: elevHNorm } : null;
   })();
 
   const titleBboxNorm: RouteBboxNorm = (() => {

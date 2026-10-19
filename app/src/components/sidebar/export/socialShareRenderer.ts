@@ -241,7 +241,7 @@ function drawStatsBar(
   const rows = Math.ceil(visibleStats.length / columns);
   const colW = w / columns;
   const rowH = h / rows;
-  const scale = Math.max(0.7, Math.min(1.4, settings.statsScale ?? 1));
+  const scale = settings.statsFrame ? 1 : Math.max(0.7, Math.min(1.4, settings.statsScale ?? 1));
   const splitWide = settings.template === 'split' && w > h;
   const labelSize = Math.round(rowH * (splitWide ? 0.29 : 0.19) * scale);
   const numSize = Math.round(rowH * (splitWide ? 0.52 : settings.layoutPreset === 'ridge-photo' || settings.layoutPreset === 'photo-grid' ? 0.42 : 0.50) * scale);
@@ -434,6 +434,24 @@ function drawPhotoBackground(
   ctx.restore();
 }
 
+function drawCustomStats(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
+  const { settings } = input;
+  if (!settings.statsFrame || !hasVisibleStats(settings)) return;
+  const { x, y, w: frameW, h: frameH } = settings.statsFrame;
+  const box = { x: x * w, y: y * h, w: frameW * w, h: frameH * h };
+  if (settings.template !== 'split' && settings.showStatsBackground !== false) {
+    const fade = h * 0.025;
+    const gradient = ctx.createLinearGradient(0, box.y - fade, 0, box.y + box.h + fade);
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(0.24, 'rgba(0,0,0,0.68)');
+    gradient.addColorStop(0.76, 'rgba(0,0,0,0.68)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(box.x, box.y - fade, box.w, box.h + fade * 2);
+  }
+  drawStatsBar(ctx, box.x, box.y, box.w, box.h, input.summary, settings, input.labels, input.fontFamily, input.statIconImages);
+}
+
 
 // --- Template renderers ---
 
@@ -502,9 +520,9 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
   }
 
   // Bottom scrim + stats/elevation
-  if (showStats || settings.showElevationMiniChart) {
+  if ((showStats && !settings.statsFrame) || settings.showElevationMiniChart) {
     const elevH = settings.showElevationMiniChart ? Math.round(h * 0.105) : 0;
-    const statsH = showStats ? Math.round(h * 0.115 * statsRowCount(settings)) : 0;
+    const statsH = showStats && !settings.statsFrame ? Math.round(h * 0.115 * statsRowCount(settings)) : 0;
     const shift = Math.round(settings.dataPanelOffsetY * h);
     const scrimBottom = h - shift;
     const panelTop = scrimBottom - elevH - statsH;
@@ -535,11 +553,12 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
       ctx.fillRect(0, gradTop, w, totalH);
     }
 
-    if (showStats) drawStatsBar(ctx, 0, panelTop, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
+    if (showStats && !settings.statsFrame) drawStatsBar(ctx, 0, panelTop, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
     if (settings.showElevationMiniChart) {
       drawElevationChart(ctx, pad, scrimBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily, settings.statsColor ?? '#FFFFFF');
     }
   }
+  drawCustomStats(ctx, w, h, input);
 }
 
 function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
@@ -558,9 +577,9 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
   const shift = Math.round(settings.dataPanelOffsetY * h);
   const panelBottom = h - shift;
   const elevH = settings.showElevationMiniChart ? Math.round(h * 0.155) : 0;
-  const statsH = showStats ? Math.round(h * 0.125 * statsRowCount(settings)) : 0;
+  const statsH = showStats && !settings.statsFrame ? Math.round(h * 0.125 * statsRowCount(settings)) : 0;
   const statsY = panelBottom - elevH - statsH;
-  if (settings.showStatsBackground !== false && (showStats || settings.showElevationMiniChart)) {
+  if (settings.showStatsBackground !== false && (statsH > 0 || settings.showElevationMiniChart)) {
     const botStart = statsY - Math.round(h * 0.07);
     const botGrad = ctx.createLinearGradient(0, botStart, 0, panelBottom);
     botGrad.addColorStop(0, 'rgba(10,10,10,0)');
@@ -606,10 +625,11 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
   }
 
   // Stats + elevation
-  if (showStats) drawStatsBar(ctx, 0, statsY, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
+  if (showStats && !settings.statsFrame) drawStatsBar(ctx, 0, statsY, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
   if (settings.showElevationMiniChart) {
     drawElevationChart(ctx, pad, panelBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily, settings.statsColor ?? '#FFFFFF');
   }
+  drawCustomStats(ctx, w, h, input);
 }
 
 function drawPhotoSlot(ctx: CanvasRenderingContext2D, slot: SocialSharePhotoSlot, image: HTMLImageElement | undefined, w: number, h: number) {
@@ -706,9 +726,10 @@ function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: R
   const titleY = h * 0.85 + settings.titleOffsetY * h;
   drawTitle(ctx, summary.title, titleX, titleY, w * (settings.titleWidth ?? 0.92), titleSize, input.fontFamily, settings.titleColor ?? '#21372C', false);
 
-  if (hasVisibleStats(settings)) {
+  if (hasVisibleStats(settings) && !settings.statsFrame) {
     const wide = w > h;
     drawStatsBar(ctx, pad, h * ((wide ? 0.88 : 0.905) - settings.dataPanelOffsetY), w - pad * 2, h * (wide ? 0.11 : 0.09) * statsRowCount(settings), summary, settings, input.labels, input.fontFamily, input.statIconImages);
   }
+  drawCustomStats(ctx, w, h, input);
   drawBrandMark(ctx, w, h, input);
 }

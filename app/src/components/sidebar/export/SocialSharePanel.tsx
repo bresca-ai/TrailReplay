@@ -88,7 +88,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
 
   const applyPreset = (preset: typeof PRESET_ORDER[number]) => {
     const patch = presetSettings(preset, settings);
-    setSocialShareSettings(patch);
+    setSocialShareSettings({ ...patch, statsFrame: undefined });
     if (preset === 'long-way') setTrailStyle({ overlayFont: 'poster' });
     if (preset === 'ridge-photo' || preset === 'photo-grid') setTrailStyle({ overlayFont: 'condensed' });
     setActivePhotoSlotId(patch.photoSlots?.[0]?.id ?? null);
@@ -521,19 +521,15 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
 
       {settings.showStats && (
         <div className="space-y-2 rounded-xl border border-black/10 bg-black/[0.025] p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.customizeStats')}</p>
-              <p className="mt-0.5 text-[11px] opacity-60">{t('imageExport.customizeStatsHint')}</p>
-            </div>
-            <div className="flex items-center gap-1" aria-label={t('imageExport.statColumns')}>
-              {([2, 3, 4] as const).map((count) => (
-                <button key={count} type="button" onClick={() => setSocialShareSettings({ statsLayout: count })}
-                  className={`rounded px-2 py-1 text-xs ${settings.statsLayout === count ? 'bg-[var(--trail-orange)] text-white' : 'bg-black/5 hover:bg-black/10'}`}>
-                  {count}
-                </button>
-              ))}
-            </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.customizeStats')}</p>
+            <p className="mt-0.5 text-[11px] opacity-60">{t('imageExport.customizeStatsHint')}</p>
+            <p className="mt-1 text-[11px] font-medium text-[var(--evergreen)]">{t('imageExport.dragResizeStatsHint')}</p>
+            {settings.statsFrame && <button type="button"
+              onClick={() => setSocialShareSettings({ statsFrame: undefined, statsLayout: settings.layoutPreset === 'classic' ? 3 : 2 })}
+              className="mt-1 text-[11px] font-semibold text-[var(--trail-orange)] hover:underline">
+              {t('imageExport.resetStatsLayout')}
+            </button>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] opacity-60">{t('imageExport.statsStyle')}</span>
@@ -556,13 +552,6 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
                 className="accent-[var(--trail-orange)]" />
               {t('imageExport.statsBackground')}
             </label>
-          </div>
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="shrink-0 opacity-60">{t('imageExport.statsSize')}</span>
-            <input type="range" min={0.7} max={1.4} step={0.05} value={settings.statsScale ?? 1}
-              onChange={(event) => setSocialShareSettings({ statsScale: Number(event.target.value) })}
-              className="flex-1 accent-[var(--trail-orange)]" />
-            <span className="w-9 text-right tabular-nums opacity-60">{Math.round((settings.statsScale ?? 1) * 100)}%</span>
           </div>
           {stats.map((stat, index) => (
             <div key={stat.id} className="space-y-1.5 rounded-lg bg-[var(--canvas)] p-2">

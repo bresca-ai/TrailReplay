@@ -324,9 +324,11 @@ export interface SocialShareSettings {
   showLocation: boolean;
   showStats: boolean;
   stats: SocialShareStat[];
-  statsLayout: 2 | 3 | 4;
+  statsLayout: 1 | 2 | 3 | 4;
   statsStyle: 'minimal' | 'cards' | 'accent';
   statsColor: string;
+  /** Normalized stats box on the cover; created when the user moves or resizes it. */
+  statsFrame?: { x: number; y: number; w: number; h: number };
   /** Whether the stats area uses a readability scrim or filled stat cards. */
   showStatsBackground?: boolean;
   statsScale: number;

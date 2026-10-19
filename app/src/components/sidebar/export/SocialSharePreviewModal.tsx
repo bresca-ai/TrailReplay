@@ -37,9 +37,34 @@ interface RouteDragState {
 }
 
 interface PanelDragState {
+  startX: number;
   startY: number;
   startOffsetY: number;
+  frame: RouteBboxNorm;
+  containerW: number;
   containerH: number;
+}
+
+type StatsResizeCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+interface StatsResizeState {
+  startX: number;
+  startY: number;
+  frame: RouteBboxNorm;
+  corner: StatsResizeCorner;
+  containerW: number;
+  containerH: number;
+}
+
+function chooseStatsColumns(width: number, height: number, count: number): 1 | 2 | 3 | 4 {
+  let best: 1 | 2 | 3 | 4 = 1;
+  let bestScore = Infinity;
+  for (let columns = 1; columns <= Math.min(4, count); columns++) {
+    const rows = Math.ceil(count / columns);
+    const score = Math.abs(Math.log((width / Math.max(1, height)) / (columns / rows)));
+    if (score < bestScore) { best = columns as 1 | 2 | 3 | 4; bestScore = score; }
+  }
+  return best;
 }
 
 interface TitleDragState {
@@ -78,7 +103,9 @@ export function SocialSharePreviewModal({
 
   // Panel overlay drag state
   const panelDragRef = useRef<PanelDragState | null>(null);
-  const [panelDragVisual, setPanelDragVisual] = useState({ dy: 0, active: false });
+  const [panelDragVisual, setPanelDragVisual] = useState({ dx: 0, dy: 0, active: false });
+  const statsResizeRef = useRef<StatsResizeState | null>(null);
+  const [statsResizeVisual, setStatsResizeVisual] = useState({ dx: 0, dy: 0, corner: 'bottom-right' as StatsResizeCorner, active: false });
   const titleDragRef = useRef<TitleDragState | null>(null);
   const [titleDragVisual, setTitleDragVisual] = useState({ dx: 0, dy: 0, active: false });
   const titleResizeRef = useRef<{ x: number; y: number; scale: number; width: number; containerW: number } | null>(null);
@@ -134,6 +161,7 @@ export function SocialSharePreviewModal({
 
   const showRouteOverlay = !!routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
+  const hasVisibleCoverStats = settings.showStats && (settings.stats?.some((stat) => stat.visible) ?? true);
   const hasAnyOverlay = showRouteOverlay || showPanelOverlay || !!titleBboxNorm || !!logoBboxNorm;
   const hasEmptySplitFrame = settings.template === 'split' && (!settings.photoSlots?.length || settings.photoSlots.some((slot) => !slot.imageUrl));
   const photoFirstSlotId = settings.photoSlots?.[0]?.id ?? 'photo-first-hero';
@@ -373,30 +401,76 @@ export function SocialSharePreviewModal({
     e.stopPropagation();
     e.preventDefault();
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !dataPanelBboxNorm) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = container.getBoundingClientRect();
     panelDragRef.current = {
+      startX: e.clientX,
       startY: e.clientY,
       startOffsetY: settings.dataPanelOffsetY,
+      frame: dataPanelBboxNorm,
+      containerW: rect.width,
       containerH: rect.height,
     };
-    setPanelDragVisual({ dy: 0, active: true });
+    setPanelDragVisual({ dx: 0, dy: 0, active: true });
   };
 
   const onPanelPointerMove = (e: React.PointerEvent) => {
     const ds = panelDragRef.current;
     if (!ds) return;
-    setPanelDragVisual({ dy: e.clientY - ds.startY, active: true });
+    setPanelDragVisual({ dx: e.clientX - ds.startX, dy: e.clientY - ds.startY, active: true });
   };
 
-  const onPanelPointerUp = () => {
+  const onPanelPointerUp = (e: React.PointerEvent) => {
     const ds = panelDragRef.current;
     if (!ds) return;
-    const newOffsetY = Math.max(0, Math.min(0.85, ds.startOffsetY - panelDragVisual.dy / ds.containerH));
-    setSocialShareSettings({ dataPanelOffsetY: newOffsetY });
+    if (hasVisibleCoverStats) {
+      setSocialShareSettings({ statsFrame: {
+        ...ds.frame,
+        x: Math.max(0, Math.min(1 - ds.frame.w, ds.frame.x + (e.clientX - ds.startX) / ds.containerW)),
+        y: Math.max(0, Math.min(1 - ds.frame.h, ds.frame.y + (e.clientY - ds.startY) / ds.containerH)),
+      } });
+    } else {
+      setSocialShareSettings({ dataPanelOffsetY: Math.max(0, Math.min(0.85, ds.startOffsetY - (e.clientY - ds.startY) / ds.containerH)) });
+    }
     panelDragRef.current = null;
-    setPanelDragVisual({ dy: 0, active: false });
+    setPanelDragVisual({ dx: 0, dy: 0, active: false });
+  };
+
+  const onStatsResizeDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const corner = e.currentTarget.getAttribute('data-corner') as StatsResizeCorner;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || !dataPanelBboxNorm) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    statsResizeRef.current = { startX: e.clientX, startY: e.clientY, frame: dataPanelBboxNorm, corner, containerW: rect.width, containerH: rect.height };
+    setStatsResizeVisual({ dx: 0, dy: 0, corner, active: true });
+  };
+
+  const onStatsResizeMove = (e: React.PointerEvent) => {
+    const drag = statsResizeRef.current;
+    if (!drag) return;
+    setStatsResizeVisual({ dx: e.clientX - drag.startX, dy: e.clientY - drag.startY, corner: drag.corner, active: true });
+  };
+
+  const onStatsResizeUp = (e: React.PointerEvent) => {
+    const drag = statsResizeRef.current;
+    if (!drag) return;
+    const dx = (e.clientX - drag.startX) / drag.containerW;
+    const dy = (e.clientY - drag.startY) / drag.containerH;
+    const fromLeft = drag.corner.includes('left');
+    const fromTop = drag.corner.includes('top');
+    const right = drag.frame.x + drag.frame.w;
+    const bottom = drag.frame.y + drag.frame.h;
+    const x = fromLeft ? Math.max(0, Math.min(right - 0.16, drag.frame.x + dx)) : drag.frame.x;
+    const y = fromTop ? Math.max(0, Math.min(bottom - 0.07, drag.frame.y + dy)) : drag.frame.y;
+    const w = fromLeft ? right - x : Math.max(0.16, Math.min(1 - x, drag.frame.w + dx));
+    const h = fromTop ? bottom - y : Math.max(0.07, Math.min(1 - y, drag.frame.h + dy));
+    const count = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
+    setSocialShareSettings({ statsFrame: { x, y, w, h }, statsLayout: chooseStatsColumns(w * drag.containerW, h * drag.containerH, count) });
+    statsResizeRef.current = null;
+    setStatsResizeVisual({ dx: 0, dy: 0, corner: 'bottom-right', active: false });
   };
 
   return (
@@ -529,16 +603,16 @@ export function SocialSharePreviewModal({
               </div>
             </div>
 
-            {/* Panel overlay — rendered first (lower z-order) */}
+            {/* Drag stats to place them; resize their box to change row/column flow. */}
             {showPanelOverlay && dataPanelBboxNorm && (
               <div
-                className="absolute z-10 border-2 border-dashed border-transparent hover:border-white/70 rounded select-none"
+                className="group absolute z-20 rounded border-2 border-dashed border-white/35 hover:border-white/85 select-none"
                 style={{
-                  left: `${dataPanelBboxNorm.x * 100}%`,
-                  top: `${dataPanelBboxNorm.y * 100}%`,
-                  width: `${dataPanelBboxNorm.w * 100}%`,
-                  height: `${dataPanelBboxNorm.h * 100}%`,
-                  transform: `translateY(${panelDragVisual.active ? panelDragVisual.dy : 0}px)`,
+                  left: `calc(${dataPanelBboxNorm.x * 100}% + ${statsResizeVisual.active && statsResizeVisual.corner.includes('left') ? statsResizeVisual.dx : 0}px)`,
+                  top: `calc(${dataPanelBboxNorm.y * 100}% + ${statsResizeVisual.active && statsResizeVisual.corner.includes('top') ? statsResizeVisual.dy : 0}px)`,
+                  width: `calc(${dataPanelBboxNorm.w * 100}% + ${statsResizeVisual.active ? (statsResizeVisual.corner.includes('left') ? -statsResizeVisual.dx : statsResizeVisual.dx) : 0}px)`,
+                  height: `calc(${dataPanelBboxNorm.h * 100}% + ${statsResizeVisual.active ? (statsResizeVisual.corner.includes('top') ? -statsResizeVisual.dy : statsResizeVisual.dy) : 0}px)`,
+                  transform: `translate(${panelDragVisual.active ? panelDragVisual.dx : 0}px, ${panelDragVisual.active ? panelDragVisual.dy : 0}px)`,
                   cursor: panelDragVisual.active ? 'grabbing' : 'grab',
                   touchAction: 'none',
                   pointerEvents: photoEditMode ? 'none' : 'auto',
@@ -547,7 +621,22 @@ export function SocialSharePreviewModal({
                 onPointerMove={onPanelPointerMove}
                 onPointerUp={onPanelPointerUp}
                 onPointerCancel={onPanelPointerUp}
-              />
+                aria-label={t('imageExport.dragResizeStatsHint')}
+              >
+                {hasVisibleCoverStats && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => (
+                  <div key={corner}
+                    className={`absolute z-30 flex h-5 w-5 items-center justify-center rounded bg-white text-[var(--evergreen)] shadow cursor-nwse-resize ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
+                    style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
+                    data-corner={corner}
+                    onPointerDown={onStatsResizeDown}
+                    onPointerMove={onStatsResizeMove}
+                    onPointerUp={onStatsResizeUp}
+                    onPointerCancel={onStatsResizeUp}
+                    aria-label={t('imageExport.resizeStats')} title={t('imageExport.resizeStats')}>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 9L9 1M5 9L9 5" stroke="currentColor" strokeWidth="1.5" /></svg>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* Route overlay — rendered last (higher z-order) */}
