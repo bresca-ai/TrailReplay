@@ -741,6 +741,7 @@ export const fr = {
       summit: 'Sommet', pass: 'Col', viewpoint: 'Point de vue', 'high-point': 'Point haut', waterfall: 'Cascade', trailhead: 'Départ du sentier', hut: 'Refuge', shelter: 'Abri', camp: 'Campement', water: 'Eau', 'aid-station': 'Ravitaillement',
       finish: 'Arrivée', town: 'Ville', lake: 'Lac', 'river-crossing': 'Traversée de rivière', photo: 'Photo', note: 'Note', challenge: 'Défi', custom: 'Personnalisé', 'highest-point': 'Point culminant', 'longest-climb': 'Plus longue montée', 'major-descent': 'Descente principale', halfway: 'Mi-parcours',
     },
+    pasteCoordinates: 'Ou insère les coordonnées ici',
   },
   imageExport: {
     modeVideo: 'Vidéo',

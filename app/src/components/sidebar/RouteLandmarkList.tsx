@@ -1,16 +1,20 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MapPin, Pencil, Plus, Trash2, Undo2, X } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useAllRouteLandmarks } from '@/hooks/useAllRouteLandmarks';
 import {
+  colorForLandmark,
+  glyphForLandmark,
   LANDMARK_COLORS,
   LANDMARK_GLYPH_KEYS,
   PINHEAD_PATHS,
-  colorForLandmark,
-  glyphForLandmark,
 } from '@/components/map/landmarkGlyphs';
 import { trackEvent } from '@/utils/analytics';
 import type { RouteLandmark } from '@/types/landmarks';
+import { sanitizeCoordinates } from '@/components/sidebar/landmarks/coordinates.ts';
+import { mapGlobalRef } from '@/utils/mapRef.ts';
+import { createUserLandmark } from '@/utils/createUserLandmark.ts';
+import { useFindNearestRoutePoint } from '@/components/map/hooks/useFindNearestRoutePoint.ts';
 import { useI18n } from '@/i18n/useI18n';
 
 function GlyphIcon({ glyph, color, size = 16 }: { glyph: string; color: string; size?: number }) {
@@ -137,6 +141,10 @@ export function RouteLandmarkList() {
   const hiddenLandmarkIds = useAppStore((state) => state.hiddenLandmarkIds);
   const restoreHiddenLandmarks = useAppStore((state) => state.restoreHiddenLandmarks);
   const userLandmarks = useAppStore((state) => state.userLandmarks);
+  const addLandmark = useAppStore((state) => state.addLandmark);
+  const findNearestRoutePoint = useFindNearestRoutePoint();
+  const [landmarkCoordinates, setLandmarkCoordinates] = useState<string>('');
+  const [delayTimeout, setDelayTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const ordered = useMemo(
     () => [...landmarks].sort((left, right) => (left.progress ?? 1) - (right.progress ?? 1)),
@@ -148,6 +156,46 @@ export function RouteLandmarkList() {
   const restorableCount = hiddenLandmarkIds.filter(
     (id) => !userLandmarks.some((entry) => entry.id === id),
   ).length;
+
+  const clearDelayTimeout = useCallback(() => {
+    if (delayTimeout) {
+      clearTimeout(delayTimeout);
+      setDelayTimeout(null);
+    }
+  }, [delayTimeout]);
+
+  const createLandmarkFromCoordinatesDelayed = (coordinates: [number, number] | undefined, delaySeconds: number) => {
+    if (!coordinates) {
+      return clearDelayTimeout();
+    }
+
+    setDelayTimeout(setTimeout(() => {
+      mapGlobalRef.current?.flyTo({
+        center: { lng: coordinates[1], lat: coordinates[0] }
+      });
+
+      const nearest = findNearestRoutePoint(coordinates[0], coordinates[1])
+
+      const landmark = createUserLandmark({
+        lat: coordinates[0],
+        lon: coordinates[1],
+        progress: nearest?.progress ?? null,
+      });
+
+      addLandmark(landmark);
+      setIsPlacingLandmark(false);
+      selectLandmark(landmark.id);
+
+      setLandmarkCoordinates('');
+      setDelayTimeout(null);
+    }, delaySeconds * 1000));
+  };
+
+  useEffect(() => () => {
+    if (delayTimeout) {
+      clearTimeout(delayTimeout);
+    }
+  }, [delayTimeout]);
 
   return (
     <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
@@ -177,6 +225,25 @@ export function RouteLandmarkList() {
         {isPlacingLandmark ? <MapPin className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
         {isPlacingLandmark ? t('routeLandmarks.clickMapToPlace') : t('routeLandmarks.addLandmark')}
       </button>
+
+      {isPlacingLandmark && <label className="block">
+        <div className="block text-[11px] text-[var(--evergreen-60)] flex items-center justify-start gap-2">
+          <span>{t('routeLandmarks.pasteCoordinates')}</span>
+          {delayTimeout && <div
+            className="mx-auto h-3 w-3 rounded-full border-1 border-[var(--trail-orange)] border-t-transparent animate-spin" />
+          }
+
+        </div>
+        <input
+          type="text"
+          value={landmarkCoordinates}
+          onChange={(event) => {
+            setLandmarkCoordinates(event.target.value);
+            createLandmarkFromCoordinatesDelayed(sanitizeCoordinates(event.target.value), 1);
+          }}
+          className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/30 bg-[var(--canvas)] px-2 py-1.5 text-sm text-[var(--evergreen)] focus:border-[var(--trail-orange)] focus:outline-none"
+        />
+      </label>}
 
       {selected && <LandmarkEditor landmark={selected} />}
 
