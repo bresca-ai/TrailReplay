@@ -46,12 +46,13 @@ const DEFAULT_SOCIAL_STATS: SocialShareStat[] = [
 interface Props {
   coverMode?: boolean;
   aspectRatioOverride?: SocialShareAspectRatio;
+  onAspectRatioChange?: (ratio: SocialShareAspectRatio) => void;
   onPosterReady?: (url: string) => void;
   onUseCover?: () => void;
   onAddPhoto?: () => void;
 }
 
-export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPosterReady, onUseCover, onAddPhoto }: Props) {
+export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAspectRatioChange, onPosterReady, onUseCover, onAddPhoto }: Props) {
   const { t } = useI18n();
   const overlayFont = useAppStore((state) => state.settings.trailStyle.overlayFont);
   const setTrailStyle = useAppStore((state) => state.setTrailStyle);
@@ -259,8 +260,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
           {RATIOS.map(({ value, label }) => (
             <button
               key={value}
-              onClick={() => !aspectRatioOverride && setSocialShareSettings({ aspectRatio: value })}
-              disabled={!!aspectRatioOverride}
+              onClick={() => onAspectRatioChange ? onAspectRatioChange(value) : setSocialShareSettings({ aspectRatio: value })}
+              aria-pressed={settings.aspectRatio === value}
               className={`py-2 rounded text-sm font-medium transition-colors ${
                 settings.aspectRatio === value
                   ? 'bg-[var(--trail-orange)] text-white'

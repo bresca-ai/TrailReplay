@@ -242,7 +242,7 @@ export interface CameraSettings {
 
 export type VideoFormat = 'webm' | 'mp4';
 export type VideoQuality = 'low' | 'medium' | 'high' | 'ultra';
-export type AspectRatio = '16:9' | '1:1' | '9:16';
+export type AspectRatio = '16:9' | '4:5' | '1:1' | '9:16';
 
 /**
  * `standard` advances as soon as the map has drawn a frame. `studio` waits for

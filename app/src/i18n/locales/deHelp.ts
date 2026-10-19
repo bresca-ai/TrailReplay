@@ -235,7 +235,7 @@ export const help = {
         },
         generate: {
           title: 'Generieren',
-          body: 'Speichern Sie ein bearbeitbares .replay-Projekt, exportieren Sie Bilder oder Videos in 16:9, 1:1 und 9:16, gestalten Sie das Layout, wählen Sie Qualität und Bildrate und laden oder teilen Sie das Ergebnis.',
+          body: 'Speichern Sie ein bearbeitbares .replay-Projekt, exportieren Sie Bilder oder Videos in 16:9, 4:5, 1:1 und 9:16, gestalten Sie das Layout, wählen Sie Qualität und Bildrate und laden oder teilen Sie das Ergebnis.',
         },
       },
     },

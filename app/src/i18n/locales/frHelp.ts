@@ -235,7 +235,7 @@ export const help = {
       },
       generate: {
         title: 'Générer',
-        body: 'Enregistrez un projet .replay modifiable, exportez des images ou des vidéos 16:9, 1:1 et 9:16, composez la mise en page, choisissez qualité et fréquence, puis téléchargez ou partagez.',
+          body: 'Enregistrez un projet .replay modifiable, exportez des images ou des vidéos 16:9, 4:5, 1:1 et 9:16, composez la mise en page, choisissez qualité et fréquence, puis téléchargez ou partagez.',
       },
     },
   },

@@ -235,7 +235,7 @@ export const help = {
         },
         generate: {
           title: 'Generate',
-          body: 'Save an editable .replay project, export still images or 16:9, 1:1 and 9:16 videos, compose the layout, choose quality and frame rate, then download or share.',
+          body: 'Save an editable .replay project, export still images or 16:9, 4:5, 1:1 and 9:16 videos, compose the layout, choose quality and frame rate, then download or share.',
         },
       },
     },

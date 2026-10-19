@@ -479,7 +479,7 @@ raw `zoom`, `pitch`, and `bearing` values.
 ### 5.7 `videoExportSettings`
 
 `format` (`mp4` \| `webm`), `quality` (`low` `medium` `high` `ultra`), `fps`,
-`resolution` (`{ width, height }`), `aspectRatio` (`16:9` `1:1` `9:16`),
+`resolution` (`{ width, height }`), `aspectRatio` (`16:9` `4:5` `1:1` `9:16`),
 `includeAudio`, `includeCover` (boolean). When `includeCover` is `true`, the app
 renders the cover from `socialShareSettings` and places it at the start of the
 video for one second. The cover uses the video's `aspectRatio` and the font in

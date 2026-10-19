@@ -235,7 +235,7 @@ export const help = {
         },
         generate: {
           title: 'Generar',
-          body: 'Desa un projecte .replay editable, exporta imatges o vídeos 16:9, 1:1 i 9:16, compon el disseny, tria qualitat i fotogrames per segon, i descarrega o comparteix.',
+          body: 'Desa un projecte .replay editable, exporta imatges o vídeos 16:9, 4:5, 1:1 i 9:16, compon el disseny, tria qualitat i fotogrames per segon, i descarrega o comparteix.',
         },
       },
     },

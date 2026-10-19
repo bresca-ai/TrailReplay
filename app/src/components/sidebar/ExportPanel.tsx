@@ -3,12 +3,13 @@ import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useProjectFile } from '@/hooks/useProjectFile';
 import { ExportSettingsModal } from './export/ExportSettingsModal';
-import { QUALITY_OPTIONS } from './export/exportConfig';
+import { getResolution, QUALITY_OPTIONS } from './export/exportConfig';
 import { useVideoExportRecorder } from './export/useVideoExportRecorder';
 import { isValidDeliveryEmail, localStudioDownload } from './export/studioDelivery';
 import { SocialSharePanel } from './export/SocialSharePanel';
 import { useSocialShareExport } from './export/useSocialShareExport';
 import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
+import type { SocialShareAspectRatio } from '@/types';
 
 function AutomaticCoverRenderer({ onReady }: { onReady: (url: string) => void }) {
   const { previewUrl, settings, selectedPhotoReady } = useSocialShareExport();
@@ -99,6 +100,14 @@ export function ExportPanel() {
     setExportMode('image');
   };
   const returnToVideo = () => setExportMode('video');
+  const changeCoverAspectRatio = (ratio: SocialShareAspectRatio) => {
+    setCoverPreviewUrl(null);
+    setVideoExportSettings({
+      aspectRatio: ratio,
+      resolution: getResolution(videoExportSettings.quality, ratio),
+    });
+    setSocialShareSettings({ aspectRatio: ratio });
+  };
 
   // The Instagram share prompt used to be a small card buried in the
   // scrollable sidebar (easy to miss). Surface it as a centered overlay
@@ -177,6 +186,7 @@ export function ExportPanel() {
         <SocialSharePanel
           coverMode={coverMode}
           aspectRatioOverride={coverMode ? coverAspectRatio : undefined}
+          onAspectRatioChange={coverMode ? changeCoverAspectRatio : undefined}
           onPosterReady={coverMode ? receiveCoverPoster : undefined}
           onUseCover={coverMode ? returnToVideo : undefined}
           onAddPhoto={() => { setCoverPreviewUrl(null); setActivePanel('pictures'); }}
