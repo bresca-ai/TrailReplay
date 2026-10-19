@@ -13,17 +13,24 @@ const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
     const form=new FormData();
     form.append("id",id);form.append("event","download");form.append("format","gpx");form.append("selFormat","gpx");form.append("filter",filter);
     const response=await fetch(location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:form,credentials:"include"});
-    if(!response.ok)return null;
     const gpx=await response.text();
-    return /<gpx(?:\\s|>)/i.test(gpx)?gpx:null;
+    if(response.ok&&/<gpx(?:\\s|>)/i.test(gpx))return {gpx,error:null};
+    const title=(gpx.match(/<title[^>]*>([^<]{1,120})</i)||[])[1]?.replace(/\\s+/g," ").trim();
+    const path=new URL(response.url).pathname;
+    return {gpx:null,error:filter+": HTTP "+response.status+" ("+(title||path)+")"};
   };
   const onMessage=async event=>{
     if(event.origin!==appOrigin||event.source!==app||event.data?.type!=="trailreplay:ready")return;
     cleanup();
     try{
-      let gpx=await fetchGpx("original"),simplified=false;
-      if(!gpx){gpx=await fetchGpx("simplified500");simplified=!!gpx}
-      if(!gpx)throw new Error("Wikiloc responded without a GPX file. Try the importer again, or download the GPX manually with Download → File → GPX.");
+      let result=await fetchGpx("original"),simplified=false;
+      if(!result.gpx){
+        const originalError=result.error;
+        result=await fetchGpx("simplified500");
+        simplified=!!result.gpx;
+        if(!result.gpx)throw new Error("Wikiloc returned no GPX. "+originalError+"; "+result.error+". Please send these details so I can fix the importer.");
+      }
+      const gpx=result.gpx;
       app.postMessage({type:"trailreplay:wikiloc-gpx",fileName:"wikiloc-"+id+".gpx",gpx,simplified},appOrigin)
     }catch(error){alert(error instanceof Error?error.message:"Could not import this Wikiloc trail.");app.close()}
   };
