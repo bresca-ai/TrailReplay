@@ -752,19 +752,30 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
         <p className="text-xs opacity-50 text-center">{t('imageExport.noTrackHint')}</p>
       )}
 
-      <button type="button"
-        onClick={() => {
-          if (!previewUrl) return;
-          if (coverMode) { onPosterReady?.(previewUrl); onUseCover?.(); }
-          else void exportPng();
-        }}
-        disabled={!previewUrl || isRendering || hasEmptyRequiredPhoto}
-        title={hasEmptyRequiredPhoto ? t('imageExport.addPhoto') : undefined}
-        className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50"
-      >
-        {coverMode ? <ArrowLeft className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-        {t(coverMode ? 'imageExport.saveCoverBackToVideo' : 'imageExport.downloadPng')}
-      </button>
+      <div className="flex flex-col gap-2">
+        <button type="button"
+          onClick={() => {
+            if (!previewUrl) return;
+            if (coverMode) onPosterReady?.(previewUrl);
+            void exportPng();
+          }}
+          disabled={!previewUrl || isRendering || hasEmptyRequiredPhoto}
+          title={hasEmptyRequiredPhoto ? t('imageExport.addPhoto') : undefined}
+          className="w-full tr-btn tr-btn-secondary flex items-center justify-center gap-2 py-3 disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          {t(coverMode ? 'imageExport.savePng' : 'imageExport.downloadPng')}
+        </button>
+        {coverMode && <button type="button"
+          onClick={() => { if (previewUrl) { onPosterReady?.(previewUrl); onUseCover?.(); } }}
+          disabled={!previewUrl || isRendering || hasEmptyRequiredPhoto}
+          title={hasEmptyRequiredPhoto ? t('imageExport.addPhoto') : undefined}
+          className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t('imageExport.backToVideoExport')}
+        </button>}
+      </div>
 
       {/* The editable poster takes the main map area for both image and video cover design. */}
       {editorHost && (coverMode || hasTracks) && createPortal(
@@ -776,6 +787,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             if (coverMode) { onPosterReady?.(previewUrl); onUseCover?.(); }
             else void exportPng();
           }}
+          onDownload={coverMode ? () => { onPosterReady?.(previewUrl); void exportPng(); } : undefined}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
           onMapRouteGesture={transformMapViewport}

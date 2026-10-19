@@ -245,7 +245,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       const coverFrames = Math.ceil(coverDurationMs / frameDurationMs);
       for (let i = 0; i < coverFrames; i += 1) {
         if (!isRecordingRef.current || recordingCancelledRef.current) return;
-        drawVideoCoverFrame();
+        if (!drawVideoCoverFrame()) throw new Error(t('export.videoCoverMissing'));
         await encodeWebCodecsFrame(i * frameDurationMs * 1000, frameDurationMs * 1000);
       }
     }
@@ -668,7 +668,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
 
       if (!useWebCodecsRef.current) {
-        if (videoExportSettings.includeCover) drawVideoCoverFrame();
+        if (videoExportSettings.includeCover && !drawVideoCoverFrame()) {
+          throw new Error(t('export.videoCoverMissing'));
+        }
         setupMediaRecorderFallback();
       }
 

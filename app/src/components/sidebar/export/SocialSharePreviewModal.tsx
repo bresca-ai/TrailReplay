@@ -10,6 +10,7 @@ interface Props {
   isRendering: boolean;
   onClose: () => void;
   onExport: () => void;
+  onDownload?: () => void;
   settings: SocialShareSettings;
   setSocialShareSettings: (patch: Partial<SocialShareSettings>) => void;
   onMapRouteGesture: (gesture: MapRouteGesture) => Promise<void>;
@@ -103,7 +104,7 @@ interface PhotoDragState {
 }
 
 export function SocialSharePreviewModal({
-  previewUrl, isRendering, onClose, onExport,
+  previewUrl, isRendering, onClose, onExport, onDownload,
   settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
   logoBboxNorm,
   onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange,
@@ -796,23 +797,32 @@ export function SocialSharePreviewModal({
           </div>
         </div>
 
-        <div className={`px-4 py-3 flex gap-2 shrink-0 ${inline ? 'border-t border-white/10 text-white' : 'border-t border-black/10'}`}>
-          {inline && <p className="hidden min-w-0 self-center text-xs leading-4 text-white/60 sm:block">
+        <div className={`px-4 py-3 flex flex-wrap gap-2 shrink-0 ${inline ? 'border-t border-white/10 text-white' : 'border-t border-black/10'}`}>
+          {inline && <p className="mr-auto hidden min-w-0 self-center text-xs leading-4 text-white/60 sm:block">
             {t(settings.template === 'map-first' ? 'imageExport.dragMapHint' : settings.template === 'split' ? 'imageExport.dragSplitMapHint' : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
           </p>}
           {!inline && <button onClick={onClose} className="tr-btn tr-btn-secondary flex-1">
             {t('imageExport.back')}
           </button>}
+          {coverMode && onDownload && <button
+            onClick={onDownload}
+            disabled={isRendering || hasEmptySplitFrame || hasEmptyPhotoFrame}
+            title={hasEmptySplitFrame || hasEmptyPhotoFrame ? t('imageExport.addPhoto') : undefined}
+            className={`tr-btn tr-btn-secondary flex items-center justify-center gap-2 disabled:opacity-60 ${inline ? 'ml-auto' : 'flex-1'}`}
+          >
+            <Download className="w-4 h-4" />
+            {t('imageExport.savePng')}
+          </button>}
           <button
             onClick={onExport}
             disabled={isRendering || hasEmptySplitFrame || hasEmptyPhotoFrame}
             title={hasEmptySplitFrame || hasEmptyPhotoFrame ? t('imageExport.addPhoto') : undefined}
-            className={`tr-btn tr-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 ${inline ? 'w-full sm:ml-auto sm:w-auto sm:min-w-36' : 'flex-1'}`}
+            className={`tr-btn tr-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 ${inline ? (coverMode ? 'sm:min-w-36' : 'ml-auto sm:min-w-36') : 'flex-1'}`}
           >
             {isRendering ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : coverMode ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-            {t(coverMode ? 'imageExport.saveCoverBackToVideo' : 'imageExport.downloadPng')}
+            {t(coverMode ? 'imageExport.backToVideoExport' : 'imageExport.downloadPng')}
           </button>
         </div>
       </div>

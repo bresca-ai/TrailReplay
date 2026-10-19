@@ -811,6 +811,8 @@ export const es = {
     dragLogo: 'Arrastra el logo de TrailReplay para colocarlo',
     useCover: 'Usar como portada del vídeo',
     saveCoverBackToVideo: 'Guardar portada y volver al vídeo',
+    savePng: 'Guardar PNG',
+    backToVideoExport: 'Volver a exportar vídeo',
     videoCover: 'Portada del vídeo',
     videoCoverHint: 'Diseña el primer fotograma del vídeo. Aparecerá durante 1 segundo antes de la animación.',
     addPhoto: 'Añadir foto',

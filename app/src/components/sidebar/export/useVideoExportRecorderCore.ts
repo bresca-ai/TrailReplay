@@ -403,16 +403,18 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     const map = mapGlobalRef.current;
     const targetFrameInterval = 1000 / videoExportSettings.fps;
     let lastCaptureTime = 0;
+    const captureAtFrameRate = () => {
+      const now = performance.now();
+      if (now - lastCaptureTime < targetFrameInterval) return;
+      captureFrame();
+      void encodeWebCodecsFrame();
+      lastCaptureTime = now;
+    };
 
     if (!map) {
       const captureLoop = () => {
         if (!isRecordingRef.current) return;
-        const now = performance.now();
-        if (now - lastCaptureTime >= targetFrameInterval) {
-          captureFrame();
-          void encodeWebCodecsFrame();
-          lastCaptureTime = now;
-        }
+        captureAtFrameRate();
         frameRequestRef.current = requestAnimationFrame(captureLoop);
       };
       frameRequestRef.current = requestAnimationFrame(captureLoop);
@@ -421,12 +423,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     const onRender = () => {
       if (!isRecordingRef.current) return;
-      const now = performance.now();
-      if (now - lastCaptureTime >= targetFrameInterval) {
-        captureFrame();
-        void encodeWebCodecsFrame();
-        lastCaptureTime = now;
-      }
+      // A still cover must be submitted even if the map has no render event.
+      if (coverFrameStartTimeRef.current === null) captureAtFrameRate();
     };
 
     map.on('render', onRender);
@@ -434,6 +432,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     const keepRendering = () => {
       if (!isRecordingRef.current) return;
+      if (coverFrameStartTimeRef.current !== null) captureAtFrameRate();
       map.triggerRepaint();
       frameRequestRef.current = requestAnimationFrame(keepRendering);
     };
