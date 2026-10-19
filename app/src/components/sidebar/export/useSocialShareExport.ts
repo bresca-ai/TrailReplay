@@ -56,6 +56,12 @@ export function useSocialShareExport() {
   const photoRef = useRef<HTMLImageElement | null>(null);
   const photoIdRef = useRef<string | null>(null);
   const lastMapFirstFitKeyRef = useRef<string | null>(null);
+  const mapGestureSettleTimerRef = useRef<number | null>(null);
+  const previewRequestIdRef = useRef(0);
+
+  useEffect(() => () => {
+    if (mapGestureSettleTimerRef.current !== null) window.clearTimeout(mapGestureSettleTimerRef.current);
+  }, []);
 
   const selectablePictures = pictures.filter((p) => !p.isPlaceholder);
   const selectedPicture = selectablePictures.find((p) => p.id === settings.selectedPictureId) ?? null;
@@ -189,7 +195,8 @@ export function useSocialShareExport() {
   }, [settings.aspectRatio, settings.routeTransform]);
 
   const generatePreview = useCallback(async (options: { fitMapFirstRoute?: boolean; fastMapCapture?: boolean } = {}) => {
-    if (tracks.length === 0) { setPreviewUrl(null); return; }
+    const requestId = ++previewRequestIdRef.current;
+    if (tracks.length === 0) { setPreviewUrl(null); setIsRendering(false); return; }
     setIsRendering(true);
     try {
       let preCapuredMapCanvas: HTMLCanvasElement | null = null;
@@ -267,6 +274,9 @@ export function useSocialShareExport() {
         loadSocialShareLogo(),
         loadPosterAssets(settings),
       ]);
+      // An earlier tile capture can finish after a newer button click.
+      // Never replace the latest poster with that older map position.
+      if (requestId !== previewRequestIdRef.current) return;
       const input = buildInput(brandLogo, assets, preCapuredMapCanvas);
 
       // Compute the same route bounds used by the renderer for either template.
@@ -288,7 +298,7 @@ export function useSocialShareExport() {
     } catch (e) {
       console.error('Social share preview failed', e);
     } finally {
-      setIsRendering(false);
+      if (requestId === previewRequestIdRef.current) setIsRendering(false);
     }
   }, [
     buildInput,
@@ -324,7 +334,12 @@ export function useSocialShareExport() {
       map.zoomTo(zoom, { around: anchor, duration: 0 });
     }
 
-    await generatePreview();
+    await generatePreview({ fastMapCapture: true });
+    if (mapGestureSettleTimerRef.current !== null) window.clearTimeout(mapGestureSettleTimerRef.current);
+    mapGestureSettleTimerRef.current = window.setTimeout(() => {
+      mapGestureSettleTimerRef.current = null;
+      void generatePreview();
+    }, 450);
   }, [generatePreview, settings.aspectRatio, settings.splitMapFrame, settings.template]);
 
   useEffect(() => {
@@ -386,7 +401,7 @@ export function useSocialShareExport() {
     }
     map.fitBounds(
       [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
-      { padding, maxZoom: 15, duration: 600 },
+      { padding, maxZoom: 15, duration: 0 },
     );
   }, [settings.aspectRatio, settings.splitMapFrame, settings.template, tracks]);
 

@@ -23,6 +23,11 @@ const RATIOS: { value: SocialShareAspectRatio; label: string }[] = [
   { value: '9:16', label: '9:16' },
 ];
 
+const MAP_NUDGE_PX = 24;
+const MAP_ZOOM_STEP = 0.2;
+const PHOTO_NUDGE_STEP = 0.015;
+const PHOTO_ZOOM_STEP = 0.03;
+
 const STAT_OPTIONS: { value: SocialShareStatMetric; labelKey: string }[] = [
   { value: 'distance', labelKey: 'imageExport.statDistance' },
   { value: 'elevationGain', labelKey: 'imageExport.statElevGain' },
@@ -220,19 +225,19 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
     const map = mapGlobalRef.current;
     if (!map) return;
     map.panBy([x, y], { duration: 0 });
-    window.setTimeout(() => { void generatePreview(); }, 100);
+    refreshCameraPreview();
   };
 
   const zoomMap = (direction: 'in' | 'out') => {
     const map = mapGlobalRef.current;
     if (!map) return;
-    map[direction === 'in' ? 'zoomIn' : 'zoomOut']({ duration: 0 });
-    window.setTimeout(() => { void generatePreview(); }, 100);
+    map.zoomTo(map.getZoom() + (direction === 'in' ? MAP_ZOOM_STEP : -MAP_ZOOM_STEP), { duration: 0 });
+    refreshCameraPreview();
   };
 
   const centerMap = () => {
     fitTrackToMap();
-    window.setTimeout(() => { void generatePreview(); }, 700);
+    refreshCameraPreview();
   };
 
   const templates: { value: SocialShareTemplate; label: string }[] = [
@@ -678,13 +683,13 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-black/[0.035] p-2.5">
             <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.mapPosition')}>
               <span />
-              <button type="button" onClick={() => nudgeMap(0, -72)} aria-label={t('imageExport.moveMapUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
+              <button type="button" onClick={() => nudgeMap(0, -MAP_NUDGE_PX)} aria-label={t('imageExport.moveMapUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
               <span />
-              <button type="button" onClick={() => nudgeMap(-72, 0)} aria-label={t('imageExport.moveMapLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
+              <button type="button" onClick={() => nudgeMap(-MAP_NUDGE_PX, 0)} aria-label={t('imageExport.moveMapLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
               <button type="button" onClick={centerMap} aria-label={t('imageExport.centerMap')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
-              <button type="button" onClick={() => nudgeMap(72, 0)} aria-label={t('imageExport.moveMapRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
+              <button type="button" onClick={() => nudgeMap(MAP_NUDGE_PX, 0)} aria-label={t('imageExport.moveMapRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
               <span />
-              <button type="button" onClick={() => nudgeMap(0, 72)} aria-label={t('imageExport.moveMapDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
+              <button type="button" onClick={() => nudgeMap(0, MAP_NUDGE_PX)} aria-label={t('imageExport.moveMapDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
               <span />
             </div>
             <div className="flex flex-col gap-1">
@@ -725,23 +730,23 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           <div className="mt-3 rounded-xl bg-black/[0.035] p-2.5">
             <div className="mb-2 flex items-center justify-between text-xs">
               <span className="font-medium">{t('imageExport.photoPosition')}</span>
-              <span className="tabular-nums opacity-60">{photoTransform.scale.toFixed(1)}×</span>
+              <span className="tabular-nums opacity-60">{photoTransform.scale.toFixed(2)}×</span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.photoPosition')}>
                 <span />
-                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.max(-1, photoTransform.offsetY - 0.04) })} aria-label={t('imageExport.movePhotoUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.max(-1, photoTransform.offsetY - PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
                 <span />
-                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.max(-1, photoTransform.offsetX - 0.04) })} aria-label={t('imageExport.movePhotoLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.max(-1, photoTransform.offsetX - PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
                 <button type="button" onClick={() => setPhotoTransform({ offsetX: 0, offsetY: 0, scale: 1 })} aria-label={t('imageExport.resetPhoto')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
-                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.min(1, photoTransform.offsetX + 0.04) })} aria-label={t('imageExport.movePhotoRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.min(1, photoTransform.offsetX + PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
                 <span />
-                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.min(1, photoTransform.offsetY + 0.04) })} aria-label={t('imageExport.movePhotoDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.min(1, photoTransform.offsetY + PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
                 <span />
               </div>
               <div className="flex flex-col gap-1">
-                <button type="button" onClick={() => setPhotoTransform({ scale: Math.min(3, photoTransform.scale + 0.1) })} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
-                <button type="button" onClick={() => setPhotoTransform({ scale: Math.max(1, photoTransform.scale - 0.1) })} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ scale: Math.min(3, photoTransform.scale + PHOTO_ZOOM_STEP) })} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ scale: Math.max(1, photoTransform.scale - PHOTO_ZOOM_STEP) })} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
               </div>
             </div>
           </div>

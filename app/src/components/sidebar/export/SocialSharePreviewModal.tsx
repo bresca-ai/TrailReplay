@@ -380,7 +380,7 @@ export function SocialSharePreviewModal({
       setRouteDragVisual({ dx, dy, sf: 1, active: true, type: ds.type });
     } else {
       const diag = (dx + dy) * 0.5;
-      const sf = Math.max(0.2, 1 + diag / (ds.containerW * 0.3));
+      const sf = Math.max(0.2, 1 + diag / (ds.containerW * 0.6));
       setRouteDragVisual({ dx: 0, dy: 0, sf, active: true, type: ds.type });
     }
   };
@@ -390,7 +390,7 @@ export function SocialSharePreviewModal({
     if (!ds) return;
     const dx = e.clientX - ds.startX;
     const dy = e.clientY - ds.startY;
-    const scaleFactor = Math.max(0.2, 1 + (dx + dy) * 0.5 / (ds.containerW * 0.3));
+    const scaleFactor = Math.max(0.2, 1 + (dx + dy) * 0.5 / (ds.containerW * 0.6));
     routeDragRef.current = null;
     setRouteDragVisual({ dx: 0, dy: 0, sf: 1, active: false, type: null });
 
@@ -551,9 +551,9 @@ export function SocialSharePreviewModal({
             </button>
           )}
           {inline && <div className="ml-auto flex shrink-0 items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
-            <button type="button" onClick={() => setCanvasZoom((zoom) => Math.max(1, zoom - 0.25))} disabled={canvasZoom <= 1} aria-label={t('imageExport.zoomOut')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Minus className="h-3.5 w-3.5" /></button>
+            <button type="button" onClick={() => setCanvasZoom((zoom) => Math.max(1, Number((zoom - 0.1).toFixed(2))))} disabled={canvasZoom <= 1} aria-label={t('imageExport.zoomOut')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Minus className="h-3.5 w-3.5" /></button>
             <span className="w-10 text-center text-[11px] tabular-nums">{Math.round(canvasZoom * 100)}%</span>
-            <button type="button" onClick={() => setCanvasZoom((zoom) => Math.min(2.5, zoom + 0.25))} disabled={canvasZoom >= 2.5} aria-label={t('imageExport.zoomIn')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Plus className="h-3.5 w-3.5" /></button>
+            <button type="button" onClick={() => setCanvasZoom((zoom) => Math.min(2.5, Number((zoom + 0.1).toFixed(2))))} disabled={canvasZoom >= 2.5} aria-label={t('imageExport.zoomIn')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Plus className="h-3.5 w-3.5" /></button>
           </div>}
           {!inline && <button onClick={onClose} className="p-1 hover:bg-black/5 rounded">
             <X className="w-4 h-4" />
@@ -591,7 +591,7 @@ export function SocialSharePreviewModal({
                 if (settings.template !== 'photo-first' || !hasPhotoFirstImage) return;
                 event.preventDefault();
                 const transform = settings.photoTransform ?? { offsetX: 0, offsetY: 0, scale: 1 };
-                setSocialShareSettings({ photoTransform: { ...transform, scale: Math.max(1, Math.min(3, transform.scale + (event.deltaY < 0 ? 0.1 : -0.1))) } });
+                setSocialShareSettings({ photoTransform: { ...transform, scale: Math.max(1, Math.min(3, transform.scale + (event.deltaY < 0 ? 0.03 : -0.03))) } });
               }}
             />
 
@@ -610,7 +610,7 @@ export function SocialSharePreviewModal({
               onPointerUp={onSplitPhotoPointerUp}
               onPointerCancel={onSplitPhotoPointerUp}
               onDoubleClick={() => onPhotoSlotPick(slot.id)}
-              onWheel={(event) => { if (!slot.imageUrl) return; event.preventDefault(); onPhotoSlotChange(slot.id, { scale: Math.max(1, Math.min(3, slot.scale + (event.deltaY < 0 ? 0.1 : -0.1))) }); }}
+              onWheel={(event) => { if (!slot.imageUrl) return; event.preventDefault(); onPhotoSlotChange(slot.id, { scale: Math.max(1, Math.min(3, slot.scale + (event.deltaY < 0 ? 0.03 : -0.03))) }); }}
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => {
                 event.preventDefault();
@@ -733,7 +733,7 @@ export function SocialSharePreviewModal({
                   const rect = event.currentTarget.getBoundingClientRect();
                   void onMapRouteGesture({
                     type: 'resize',
-                    scaleFactor: event.deltaY < 0 ? 1.16 : 1 / 1.16,
+                    scaleFactor: event.deltaY < 0 ? 1.05 : 1 / 1.05,
                     anchorX: (event.clientX - rect.left) / rect.width,
                     anchorY: (event.clientY - rect.top) / rect.height,
                   });
