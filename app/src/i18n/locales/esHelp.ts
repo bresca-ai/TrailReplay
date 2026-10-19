@@ -26,7 +26,7 @@ export const help = {
             title: 'Qué decirle a tu agente',
             intro: 'Sirve cualquier agente que sepa leer una web y escribir un archivo. Con esto ya devuelve una receta que funciona.',
             label: 'Instrucción',
-            body: 'Lee https://trailreplay.com/llms.txt y la especificación del formato que enlaza. Después escribe un recipe.json en esta carpeta para los GPX que hay aquí, siguiendo lo que te describo abajo. No calcules coordenadas: ancla todo por kilómetro y deja que la app lo resuelva.',
+            body: 'Lee https://trailreplay.com/llms.txt y la especificación del formato que enlaza. Después escribe un recipe.json en esta carpeta para los GPX que hay aquí, siguiendo lo que te describo abajo. No calcules coordenadas: ancla todo por kilómetro y deja que la app lo resuelva. Antes de configurar la exportación de vídeo, pregúntame si quiero una portada diseñada durante el primer segundo; espera mi respuesta y define includeCover según ella. Si quiero una portada con fotos, indica los archivos en photoSlots e inclúyelos con la receta.',
             note: 'Después dile qué quieres de verdad: los avituallamientos de la web de la carrera, los refugios donde dormiste, un texto en la subida larga.',
         },
         camera: {

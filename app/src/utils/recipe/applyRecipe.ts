@@ -71,7 +71,7 @@ export function mergeRecipeCameraSettings(recipe: Recipe): CameraSettings {
  * A recipe describes a whole replay, not an addition to one, so this mirrors
  * opening a project rather than importing another GPX.
  */
-export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: AppState): void {
+export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: AppState, coverImageUrls: (string | null)[] = []): void {
   store.reset();
 
   for (const track of resolved.tracks) {
@@ -82,10 +82,24 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     ?? resolved.tracks[0];
   const defaultCover = createDefaultSocialShareSettings();
   const authoredCover = recipe.socialShareSettings;
+  const { photoSlots: _photoSlots, ...authoredCoverFields } = authoredCover ?? {};
+  void _photoSlots;
   const coverPreset = authoredCover?.layoutPreset
     ? presetSettings(authoredCover.layoutPreset, defaultCover)
     : {};
-  const mergedCover = { ...defaultCover, ...coverPreset, ...authoredCover };
+  const mergedCover = { ...defaultCover, ...coverPreset, ...authoredCoverFields };
+  const authoredSlots = authoredCover?.photoSlots?.map((slot, index) => {
+    const presetSlot = coverPreset.photoSlots?.[index];
+    const frame = presetSlot ?? createPhotoSlot(`recipe-photo-${index + 1}`, 0, 0, 1, 0.66);
+    const { file: _file, ...fields } = slot;
+    void _file;
+    return {
+      ...frame,
+      ...fields,
+      id: slot.id || frame.id,
+      imageUrl: coverImageUrls[index] ?? slot.imageUrl ?? frame.imageUrl,
+    };
+  });
 
   store.hydrateState({
     // Kept so saving preserves where this came from, not only what it became.
@@ -124,7 +138,8 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
     socialShareSettings: {
       ...mergedCover,
-      ...(mergedCover.template === 'split' && !mergedCover.photoSlots?.length
+      ...(authoredSlots ? { photoSlots: authoredSlots } : {}),
+      ...(mergedCover.template === 'split' && !authoredSlots?.length && !mergedCover.photoSlots?.length
         ? { photoSlots: [createPhotoSlot('hero', 0, 0, 1, 0.66)] }
         : {}),
       ...(recipe.socialShareSettings?.stats ? {

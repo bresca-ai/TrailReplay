@@ -4,6 +4,7 @@ import { parseGPXFiles, parseRouteFiles } from '@/utils/gpxParser';
 import { isRecipeFile, parseRecipeFile } from '@/utils/recipe/parseRecipeFile';
 import { resolveRecipe } from '@/utils/recipe/resolveRecipe';
 import { applyRecipe } from '@/utils/recipe/applyRecipe';
+import { resolveCoverPhotos } from '@/utils/recipe/resolveCoverPhotos';
 import { RecipeError } from '@/utils/recipe/types';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
@@ -54,7 +55,8 @@ export function useGPX() {
         parsed.map((entry) => entry.track),
         parsed.map((entry) => entry.fileName),
       );
-      applyRecipe(recipe, resolved, useAppStore.getState());
+      const coverImageUrls = await resolveCoverPhotos(recipe, fileArray);
+      applyRecipe(recipe, resolved, useAppStore.getState(), coverImageUrls);
       useAppStore.getState().setRecipeReport(resolved.report);
 
       trackEvent('recipe_import_completed', {
