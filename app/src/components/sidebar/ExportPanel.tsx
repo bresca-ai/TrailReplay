@@ -261,7 +261,7 @@ export function ExportPanel() {
           </div>
 
           {!isExporting && !exportedBlob && (
-            <div className="rounded-xl border border-white/15 bg-white/[0.06] p-3">
+            <div className="rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/[0.03] p-3 text-[var(--evergreen)]">
               <label className="flex cursor-pointer items-start gap-2.5">
                 <input
                   type="checkbox"
@@ -277,11 +277,12 @@ export function ExportPanel() {
                 />
                 <span>
                   <span className="block text-sm font-semibold">{t('export.addVideoCover')}</span>
-                  <span className="mt-0.5 block text-xs leading-5 text-[var(--canvas)]/70">{t('export.addVideoCoverHint')}</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-[var(--evergreen-60)]">{t('export.addVideoCoverHint')}</span>
                 </span>
               </label>
               {videoExportSettings.includeCover ? (
-                <button type="button" onClick={openCoverEditor} className="mt-3 w-full rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/10">
+                <button type="button" onClick={openCoverEditor} className="tr-btn tr-btn-secondary mt-3 flex w-full items-center justify-center gap-2 py-2 text-xs">
+                  <ImageIcon className="h-3.5 w-3.5" />
                   {coverPreviewUrl ? t('export.editVideoCover') : t('export.designVideoCover')}
                 </button>
               ) : null}
