@@ -9,54 +9,39 @@ const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
   if(!app){alert("Allow pop-ups for Wikiloc, then click the TrailReplay bookmark again.");return}
   let timeout;
   const cleanup=()=>{window.removeEventListener("message",onMessage);clearTimeout(timeout)};
-  const readGpx=async(response,label)=>{
-    const gpx=await response.text();
-    if(response.ok&&/<gpx(?:\\s|>)/i.test(gpx))return {gpx,error:null};
-    const title=(gpx.match(/<title[^>]*>([^<]{1,120})</i)||[])[1]?.replace(/\\s+/g," ").trim();
-    const path=new URL(response.url).pathname;
-    const bodyText=new DOMParser().parseFromString(gpx,"text/html").body.textContent||"";
-    const excerpt=bodyText.replace(/\\s+/g," ").trim().slice(0,140);
-    const contentType=response.headers.get("content-type")||"unknown content type";
-    return {gpx:null,error:label+": HTTP "+response.status+", "+contentType+", "+gpx.length+" characters ("+(title||path)+")"+(excerpt?" — "+excerpt:"")};
+  const escapeXml=value=>String(value).replace(/[&<>"']/g,char=>char==="&"?"&amp;":char==="<"?"&lt;":char===">"?"&gt;":char==='"'?"&quot;":"&apos;");
+  const makeGpx=()=>{
+    const trail=window.mapData?.mapData?.find(item=>String(item.spaId)===id&&!item.waypoint);
+    if(!trail?.geom||!window.twkb?.toGeoJSON){
+      throw new Error("Wikiloc's route map is not ready. Wait for the map to load and try again, or use Manual to download the GPX.")
+    }
+    const bytes=Uint8Array.from(atob(trail.geom),char=>char.charCodeAt(0));
+    const geometry=window.twkb.toGeoJSON(bytes).features[0]?.geometry;
+    const points=geometry?.type==="LineString"?geometry.coordinates:geometry?.type==="MultiLineString"?geometry.coordinates.flat():null;
+    if(!points||points.length<2)throw new Error("Wikiloc's route map has no usable track. Use Manual to download the GPX.");
+    const start=Number(trail.trackStartTimestamp),firstMeasure=Number(points[0][3]);
+    const timeShift=Number.isFinite(start)&&start>0&&Number.isFinite(firstMeasure)?start-firstMeasure:null;
+    const track=points.map(point=>{
+      const lon=Number(point[0]),lat=Number(point[1]);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180){
+        throw new Error("Wikiloc's route map contains invalid coordinates. Use Manual to download the GPX.")
+      }
+      let xml='<trkpt lat="'+lat+'" lon="'+lon+'">';
+      if(point.length>2&&Number.isFinite(Number(point[2])))xml+='<ele>'+Number(point[2])+'</ele>';
+      if(timeShift!==null&&point.length>3&&Number.isFinite(Number(point[3]))){
+        const date=new Date(Number(point[3])+timeShift);
+        if(!Number.isNaN(date.getTime()))xml+='<time>'+date.toISOString()+'</time>';
+      }
+      return xml+'</trkpt>'
+    }).join('');
+    return '<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="TrailReplay" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+escapeXml(trail.nom||'Wikiloc trail')+'</name><trkseg>'+track+'</trkseg></trk></gpx>'
   };
-  const fetchOriginalGpx=async()=>{
-    const pageResponse=await fetch(location.origin+"/wikiloc/download.do?id="+encodeURIComponent(id)+"&event=file",{credentials:"include"});
-    const html=await pageResponse.text();
-    const documentFromPage=new DOMParser().parseFromString(html,"text/html");
-    const form=Array.from(documentFromPage.forms).find(candidate=>candidate.action.includes("downloadToFile.do"))||documentFromPage.forms[0];
-    if(!pageResponse.ok||!form)return {gpx:null,error:"file form: HTTP "+pageResponse.status+" ("+((documentFromPage.title||new URL(pageResponse.url).pathname))+ ")"};
-    const originalOption=Array.from(form.querySelectorAll("select option")).find(option=>/original/i.test(option.textContent||""));
-    const originalLabel=Array.from(form.querySelectorAll("label")).find(label=>/original/i.test(label.textContent||""));
-    const originalControl=originalOption?.parentElement||originalLabel?.control;
-    if(!originalControl?.name)return {gpx:null,error:"file form: Original quality option was not found"};
-    const data=new FormData(form);
-    data.set("id",id);data.set("event","download");data.set("format","gpx");data.set("selFormat","gpx");
-    if(originalOption)data.set(originalControl.name,originalOption.value);
-    else data.set(originalControl.name,originalControl.value);
-    const action=new URL(form.getAttribute("action")||"/wikiloc/downloadToFile.do",pageResponse.url).href;
-    const response=await fetch(action,{method:"POST",body:data,credentials:"include",referrer:pageResponse.url});
-    return await readGpx(response,"Original form");
-  };
-  const fetchGpx=async filter=>{
-    const form=new FormData();
-    form.append("id",id);form.append("event","download");form.append("format","gpx");form.append("selFormat","gpx");form.append("filter",filter);
-    const downloadPage=new URL("/wikiloc/download.do?id="+encodeURIComponent(id)+"&event=file",location.origin).href;
-    const response=await fetch(location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:form,credentials:"include",referrer:downloadPage});
-    return await readGpx(response,filter);
-  };
-  const onMessage=async event=>{
+  const onMessage=event=>{
     if(event.origin!==appOrigin||event.source!==app||event.data?.type!=="trailreplay:ready")return;
     cleanup();
     try{
-      let result=await fetchOriginalGpx(),simplified=false;
-      if(!result.gpx){
-        const originalError=result.error;
-        result=await fetchGpx("simplified500");
-        simplified=!!result.gpx;
-        if(!result.gpx)throw new Error("Wikiloc returned no GPX. "+originalError+"; "+result.error+". Please send these details so I can fix the importer.");
-      }
-      const gpx=result.gpx;
-      app.postMessage({type:"trailreplay:wikiloc-gpx",fileName:"wikiloc-"+id+".gpx",gpx,simplified},appOrigin)
+      const gpx=makeGpx();
+      app.postMessage({type:"trailreplay:wikiloc-gpx",fileName:"wikiloc-"+id+".gpx",gpx},appOrigin)
     }catch(error){alert(error instanceof Error?error.message:"Could not import this Wikiloc trail.");app.close()}
   };
   window.addEventListener("message",onMessage);

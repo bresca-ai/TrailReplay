@@ -1,25 +1,49 @@
-import { describe, expect, it } from 'vitest';
+import { runInNewContext } from 'node:vm';
+import { describe, expect, it, vi } from 'vitest';
 import { createWikilocBookmarkletHref } from './wikilocBookmarklet';
 
 describe('createWikilocBookmarkletHref', () => {
-  it('creates a Wikiloc bookmarklet that requests the original GPX and opens TrailReplay', () => {
-    const href = createWikilocBookmarkletHref('https://trailreplay.example');
-    const source = decodeURIComponent(href.slice('javascript:'.length));
+  it('converts the full Wikiloc map track into GPX and sends it to TrailReplay', () => {
+    const source = decodeURIComponent(createWikilocBookmarkletHref('https://trailreplay.example').slice('javascript:'.length));
+    const app = { postMessage: vi.fn(), close: vi.fn() };
+    const listeners = new Map<string, (event: unknown) => void>();
+    const alert = vi.fn();
+    const fetch = vi.fn(() => { throw new Error('The bookmark must not request Wikiloc downloads'); });
+    const decode = vi.fn(() => ({ features: [{ geometry: { type: 'LineString', coordinates: [
+      [0.646152, 42.631753, 2912.9, -1000],
+      [0.646200, 42.631800, 2914.1, 1000],
+    ] } }] }));
+    const start = Date.parse('2024-01-01T00:00:00.000Z');
+    const window = {
+      open: vi.fn(() => app),
+      addEventListener: vi.fn((name: string, listener: (event: unknown) => void) => listeners.set(name, listener)),
+      removeEventListener: vi.fn((name: string) => listeners.delete(name)),
+      mapData: { mapData: [{ spaId: 105740853, nom: 'Aneto & Coronas', geom: 'AQID', trackStartTimestamp: start }] },
+      twkb: { toGeoJSON: decode },
+    };
 
-    expect(() => new Function(source)).not.toThrow();
-    expect(href).toMatch(/^javascript:/);
-    expect(source).toContain('wikilocImport=1');
-    expect(source).toContain('/wikiloc/download.do?id=');
-    expect(source).toContain('/wikiloc/downloadToFile.do');
-    expect(source).toContain('fetchOriginalGpx()');
-    expect(source).toContain('/original/i');
-    expect(source).toContain('response.headers.get("content-type")');
-    expect(source).toContain('slice(0,140)');
-    expect(source).toContain('fetchGpx("simplified500")');
-    expect(source).toContain('Wikiloc returned no GPX. ');
-    expect(source).toContain('Please send these details so I can fix the importer.');
-    expect(source).toContain('simplified},appOrigin');
-    expect(source).toContain('trailreplay:wikiloc-gpx');
-    expect(source).toContain('https://trailreplay.example');
+    runInNewContext(source, {
+      window,
+      location: { hostname: 'www.wikiloc.com', pathname: '/mountaineering-trails/aneto-105740853' },
+      alert,
+      fetch,
+      atob,
+      Uint8Array,
+      setTimeout: () => 1,
+      clearTimeout: () => undefined,
+    });
+    listeners.get('message')?.({ origin: 'https://trailreplay.example', source: app, data: { type: 'trailreplay:ready' } });
+
+    expect(window.open).toHaveBeenCalledWith('https://trailreplay.example/?wikilocImport=1', '_blank');
+    expect(decode).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+    expect(app.postMessage).toHaveBeenCalledOnce();
+    const [payload, origin] = app.postMessage.mock.calls[0];
+    expect(origin).toBe('https://trailreplay.example');
+    expect(payload).toMatchObject({ type: 'trailreplay:wikiloc-gpx', fileName: 'wikiloc-105740853.gpx' });
+    expect(payload.gpx).toContain('<name>Aneto &amp; Coronas</name>');
+    expect(payload.gpx).toContain('<trkpt lat="42.631753" lon="0.646152"><ele>2912.9</ele><time>2024-01-01T00:00:00.000Z</time></trkpt>');
+    expect(payload.gpx).toContain('<trkpt lat="42.6318" lon="0.6462"><ele>2914.1</ele><time>2024-01-01T00:00:02.000Z</time></trkpt>');
   });
 });
