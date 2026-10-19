@@ -42,6 +42,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
+    loadCoverImage, drawVideoCoverFrame, coverFrameStartTimeRef,
     applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   } = useVideoExportRecorderCore(options);
@@ -239,6 +240,16 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const progressUpdateInterval = Math.max(1, Math.round(fps / 5));
 
     setIsDeterministicExport(true);
+    const coverDurationMs = videoExportSettings.includeCover ? 1000 : 0;
+    if (coverDurationMs > 0) {
+      const coverFrames = Math.ceil(coverDurationMs / frameDurationMs);
+      for (let i = 0; i < coverFrames; i += 1) {
+        if (!isRecordingRef.current || recordingCancelledRef.current) return;
+        if (!drawVideoCoverFrame()) throw new Error(t('export.videoCoverMissing'));
+        await encodeWebCodecsFrame(i * frameDurationMs * 1000, frameDurationMs * 1000);
+      }
+    }
+    coverFrameStartTimeRef.current = null;
     setStudioMapTime(0);
     store.setPlayback({ isPlaying: true, currentTime: 0, progress: 0 });
     // Start the cinematic movement first and wait for its first rendered frame.
@@ -248,14 +259,14 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     store.setAnimationPhase('intro');
     setExportStage(t('export.recordingIntro'));
     await waitForMapFrame();
-    await captureDeterministicPhase(INTRO_DURATION, 0, true);
+    await captureDeterministicPhase(INTRO_DURATION, coverDurationMs, true);
 
     if (!isRecordingRef.current || recordingCancelledRef.current) return;
 
     store.setCinematicPlayed(true);
     store.setAnimationPhase('playing');
     setExportStage(describeRecordingStage(0, frameCount));
-    let encodedDurationMs = INTRO_DURATION;
+    let encodedDurationMs = coverDurationMs + INTRO_DURATION;
     // Mirrors App.tsx's live-playback picture trigger (`getTriggeredPlaybackPictures`),
     // but drives its own hold here so the export can freeze the route
     // position for the picture's full `displayDuration` instead of just
@@ -385,7 +396,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     }
 
     if (!recordingCancelledRef.current) finishRecording();
-  }, [captureDeterministicPhase, captureFrame, capturePictureHold, captureVideoHold, describeRecordingStage, encodeWebCodecsFrame, finishRecording, isRecordingRef, mp4EncoderRef, pictures, recordingCancelledRef, setExportProgress, setExportStage, setIsDeterministicExport, setStudioMapTime, t, videoExportSettings, videos, waitForExportFrame, waitForMapFrame, waitForVideoPopup]);
+  }, [captureDeterministicPhase, captureFrame, capturePictureHold, captureVideoHold, coverFrameStartTimeRef, describeRecordingStage, drawVideoCoverFrame, encodeWebCodecsFrame, finishRecording, isRecordingRef, mp4EncoderRef, pictures, recordingCancelledRef, setExportProgress, setExportStage, setIsDeterministicExport, setStudioMapTime, t, videoExportSettings, videos, waitForExportFrame, waitForMapFrame, waitForVideoPopup]);
 
   useEffect(() => {
     if (!isRecordingRef.current) return;
@@ -582,6 +593,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       recordingCanvasRef.current.width = width;
       recordingCanvasRef.current.height = height;
       recordingContextRef.current = recordingCanvasRef.current.getContext('2d');
+      await loadCoverImage();
 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
@@ -656,6 +668,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
 
       if (!useWebCodecsRef.current) {
+        if (videoExportSettings.includeCover && !drawVideoCoverFrame()) {
+          throw new Error(t('export.videoCoverMissing'));
+        }
         setupMediaRecorderFallback();
       }
 
@@ -696,6 +711,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       setExportStage(t('export.stageStartingRecording'));
       recordingStartTimeRef.current = performance.now();
+      coverFrameStartTimeRef.current = videoExportSettings.includeCover ? recordingStartTimeRef.current : null;
       isRecordingRef.current = true;
 
       setExportStage(t('export.stageRecordingAnimation'));
@@ -713,7 +729,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         });
       } else {
         startFrameCapture();
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        const waitMs = videoExportSettings.includeCover ? 1000 : 200;
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        coverFrameStartTimeRef.current = null;
         play();
       }
     } catch (error) {
@@ -738,7 +756,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       setUseWebCodecs(false);
     }
-  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, exportProfileMetadata, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, restoreStudioMapTime, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
+  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, coverFrameStartTimeRef, drawVideoCoverFrame, exportProfileMetadata, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadCoverImage, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, restoreStudioMapTime, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.

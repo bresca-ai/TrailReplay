@@ -41,6 +41,16 @@ places we slept"), and have them drop it on the page together with their GPX
 files. The app resolves the rest with its own track maths and reports back what
 it placed.
 
+When preparing a video recipe, check whether the person has chosen a cover.
+If they have not, ask: "Do you want a designed cover image shown for the first
+second of the video?" Wait for an explicit yes or no before setting
+`videoExportSettings.includeCover`. Set it to `true` only when they want the
+cover; otherwise set it to `false`. If yes, describe its
+title, map layout, stats, and optional photos in `socialShareSettings`.
+Photos can be named by `file` in `photoSlots` and supplied alongside the
+recipe and routes, or packed into a `.replay` archive. See the format guide
+below for every cover field and examples.
+
 - [Giving TrailReplay a route](https://trailreplay.com/replay-file.md): the
   recipe format, the derived sets (`overnight-stops`, `start-finish`), and the
   `.replay` project format. Read this before writing anything.

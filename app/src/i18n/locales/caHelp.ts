@@ -26,7 +26,7 @@ export const help = {
             title: 'Què dir-li al teu agent',
             intro: 'Serveix qualsevol agent que sàpiga llegir un web i escriure un fitxer. Amb això ja et torna una recepta que funciona.',
             label: 'Instrucció',
-            body: 'Llegeix https://trailreplay.com/llms.txt i l’especificació del format que enllaça. Després escriu un recipe.json en aquesta carpeta per als GPX que hi ha aquí, seguint el que et descric a sota. No calculis coordenades: ancora-ho tot per quilòmetre i deixa que l’app ho resolgui.',
+            body: 'Llegeix https://trailreplay.com/llms.txt i l’especificació del format que enllaça. Després escriu un recipe.json en aquesta carpeta per als GPX que hi ha aquí, seguint el que et descric a sota. No calculis coordenades: ancora-ho tot per quilòmetre i deixa que l’app ho resolgui. Abans de configurar l’exportació del vídeo, pregunta’m si vull una portada dissenyada durant el primer segon; espera la meva resposta i defineix includeCover en conseqüència. Si vull una portada amb fotos, indica els fitxers a photoSlots i inclou-los amb la recepta.',
             note: 'Després digues-li què vols de debò: els avituallaments del web de la cursa, els refugis on vas dormir, un text a la pujada llarga.',
         },
         camera: {
@@ -243,7 +243,7 @@ export const help = {
         },
         generate: {
           title: 'Generar',
-          body: 'Desa un projecte .replay editable, exporta imatges o vídeos 16:9, 1:1 i 9:16, compon el disseny, tria qualitat i fotogrames per segon, i descarrega o comparteix.',
+          body: 'Desa un projecte .replay editable, exporta imatges o vídeos 16:9, 4:5, 1:1 i 9:16, compon el disseny, tria qualitat i fotogrames per segon, i descarrega o comparteix.',
         },
       },
     },

@@ -23,6 +23,7 @@ export function getMapFirstRouteSafeArea(options: {
   posterHeight: number;
   showLocation: boolean;
   showStats: boolean;
+  statsRows?: number;
   showElevation: boolean;
 }): FitBox {
   const aspect = options.posterWidth / options.posterHeight;
@@ -32,7 +33,7 @@ export function getMapFirstRouteSafeArea(options: {
     + 0.05
     + 0.04
     + (options.showLocation ? 0.04 : 0);
-  const panelHeight = (options.showStats ? 0.115 : 0)
+  const panelHeight = (options.showStats ? 0.115 * (options.statsRows ?? 1) : 0)
     + (options.showElevation ? 0.105 : 0);
   const bottom = 1 - panelHeight - 0.04;
   const top = Math.min(0.32, titleBottom);

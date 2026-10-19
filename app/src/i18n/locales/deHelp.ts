@@ -26,7 +26,7 @@ export const help = {
             title: 'Was du deinem Agenten sagst',
             intro: 'Jeder Agent, der eine Webseite lesen und eine Datei schreiben kann, reicht. Damit kommt ein funktionierendes Rezept zurück.',
             label: 'Anweisung',
-            body: 'Lies https://trailreplay.com/llms.txt und die dort verlinkte Formatspezifikation. Schreib dann eine recipe.json in diesen Ordner für die GPX-Dateien hier, nach dem, was ich unten beschreibe. Berechne keine Koordinaten. Verankere alles über Kilometer und lass die App es auflösen.',
+            body: 'Lies https://trailreplay.com/llms.txt und die dort verlinkte Formatspezifikation. Schreib dann eine recipe.json in diesen Ordner für die GPX-Dateien hier, nach dem, was ich unten beschreibe. Berechne keine Koordinaten. Verankere alles über Kilometer und lass die App es auflösen. Frag mich vor dem Videoexport, ob ich ein gestaltetes Titelbild für die erste Sekunde möchte; warte auf meine Antwort und setze includeCover entsprechend. Wenn ich ein Titelbild mit Fotos möchte, nenne die Bilddateien in photoSlots und lege sie dem Rezept bei.',
             note: 'Sag ihm dann, was du wirklich willst: die Verpflegungsstellen von der Rennseite, die Hütten, einen Text am langen Anstieg.',
         },
         camera: {
@@ -243,7 +243,7 @@ export const help = {
         },
         generate: {
           title: 'Generieren',
-          body: 'Speichern Sie ein bearbeitbares .replay-Projekt, exportieren Sie Bilder oder Videos in 16:9, 1:1 und 9:16, gestalten Sie das Layout, wählen Sie Qualität und Bildrate und laden oder teilen Sie das Ergebnis.',
+          body: 'Speichern Sie ein bearbeitbares .replay-Projekt, exportieren Sie Bilder oder Videos in 16:9, 4:5, 1:1 und 9:16, gestalten Sie das Layout, wählen Sie Qualität und Bildrate und laden oder teilen Sie das Ergebnis.',
         },
       },
     },

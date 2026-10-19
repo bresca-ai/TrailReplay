@@ -242,7 +242,7 @@ export interface CameraSettings {
 
 export type VideoFormat = 'webm' | 'mp4';
 export type VideoQuality = 'low' | 'medium' | 'high' | 'ultra';
-export type AspectRatio = '16:9' | '1:1' | '9:16';
+export type AspectRatio = '16:9' | '4:5' | '1:1' | '9:16';
 
 /**
  * `standard` advances as soon as the map has drawn a frame. `studio` waits for
@@ -259,10 +259,36 @@ export interface VideoExportSettings {
   resolution: { width: number; height: number };
   aspectRatio: AspectRatio;
   includeAudio: boolean;
+  includeCover: boolean;
 }
 
-export type SocialShareTemplate = 'map-first' | 'photo-first';
-export type SocialShareAspectRatio = '4:5' | '1:1' | '9:16';
+export type SocialShareTemplate = 'map-first' | 'photo-first' | 'split';
+export type SocialShareAspectRatio = '16:9' | '4:5' | '1:1' | '9:16';
+export type SocialShareLayoutPreset = 'classic' | 'long-way' | 'ridge-photo' | 'photo-grid';
+export type SocialShareStatMetric = 'distance' | 'elevationGain' | 'duration' | 'movingDuration' | 'pace' | 'heartRate' | 'speed' | 'altitude' | 'maxElevation' | 'elevationLoss' | 'maxSpeed' | 'custom';
+
+export interface SocialShareStat {
+  id: string;
+  metric: SocialShareStatMetric;
+  label: string;
+  value: string;
+  visible: boolean;
+  icon?: string;
+}
+
+export interface SocialSharePhotoSlot {
+  id: string;
+  imageUrl: string | null;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  /** Draw this frame over the split layout's map inset. */
+  aboveMap?: boolean;
+}
 
 export interface SocialShareRouteTransform {
   offsetX: number;
@@ -271,17 +297,46 @@ export interface SocialShareRouteTransform {
   opacity: number;
 }
 
+export interface SocialSharePhotoTransform {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
 export interface SocialShareSettings {
   template: SocialShareTemplate;
+  layoutPreset: SocialShareLayoutPreset;
   aspectRatio: SocialShareAspectRatio;
   selectedPictureId: string | null;
+  photoSlots: SocialSharePhotoSlot[];
+  /** Normalized position and size of the map inset in photo + map layouts. */
+  splitMapFrame?: { x: number; y: number; w: number; h: number };
   titleMode: 'journey-name' | 'track-name' | 'custom';
   customTitle: string;
+  titleScale: number;
+  titleWidth: number;
+  titleColor: string;
+  /** Normalized offsets for directly positioning the title layer in the poster editor. */
+  titleOffsetX: number;
+  titleOffsetY: number;
+  /** Normalized top-left position of the required TrailReplay logo on the poster. */
+  logoPositionX: number;
+  logoPositionY: number;
   locationLabel: string;
   showLocation: boolean;
   showStats: boolean;
+  stats: SocialShareStat[];
+  statsLayout: 1 | 2 | 3 | 4;
+  statsStyle: 'minimal' | 'cards' | 'accent';
+  statsColor: string;
+  /** Normalized stats box on the cover; created when the user moves or resizes it. */
+  statsFrame?: { x: number; y: number; w: number; h: number };
+  /** Whether the stats area uses a readability scrim or filled stat cards. */
+  showStatsBackground?: boolean;
+  statsScale: number;
   showElevationMiniChart: boolean;
   routeTransform: SocialShareRouteTransform;
+  photoTransform: SocialSharePhotoTransform;
   /** How far up the data panel (stats + elevation) is shifted from the bottom, as a fraction of poster height (0 = bottom). */
   dataPanelOffsetY: number;
   routeGlow: boolean;
@@ -308,7 +363,7 @@ export interface ComparisonTrack {
 export type UnitSystem = 'metric' | 'imperial';
 
 export type ColorMode = 'fixed' | 'heartRate' | 'zones';
-export type OverlayFont = 'modern' | 'editorial' | 'technical' | 'condensed' | 'geometric';
+export type OverlayFont = 'modern' | 'editorial' | 'technical' | 'condensed' | 'geometric' | 'poster' | 'display';
 
 export interface TrailColorZone {
   id: string;

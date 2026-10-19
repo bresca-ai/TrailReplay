@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Pack a recipe and its routes into a single `.replay` file.
+ * Pack a recipe, routes, and optional cover photos into a single `.replay` file.
  *
  * That is all this does. It resolves nothing: no kilometre-to-coordinate maths,
  * no ordering, no derived sets. TrailReplay does that when the file is opened,
@@ -16,7 +16,7 @@
  *
  * Usage:
  *   node make-replay.mjs <dir-with-recipe-and-routes> [-o out.replay]
- *   node make-replay.mjs recipe.json route.gpx [more.gpx ...] [-o out.replay]
+ *   node make-replay.mjs recipe.json route.gpx [more.gpx or cover photos ...] [-o out.replay]
  *
  * Node built-ins only, so it runs from a clean checkout with no install step.
  * The format is documented at https://trailreplay.com/replay-file.md
@@ -105,6 +105,7 @@ function slugify(value, fallback) {
 }
 
 const isRoute = (name) => /\.(gpx|kml)$/i.test(name);
+const isCoverPhoto = (name) => /\.(jpe?g|png|webp|avif)$/i.test(name);
 
 /** Split the inputs into one recipe and its routes, from a directory or a list. */
 function collectInputs(paths) {
@@ -117,6 +118,7 @@ function collectInputs(paths) {
 
   const recipes = paths.filter((path) => path.toLowerCase().endsWith('.json'));
   const routes = paths.filter((path) => isRoute(path));
+  const coverPhotos = paths.filter((path) => isCoverPhoto(path));
 
   if (recipes.length === 0) throw new Error('No recipe: expected a .json file');
   if (recipes.length > 1) {
@@ -124,7 +126,7 @@ function collectInputs(paths) {
   }
   if (routes.length === 0) throw new Error('No .gpx or .kml routes to pack');
 
-  return { recipe: recipes[0], routes };
+  return { recipe: recipes[0], routes, coverPhotos };
 }
 
 /**
@@ -147,6 +149,21 @@ function checkRoutesAreNamed(recipe, routeNames) {
   }
 }
 
+function checkCoverPhotosAreNamed(recipe, photoPaths) {
+  const names = photoPaths.map((path) => basename(path).toLowerCase());
+  const selected = new Set();
+  for (const slot of recipe.socialShareSettings?.photoSlots ?? []) {
+    if (!slot.file) continue;
+    const name = basename(slot.file).toLowerCase();
+    const matches = names.filter((available) => available === name);
+    if (matches.length !== 1) {
+      throw new Error(`Cover photo "${slot.file}" must match exactly one supplied image file`);
+    }
+    selected.add(name);
+  }
+  return photoPaths.filter((path) => selected.has(basename(path).toLowerCase()));
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const outFlag = argv.indexOf('-o');
@@ -159,7 +176,7 @@ function main() {
     process.exit(1);
   }
 
-  const { recipe: recipePath, routes } = collectInputs(inputs.map((path) => resolve(path)));
+  const { recipe: recipePath, routes, coverPhotos } = collectInputs(inputs.map((path) => resolve(path)));
   const recipeText = readFileSync(recipePath, 'utf8');
 
   let recipe;
@@ -170,10 +187,14 @@ function main() {
   }
 
   checkRoutesAreNamed(recipe, routes);
+  const namedCoverPhotos = checkCoverPhotosAreNamed(recipe, coverPhotos);
 
   const files = { 'recipe.json': recipeText };
   for (const route of routes) {
     files[`routes/${basename(route)}`] = readFileSync(route);
+  }
+  for (const photo of namedCoverPhotos) {
+    files[`media/${basename(photo)}`] = readFileSync(photo);
   }
 
   const outPath = outFlag !== -1
@@ -187,6 +208,7 @@ function main() {
 
   console.log(`recipe  ${basename(recipePath)}`);
   for (const route of routes) console.log(`route   ${basename(route)}`);
+  for (const photo of namedCoverPhotos) console.log(`cover   ${basename(photo)}`);
   console.log(`\nwrote ${outPath}`);
   console.log('TrailReplay resolves the recipe when this is opened, and reports what it placed.');
 }

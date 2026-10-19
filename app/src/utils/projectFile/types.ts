@@ -165,6 +165,8 @@ export interface ParsedProject {
   recipe: Recipe | null;
   /** Every route in the archive, whether or not a project references it. */
   routes: Array<{ fileName: string; gpxText: string }>;
+  /** Images included beside routes for a recipe-authored cover. */
+  coverPhotos?: Array<{ fileName: string; bytes: Uint8Array }>;
   tracks: Array<{ meta: ReplayTrackMeta; gpxText: string }>;
   comparisonTracks: Array<{ meta: ReplayComparisonTrackMeta; gpxText: string }>;
 }

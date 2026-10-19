@@ -142,7 +142,7 @@ export function Sidebar() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col min-h-0">
+      <div data-sidebar-scroll className="flex-1 overflow-y-auto p-4 flex flex-col min-h-0">
         <div className="flex-1">
           <SidebarPanelContent />
         </div>

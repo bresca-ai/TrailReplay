@@ -13,6 +13,13 @@ no upload API.
 
 ## 1. The whole job
 
+If you are preparing a video and the person has not already chosen, ask whether
+they want a designed cover image shown for the first second. Wait for an explicit
+yes or no. Set
+`videoExportSettings.includeCover` to `true` only after a yes, and to `false`
+after a no. You may still author `socialShareSettings` for a standalone image,
+but do not silently add the cover to a video.
+
 Write a recipe describing what you want, in the terms the source uses:
 
 ```json
@@ -290,19 +297,22 @@ pins are the point.
 A `.replay` is a **ZIP archive** holding a recipe, a resolved project, or both.
 Standard deflate, under 200 MB.
 
-What you produce is the first kind — the recipe and its routes, nothing
-resolved:
+What you produce is the first kind — the recipe and its routes, optionally
+with cover photos, nothing resolved:
 
 ```
 my-race.replay
 ├── recipe.json
-└── routes/
-    ├── day-1.gpx
-    └── day-2.gpx
+├── routes/
+│   ├── day-1.gpx
+│   └── day-2.gpx
+└── media/
+    └── cover.jpg          ← only when a photoSlot names this file
 ```
 
-The app resolves it on open, exactly as it would a dropped folder. Routes are
-matched on file name, so the `routes/` prefix does not matter.
+The app resolves it on open, exactly as it would a dropped folder. Routes and
+cover photos are matched on file name, so the `routes/` and `media/` prefixes
+do not matter. `make-replay.mjs` packs cover images from the same input folder.
 
 What the app's Save button writes is both:
 
@@ -479,16 +489,128 @@ raw `zoom`, `pitch`, and `bearing` values.
 ### 5.7 `videoExportSettings`
 
 `format` (`mp4` \| `webm`), `quality` (`low` `medium` `high` `ultra`), `fps`,
-`resolution` (`{ width, height }`), `aspectRatio` (`16:9` `1:1` `9:16`),
-`includeAudio`.
+`resolution` (`{ width, height }`), `aspectRatio` (`16:9` `4:5` `1:1` `9:16`),
+`includeAudio`, `includeCover` (boolean). When `includeCover` is `true`, the app
+renders the cover from `socialShareSettings` and places it at the start of the
+video for one second. The cover uses the video's `aspectRatio` and the font in
+`settings.trailStyle.overlayFont`.
 
 ### 5.8 `socialShareSettings`
 
-`template` (`map-first` \| `photo-first`), `aspectRatio` (`4:5` `1:1` `9:16`),
+`template` (`map-first` \| `photo-first` \| `split`), `layoutPreset` (`classic`
+`long-way` `ridge-photo` `photo-grid`), `aspectRatio` (`16:9` `4:5` `1:1` `9:16`),
 `selectedPictureId`, `titleMode` (`journey-name` `track-name` `custom`),
-`customTitle`, `locationLabel`, `showLocation`, `showStats`,
-`showElevationMiniChart`, `routeTransform` (`{ offsetX, offsetY, scale,
-opacity }`), `dataPanelOffsetY`, `routeGlow`.
+`customTitle` (use `\n` for stacked lines), `titleScale` (`0.5`–`3.2`),
+`titleWidth` (`0.3`–`0.96`), `titleColor` (hex),
+`titleOffsetX`, `titleOffsetY`, `logoPositionX`, `logoPositionY`, `locationLabel`, `showLocation`,
+`showStats`, `showElevationMiniChart`, `routeTransform` (`{ offsetX, offsetY,
+scale, opacity }`), `photoTransform` (`{ offsetX, offsetY, scale }`),
+`splitMapFrame` (`{ x, y, w, h }`), `statsFrame` (`{ x, y, w, h }`),
+`showStatsBackground`, `statsScale`, `dataPanelOffsetY`, `routeGlow`. The title and position offsets are fractions of
+the poster width or height. `logoPositionX` and `logoPositionY` set the top-left
+of the required white-backed TrailReplay logo as fractions of the poster size;
+the app keeps the logo inside the poster and always includes it in the output.
+Selecting `layoutPreset` in a recipe applies that design's default typography,
+colors, title placement, stats and photo frames. Other fields in the recipe
+override those defaults.
+
+`stats` is an ordered array of `{ id, metric, label, value, visible, icon? }`. Metrics
+are `distance`, `elevationGain`, `duration`, `movingDuration`, `pace`,
+`heartRate`, `speed`, `altitude`, `maxElevation`, `elevationLoss`, `maxSpeed`,
+or `custom`. A nonempty `value` overrides the calculated metric, and `label`
+overrides its translated label. Show up to four stats. `statsLayout` is `2`, `3`,
+or `4` columns; `statsStyle` is `minimal`, `cards`, or `accent`;
+`statsColor` is a hex color and `statsScale` ranges from `0.7` to `1.4`.
+`icon` uses the same map symbols as annotation cards, such as `map:summit`,
+`map:waterfall`, or a searchable Pinhead symbol such as `pinhead:mountain`.
+Older activity and emoji icon values remain drawable in saved projects.
+
+The split and photo-first layouts use `photoSlots`, an array of `{ id, file?,
+x, y, w, h, offsetX, offsetY, scale, aboveMap? }`. Coordinates and dimensions
+are poster fractions from `0` to `1`, and the frame may span the full width.
+`file` names a JPEG, PNG, WebP or AVIF supplied alongside the recipe and route
+files. The app imports and compresses it for the cover. An omitted `file`
+creates a clickable empty frame in the cover editor; users can upload or drop
+a photo directly into each frame. Frames can be moved and resized on the
+canvas; double-click a filled frame to pan its crop and scroll to zoom.
+`aboveMap` controls whether a split photo is drawn over the map inset. The
+editor also offers this as a checkbox. Each frame can use a different file.
+The `ridge-photo` preset uses one frame and `photo-grid` uses two. A recipe
+with `template: "split"` and no slots gets one empty frame automatically.
+For split layouts, `splitMapFrame` sets the inset map bounds as fractions of the
+poster, including `{ "x": 0, "w": 1 }` for full width; omit it for the preset
+position and size. In the editor, drag inside the map to pan its view, scroll
+to zoom, move its frame with the white handle, and resize it with any orange
+corner. `statsFrame` positions and sizes the stats as one block; its proportions
+determine whether they flow in a row or a column. Set `showStatsBackground` to
+`false` for stats without a backing panel. The map style selector changes the map
+presentation used by the cover and replay.
+Photo-first uses the first slot as its full background photo. Existing projects
+that only specify `selectedPictureId` continue to use that picture until a
+photo is uploaded into the first slot.
+`settings.trailStyle.overlayFont` accepts `modern`, `editorial`, `technical`,
+`condensed`, `geometric`, `poster` (Anton), and `display` (Bebas Neue). The
+chosen font applies to video overlays, map place labels, and the cover.
+
+For an agent-authored video cover, `map-first` needs no image file. A
+`photo-first` or `split` cover can import its photos through the `file` fields;
+include those images when dropping the recipe or packing the `.replay` file.
+Only use an empty frame when the person intends to choose a photo later.
+
+```json
+{
+  "name": "Mountain Traverse",
+  "tracks": [{ "file": "route.gpx" }],
+  "settings": { "trailStyle": { "overlayFont": "condensed" } },
+  "videoExportSettings": { "aspectRatio": "9:16", "includeCover": true },
+  "socialShareSettings": {
+    "template": "map-first",
+    "titleMode": "custom",
+    "customTitle": "Three summits. One day.",
+    "showStats": true,
+    "statsLayout": 2,
+    "statsStyle": "cards",
+    "statsColor": "#FFFFFF",
+    "stats": [
+      { "id": "distance", "metric": "distance", "label": "DISTANCE", "value": "", "visible": true },
+      { "id": "climb", "metric": "elevationGain", "label": "CLIMB", "value": "", "visible": true },
+      { "id": "summits", "metric": "custom", "label": "SUMMITS", "value": "3", "visible": true }
+    ]
+  }
+}
+```
+
+For a photo and map cover, put the named images beside `recipe.json` and the
+route file. This example places a full-width map below a photo and keeps two
+stats at the bottom:
+
+```json
+{
+  "name": "Ridgeline Loop",
+  "tracks": [{ "file": "route.gpx" }],
+  "settings": { "trailStyle": { "overlayFont": "poster" } },
+  "videoExportSettings": { "aspectRatio": "9:16", "includeCover": true },
+  "socialShareSettings": {
+    "template": "split",
+    "layoutPreset": "ridge-photo",
+    "titleMode": "custom",
+    "customTitle": "RIDGELINE LOOP",
+    "titleColor": "#21372C",
+    "splitMapFrame": { "x": 0, "y": 0.54, "w": 1, "h": 0.24 },
+    "photoSlots": [
+      { "id": "hero", "file": "hiker.jpg", "x": 0, "y": 0, "w": 1, "h": 0.63,
+        "offsetX": 0, "offsetY": 0, "scale": 1, "aboveMap": false }
+    ],
+    "statsFrame": { "x": 0.08, "y": 0.87, "w": 0.84, "h": 0.09 },
+    "showStats": true,
+    "showStatsBackground": false,
+    "stats": [
+      { "id": "distance", "metric": "distance", "label": "KM", "value": "", "visible": true, "icon": "map:summit" },
+      { "id": "climb", "metric": "elevationGain", "label": "CLIMB", "value": "", "visible": true, "icon": "map:waypoint" }
+    ]
+  }
+}
+```
 
 ### 5.9 Route and playback
 
@@ -530,9 +652,9 @@ second of three equal legs sits past `0.333`.
 
 ### 5.11 Fields to leave alone
 
-`pictures` and `videos` reference real media files that a `.replay` cannot
-carry — the app reopens them as placeholders, so authoring them from outside is
-not useful. `cinematicCameraKeyframes` is intentionally not part of recipe
+`pictures` and `videos` are route-timed media annotations, separate from cover
+`photoSlots`. Saved projects reopen those annotations as placeholders, so
+authoring them from outside is not useful. `cinematicCameraKeyframes` is intentionally not part of recipe
 input. Import the recipe first, then author Cinematic shots in the website.
 
 ---

@@ -26,7 +26,7 @@ export const help = {
             title: 'What to say to your agent',
             intro: 'Any coding agent that can read a web page and write a file will do. This is enough to get a working recipe back.',
             label: 'Prompt',
-            body: 'Read https://trailreplay.com/llms.txt and the format spec it links to. Then write a recipe.json in this folder for the GPX files here, following what I describe below. Do not compute coordinates. Anchor everything by kilometre and let the app resolve it.',
+            body: 'Read https://trailreplay.com/llms.txt and the format spec it links to. Then write a recipe.json in this folder for the GPX files here, following what I describe below. Do not compute coordinates. Anchor everything by kilometre and let the app resolve it. Before setting up video export, ask me whether I want a designed cover image shown for the first second of the video; wait for my answer and set includeCover accordingly. If I want a photo cover, name the image files in photoSlots and include those files with the recipe.',
             note: 'Then say what you actually want: the aid stations off a race page, the huts you stayed in, a caption at the big climb.',
         },
         camera: {
@@ -243,7 +243,7 @@ export const help = {
         },
         generate: {
           title: 'Generate',
-          body: 'Save an editable .replay project, export still images or 16:9, 1:1 and 9:16 videos, compose the layout, choose quality and frame rate, then download or share.',
+          body: 'Save an editable .replay project, export still images or 16:9, 4:5, 1:1 and 9:16 videos, compose the layout, choose quality and frame rate, then download or share.',
         },
       },
     },

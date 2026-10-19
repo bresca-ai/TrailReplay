@@ -1,4 +1,4 @@
-import type { CameraSettings, AppSettings, LanguageCode, RouteTimingMode, SocialShareSettings, VideoExportSettings } from '@/types';
+import type { CameraSettings, AppSettings, LanguageCode, RouteTimingMode, SocialSharePhotoSlot, SocialShareSettings, VideoExportSettings } from '@/types';
 import type { LandmarkType } from '@/types/landmarks';
 
 /**
@@ -49,8 +49,14 @@ export interface Recipe {
   settings?: DeepPartial<AppSettings>;
   cameraSettings?: Partial<CameraSettings>;
   videoExportSettings?: Partial<VideoExportSettings>;
-  socialShareSettings?: Partial<SocialShareSettings>;
+  socialShareSettings?: Omit<Partial<SocialShareSettings>, 'photoSlots'> & { photoSlots?: RecipeCoverPhotoSlot[] };
 }
+
+/** A poster frame can name a photo dropped beside the recipe or packed in its archive. */
+export type RecipeCoverPhotoSlot = Partial<Omit<SocialSharePhotoSlot, 'imageUrl'>> & {
+  file?: string;
+  imageUrl?: string | null;
+};
 
 export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];

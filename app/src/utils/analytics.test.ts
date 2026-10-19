@@ -79,6 +79,7 @@ describe('analytics', () => {
       resolution: { width: 2160, height: 3840 },
       aspectRatio: '9:16',
       includeAudio: false,
+      includeCover: false,
     }, 'webm', 90_000)).toEqual({
       export_format: 'webm',
       export_requested_format: 'mp4',

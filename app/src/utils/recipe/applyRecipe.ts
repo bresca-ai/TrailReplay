@@ -9,6 +9,7 @@ import {
 } from '@/store/defaults';
 import type { Recipe } from './types';
 import type { ResolvedRecipe } from './resolveRecipe';
+import { createPhotoSlot, presetSettings } from '@/components/sidebar/export/socialSharePresets';
 import {
   getFollowBehindLevelForStopIndex,
   getFollowBehindStopIndexForLevel,
@@ -19,6 +20,9 @@ import {
 function mergeSettings(recipe: Recipe, activeColor: string, activeIcon: string): AppSettings {
   const defaults = createDefaultSettings();
   const saved = recipe.settings ?? {};
+  const coverFont = recipe.socialShareSettings?.layoutPreset === 'long-way' ? 'poster'
+    : recipe.socialShareSettings?.layoutPreset === 'ridge-photo' || recipe.socialShareSettings?.layoutPreset === 'photo-grid' ? 'condensed'
+      : defaults.trailStyle.overlayFont;
   return {
     ...defaults,
     ...saved,
@@ -29,6 +33,7 @@ function mergeSettings(recipe: Recipe, activeColor: string, activeIcon: string):
       trailColor: activeColor,
       markerColor: activeColor,
       currentIcon: activeIcon,
+      overlayFont: coverFont,
       ...saved.trailStyle,
     },
     mapOverlays: { ...defaults.mapOverlays, ...saved.mapOverlays },
@@ -66,7 +71,7 @@ export function mergeRecipeCameraSettings(recipe: Recipe): CameraSettings {
  * A recipe describes a whole replay, not an addition to one, so this mirrors
  * opening a project rather than importing another GPX.
  */
-export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: AppState): void {
+export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: AppState, coverImageUrls: (string | null)[] = []): void {
   store.reset();
 
   for (const track of resolved.tracks) {
@@ -75,6 +80,26 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
 
   const activeTrack = resolved.tracks.find((track) => track.id === resolved.activeTrackId)
     ?? resolved.tracks[0];
+  const defaultCover = createDefaultSocialShareSettings();
+  const authoredCover = recipe.socialShareSettings;
+  const { photoSlots: _photoSlots, ...authoredCoverFields } = authoredCover ?? {};
+  void _photoSlots;
+  const coverPreset = authoredCover?.layoutPreset
+    ? presetSettings(authoredCover.layoutPreset, defaultCover)
+    : {};
+  const mergedCover = { ...defaultCover, ...coverPreset, ...authoredCoverFields };
+  const authoredSlots = authoredCover?.photoSlots?.map((slot, index) => {
+    const presetSlot = coverPreset.photoSlots?.[index];
+    const frame = presetSlot ?? createPhotoSlot(`recipe-photo-${index + 1}`, 0, 0, 1, 0.66);
+    const { file: _file, ...fields } = slot;
+    void _file;
+    return {
+      ...frame,
+      ...fields,
+      id: slot.id || frame.id,
+      imageUrl: coverImageUrls[index] ?? slot.imageUrl ?? frame.imageUrl,
+    };
+  });
 
   store.hydrateState({
     // Kept so saving preserves where this came from, not only what it became.
@@ -111,7 +136,26 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     settings: mergeSettings(recipe, activeTrack.color, activeTrack.activityIcon),
     cameraSettings: mergeRecipeCameraSettings(recipe),
     videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
-    socialShareSettings: { ...createDefaultSocialShareSettings(), ...recipe.socialShareSettings },
+    socialShareSettings: {
+      ...mergedCover,
+      ...(authoredSlots ? { photoSlots: authoredSlots } : {}),
+      ...(mergedCover.template === 'split' && !authoredSlots?.length && !mergedCover.photoSlots?.length
+        ? { photoSlots: [createPhotoSlot('hero', 0, 0, 1, 0.66)] }
+        : {}),
+      ...(recipe.socialShareSettings?.stats ? {
+        stats: recipe.socialShareSettings.stats.map((stat, index) => ({
+          id: stat.id || `recipe-stat-${index}`,
+          metric: stat.metric || 'custom',
+          label: stat.label ?? '',
+          value: stat.value ?? '',
+          visible: stat.visible !== false,
+          icon: stat.icon,
+        })),
+      } : {}),
+      ...(recipe.videoExportSettings?.includeCover
+        ? { aspectRatio: recipe.videoExportSettings.aspectRatio ?? createDefaultVideoExportSettings().aspectRatio }
+        : {}),
+    },
     activePanel: 'tracks',
   });
 }

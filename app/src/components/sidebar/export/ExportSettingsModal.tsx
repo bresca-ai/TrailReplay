@@ -109,7 +109,7 @@ export function ExportSettingsModal({
                   className={`
                     border-2 rounded-sm
                     ${videoExportSettings.aspectRatio === aspectRatio.id ? 'border-white/70' : 'border-[var(--evergreen)]/40'}
-                    ${aspectRatio.id === '16:9' ? 'w-8 h-[18px]' : aspectRatio.id === '1:1' ? 'w-5 h-5' : 'w-[11px] h-5'}
+                  ${aspectRatio.id === '16:9' ? 'w-8 h-[18px]' : aspectRatio.id === '1:1' ? 'w-5 h-5' : aspectRatio.id === '4:5' ? 'w-4 h-5' : 'w-[11px] h-5'}
                   `}
                 />
                 <span className="font-bold">{aspectRatio.label}</span>

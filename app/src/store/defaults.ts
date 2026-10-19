@@ -94,23 +94,44 @@ export function createDefaultVideoExportSettings(): VideoExportSettings {
     resolution: { width: 1920, height: 1080 },
     aspectRatio: '16:9',
     includeAudio: false,
+    includeCover: false,
   };
 }
 
 export function createDefaultSocialShareSettings(): SocialShareSettings {
   return {
     template: 'map-first',
+    layoutPreset: 'classic',
     aspectRatio: '4:5',
     selectedPictureId: null,
+    photoSlots: [],
     titleMode: 'journey-name',
     customTitle: '',
+    titleScale: 1,
+    titleWidth: 0.74,
+    titleColor: '#FFFFFF',
+    titleOffsetX: 0,
+    titleOffsetY: 0,
+    logoPositionX: 0.76,
+    logoPositionY: 0.04,
     locationLabel: '',
     showLocation: false,
     showStats: true,
-    showElevationMiniChart: true,
+    stats: [
+      { id: 'distance', metric: 'distance', label: '', value: '', visible: true },
+      { id: 'elevation', metric: 'elevationGain', label: '', value: '', visible: true },
+      { id: 'time', metric: 'duration', label: '', value: '', visible: true },
+    ],
+    statsLayout: 3,
+    statsStyle: 'minimal',
+    statsColor: '#FFFFFF',
+    showStatsBackground: true,
+    statsScale: 1,
+    showElevationMiniChart: false,
     routeTransform: { offsetX: 0, offsetY: 0, scale: 1, opacity: 0.9 },
+    photoTransform: { offsetX: 0, offsetY: 0, scale: 1 },
     dataPanelOffsetY: 0,
-    routeGlow: true,
+    routeGlow: false,
   };
 }
 

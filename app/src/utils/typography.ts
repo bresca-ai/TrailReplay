@@ -9,6 +9,8 @@ export const OVERLAY_FONT_OPTIONS: ReadonlyArray<{
   { id: 'technical', labelKey: 'annotations.fontTechnical' },
   { id: 'condensed', labelKey: 'annotations.fontCondensed' },
   { id: 'geometric', labelKey: 'annotations.fontGeometric' },
+  { id: 'poster', labelKey: 'annotations.fontPoster' },
+  { id: 'display', labelKey: 'annotations.fontDisplay' },
 ];
 
 const FONT_FAMILIES: Record<OverlayFont, string> = {
@@ -17,6 +19,8 @@ const FONT_FAMILIES: Record<OverlayFont, string> = {
   technical: "'JetBrains Mono', Monaco, monospace",
   condensed: "'Barlow Condensed', 'Arial Narrow', sans-serif",
   geometric: "'Montserrat', Arial, sans-serif",
+  poster: "'Anton', Impact, sans-serif",
+  display: "'Bebas Neue', 'Arial Narrow', sans-serif",
 };
 
 export function overlayFontFamily(font: OverlayFont | null | undefined): string {
