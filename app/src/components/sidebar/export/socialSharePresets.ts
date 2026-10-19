@@ -38,6 +38,7 @@ export function presetSettings(preset: SocialShareLayoutPreset, current: SocialS
   if (preset === 'ridge-photo' || preset === 'photo-grid') return {
     layoutPreset: preset,
     template: 'split',
+    splitMapFrame: undefined,
     titleMode: 'journey-name',
     photoSlots: preset === 'ridge-photo'
       ? [{ ...(photos[0] ?? createPhotoSlot('hero', 0, 0, 1, 0.66)), x: 0, y: 0, w: 1, h: 0.66 }]

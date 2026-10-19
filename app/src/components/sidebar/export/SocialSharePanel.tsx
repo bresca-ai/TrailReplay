@@ -13,7 +13,9 @@ import { OverlayFontPicker } from '@/components/sidebar/OverlayFontPicker';
 import { useAppStore } from '@/store/useAppStore';
 import { compressCoverPhoto } from './socialShareMedia';
 import { arrangePhotoSlots, createPhotoSlot, PRESET_ORDER, presetSettings } from './socialSharePresets';
-import type { SocialShareTemplate, SocialShareAspectRatio, SocialShareStat, SocialShareStatMetric, SocialSharePhotoSlot } from '@/types';
+import { getPosterSize } from './socialShareRenderer';
+import { getSplitMapFrame } from './socialShareSplit';
+import type { MapStyle, SocialShareTemplate, SocialShareAspectRatio, SocialShareStat, SocialShareStatMetric, SocialSharePhotoSlot } from '@/types';
 
 const RATIOS: { value: SocialShareAspectRatio; label: string }[] = [
   { value: '16:9', label: '16:9' },
@@ -55,6 +57,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
   const { t } = useI18n();
   const overlayFont = useAppStore((state) => state.settings.trailStyle.overlayFont);
   const setTrailStyle = useAppStore((state) => state.setTrailStyle);
+  const mapStyle = useAppStore((state) => state.settings.mapStyle);
+  const setMapStyle = useAppStore((state) => state.setMapStyle);
   const {
     previewUrl, isRendering, generatePreview, exportPng, fitTrackToMap,
     settings, setSocialShareSettings, pictures, hasTracks,
@@ -77,6 +81,10 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
   const photoFirstImageUrl = settings.photoSlots?.[0]?.imageUrl
     ?? pictures.find((picture) => picture.id === settings.selectedPictureId)?.url
     ?? null;
+  const posterSize = getPosterSize(settings.aspectRatio);
+  const splitMapFrame = getSplitMapFrame(posterSize.w, posterSize.h, settings.splitMapFrame);
+  const updateSplitMapFrame = (patch: Partial<typeof splitMapFrame>) =>
+    setSocialShareSettings({ splitMapFrame: getSplitMapFrame(posterSize.w, posterSize.h, { ...splitMapFrame, ...patch }) });
 
   const applyPreset = (preset: typeof PRESET_ORDER[number]) => {
     const patch = presetSettings(preset, settings);
@@ -358,6 +366,46 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           </button>)}
         </div>}
         {photoError && <p className="text-xs text-red-600" role="alert">{photoError}</p>}
+      </div>}
+
+      {settings.template === 'split' && <div className="space-y-3 rounded-xl border border-black/10 bg-black/[0.025] p-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.mapFrame')}</div>
+          <p className="mt-1 text-[11px] leading-4 opacity-60">{t('imageExport.splitMapHint')}</p>
+        </div>
+        <div className="space-y-2">
+          <label className="flex items-center gap-3 text-xs">
+            <span className="w-16 shrink-0 opacity-70">{t('imageExport.mapWidth')}</span>
+            <input type="range" min={0.18} max={0.9} step={0.01} value={splitMapFrame.w}
+              onChange={(event) => updateSplitMapFrame({ w: Number(event.target.value) })}
+              className="min-w-0 flex-1 accent-[var(--trail-orange)]" />
+            <span className="w-9 text-right tabular-nums opacity-60">{Math.round(splitMapFrame.w * 100)}%</span>
+          </label>
+          <label className="flex items-center gap-3 text-xs">
+            <span className="w-16 shrink-0 opacity-70">{t('imageExport.mapHeight')}</span>
+            <input type="range" min={0.12} max={0.7} step={0.01} value={splitMapFrame.h}
+              onChange={(event) => updateSplitMapFrame({ h: Number(event.target.value) })}
+              className="min-w-0 flex-1 accent-[var(--trail-orange)]" />
+            <span className="w-9 text-right tabular-nums opacity-60">{Math.round(splitMapFrame.h * 100)}%</span>
+          </label>
+        </div>
+        <button type="button" onClick={() => setSocialShareSettings({ splitMapFrame: undefined })}
+          className="rounded-md bg-black/5 px-2.5 py-1.5 text-xs font-medium hover:bg-black/10">{t('imageExport.resetMapFrame')}</button>
+        <div>
+          <div className="mb-2 text-xs font-medium">{t('imageExport.mapStyle')}</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {([
+              { id: 'satellite', label: 'settings.mapStyles.satellite' },
+              { id: 'topo', label: 'settings.mapStyles.topo' },
+              { id: 'outdoor', label: 'settings.mapStyles.outdoor' },
+              { id: 'street', label: 'settings.mapStyles.street' },
+            ] as const satisfies Array<{ id: MapStyle; label: string }>).map((option) => <button key={option.id} type="button"
+              onClick={() => setMapStyle(option.id)} aria-pressed={mapStyle === option.id}
+              className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${mapStyle === option.id ? 'bg-[var(--trail-orange)] text-white' : 'bg-white text-[var(--evergreen)] hover:bg-black/10'}`}>
+              {t(option.label)}
+            </button>)}
+          </div>
+        </div>
       </div>}
 
       {/* Title */}

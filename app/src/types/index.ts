@@ -307,6 +307,8 @@ export interface SocialShareSettings {
   aspectRatio: SocialShareAspectRatio;
   selectedPictureId: string | null;
   photoSlots: SocialSharePhotoSlot[];
+  /** Normalized position and size of the map inset in photo + map layouts. */
+  splitMapFrame?: { x: number; y: number; w: number; h: number };
   titleMode: 'journey-name' | 'track-name' | 'custom';
   customTitle: string;
   titleScale: number;

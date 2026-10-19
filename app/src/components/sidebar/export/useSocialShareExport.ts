@@ -45,6 +45,7 @@ export function useSocialShareExport() {
   const unitSystem = useAppStore((s) => s.settings.unitSystem);
   const language = useAppStore((s) => s.settings.language);
   const overlayFont = useAppStore((s) => s.settings.trailStyle.overlayFont);
+  const mapStyle = useAppStore((s) => s.settings.mapStyle);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
@@ -109,7 +110,7 @@ export function useSocialShareExport() {
       if (map && container && tracks.length > 0) {
         const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
         const rect = container.getBoundingClientRect();
-        const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH) : null;
+        const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH, settings.splitMapFrame) : null;
         const { cropX, cropY, cropW, cropH } = getCropRegion(rect, splitBox?.w ?? posterW, splitBox?.h ?? posterH);
         const pts: CanvasPoint[] = [];
         for (const track of tracks) {
@@ -214,16 +215,19 @@ export function useSocialShareExport() {
             && lastMapFirstFitKeyRef.current !== fitKey) {
             const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
             const rect = container.getBoundingClientRect();
-            const crop = getCropRegion(rect, posterW, posterH);
-            const safeArea = getMapFirstRouteSafeArea({
-              posterWidth: posterW,
-              posterHeight: posterH,
-              showLocation: settings.showLocation,
-              showStats: settings.showStats && visibleStatCount > 0,
-              statsRows,
-              showElevation: settings.showElevationMiniChart,
-            });
-            const padding = settings.template === 'split' ? 80 : getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
+            const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH, settings.splitMapFrame) : null;
+            const crop = getCropRegion(rect, splitBox?.w ?? posterW, splitBox?.h ?? posterH);
+            const safeArea = splitBox
+              ? { x: 0.08, y: 0.08, w: 0.84, h: 0.84 }
+              : getMapFirstRouteSafeArea({
+                posterWidth: posterW,
+                posterHeight: posterH,
+                showLocation: settings.showLocation,
+                showStats: settings.showStats && visibleStatCount > 0,
+                statsRows,
+                showElevation: settings.showElevationMiniChart,
+              });
+            const padding = getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
             let minLon = Infinity;
             let maxLon = -Infinity;
             let minLat = Infinity;
@@ -267,7 +271,7 @@ export function useSocialShareExport() {
       // Compute the same route bounds used by the renderer for either template.
       if (settings.template === 'split') {
         const { w, h } = getPosterSize(settings.aspectRatio);
-        const box = getSplitMapBox(w, h);
+        const box = getSplitMapBox(w, h, settings.splitMapFrame);
         setRouteBboxNorm({ x: box.x / w, y: box.y / h, w: box.w / w, h: box.h / h });
       } else if (settings.template === 'photo-first' && input.routeLatLons) {
         setRouteBboxNorm(computeRouteBbox(input.routeLatLons));
@@ -300,7 +304,7 @@ export function useSocialShareExport() {
 
     const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
     const rect = container.getBoundingClientRect();
-    const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH) : null;
+    const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH, settings.splitMapFrame) : null;
     const { cropX, cropY, cropW, cropH } = getCropRegion(rect, splitBox?.w ?? posterW, splitBox?.h ?? posterH);
 
     if (gesture.type === 'move') {
@@ -320,7 +324,7 @@ export function useSocialShareExport() {
     }
 
     await generatePreview();
-  }, [generatePreview, settings.aspectRatio, settings.template]);
+  }, [generatePreview, settings.aspectRatio, settings.splitMapFrame, settings.template]);
 
   useEffect(() => {
     const render = () => void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first' });
@@ -355,6 +359,7 @@ export function useSocialShareExport() {
     settings.routeTransform.offsetY,
     settings.routeTransform.opacity,
     settings.routeGlow,
+    mapStyle,
     tracks.length,
     photoVersion,
     generatePreview,
@@ -367,11 +372,22 @@ export function useSocialShareExport() {
     if (pts.length === 0) return;
     const lons = pts.map((p) => p.lon);
     const lats = pts.map((p) => p.lat);
+    let padding: number | { top: number; right: number; bottom: number; left: number } = 80;
+    if (settings.template === 'split') {
+      const container = document.getElementById('map-capture-container');
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const { w, h } = getPosterSize(settings.aspectRatio);
+        const box = getSplitMapBox(w, h, settings.splitMapFrame);
+        const crop = getCropRegion(rect, box.w, box.h);
+        padding = getMapFirstFitPadding(rect.width, rect.height, crop, { x: 0.08, y: 0.08, w: 0.84, h: 0.84 });
+      }
+    }
     map.fitBounds(
       [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
-      { padding: 80, maxZoom: 15, duration: 600 },
+      { padding, maxZoom: 15, duration: 600 },
     );
-  }, [tracks]);
+  }, [settings.aspectRatio, settings.splitMapFrame, settings.template, tracks]);
 
   const exportPng = useCallback(async () => {
     if (tracks.length === 0) return;

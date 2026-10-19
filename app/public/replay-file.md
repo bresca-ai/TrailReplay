@@ -495,7 +495,7 @@ video for one second. The cover uses the video's `aspectRatio` and the font in
 `titleOffsetX`, `titleOffsetY`, `logoPositionX`, `logoPositionY`, `locationLabel`, `showLocation`,
 `showStats`, `showElevationMiniChart`, `routeTransform` (`{ offsetX, offsetY,
 scale, opacity }`), `photoTransform` (`{ offsetX, offsetY, scale }`),
-`dataPanelOffsetY`, `routeGlow`. The title and position offsets are fractions of
+`splitMapFrame` (`{ x, y, w, h }`), `dataPanelOffsetY`, `routeGlow`. The title and position offsets are fractions of
 the poster width or height. `logoPositionX` and `logoPositionY` set the top-left
 of the required white-backed TrailReplay logo as fractions of the poster size;
 the app keeps the logo inside the poster and always includes it in the output.
@@ -520,6 +520,11 @@ offsetX, offsetY, scale }`. Coordinates are poster fractions. An omitted or
 upload or drop a photo directly into each frame, then pan and zoom its crop.
 The `ridge-photo` preset uses one frame and `photo-grid` uses two. A recipe
 with `template: "split"` and no slots gets one empty frame automatically.
+For split layouts, `splitMapFrame` sets the inset map bounds as fractions of the
+poster; omit it for the preset position and size. In the editor, drag inside the
+map to pan its view, scroll to zoom, move its frame with the white handle, and
+resize it with the orange corner. The map style selector changes the map
+presentation used by the cover and replay.
 Photo-first uses the first slot as its full background photo. Existing projects
 that only specify `selectedPictureId` continue to use that picture until a
 photo is uploaded into the first slot.

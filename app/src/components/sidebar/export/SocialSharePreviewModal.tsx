@@ -3,6 +3,7 @@ import { Check, Download, ImagePlus, Loader2, Minus, Move, Plus, X } from 'lucid
 import type { SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
+import { getSplitMapFrame } from './socialShareSplit';
 
 interface Props {
   previewUrl: string;
@@ -25,7 +26,7 @@ interface Props {
 }
 
 interface RouteDragState {
-  type: 'move' | 'resize';
+  type: 'move' | 'resize' | 'frame-move';
   startX: number;
   startY: number;
   startScale: number;
@@ -73,7 +74,7 @@ export function SocialSharePreviewModal({
 
   // Route overlay drag state
   const routeDragRef = useRef<RouteDragState | null>(null);
-  const [routeDragVisual, setRouteDragVisual] = useState({ dx: 0, dy: 0, sf: 1, active: false });
+  const [routeDragVisual, setRouteDragVisual] = useState<{ dx: number; dy: number; sf: number; active: boolean; type: RouteDragState['type'] | null }>({ dx: 0, dy: 0, sf: 1, active: false, type: null });
 
   // Panel overlay drag state
   const panelDragRef = useRef<PanelDragState | null>(null);
@@ -269,7 +270,7 @@ export function SocialSharePreviewModal({
   };
 
   // ── Route drag handlers (pointer capture on the bbox div) ─────────────────
-  const onRoutePointerDown = (e: React.PointerEvent, type: 'move' | 'resize') => {
+  const onRoutePointerDown = (e: React.PointerEvent, type: RouteDragState['type']) => {
     e.stopPropagation();
     e.preventDefault();
     const container = containerRef.current;
@@ -286,7 +287,7 @@ export function SocialSharePreviewModal({
       containerW: rect.width,
       containerH: rect.height,
     };
-    setRouteDragVisual({ dx: 0, dy: 0, sf: 1, active: true });
+    setRouteDragVisual({ dx: 0, dy: 0, sf: 1, active: true, type });
   };
 
   const onRoutePointerMove = (e: React.PointerEvent) => {
@@ -294,33 +295,54 @@ export function SocialSharePreviewModal({
     if (!ds) return;
     const dx = e.clientX - ds.startX;
     const dy = e.clientY - ds.startY;
-    if (ds.type === 'move') {
-      setRouteDragVisual({ dx, dy, sf: 1, active: true });
+    if (ds.type === 'move' || ds.type === 'frame-move' || settings.template === 'split') {
+      setRouteDragVisual({ dx, dy, sf: 1, active: true, type: ds.type });
     } else {
       const diag = (dx + dy) * 0.5;
       const sf = Math.max(0.2, 1 + diag / (ds.containerW * 0.3));
-      setRouteDragVisual({ dx: 0, dy: 0, sf, active: true });
+      setRouteDragVisual({ dx: 0, dy: 0, sf, active: true, type: ds.type });
     }
   };
 
-  const onRoutePointerUp = () => {
+  const onRoutePointerUp = (e: React.PointerEvent) => {
     const ds = routeDragRef.current;
     if (!ds) return;
-    const visual = routeDragVisual;
+    const dx = e.clientX - ds.startX;
+    const dy = e.clientY - ds.startY;
+    const scaleFactor = Math.max(0.2, 1 + (dx + dy) * 0.5 / (ds.containerW * 0.3));
     routeDragRef.current = null;
-    setRouteDragVisual({ dx: 0, dy: 0, sf: 1, active: false });
+    setRouteDragVisual({ dx: 0, dy: 0, sf: 1, active: false, type: null });
+
+    if (settings.template === 'split' && routeBboxNorm) {
+      if (ds.type === 'move') {
+        void onMapRouteGesture({
+          type: 'move',
+          deltaX: dx / (ds.containerW * routeBboxNorm.w),
+          deltaY: dy / (ds.containerH * routeBboxNorm.h),
+        });
+      } else {
+        const frame = getSplitMapFrame(1, 1, {
+          ...routeBboxNorm,
+          ...(ds.type === 'frame-move'
+            ? { x: routeBboxNorm.x + dx / ds.containerW, y: routeBboxNorm.y + dy / ds.containerH }
+            : { w: routeBboxNorm.w + dx / ds.containerW, h: routeBboxNorm.h + dy / ds.containerH }),
+        });
+        setSocialShareSettings({ splitMapFrame: frame });
+      }
+      return;
+    }
 
     if (settings.template === 'map-first') {
       if (ds.type === 'move') {
         void onMapRouteGesture({
           type: 'move',
-          deltaX: visual.dx / ds.containerW,
-          deltaY: visual.dy / ds.containerH,
+          deltaX: dx / ds.containerW,
+          deltaY: dy / ds.containerH,
         });
       } else {
         void onMapRouteGesture({
           type: 'resize',
-          scaleFactor: visual.sf,
+          scaleFactor,
           anchorX: (routeBboxNorm?.x ?? 0) + (routeBboxNorm?.w ?? 1) / 2,
           anchorY: (routeBboxNorm?.y ?? 0) + (routeBboxNorm?.h ?? 1) / 2,
         });
@@ -332,15 +354,15 @@ export function SocialSharePreviewModal({
       setSocialShareSettings({
         routeTransform: {
           ...settings.routeTransform,
-          offsetX: ds.startOffsetX + visual.dx / ds.containerW,
-          offsetY: ds.startOffsetY + visual.dy / ds.containerH,
+          offsetX: ds.startOffsetX + dx / ds.containerW,
+          offsetY: ds.startOffsetY + dy / ds.containerH,
         },
       });
     } else {
       setSocialShareSettings({
         routeTransform: {
           ...settings.routeTransform,
-          scale: Math.max(0.3, Math.min(4, ds.startScale * visual.sf)),
+          scale: Math.max(0.3, Math.min(4, ds.startScale * scaleFactor)),
         },
       });
     }
@@ -396,7 +418,8 @@ export function SocialSharePreviewModal({
             {!inline && hasAnyOverlay && (
               <span className="ml-2 text-xs font-normal opacity-60 normal-case tracking-normal">
                 {t(settings.template === 'map-first'
-                  ? 'imageExport.dragMapHint'
+                ? 'imageExport.dragMapHint'
+                : settings.template === 'split' ? 'imageExport.dragSplitMapHint'
                   : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
               </span>
             )}
@@ -534,9 +557,13 @@ export function SocialSharePreviewModal({
                 style={{
                   left: `${routeBboxNorm.x * 100}%`,
                   top: `${routeBboxNorm.y * 100}%`,
-                  width: `${routeBboxNorm.w * 100}%`,
-                  height: `${routeBboxNorm.h * 100}%`,
-                  transform: `translate(${routeDragVisual.active ? routeDragVisual.dx : 0}px, ${routeDragVisual.active ? routeDragVisual.dy : 0}px) scale(${routeDragVisual.active ? routeDragVisual.sf : 1})`,
+                  width: settings.template === 'split' && routeDragVisual.type === 'resize'
+                    ? `calc(${routeBboxNorm.w * 100}% + ${routeDragVisual.dx}px)` : `${routeBboxNorm.w * 100}%`,
+                  height: settings.template === 'split' && routeDragVisual.type === 'resize'
+                    ? `calc(${routeBboxNorm.h * 100}% + ${routeDragVisual.dy}px)` : `${routeBboxNorm.h * 100}%`,
+                  transform: settings.template === 'split'
+                    ? `translate(${routeDragVisual.type === 'frame-move' ? routeDragVisual.dx : 0}px, ${routeDragVisual.type === 'frame-move' ? routeDragVisual.dy : 0}px)`
+                    : `translate(${routeDragVisual.active ? routeDragVisual.dx : 0}px, ${routeDragVisual.active ? routeDragVisual.dy : 0}px) scale(${routeDragVisual.active ? routeDragVisual.sf : 1})`,
                   transformOrigin: '50% 50%',
                   cursor: routeDragVisual.active ? 'grabbing' : 'grab',
                   touchAction: 'none',
@@ -546,7 +573,28 @@ export function SocialSharePreviewModal({
                 onPointerMove={onRoutePointerMove}
                 onPointerUp={onRoutePointerUp}
                 onPointerCancel={onRoutePointerUp}
+                onWheel={(event) => {
+                  if (settings.template !== 'split') return;
+                  event.preventDefault();
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  void onMapRouteGesture({
+                    type: 'resize',
+                    scaleFactor: event.deltaY < 0 ? 1.16 : 1 / 1.16,
+                    anchorX: (event.clientX - rect.left) / rect.width,
+                    anchorY: (event.clientY - rect.top) / rect.height,
+                  });
+                }}
+                aria-label={settings.template === 'split' ? t('imageExport.dragSplitMapHint') : t('imageExport.dragMapHint')}
               >
+                {settings.template === 'split' && <button type="button"
+                  className="absolute left-0 top-0 z-20 flex h-6 w-6 -translate-x-1/3 -translate-y-1/3 cursor-move items-center justify-center rounded-md bg-white text-[var(--evergreen)] shadow"
+                  onPointerDown={(event) => onRoutePointerDown(event, 'frame-move')}
+                  onPointerMove={onRoutePointerMove}
+                  onPointerUp={onRoutePointerUp}
+                  onPointerCancel={onRoutePointerUp}
+                  aria-label={t('imageExport.moveMapFrame')} title={t('imageExport.moveMapFrame')}>
+                  <Move className="h-3.5 w-3.5" />
+                </button>}
                 {/* Resize handle — bottom-right corner */}
                 <div
                   className="absolute bottom-0 right-0 w-5 h-5 bg-[var(--trail-orange)] rounded-tl-md flex items-center justify-center cursor-nwse-resize"
@@ -555,6 +603,10 @@ export function SocialSharePreviewModal({
                     e.stopPropagation();
                     onRoutePointerDown(e, 'resize');
                   }}
+                  onPointerMove={onRoutePointerMove}
+                  onPointerUp={onRoutePointerUp}
+                  onPointerCancel={onRoutePointerUp}
+                  aria-label={settings.template === 'split' ? t('imageExport.resizeMapFrame') : t('imageExport.zoomIn')}
                 >
                   <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                     <path d="M1 7L7 1M4 7L7 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
@@ -593,7 +645,7 @@ export function SocialSharePreviewModal({
 
         <div className={`px-4 py-3 flex gap-2 shrink-0 ${inline ? 'border-t border-white/10 text-white' : 'border-t border-black/10'}`}>
           {inline && <p className="min-w-0 self-center text-xs leading-4 text-white/60">
-            {t(settings.template === 'map-first' ? 'imageExport.dragMapHint' : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
+            {t(settings.template === 'map-first' ? 'imageExport.dragMapHint' : settings.template === 'split' ? 'imageExport.dragSplitMapHint' : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
           </p>}
           {!inline && <button onClick={onClose} className="tr-btn tr-btn-secondary flex-1">
             {t('imageExport.back')}

@@ -659,7 +659,7 @@ function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: R
     drawPhotoSlot(ctx, slot, input.slotImages[slot.id], w, h);
   }
 
-  const mapBox = getSplitMapBox(w, h);
+  const mapBox = getSplitMapBox(w, h, settings.splitMapFrame);
   ctx.save();
   ctx.shadowColor = 'rgba(11,31,23,0.30)';
   ctx.shadowBlur = w * 0.035;
