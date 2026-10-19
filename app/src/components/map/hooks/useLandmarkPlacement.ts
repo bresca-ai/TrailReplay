@@ -2,18 +2,12 @@ import { useEffect, type MutableRefObject } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { useAppStore } from '@/store/useAppStore';
 import { createUserLandmark } from '@/utils/createUserLandmark';
+import { useFindNearestRoutePoint } from '@/components/map/hooks/useFindNearestRoutePoint.ts';
 
 /** Kept in sync with useRouteLandmarksLayer, which owns these layers. */
 const LANDMARK_LAYER_IDS = ['route-landmarks-icon', 'route-landmarks-label'];
 
-interface RoutePlacement {
-  lat: number;
-  lon: number;
-  progress: number;
-}
-
 interface UseLandmarkPlacementParams {
-  findNearestRoutePoint: (lat: number, lon: number) => RoutePlacement | null;
   isMapLoaded: boolean;
   isPlacingLandmark: boolean;
   mapRef: MutableRefObject<maplibregl.Map | null>;
@@ -26,11 +20,12 @@ interface UseLandmarkPlacementParams {
  * when the route is near enough, which is what orders the sidebar list.
  */
 export function useLandmarkPlacement({
-  findNearestRoutePoint,
   isMapLoaded,
   isPlacingLandmark,
   mapRef,
 }: UseLandmarkPlacementParams) {
+  const findNearestRoutePoint = useFindNearestRoutePoint();
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;

@@ -29,7 +29,6 @@ import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
 import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
 import { useTilePreloadDiagnostics } from './hooks/useTilePreloadDiagnostics';
-import { projectCoordinateToJourney, projectCoordinateToTrack } from '@/utils/routeProjection';
 import type { CropPreviewMetrics } from '@/utils/crop';
 
 interface TrailMapProps {
@@ -129,21 +128,9 @@ export function TrailMap(_props: TrailMapProps) {
     }
   }, []);
 
-  const findNearestRoutePoint = useCallback((lat: number, lon: number) => {
-    if (computedJourney && computedJourney.coordinates.length > 0) {
-      return projectCoordinateToJourney(computedJourney, lat, lon, playback.progress);
-    }
-
-    const track = activeTrack || tracks[0];
-    if (!track || track.points.length === 0) return null;
-
-    return projectCoordinateToTrack(track, lat, lon, playback.progress);
-  }, [activeTrack, computedJourney, playback.progress, tracks]);
-
   useManualPicturePlacement({
     addPicture,
     addVideo,
-    findNearestRoutePoint,
     isMapLoaded,
     mapRef: map,
     pendingPicturePlacements,
@@ -189,7 +176,6 @@ export function TrailMap(_props: TrailMapProps) {
   });
 
   useLandmarkPlacement({
-    findNearestRoutePoint,
     isMapLoaded,
     isPlacingLandmark,
     mapRef: map,

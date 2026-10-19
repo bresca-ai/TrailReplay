@@ -750,6 +750,7 @@ export const de = {
       summit: 'Gipfel', pass: 'Pass', viewpoint: 'Aussichtspunkt', 'high-point': 'Hochpunkt', waterfall: 'Wasserfall', trailhead: 'Ausgangspunkt', hut: 'Hütte', shelter: 'Schutzhütte', camp: 'Zeltplatz', water: 'Wasser', 'aid-station': 'Verpflegungsstation',
       finish: 'Ziel', town: 'Ort', lake: 'See', 'river-crossing': 'Flussquerung', photo: 'Foto', note: 'Notiz', challenge: 'Herausforderung', custom: 'Benutzerdefiniert', 'highest-point': 'Höchster Punkt', 'longest-climb': 'Längster Anstieg', 'major-descent': 'Größter Abstieg', halfway: 'Hälfte',
     },
+    pasteCoordinates: 'Oder Koordinaten hier einfügen',
   },
   imageExport: {
     modeVideo: 'Video',
