@@ -456,8 +456,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
 
   if (settings.layoutPreset === 'long-way') {
     ctx.save();
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = '#2B5337';
+    ctx.fillStyle = 'rgba(8, 35, 22, 0.18)';
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
@@ -471,7 +470,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
 
   if (settings.layoutPreset === 'long-way') {
     const titleScrim = ctx.createLinearGradient(0, 0, w * 0.88, 0);
-    titleScrim.addColorStop(0, 'rgba(3,18,13,0.84)');
+    titleScrim.addColorStop(0, 'rgba(3,18,13,0.58)');
     titleScrim.addColorStop(1, 'rgba(3,18,13,0)');
     ctx.fillStyle = titleScrim;
     ctx.fillRect(0, h * 0.12, w, h * 0.72);

@@ -9,7 +9,7 @@ import { trackEvent } from '@/utils/analytics';
 import { renderActivityIcon } from '@/utils/activityIcons';
 import { AnnotationSymbolPicker } from '@/components/sidebar/AnnotationSymbolPicker';
 import { annotationSymbolLabel, annotationSymbolPath } from '@/components/annotations/annotationSymbol';
-import { OVERLAY_FONT_OPTIONS, overlayFontFamily } from '@/utils/typography';
+import { OverlayFontPicker } from '@/components/sidebar/OverlayFontPicker';
 import { useAppStore } from '@/store/useAppStore';
 import { compressCoverPhoto } from './socialShareMedia';
 import { arrangePhotoSlots, createPhotoSlot, PRESET_ORDER, presetSettings } from './socialSharePresets';
@@ -247,10 +247,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
 
       <div>
         <label className="mb-2 block text-xs uppercase tracking-wide opacity-60" htmlFor="cover-font">{t('imageExport.coverTypography')}</label>
-        <select id="cover-font" value={overlayFont} onChange={(event) => setTrailStyle({ overlayFont: event.target.value as typeof overlayFont })}
-          className="w-full rounded-lg border border-black/10 bg-[var(--canvas)] px-3 py-2 text-sm">
-          {OVERLAY_FONT_OPTIONS.map((font) => <option key={font.id} value={font.id} style={{ fontFamily: overlayFontFamily(font.id) }}>{t(font.labelKey)}</option>)}
-        </select>
+        <OverlayFontPicker id="cover-font" value={overlayFont} onChange={(font) => setTrailStyle({ overlayFont: font })} />
       </div>
 
       {/* Aspect ratio */}
