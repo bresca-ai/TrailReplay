@@ -21,21 +21,28 @@ jobs:
       github.event.workflow_run.actor.login == 'alexalmansa'
     runs-on: ubuntu-latest
     steps:
+      - name: Download request metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: approved-fork-preview-request
+          path: fork-preview-request
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+
       - name: Verify approval and mirror the exact PR head
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
-          PR_NUMBER="$(
-            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/pull_requests" \
-              --jq 'if length == 1 then .[0].number else empty end'
-          )"
+          PR_NUMBER="$(cat fork-preview-request/pr-number)"
+          requested_sha="$(cat fork-preview-request/head-sha)"
           case "$PR_NUMBER" in
             ''|*[!0-9]*)
-              echo "The triggering run is not associated with a pull request."
+              echo "The approved fork request contains an invalid pull request number."
               exit 1
               ;;
           esac
+          [[ "$requested_sha" =~ ^[0-9a-f]{40}$ ]]
 
           pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
           state="$(jq -r '.state' <<<"$pr_json")"
@@ -44,7 +51,7 @@ jobs:
 
           test "$state" = open
           test "$head_repo" != "$GITHUB_REPOSITORY"
-          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
+          test "$head_sha" = "$requested_sha"
 
           latest_review="$(
             gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" \
