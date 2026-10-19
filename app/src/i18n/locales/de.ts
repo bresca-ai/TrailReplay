@@ -760,7 +760,7 @@ export const de = {
     templatePhotoFirst: 'Foto zuerst',
     templateSplit: 'Foto + Karte',
     layoutPresets: 'Fertige Layouts', presetClassic: 'Klassische Karte', presetLongWay: 'Markante Route', presetRidgePhoto: 'Foto + Karte', presetPhotoGrid: 'Zwei Fotos',
-    coverTypography: 'Schrift für Cover und Video', photoFrames: 'Fotorahmen', photoFramesHint: 'Leeren Rahmen anklicken oder ein Foto hineinziehen. Ziehen zum Zuschneiden, scrollen zum Zoomen.', addFrame: 'Rahmen hinzufügen', removePhoto: 'Foto entfernen', replacePhoto: 'Foto ersetzen', zoomPhoto: 'Zoom', movePhotoCrop: 'Fotoausschnitt verschieben',
+    coverTypography: 'Schrift für Cover und Video', photoFrames: 'Fotorahmen', photoFramesHint: 'Leeren Rahmen anklicken, um ein Foto einzufügen. Rahmen ziehen zum Verschieben, Ecken zum Skalieren und doppelklicken zum Zuschneiden.', addFrame: 'Rahmen hinzufügen', removePhoto: 'Foto entfernen', replacePhoto: 'Foto ersetzen', zoomPhoto: 'Zoom', movePhotoCrop: 'Fotoausschnitt verschieben', movePhotoFrame: 'Fotorahmen verschieben', resizePhotoFrame: 'Fotorahmen skalieren', cropPhoto: 'Foto zuschneiden', photoAboveMap: 'Foto vor der Karte platzieren',
     titleWidth: 'Titelbreite', resizeTitle: 'Titelgröße ändern', statIcon: 'Symbol', noIcon: 'Kein Symbol',
     ratio: 'Verhältnis',
     photo: 'Foto',

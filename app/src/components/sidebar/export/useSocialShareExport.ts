@@ -56,6 +56,7 @@ export function useSocialShareExport() {
   const photoRef = useRef<HTMLImageElement | null>(null);
   const photoIdRef = useRef<string | null>(null);
   const lastMapFirstFitKeyRef = useRef<string | null>(null);
+  const lastMapSnapshotRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
   const mapGestureSettleTimerRef = useRef<number | null>(null);
   const previewRequestIdRef = useRef(0);
 
@@ -194,7 +195,7 @@ export function useSocialShareExport() {
     return getRouteBboxNorm(projected, pw, ph, pw * 0.025);
   }, [settings.aspectRatio, settings.routeTransform]);
 
-  const generatePreview = useCallback(async (options: { fitMapFirstRoute?: boolean; fastMapCapture?: boolean } = {}) => {
+  const generatePreview = useCallback(async (options: { fitMapFirstRoute?: boolean; fastMapCapture?: boolean; reuseMapCapture?: boolean } = {}) => {
     const requestId = ++previewRequestIdRef.current;
     if (tracks.length === 0) { setPreviewUrl(null); setIsRendering(false); return; }
     setIsRendering(true);
@@ -260,12 +261,26 @@ export function useSocialShareExport() {
             lastMapFirstFitKeyRef.current = fitKey;
           }
 
-          preCapuredMapCanvas = await captureSocialMap(map, {
-            routeGlow: settings.template === 'split' ? false : settings.routeGlow,
-            routeOpacity: settings.routeTransform.opacity,
-            highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
-            waitForTiles: !options.fastMapCapture,
-          });
+          const center = map.getCenter();
+          const snapshotKey = [
+            settings.template, settings.routeGlow, settings.routeTransform.opacity,
+            settings.layoutPreset, mapStyle,
+            center.lng, center.lat, map.getZoom(), map.getPitch(), map.getBearing(),
+            map.getCanvas().width, map.getCanvas().height,
+            ...visibleTracks.map((track) => `${track.id}:${track.points.length}:${track.color}`),
+          ].join('|');
+          const cached = lastMapSnapshotRef.current;
+          if (options.reuseMapCapture && cached?.key === snapshotKey) {
+            preCapuredMapCanvas = cached.canvas;
+          } else {
+            preCapuredMapCanvas = await captureSocialMap(map, {
+              routeGlow: settings.template === 'split' ? false : settings.routeGlow,
+              routeOpacity: settings.routeTransform.opacity,
+              highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
+              waitForTiles: !options.fastMapCapture,
+            });
+            if (preCapuredMapCanvas) lastMapSnapshotRef.current = { key: snapshotKey, canvas: preCapuredMapCanvas };
+          }
         }
       }
 
@@ -305,6 +320,7 @@ export function useSocialShareExport() {
     computeRouteBbox,
     tracks,
     overlayFont,
+    mapStyle,
     settings,
   ]);
 
@@ -343,7 +359,7 @@ export function useSocialShareExport() {
   }, [generatePreview, settings.aspectRatio, settings.splitMapFrame, settings.template]);
 
   useEffect(() => {
-    const render = () => void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first' });
+    const render = () => void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first', reuseMapCapture: true });
     if (settings.template === 'photo-first' || mapGlobalRef.current) {
       render();
       return;

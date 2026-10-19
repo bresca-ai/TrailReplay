@@ -760,7 +760,7 @@ export const es = {
     templatePhotoFirst: 'Foto primero',
     templateSplit: 'Foto + mapa',
     layoutPresets: 'Diseños preparados', presetClassic: 'Mapa clásico', presetLongWay: 'Ruta destacada', presetRidgePhoto: 'Foto + mapa', presetPhotoGrid: 'Dos fotos',
-    coverTypography: 'Tipografía de portada y vídeo', photoFrames: 'Marcos de fotos', photoFramesHint: 'Haz clic en un marco vacío o arrastra una foto. Arrastra para recortar y desplázate para ampliar.', addFrame: 'Añadir marco', removePhoto: 'Quitar foto', replacePhoto: 'Cambiar foto', zoomPhoto: 'Zoom', movePhotoCrop: 'Arrastra para recortar la foto',
+    coverTypography: 'Tipografía de portada y vídeo', photoFrames: 'Marcos de fotos', photoFramesHint: 'Haz clic en un marco vacío para añadir una foto. Arrastra el marco para moverlo, usa las esquinas para cambiar su tamaño y haz doble clic para recortar.', addFrame: 'Añadir marco', removePhoto: 'Quitar foto', replacePhoto: 'Cambiar foto', zoomPhoto: 'Zoom', movePhotoCrop: 'Arrastra para recortar la foto', movePhotoFrame: 'Mover marco de foto', resizePhotoFrame: 'Cambiar tamaño del marco', cropPhoto: 'Recortar foto', photoAboveMap: 'Poner foto delante del mapa',
     titleWidth: 'Ancho del título', resizeTitle: 'Cambiar tamaño del título', statIcon: 'Icono', noIcon: 'Sin icono',
     ratio: 'Proporción',
     photo: 'Foto',

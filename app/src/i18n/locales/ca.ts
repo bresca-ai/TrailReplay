@@ -760,7 +760,7 @@ export const ca = {
     templatePhotoFirst: 'Foto primer',
     templateSplit: 'Foto + mapa',
     layoutPresets: 'Dissenys preparats', presetClassic: 'Mapa clàssic', presetLongWay: 'Ruta destacada', presetRidgePhoto: 'Foto + mapa', presetPhotoGrid: 'Dues fotos',
-    coverTypography: 'Tipografia de portada i vídeo', photoFrames: 'Marcs de fotos', photoFramesHint: 'Clica un marc buit o arrossega-hi una foto. Arrossega per retallar i desplaça per ampliar.', addFrame: 'Afegeix un marc', removePhoto: 'Treu la foto', replacePhoto: 'Canvia la foto', zoomPhoto: 'Zoom', movePhotoCrop: 'Arrossega per retallar la foto',
+    coverTypography: 'Tipografia de portada i vídeo', photoFrames: 'Marcs de fotos', photoFramesHint: 'Clica un marc buit per afegir-hi una foto. Arrossega el marc per moure’l, fes servir les cantonades per canviar-ne la mida i fes doble clic per retallar.', addFrame: 'Afegeix un marc', removePhoto: 'Treu la foto', replacePhoto: 'Canvia la foto', zoomPhoto: 'Zoom', movePhotoCrop: 'Arrossega per retallar la foto', movePhotoFrame: 'Mou el marc de foto', resizePhotoFrame: 'Canvia la mida del marc', cropPhoto: 'Retalla la foto', photoAboveMap: 'Posa la foto davant del mapa',
     titleWidth: 'Amplada del títol', resizeTitle: 'Canvia la mida del títol', statIcon: 'Icona', noIcon: 'Sense icona',
     ratio: 'Proporció',
     photo: 'Foto',

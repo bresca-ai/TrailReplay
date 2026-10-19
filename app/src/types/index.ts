@@ -286,6 +286,8 @@ export interface SocialSharePhotoSlot {
   offsetX: number;
   offsetY: number;
   scale: number;
+  /** Draw this frame over the split layout's map inset. */
+  aboveMap?: boolean;
 }
 
 export interface SocialShareRouteTransform {

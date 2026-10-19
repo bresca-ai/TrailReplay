@@ -760,7 +760,7 @@ export const en = {
     templatePhotoFirst: 'Photo First',
     templateSplit: 'Photo + Map',
     layoutPresets: 'Ready-made layouts', presetClassic: 'Classic map', presetLongWay: 'Bold route', presetRidgePhoto: 'Photo + map', presetPhotoGrid: 'Two photos',
-    coverTypography: 'Cover and video typography', photoFrames: 'Photo frames', photoFramesHint: 'Click an empty frame or drop a photo onto it. Drag to crop; scroll to zoom.', addFrame: 'Add frame', removePhoto: 'Remove photo', replacePhoto: 'Replace photo', zoomPhoto: 'Zoom', movePhotoCrop: 'Drag to crop photo',
+    coverTypography: 'Cover and video typography', photoFrames: 'Photo frames', photoFramesHint: 'Click an empty frame to add a photo. Drag a frame to move it, use its corners to resize, and double-click to crop.', addFrame: 'Add frame', removePhoto: 'Remove photo', replacePhoto: 'Replace photo', zoomPhoto: 'Zoom', movePhotoCrop: 'Drag to crop photo', movePhotoFrame: 'Move photo frame', resizePhotoFrame: 'Resize photo frame', cropPhoto: 'Crop photo', photoAboveMap: 'Place photo in front of map',
     titleWidth: 'Title width', resizeTitle: 'Resize title', statIcon: 'Icon', noIcon: 'No icon',
     ratio: 'Ratio',
     photo: 'Photo',

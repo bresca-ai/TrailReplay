@@ -4,6 +4,7 @@ import type { SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
 import { getSplitMapFrame } from './socialShareSplit';
+import { movePosterFrame, resizePosterFrame, type FrameCorner, type PosterFrame } from './socialShareFrame';
 
 interface Props {
   previewUrl: string;
@@ -22,12 +23,16 @@ interface Props {
   onPhotoSlotFile: (id: string, file: File) => void;
   onPhotoSlotPicture: (id: string, pictureId: string) => void;
   onPhotoSlotChange: (id: string, patch: Partial<SocialSharePhotoSlot>) => void;
+  activePhotoSlotId: string | null;
+  onPhotoSlotSelect: (id: string) => void;
   coverMode?: boolean;
   inline?: boolean;
 }
 
 interface RouteDragState {
   type: 'move' | 'resize' | 'frame-move';
+  frame?: PosterFrame;
+  corner?: FrameCorner;
   startX: number;
   startY: number;
   startScale: number;
@@ -107,7 +112,7 @@ export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport, onDownload,
   settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
   logoBboxNorm,
-  onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange,
+  onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange, activePhotoSlotId, onPhotoSlotSelect,
 }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,6 +123,7 @@ export function SocialSharePreviewModal({
   // Route overlay drag state
   const routeDragRef = useRef<RouteDragState | null>(null);
   const [routeDragVisual, setRouteDragVisual] = useState<{ dx: number; dy: number; sf: number; active: boolean; type: RouteDragState['type'] | null }>({ dx: 0, dy: 0, sf: 1, active: false, type: null });
+  const [splitMapDraft, setSplitMapDraft] = useState<PosterFrame | null>(null);
 
   // Panel overlay drag state
   const panelDragRef = useRef<PanelDragState | null>(null);
@@ -135,31 +141,58 @@ export function SocialSharePreviewModal({
   const photoDragRef = useRef<PhotoDragState | null>(null);
   const [photoDragVisual, setPhotoDragVisual] = useState({ dx: 0, dy: 0, active: false });
   const [photoEditMode, setPhotoEditMode] = useState(false);
-  const splitPhotoDragRef = useRef<{ slot: SocialSharePhotoSlot; x: number; y: number; width: number; height: number } | null>(null);
+  const splitPhotoDragRef = useRef<{
+    slot: SocialSharePhotoSlot; x: number; y: number;
+    containerW: number; containerH: number;
+    mode: 'move' | 'resize' | 'crop'; corner?: FrameCorner;
+  } | null>(null);
   const [splitPhotoDragVisual, setSplitPhotoDragVisual] = useState({ id: '', dx: 0, dy: 0 });
+  const [splitPhotoDraft, setSplitPhotoDraft] = useState<{ id: string; frame: PosterFrame } | null>(null);
+  const [splitPhotoCropId, setSplitPhotoCropId] = useState<string | null>(null);
 
-  const onSplitPhotoPointerDown = (e: React.PointerEvent, slot: SocialSharePhotoSlot) => {
+  const onSplitPhotoPointerDown = (e: React.PointerEvent, slot: SocialSharePhotoSlot, mode: 'move' | 'resize' | 'crop', corner?: FrameCorner) => {
     e.stopPropagation();
-    if (!slot.imageUrl) { onPhotoSlotPick(slot.id); return; }
     e.preventDefault();
+    onPhotoSlotSelect(slot.id);
     e.currentTarget.setPointerCapture(e.pointerId);
-    const rect = e.currentTarget.getBoundingClientRect();
-    splitPhotoDragRef.current = { slot, x: e.clientX, y: e.clientY, width: rect.width, height: rect.height };
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    splitPhotoDragRef.current = { slot, x: e.clientX, y: e.clientY, containerW: rect.width, containerH: rect.height, mode, corner };
     setSplitPhotoDragVisual({ id: slot.id, dx: 0, dy: 0 });
   };
   const onSplitPhotoPointerMove = (e: React.PointerEvent) => {
     const drag = splitPhotoDragRef.current;
-    if (drag) setSplitPhotoDragVisual({ id: drag.slot.id, dx: e.clientX - drag.x, dy: e.clientY - drag.y });
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (drag.mode === 'crop') setSplitPhotoDragVisual({ id: drag.slot.id, dx, dy });
+    else setSplitPhotoDraft({
+      id: drag.slot.id,
+      frame: drag.mode === 'resize' && drag.corner
+        ? resizePosterFrame(drag.slot, drag.corner, dx / drag.containerW, dy / drag.containerH)
+        : movePosterFrame(drag.slot, dx / drag.containerW, dy / drag.containerH),
+    });
   };
   const onSplitPhotoPointerUp = (e: React.PointerEvent) => {
     const drag = splitPhotoDragRef.current;
     if (!drag) return;
-    onPhotoSlotChange(drag.slot.id, {
-      offsetX: Math.max(-0.5, Math.min(0.5, drag.slot.offsetX - (e.clientX - drag.x) / drag.width)),
-      offsetY: Math.max(-0.5, Math.min(0.5, drag.slot.offsetY - (e.clientY - drag.y) / drag.height)),
-    });
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (drag.mode === 'crop') {
+      if (Math.abs(dx) + Math.abs(dy) > 1) onPhotoSlotChange(drag.slot.id, {
+        offsetX: Math.max(-0.5, Math.min(0.5, drag.slot.offsetX - dx / (drag.containerW * drag.slot.w))),
+        offsetY: Math.max(-0.5, Math.min(0.5, drag.slot.offsetY - dy / (drag.containerH * drag.slot.h))),
+      });
+    } else if (drag.mode === 'resize' && drag.corner) {
+      onPhotoSlotChange(drag.slot.id, resizePosterFrame(drag.slot, drag.corner, dx / drag.containerW, dy / drag.containerH));
+    } else if (Math.abs(dx) + Math.abs(dy) > 3) {
+      onPhotoSlotChange(drag.slot.id, movePosterFrame(drag.slot, dx / drag.containerW, dy / drag.containerH));
+    } else if (!drag.slot.imageUrl) {
+      onPhotoSlotPick(drag.slot.id);
+    }
     splitPhotoDragRef.current = null;
     setSplitPhotoDragVisual({ id: '', dx: 0, dy: 0 });
+    setSplitPhotoDraft(null);
   };
 
   const aspectStyle = settings.aspectRatio === '16:9' ? '16 / 9'
@@ -181,6 +214,7 @@ export function SocialSharePreviewModal({
   }, [inline]);
 
   const showRouteOverlay = !!routeBboxNorm;
+  const displayedMapFrame = settings.template === 'split' && splitMapDraft ? splitMapDraft : routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
   const hasVisibleCoverStats = settings.showStats && (settings.stats?.some((stat) => stat.visible) ?? true);
   const visibleCoverStatCount = Math.max(1, Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3));
@@ -351,7 +385,7 @@ export function SocialSharePreviewModal({
   };
 
   // ── Route drag handlers (pointer capture on the bbox div) ─────────────────
-  const onRoutePointerDown = (e: React.PointerEvent, type: RouteDragState['type']) => {
+  const onRoutePointerDown = (e: React.PointerEvent, type: RouteDragState['type'], corner?: FrameCorner) => {
     e.stopPropagation();
     e.preventDefault();
     const container = containerRef.current;
@@ -360,6 +394,8 @@ export function SocialSharePreviewModal({
     const rect = container.getBoundingClientRect();
     routeDragRef.current = {
       type,
+      frame: settings.template === 'split' ? getSplitMapFrame(1, 1, settings.splitMapFrame) : undefined,
+      corner,
       startX: e.clientX,
       startY: e.clientY,
       startScale: settings.routeTransform.scale,
@@ -376,6 +412,12 @@ export function SocialSharePreviewModal({
     if (!ds) return;
     const dx = e.clientX - ds.startX;
     const dy = e.clientY - ds.startY;
+    if (settings.template === 'split' && ds.frame && ds.type !== 'move') {
+      setSplitMapDraft(ds.type === 'resize' && ds.corner
+        ? resizePosterFrame(ds.frame, ds.corner, dx / ds.containerW, dy / ds.containerH, 0.18, 0.12)
+        : movePosterFrame(ds.frame, dx / ds.containerW, dy / ds.containerH));
+      return;
+    }
     if (ds.type === 'move' || ds.type === 'frame-move' || settings.template === 'split') {
       setRouteDragVisual({ dx, dy, sf: 1, active: true, type: ds.type });
     } else {
@@ -393,21 +435,20 @@ export function SocialSharePreviewModal({
     const scaleFactor = Math.max(0.2, 1 + (dx + dy) * 0.5 / (ds.containerW * 0.6));
     routeDragRef.current = null;
     setRouteDragVisual({ dx: 0, dy: 0, sf: 1, active: false, type: null });
+    setSplitMapDraft(null);
 
-    if (settings.template === 'split' && routeBboxNorm) {
+    if (settings.template === 'split' && ds.frame) {
       if (ds.type === 'move') {
+        if (Math.abs(dx) + Math.abs(dy) < 2) return;
         void onMapRouteGesture({
           type: 'move',
-          deltaX: dx / (ds.containerW * routeBboxNorm.w),
-          deltaY: dy / (ds.containerH * routeBboxNorm.h),
+          deltaX: dx / (ds.containerW * ds.frame.w),
+          deltaY: dy / (ds.containerH * ds.frame.h),
         });
       } else {
-        const frame = getSplitMapFrame(1, 1, {
-          ...routeBboxNorm,
-          ...(ds.type === 'frame-move'
-            ? { x: routeBboxNorm.x + dx / ds.containerW, y: routeBboxNorm.y + dy / ds.containerH }
-            : { w: routeBboxNorm.w + dx / ds.containerW, h: routeBboxNorm.h + dy / ds.containerH }),
-        });
+        const frame = ds.type === 'resize' && ds.corner
+          ? resizePosterFrame(ds.frame, ds.corner, dx / ds.containerW, dy / ds.containerH, 0.18, 0.12)
+          : movePosterFrame(ds.frame, dx / ds.containerW, dy / ds.containerH);
         setSocialShareSettings({ splitMapFrame: frame });
       }
       return;
@@ -602,25 +643,54 @@ export function SocialSharePreviewModal({
               {t('imageExport.addFirstPhoto')}
             </button>}
 
-            {settings.template === 'split' && (settings.photoSlots ?? []).map((slot) => <div key={slot.id}
-              className={`absolute select-none border-2 ${slot.imageUrl ? 'border-transparent hover:border-white/90' : 'border-dashed border-white/80 bg-white/5'}`}
-              style={{ left: `${slot.x * 100}%`, top: `${slot.y * 100}%`, width: `${slot.w * 100}%`, height: `${slot.h * 100}%`, cursor: slot.imageUrl ? 'grab' : 'pointer', touchAction: 'none' }}
-              onPointerDown={(event) => onSplitPhotoPointerDown(event, slot)}
-              onPointerMove={onSplitPhotoPointerMove}
-              onPointerUp={onSplitPhotoPointerUp}
-              onPointerCancel={onSplitPhotoPointerUp}
-              onDoubleClick={() => onPhotoSlotPick(slot.id)}
-              onWheel={(event) => { if (!slot.imageUrl) return; event.preventDefault(); onPhotoSlotChange(slot.id, { scale: Math.max(1, Math.min(3, slot.scale + (event.deltaY < 0 ? 0.03 : -0.03))) }); }}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                const file = event.dataTransfer.files[0];
-                const pictureId = event.dataTransfer.getData('text/x-trailreplay-picture');
-                if (file?.type.startsWith('image/')) onPhotoSlotFile(slot.id, file);
-                else if (pictureId) onPhotoSlotPicture(slot.id, pictureId);
-              }}
-              aria-label={slot.imageUrl ? t('imageExport.movePhotoCrop') : t('imageExport.addPhoto')}
-            >{splitPhotoDragVisual.id === slot.id && (splitPhotoDragVisual.dx !== 0 || splitPhotoDragVisual.dy !== 0) && <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">{t('imageExport.movePhotoCrop')}</span>}</div>)}
+            {settings.template === 'split' && (settings.photoSlots ?? []).map((slot) => {
+              const frame = splitPhotoDraft?.id === slot.id ? splitPhotoDraft.frame : slot;
+              const selected = activePhotoSlotId === slot.id;
+              const cropping = splitPhotoCropId === slot.id;
+              return <div key={slot.id}
+                className={`absolute select-none border-2 ${selected ? 'border-[var(--trail-orange)] ring-1 ring-white/80' : slot.imageUrl ? 'border-transparent hover:border-white/90' : 'border-dashed border-white/80 bg-white/5'}`}
+                style={{ left: `${frame.x * 100}%`, top: `${frame.y * 100}%`, width: `${frame.w * 100}%`, height: `${frame.h * 100}%`, zIndex: slot.aboveMap ? 15 : 5, cursor: cropping ? 'move' : 'grab', touchAction: 'none' }}
+                onPointerDown={(event) => onSplitPhotoPointerDown(event, slot, cropping ? 'crop' : 'move')}
+                onPointerMove={onSplitPhotoPointerMove}
+                onPointerUp={onSplitPhotoPointerUp}
+                onPointerCancel={onSplitPhotoPointerUp}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  if (slot.imageUrl) setSplitPhotoCropId(cropping ? null : slot.id);
+                  else onPhotoSlotPick(slot.id);
+                }}
+                onWheel={(event) => { if (!slot.imageUrl) return; event.preventDefault(); onPhotoSlotChange(slot.id, { scale: Math.max(1, Math.min(3, slot.scale + (event.deltaY < 0 ? 0.03 : -0.03))) }); }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const file = event.dataTransfer.files[0];
+                  const pictureId = event.dataTransfer.getData('text/x-trailreplay-picture');
+                  if (file?.type.startsWith('image/')) onPhotoSlotFile(slot.id, file);
+                  else if (pictureId) onPhotoSlotPicture(slot.id, pictureId);
+                }}
+                aria-label={slot.imageUrl ? t(cropping ? 'imageExport.movePhotoCrop' : 'imageExport.movePhotoFrame') : t('imageExport.addPhoto')}
+              >
+                {splitPhotoDraft?.id === slot.id && slot.imageUrl && <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <img src={slot.imageUrl} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${50 + slot.offsetX * 100}% ${50 + slot.offsetY * 100}%`, transform: `scale(${slot.scale})` }} />
+                </div>}
+                {selected && slot.imageUrl && <button type="button"
+                  className="absolute left-1/2 top-2 z-30 -translate-x-1/2 rounded bg-white px-2 py-1 text-[10px] font-semibold text-[var(--evergreen)] shadow"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => { event.stopPropagation(); setSplitPhotoCropId(cropping ? null : slot.id); }}
+                  aria-pressed={cropping}>
+                  {t(cropping ? 'imageExport.doneEditingPhoto' : 'imageExport.cropPhoto')}
+                </button>}
+                {selected && !cropping && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => <div key={corner}
+                  className={`absolute z-30 h-4 w-4 rounded-sm bg-[var(--trail-orange)] shadow ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
+                  style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
+                  onPointerDown={(event) => onSplitPhotoPointerDown(event, slot, 'resize', corner)}
+                  onPointerMove={onSplitPhotoPointerMove}
+                  onPointerUp={onSplitPhotoPointerUp}
+                  onPointerCancel={onSplitPhotoPointerUp}
+                  aria-label={t('imageExport.resizePhotoFrame')} title={t('imageExport.resizePhotoFrame')} />)}
+                {cropping && splitPhotoDragVisual.id === slot.id && (splitPhotoDragVisual.dx !== 0 || splitPhotoDragVisual.dy !== 0) && <span className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-xs text-white">{t('imageExport.movePhotoCrop')}</span>}
+              </div>;
+            })}
 
             <div
               className="absolute z-20 rounded-md border-2 border-dashed border-transparent hover:border-white/85 select-none"
@@ -705,18 +775,16 @@ export function SocialSharePreviewModal({
             )}
 
             {/* Route overlay — rendered last (higher z-order) */}
-            {showRouteOverlay && routeBboxNorm && (
+            {showRouteOverlay && routeBboxNorm && displayedMapFrame && (
               <div
                 className="absolute z-10 border-2 border-dashed border-transparent hover:border-[var(--trail-orange)] rounded select-none"
                 style={{
-                  left: `${routeBboxNorm.x * 100}%`,
-                  top: `${routeBboxNorm.y * 100}%`,
-                  width: settings.template === 'split' && routeDragVisual.type === 'resize'
-                    ? `calc(${routeBboxNorm.w * 100}% + ${routeDragVisual.dx}px)` : `${routeBboxNorm.w * 100}%`,
-                  height: settings.template === 'split' && routeDragVisual.type === 'resize'
-                    ? `calc(${routeBboxNorm.h * 100}% + ${routeDragVisual.dy}px)` : `${routeBboxNorm.h * 100}%`,
+                  left: `${displayedMapFrame.x * 100}%`,
+                  top: `${displayedMapFrame.y * 100}%`,
+                  width: `${displayedMapFrame.w * 100}%`,
+                  height: `${displayedMapFrame.h * 100}%`,
                   transform: settings.template === 'split'
-                    ? `translate(${routeDragVisual.type === 'frame-move' ? routeDragVisual.dx : 0}px, ${routeDragVisual.type === 'frame-move' ? routeDragVisual.dy : 0}px)`
+                    ? undefined
                     : `translate(${routeDragVisual.active ? routeDragVisual.dx : 0}px, ${routeDragVisual.active ? routeDragVisual.dy : 0}px) scale(${routeDragVisual.active ? routeDragVisual.sf : 1})`,
                   transformOrigin: '50% 50%',
                   cursor: routeDragVisual.active ? 'grabbing' : 'grab',
@@ -741,7 +809,7 @@ export function SocialSharePreviewModal({
                 aria-label={settings.template === 'split' ? t('imageExport.dragSplitMapHint') : t('imageExport.dragMapHint')}
               >
                 {settings.template === 'split' && <button type="button"
-                  className="absolute left-0 top-0 z-20 flex h-6 w-6 -translate-x-1/3 -translate-y-1/3 cursor-move items-center justify-center rounded-md bg-white text-[var(--evergreen)] shadow"
+                  className="absolute left-1/2 top-1 z-20 flex h-6 w-6 -translate-x-1/2 cursor-move items-center justify-center rounded-md bg-white text-[var(--evergreen)] shadow"
                   onPointerDown={(event) => onRoutePointerDown(event, 'frame-move')}
                   onPointerMove={onRoutePointerMove}
                   onPointerUp={onRoutePointerUp}
@@ -749,23 +817,26 @@ export function SocialSharePreviewModal({
                   aria-label={t('imageExport.moveMapFrame')} title={t('imageExport.moveMapFrame')}>
                   <Move className="h-3.5 w-3.5" />
                 </button>}
-                {/* Resize handle — bottom-right corner */}
-                <div
-                  className="absolute bottom-0 right-0 w-5 h-5 bg-[var(--trail-orange)] rounded-tl-md flex items-center justify-center cursor-nwse-resize"
-                  style={{ transform: 'translate(50%, 50%)' }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    onRoutePointerDown(e, 'resize');
-                  }}
-                  onPointerMove={onRoutePointerMove}
-                  onPointerUp={onRoutePointerUp}
-                  onPointerCancel={onRoutePointerUp}
-                  aria-label={settings.template === 'split' ? t('imageExport.resizeMapFrame') : t('imageExport.zoomIn')}
-                >
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                    <path d="M1 7L7 1M4 7L7 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                </div>
+                {settings.template === 'split'
+                  ? (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => <div key={corner}
+                    className={`absolute z-20 flex h-5 w-5 items-center justify-center rounded-sm bg-[var(--trail-orange)] shadow ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
+                    style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
+                    onPointerDown={(event) => onRoutePointerDown(event, 'resize', corner)}
+                    onPointerMove={onRoutePointerMove}
+                    onPointerUp={onRoutePointerUp}
+                    onPointerCancel={onRoutePointerUp}
+                    aria-label={t('imageExport.resizeMapFrame')} title={t('imageExport.resizeMapFrame')}>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 7L7 1M4 7L7 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </div>)
+                  : <div
+                    className="absolute bottom-0 right-0 flex h-5 w-5 translate-x-1/2 translate-y-1/2 cursor-nwse-resize items-center justify-center rounded-tl-md bg-[var(--trail-orange)]"
+                    onPointerDown={(event) => onRoutePointerDown(event, 'resize')}
+                    onPointerMove={onRoutePointerMove}
+                    onPointerUp={onRoutePointerUp}
+                    onPointerCancel={onRoutePointerUp}
+                    aria-label={t('imageExport.zoomIn')}>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 7L7 1M4 7L7 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </div>}
               </div>
             )}
 

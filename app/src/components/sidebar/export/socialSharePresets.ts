@@ -7,13 +7,22 @@ export function createPhotoSlot(id: string, x: number, y: number, w: number, h: 
   return { id, imageUrl: null, x, y, w, h, offsetX: 0, offsetY: 0, scale: 1 };
 }
 
-export function arrangePhotoSlots(slots: SocialSharePhotoSlot[]): SocialSharePhotoSlot[] {
-  const count = slots.length;
-  return slots.map((slot, index) => {
-    if (count === 1) return { ...slot, x: 0, y: 0, w: 1, h: 0.66 };
-    if (count <= 3) return { ...slot, x: index / count, y: 0, w: 1 / count, h: 0.66 };
-    return { ...slot, x: (index % 2) * 0.5, y: Math.floor(index / 2) * 0.33, w: 0.5, h: 0.33 };
-  });
+/** Add a frame without moving any frames the user has already arranged. */
+export function createAddedPhotoSlot(id: string, slots: SocialSharePhotoSlot[]): SocialSharePhotoSlot {
+  if (slots.length === 0) return createPhotoSlot(id, 0, 0, 1, 0.66);
+  const candidates = [
+    { x: 0.04, y: 0.68 }, { x: 0.54, y: 0.68 },
+    { x: 0.04, y: 0.36 }, { x: 0.54, y: 0.36 },
+    { x: 0.04, y: 0.04 }, { x: 0.54, y: 0.04 },
+  ];
+  const size = { w: 0.42, h: 0.26 };
+  const best = candidates.reduce<{ x: number; y: number; overlap: number }>((choice, candidate) => {
+    const overlap = slots.reduce((total, slot) => total
+      + Math.max(0, Math.min(candidate.x + size.w, slot.x + slot.w) - Math.max(candidate.x, slot.x))
+      * Math.max(0, Math.min(candidate.y + size.h, slot.y + slot.h) - Math.max(candidate.y, slot.y)), 0);
+    return overlap < choice.overlap ? { ...candidate, overlap } : choice;
+  }, { ...candidates[0], overlap: Infinity });
+  return { ...createPhotoSlot(id, best.x, best.y, size.w, size.h), aboveMap: true };
 }
 
 export function presetSettings(preset: SocialShareLayoutPreset, current: SocialShareSettings): Partial<SocialShareSettings> {
@@ -41,10 +50,10 @@ export function presetSettings(preset: SocialShareLayoutPreset, current: SocialS
     splitMapFrame: undefined,
     titleMode: 'journey-name',
     photoSlots: preset === 'ridge-photo'
-      ? [{ ...(photos[0] ?? createPhotoSlot('hero', 0, 0, 1, 0.66)), x: 0, y: 0, w: 1, h: 0.66 }]
+      ? [{ ...(photos[0] ?? createPhotoSlot('hero', 0, 0, 1, 0.66)), x: 0, y: 0, w: 1, h: 0.66, aboveMap: false }]
       : [
-        { ...(photos[0] ?? createPhotoSlot('left', 0, 0, 0.5, 0.66)), x: 0, y: 0, w: 0.5, h: 0.66 },
-        { ...(photos[1] ?? createPhotoSlot('right', 0.5, 0, 0.5, 0.66)), x: 0.5, y: 0, w: 0.5, h: 0.66 },
+        { ...(photos[0] ?? createPhotoSlot('left', 0, 0, 0.5, 0.66)), x: 0, y: 0, w: 0.5, h: 0.66, aboveMap: false },
+        { ...(photos[1] ?? createPhotoSlot('right', 0.5, 0, 0.5, 0.66)), x: 0.5, y: 0, w: 0.5, h: 0.66, aboveMap: false },
       ],
     titleScale: 1.85,
     titleWidth: 0.92,

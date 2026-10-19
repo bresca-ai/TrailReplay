@@ -680,7 +680,7 @@ function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: R
   }
   ctx.restore();
 
-  for (const slot of settings.photoSlots ?? []) {
+  for (const slot of (settings.photoSlots ?? []).filter((item) => !item.aboveMap)) {
     drawPhotoSlot(ctx, slot, input.slotImages[slot.id], w, h);
   }
 
@@ -720,6 +720,10 @@ function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: R
   ctx.beginPath();
   ctx.roundRect(mapBox.x, mapBox.y, mapBox.w, mapBox.h, w * 0.05);
   ctx.stroke();
+
+  for (const slot of (settings.photoSlots ?? []).filter((item) => item.aboveMap)) {
+    drawPhotoSlot(ctx, slot, input.slotImages[slot.id], w, h);
+  }
 
   const titleSize = Math.round(Math.min(w * 0.095, h * 0.095) * (settings.titleScale ?? 1));
   const titleX = pad + settings.titleOffsetX * w;

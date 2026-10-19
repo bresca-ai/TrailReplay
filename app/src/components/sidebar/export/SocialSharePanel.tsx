@@ -11,7 +11,7 @@ import { annotationSymbolLabel, annotationSymbolPath } from '@/components/annota
 import { OverlayFontPicker } from '@/components/sidebar/OverlayFontPicker';
 import { useAppStore } from '@/store/useAppStore';
 import { compressCoverPhoto } from './socialShareMedia';
-import { arrangePhotoSlots, createPhotoSlot, PRESET_ORDER, presetSettings } from './socialSharePresets';
+import { createAddedPhotoSlot, createPhotoSlot, PRESET_ORDER, presetSettings } from './socialSharePresets';
 import { getPosterSize } from './socialShareRenderer';
 import { getSplitMapFrame } from './socialShareSplit';
 import type { MapStyle, SocialShareTemplate, SocialShareAspectRatio, SocialShareStat, SocialShareStatMetric, SocialSharePhotoSlot } from '@/types';
@@ -337,7 +337,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             <div className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.photoFrames')}</div>
             <button type="button" disabled={(settings.photoSlots?.length ?? 0) >= 4} onClick={() => {
               const id = `photo-${Date.now()}`;
-              setSocialShareSettings({ photoSlots: arrangePhotoSlots([...(settings.photoSlots ?? []), createPhotoSlot(id, 0, 0, 1, 0.66)]) });
+              const slots = settings.photoSlots ?? [];
+              setSocialShareSettings({ photoSlots: [...slots, createAddedPhotoSlot(id, slots)] });
               setActivePhotoSlotId(id);
             }} className="text-xs font-semibold text-[var(--trail-orange)] disabled:opacity-40">+ {t('imageExport.addFrame')}</button>
           </div>
@@ -357,11 +358,18 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
                 className="block w-full accent-[var(--trail-orange)]" />
             </label>
             {(settings.photoSlots?.length ?? 0) > 1 && <button type="button" onClick={() => {
-              const remaining = arrangePhotoSlots(settings.photoSlots.filter((slot) => slot.id !== activePhotoSlotId));
+              const remaining = settings.photoSlots.filter((slot) => slot.id !== activePhotoSlotId);
               setSocialShareSettings({ photoSlots: remaining });
               setActivePhotoSlotId(remaining[0]?.id ?? null);
             }} aria-label={t('imageExport.removePhoto')} title={t('imageExport.removePhoto')} className="rounded p-1.5 text-red-600 hover:bg-red-500/10"><X className="h-4 w-4" /></button>}
           </div>}
+          {activePhotoSlotId && (settings.photoSlots ?? []).some((slot) => slot.id === activePhotoSlotId) && <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox"
+              checked={!!settings.photoSlots.find((slot) => slot.id === activePhotoSlotId)?.aboveMap}
+              onChange={(event) => updatePhotoSlot(activePhotoSlotId, { aboveMap: event.target.checked })}
+              className="accent-[var(--trail-orange)]" />
+            {t('imageExport.photoAboveMap')}
+          </label>}
           {pictures.length > 0 && <div className="flex gap-1.5 overflow-x-auto pt-1">
             {pictures.map((picture) => <button key={picture.id} type="button" draggable
               onDragStart={(event) => event.dataTransfer.setData('text/x-trailreplay-picture', picture.id)}
@@ -416,14 +424,14 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
         <div className="space-y-2">
           <label className="flex items-center gap-3 text-xs">
             <span className="w-16 shrink-0 opacity-70">{t('imageExport.mapWidth')}</span>
-            <input type="range" min={0.18} max={0.9} step={0.01} value={splitMapFrame.w}
+            <input type="range" min={0.18} max={1} step={0.01} value={splitMapFrame.w}
               onChange={(event) => updateSplitMapFrame({ w: Number(event.target.value) })}
               className="min-w-0 flex-1 accent-[var(--trail-orange)]" />
             <span className="w-9 text-right tabular-nums opacity-60">{Math.round(splitMapFrame.w * 100)}%</span>
           </label>
           <label className="flex items-center gap-3 text-xs">
             <span className="w-16 shrink-0 opacity-70">{t('imageExport.mapHeight')}</span>
-            <input type="range" min={0.12} max={0.7} step={0.01} value={splitMapFrame.h}
+            <input type="range" min={0.12} max={1} step={0.01} value={splitMapFrame.h}
               onChange={(event) => updateSplitMapFrame({ h: Number(event.target.value) })}
               className="min-w-0 flex-1 accent-[var(--trail-orange)]" />
             <span className="w-9 text-right tabular-nums opacity-60">{Math.round(splitMapFrame.h * 100)}%</span>
@@ -800,6 +808,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           onPhotoSlotFile={(id, file) => { void loadPhotoIntoSlot(id, file); }}
           onPhotoSlotPicture={(id, pictureId) => { void loadLibraryPhotoIntoSlot(id, pictureId); }}
           onPhotoSlotChange={updatePhotoSlot}
+          activePhotoSlotId={activePhotoSlotId}
+          onPhotoSlotSelect={setActivePhotoSlotId}
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}

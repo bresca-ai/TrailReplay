@@ -760,7 +760,7 @@ export const fr = {
     templatePhotoFirst: 'Photo en avant',
     templateSplit: 'Photo + carte',
     layoutPresets: 'Mises en page prêtes', presetClassic: 'Carte classique', presetLongWay: 'Parcours fort', presetRidgePhoto: 'Photo + carte', presetPhotoGrid: 'Deux photos',
-    coverTypography: 'Police de la couverture et vidéo', photoFrames: 'Cadres photo', photoFramesHint: 'Cliquez sur un cadre vide ou glissez-y une photo. Glissez pour recadrer, faites défiler pour zoomer.', addFrame: 'Ajouter un cadre', removePhoto: 'Retirer la photo', replacePhoto: 'Remplacer la photo', zoomPhoto: 'Zoom', movePhotoCrop: 'Glisser pour recadrer la photo',
+    coverTypography: 'Police de la couverture et vidéo', photoFrames: 'Cadres photo', photoFramesHint: 'Cliquez sur un cadre vide pour ajouter une photo. Glissez le cadre pour le déplacer, utilisez les coins pour le redimensionner et double-cliquez pour recadrer.', addFrame: 'Ajouter un cadre', removePhoto: 'Retirer la photo', replacePhoto: 'Remplacer la photo', zoomPhoto: 'Zoom', movePhotoCrop: 'Glisser pour recadrer la photo', movePhotoFrame: 'Déplacer le cadre photo', resizePhotoFrame: 'Redimensionner le cadre photo', cropPhoto: 'Recadrer la photo', photoAboveMap: 'Placer la photo devant la carte',
     titleWidth: 'Largeur du titre', resizeTitle: 'Redimensionner le titre', statIcon: 'Icône', noIcon: 'Sans icône',
     ratio: 'Format',
     photo: 'Photo',
