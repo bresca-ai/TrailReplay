@@ -14,6 +14,9 @@ export function captureSocialMap(
     const trailOpacity = trail ? map.getPaintProperty('trail-line', 'line-opacity') : undefined;
     const trailWidth = trail ? map.getPaintProperty('trail-line', 'line-width') : undefined;
     const trailColor = trail ? map.getPaintProperty('trail-line', 'line-color') : undefined;
+    const trailOpacityTransition = trail ? map.getPaintProperty('trail-line', 'line-opacity-transition') : undefined;
+    const trailWidthTransition = trail ? map.getPaintProperty('trail-line', 'line-width-transition') : undefined;
+    const trailColorTransition = trail ? map.getPaintProperty('trail-line', 'line-color-transition') : undefined;
     let casingAdded = false;
 
     try {
@@ -30,6 +33,13 @@ export function captureSocialMap(
       // The plain route should use MapLibre's native line rendering, including
       // its projection at pitch, instead of a second flat canvas stroke.
       if (!options.routeGlow && trail) {
+        // Capture the final paint values in the very next frame. Otherwise the
+        // default paint transition can leave the route half-transparent when
+        // an editor change triggers a fresh snapshot.
+        const instantTransition = { duration: 0, delay: 0 };
+        map.setPaintProperty('trail-line', 'line-opacity-transition', instantTransition);
+        map.setPaintProperty('trail-line', 'line-width-transition', instantTransition);
+        if (options.highlightRoute) map.setPaintProperty('trail-line', 'line-color-transition', instantTransition);
         map.addLayer({
           id: CASING_LAYER,
           type: 'line',
@@ -88,6 +98,9 @@ export function captureSocialMap(
           map.setPaintProperty('trail-line', 'line-width', trailWidth);
           map.setPaintProperty('trail-line', 'line-opacity', trailOpacity);
           if (options.highlightRoute) map.setPaintProperty('trail-line', 'line-color', trailColor);
+          map.setPaintProperty('trail-line', 'line-width-transition', trailWidthTransition);
+          map.setPaintProperty('trail-line', 'line-opacity-transition', trailOpacityTransition);
+          if (options.highlightRoute) map.setPaintProperty('trail-line', 'line-color-transition', trailColorTransition);
         }
       }
       map.triggerRepaint();
