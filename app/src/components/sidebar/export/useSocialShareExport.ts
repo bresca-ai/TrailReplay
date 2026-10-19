@@ -188,7 +188,7 @@ export function useSocialShareExport() {
     return getRouteBboxNorm(projected, pw, ph, pw * 0.025);
   }, [settings.aspectRatio, settings.routeTransform]);
 
-  const generatePreview = useCallback(async (options: { fitMapFirstRoute?: boolean } = {}) => {
+  const generatePreview = useCallback(async (options: { fitMapFirstRoute?: boolean; fastMapCapture?: boolean } = {}) => {
     if (tracks.length === 0) { setPreviewUrl(null); return; }
     setIsRendering(true);
     try {
@@ -257,6 +257,7 @@ export function useSocialShareExport() {
             routeGlow: settings.template === 'split' ? false : settings.routeGlow,
             routeOpacity: settings.routeTransform.opacity,
             highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
+            waitForTiles: !options.fastMapCapture,
           });
         }
       }

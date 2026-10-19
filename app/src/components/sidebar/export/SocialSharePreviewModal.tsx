@@ -540,6 +540,7 @@ export function SocialSharePreviewModal({
               </span>
             )}
           </h2>
+          {inline && isRendering && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white/60" aria-label={t('imageExport.rendering')} />}
           {settings.template === 'photo-first' && (
             <button type="button" onClick={() => setPhotoEditMode((active) => !active)}
               aria-pressed={photoEditMode}
@@ -787,7 +788,7 @@ export function SocialSharePreviewModal({
               title={t('imageExport.dragLogo')}
             />
 
-            {isRendering && (
+            {isRendering && !inline && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
               </div>
@@ -811,7 +812,7 @@ export function SocialSharePreviewModal({
             {isRendering ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : coverMode ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-            {t(coverMode ? 'imageExport.useCover' : 'imageExport.downloadPng')}
+            {t(coverMode ? 'imageExport.saveCoverBackToVideo' : 'imageExport.downloadPng')}
           </button>
         </div>
       </div>

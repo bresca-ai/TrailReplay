@@ -71,7 +71,11 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
-  const cameraPreviewTimer = useRef<number | null>(null);
+  const cameraPreviewFrame = useRef<number | null>(null);
+  const cameraPreviewSettleTimer = useRef<number | null>(null);
+  const cameraPreviewRunning = useRef(false);
+  const cameraPreviewPending = useRef<'fast' | 'full' | null>(null);
+  const generatePreviewRef = useRef(generatePreview);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const targetPhotoSlotRef = useRef<string | null>(null);
   const [activePhotoSlotId, setActivePhotoSlotId] = useState<string | null>(null);
@@ -160,15 +164,44 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
   }, [aspectRatioOverride, setSocialShareSettings, settings.aspectRatio]);
 
   useEffect(() => () => {
-    if (cameraPreviewTimer.current !== null) window.clearTimeout(cameraPreviewTimer.current);
+    if (cameraPreviewFrame.current !== null) window.cancelAnimationFrame(cameraPreviewFrame.current);
+    if (cameraPreviewSettleTimer.current !== null) window.clearTimeout(cameraPreviewSettleTimer.current);
+    cameraPreviewPending.current = null;
   }, []);
 
+  useEffect(() => { generatePreviewRef.current = generatePreview; }, [generatePreview]);
+
+  const flushCameraPreview = () => {
+    cameraPreviewFrame.current = null;
+    if (cameraPreviewRunning.current || !cameraPreviewPending.current) return;
+    const mode = cameraPreviewPending.current;
+    cameraPreviewPending.current = null;
+    cameraPreviewRunning.current = true;
+    void generatePreviewRef.current({ fastMapCapture: mode === 'fast' }).finally(() => {
+      cameraPreviewRunning.current = false;
+      if (cameraPreviewPending.current && cameraPreviewFrame.current === null) {
+        cameraPreviewFrame.current = window.requestAnimationFrame(flushCameraPreview);
+      }
+    });
+  };
+  const requestCameraPreview = (mode: 'fast' | 'full') => {
+    if (mode === 'full' || cameraPreviewPending.current !== 'full') cameraPreviewPending.current = mode;
+    if (!cameraPreviewRunning.current && cameraPreviewFrame.current === null) {
+      cameraPreviewFrame.current = window.requestAnimationFrame(flushCameraPreview);
+    }
+  };
   const refreshCameraPreview = () => {
-    if (cameraPreviewTimer.current !== null) window.clearTimeout(cameraPreviewTimer.current);
-    cameraPreviewTimer.current = window.setTimeout(() => {
-      cameraPreviewTimer.current = null;
-      void generatePreview();
-    }, 180);
+    requestCameraPreview('fast');
+    if (cameraPreviewSettleTimer.current !== null) window.clearTimeout(cameraPreviewSettleTimer.current);
+    cameraPreviewSettleTimer.current = window.setTimeout(() => {
+      cameraPreviewSettleTimer.current = null;
+      requestCameraPreview('full');
+    }, 350);
+  };
+  const finishCameraDrag = () => {
+    if (cameraPreviewSettleTimer.current !== null) window.clearTimeout(cameraPreviewSettleTimer.current);
+    cameraPreviewSettleTimer.current = null;
+    requestCameraPreview('full');
   };
 
   const handlePitch = (v: number) => {
@@ -609,6 +642,9 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
                 type="range" min={0} max={60} step={1}
                 value={pitch}
                 onChange={(e) => handlePitch(Number(e.target.value))}
+                onPointerUp={finishCameraDrag}
+                onPointerCancel={finishCameraDrag}
+                onKeyUp={finishCameraDrag}
                 className="flex-1 accent-[var(--trail-orange)]"
               />
               <span className="w-8 text-right opacity-50 tabular-nums">{pitch}°</span>
@@ -619,6 +655,9 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
                 type="range" min={-180} max={180} step={1}
                 value={bearing}
                 onChange={(e) => handleBearing(Number(e.target.value))}
+                onPointerUp={finishCameraDrag}
+                onPointerCancel={finishCameraDrag}
+                onKeyUp={finishCameraDrag}
                 className="flex-1 accent-[var(--trail-orange)]"
               />
               <span className="w-8 text-right opacity-50 tabular-nums">{bearing}°</span>
@@ -707,6 +746,14 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
       {!hasTracks && (
         <p className="text-xs opacity-50 text-center">{t('imageExport.noTrackHint')}</p>
       )}
+
+      {coverMode && <button type="button"
+        onClick={() => { if (previewUrl) { onPosterReady?.(previewUrl); onUseCover?.(); } }}
+        disabled={!previewUrl || isRendering}
+        className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50"
+      >
+        <ArrowLeft className="h-4 w-4" />{t('imageExport.saveCoverBackToVideo')}
+      </button>}
 
       {/* The cover canvas stays in the main map area while its controls remain in the sidebar. */}
       {coverMode && editorHost && createPortal(

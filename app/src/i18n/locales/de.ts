@@ -809,6 +809,7 @@ export const de = {
     dragTitle: 'Ziehe den Titel an die gewünschte Stelle',
     dragLogo: 'Ziehe das TrailReplay-Logo an die gewünschte Stelle',
     useCover: 'Als Videocover verwenden',
+    saveCoverBackToVideo: 'Cover speichern und zurück zum Video',
     videoCover: 'Videocover',
     videoCoverHint: 'Gestalte das erste Videobild. Es wird 1 Sekunde vor der Animation angezeigt.',
     addPhoto: 'Foto hinzufügen',

@@ -6,7 +6,7 @@ const CASING_LAYER = 'social-cover-route-casing';
 /** Capture a clean poster frame while leaving the live map's styling intact. */
 export function captureSocialMap(
   map: maplibregl.Map,
-  options: { routeGlow: boolean; routeOpacity: number; highlightRoute?: boolean },
+  options: { routeGlow: boolean; routeOpacity: number; highlightRoute?: boolean; waitForTiles?: boolean },
 ): Promise<HTMLCanvasElement | null> {
   const capture = async (): Promise<HTMLCanvasElement | null> => {
     const hiddenLayers: string[] = [];
@@ -85,7 +85,7 @@ export function captureSocialMap(
           map.triggerRepaint();
         };
         const timeout = window.setTimeout(() => finish(null), 3000);
-        if (map.areTilesLoaded()) triggerCapture();
+        if (options.waitForTiles === false || map.areTilesLoaded()) triggerCapture();
         else map.once('idle', triggerCapture);
       });
     } finally {
