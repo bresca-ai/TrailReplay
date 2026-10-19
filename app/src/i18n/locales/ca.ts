@@ -741,6 +741,7 @@ export const ca = {
       summit: 'Cim', pass: 'Coll', viewpoint: 'Mirador', 'high-point': 'Punt alt', waterfall: 'Cascada', trailhead: 'Inici del sender', hut: 'Refugi', shelter: 'Aixopluc', camp: 'Campament', water: 'Aigua', 'aid-station': 'Avituallament',
       finish: 'Final', town: 'Poble', lake: 'Llac', 'river-crossing': 'Creuament de riu', photo: 'Foto', note: 'Nota', challenge: 'Repte', custom: 'Personalitzat', 'highest-point': 'Punt més alt', 'longest-climb': 'Ascens més llarg', 'major-descent': 'Descens principal', halfway: 'Meitat del recorregut',
     },
+    pasteCoordinates: 'O enganxa les coordenades aquí',
   },
   imageExport: {
     modeVideo: 'Vídeo',
