@@ -180,6 +180,7 @@ export function TrailMap(_props: TrailMapProps) {
     isMapLoaded,
     labelFade: settings.landmarkLabelFade,
     scale: settings.landmarkScale,
+    overlayFont: trailStyle.overlayFont,
     landmarks,
     mapRef: map,
     onSelectLandmark: handleSelectLandmark,
