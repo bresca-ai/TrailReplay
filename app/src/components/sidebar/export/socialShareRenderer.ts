@@ -10,7 +10,6 @@ import { getSocialShareLogoBox } from './socialShareBrand';
 import { getSplitMapBox } from './socialShareSplit';
 
 const DARK_BG = 'rgba(10,10,10,0.97)';
-const WHITE_DIM = 'rgba(255,255,255,0.60)';
 const POSTER_W = 1080;
 
 function visibleStatCount(settings: SocialShareSettings) {
@@ -168,6 +167,7 @@ function drawElevationChart(
   { profile, minElev, maxElev, unitSystem }: SocialShareSummaryData['elevation'] & { unitSystem: SocialShareSummaryData['unitSystem'] },
   color: string,
   fontFamily: string,
+  labelColor: string,
 ) {
   if (profile.length < 2) return;
 
@@ -184,10 +184,12 @@ function drawElevationChart(
     const ly = chartY + chartH - t * chartH * 0.88;
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fillRect(x, ly, w, 1);
-    ctx.fillStyle = WHITE_DIM;
+    ctx.fillStyle = labelColor;
+    ctx.globalAlpha = 0.65;
     ctx.textAlign = 'left';
     const label = isMetric ? `${Math.round(elev)} m` : `${Math.round(elev * 3.28084)} ft`;
     ctx.fillText(label, x + 4, ly - 4);
+    ctx.globalAlpha = 1;
   }
 
   // Area fill
@@ -291,10 +293,10 @@ function drawStatsBar(
     const cellY = y + rowH * row;
     const cx = cellX + colW / 2;
 
-    if (settings.statsStyle === 'cards') {
+    if (settings.showStatsBackground !== false && settings.statsStyle === 'cards') {
       ctx.fillStyle = 'rgba(0,0,0,0.30)';
       ctx.fillRect(cellX + 5, cellY + 3, colW - 10, rowH - 6);
-    } else if (settings.statsStyle === 'accent') {
+    } else if (settings.showStatsBackground !== false && settings.statsStyle === 'accent') {
       ctx.fillStyle = `${statsColor}28`;
       ctx.fillRect(cellX + 5, cellY + 3, colW - 10, rowH - 6);
     }
@@ -399,12 +401,14 @@ function drawTitle(
   return lines.length;
 }
 
-function drawLocation(ctx: CanvasRenderingContext2D, location: string, x: number, y: number, size: number, fontFamily: string) {
+function drawLocation(ctx: CanvasRenderingContext2D, location: string, x: number, y: number, size: number, fontFamily: string, color: string) {
   if (!location) return;
   ctx.font = `400 ${size}px ${fontFamily}`;
-  ctx.fillStyle = WHITE_DIM;
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.72;
   ctx.textAlign = 'left';
   ctx.fillText(`📍 ${location}`, x, y);
+  ctx.globalAlpha = 1;
 }
 
 function drawPhotoBackground(
@@ -494,7 +498,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
   const titleLines = drawTitle(ctx, summary.title, titleX, titleY, w * (settings.titleWidth ?? 0.74), titleSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
   if (settings.showLocation && summary.locationLabel) {
     const locSize = Math.round(h * 0.021);
-    drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 2, locSize, input.fontFamily);
+    drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 2, locSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
   }
 
   // Bottom scrim + stats/elevation
@@ -505,7 +509,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
     const scrimBottom = h - shift;
     const panelTop = scrimBottom - elevH - statsH;
 
-    if (shift < 4) {
+    if (settings.showStatsBackground !== false && shift < 4) {
       // Default position: gradient flows naturally to the poster bottom
       const scrimY = panelTop - Math.round(h * 0.06);
       const botGrad = ctx.createLinearGradient(0, scrimY, 0, h);
@@ -514,7 +518,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
       botGrad.addColorStop(1, 'rgba(0,0,0,0.72)');
       ctx.fillStyle = botGrad;
       ctx.fillRect(0, scrimY, w, h - scrimY);
-    } else {
+    } else if (settings.showStatsBackground !== false) {
       // Moved up: localized pill — fades in above, solid behind text, fades out below
       const fadeH = Math.round(h * 0.045);
       const gradTop = panelTop - fadeH;
@@ -533,7 +537,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
 
     if (showStats) drawStatsBar(ctx, 0, panelTop, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
     if (settings.showElevationMiniChart) {
-      drawElevationChart(ctx, pad, scrimBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily);
+      drawElevationChart(ctx, pad, scrimBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily, settings.statsColor ?? '#FFFFFF');
     }
   }
 }
@@ -550,16 +554,21 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
     drawPhotoBackground(ctx, selectedPhoto, w, h, settings.photoTransform);
   }
 
-  // Bottom dark gradient — ends at the data panel bottom so it doesn't bleed below when panel is moved up
+  // Size the stats area and its scrim from only the layers that are visible.
   const shift = Math.round(settings.dataPanelOffsetY * h);
   const panelBottom = h - shift;
-  const botStart = Math.min(h * 0.52, panelBottom - h * 0.22);
-  const botGrad = ctx.createLinearGradient(0, botStart, 0, panelBottom);
-  botGrad.addColorStop(0, 'rgba(10,10,10,0)');
-  botGrad.addColorStop(0.38, 'rgba(10,10,10,0.88)');
-  botGrad.addColorStop(1, DARK_BG);
-  ctx.fillStyle = botGrad;
-  ctx.fillRect(0, botStart, w, panelBottom - botStart);
+  const elevH = settings.showElevationMiniChart ? Math.round(h * 0.155) : 0;
+  const statsH = showStats ? Math.round(h * 0.125 * statsRowCount(settings)) : 0;
+  const statsY = panelBottom - elevH - statsH;
+  if (settings.showStatsBackground !== false && (showStats || settings.showElevationMiniChart)) {
+    const botStart = statsY - Math.round(h * 0.07);
+    const botGrad = ctx.createLinearGradient(0, botStart, 0, panelBottom);
+    botGrad.addColorStop(0, 'rgba(10,10,10,0)');
+    botGrad.addColorStop(0.4, 'rgba(10,10,10,0.72)');
+    botGrad.addColorStop(1, DARK_BG);
+    ctx.fillStyle = botGrad;
+    ctx.fillRect(0, botStart, w, panelBottom - botStart);
+  }
 
   // Top gradient for text
   const topGrad = ctx.createLinearGradient(0, 0, 0, h * 0.38);
@@ -593,17 +602,13 @@ function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, inp
   // Location
   if (settings.showLocation && summary.locationLabel) {
     const locSize = Math.round(h * 0.025);
-    drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 4, locSize, input.fontFamily);
+    drawLocation(ctx, summary.locationLabel, titleX, titleY + titleLines * titleSize * 1.12 + locSize + 4, locSize, input.fontFamily, settings.titleColor ?? '#FFFFFF');
   }
 
-  // Stats + elevation (panelBottom and shift already computed above)
-  const elevH = Math.round(h * 0.155);
-  const statsH = showStats ? Math.round(h * 0.125 * statsRowCount(settings)) : 0;
-  const statsY = panelBottom - elevH - statsH;
-
+  // Stats + elevation
   if (showStats) drawStatsBar(ctx, 0, statsY, w, statsH, summary, settings, input.labels, input.fontFamily, input.statIconImages);
   if (settings.showElevationMiniChart) {
-    drawElevationChart(ctx, pad, panelBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily);
+    drawElevationChart(ctx, pad, panelBottom - elevH, w - pad * 2, elevH, { ...summary.elevation, unitSystem: summary.unitSystem }, input.routeColor, input.fontFamily, settings.statsColor ?? '#FFFFFF');
   }
 }
 

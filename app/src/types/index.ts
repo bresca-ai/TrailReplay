@@ -327,6 +327,8 @@ export interface SocialShareSettings {
   statsLayout: 2 | 3 | 4;
   statsStyle: 'minimal' | 'cards' | 'accent';
   statsColor: string;
+  /** Whether the stats area uses a readability scrim or filled stat cards. */
+  showStatsBackground?: boolean;
   statsScale: number;
   showElevationMiniChart: boolean;
   routeTransform: SocialShareRouteTransform;

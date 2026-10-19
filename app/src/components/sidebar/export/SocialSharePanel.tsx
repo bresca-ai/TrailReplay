@@ -447,12 +447,12 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
               className="mt-1 block w-full accent-[var(--trail-orange)]" />
           </label>
           <span className="w-9 text-right text-[11px] tabular-nums opacity-60">{Math.round((settings.titleScale ?? 1) * 100)}%</span>
-          <label className="shrink-0 text-[11px] font-medium">
-            {t('imageExport.titleColor')}
-            <input type="color" value={settings.titleColor ?? '#FFFFFF'} onChange={(event) => setSocialShareSettings({ titleColor: event.target.value })}
-              aria-label={t('imageExport.titleColor')} className="mt-1 block h-7 w-full cursor-pointer rounded border-0 bg-transparent p-0" />
-          </label>
         </div>
+        <label className="mt-2 flex items-center gap-2 text-[11px] font-medium">
+          {t('imageExport.titleColor')}
+          <input type="color" value={settings.titleColor ?? '#FFFFFF'} onChange={(event) => setSocialShareSettings({ titleColor: event.target.value })}
+            aria-label={t('imageExport.titleColor')} className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+        </label>
         <label className="mt-2 block text-[11px] font-medium">{t('imageExport.titleWidth')}
           <input type="range" min={0.3} max={0.96} step={0.02} value={settings.titleWidth ?? 0.74}
             onChange={(event) => setSocialShareSettings({ titleWidth: Number(event.target.value) })}
@@ -535,7 +535,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] opacity-60">{t('imageExport.statsStyle')}</span>
             {(['minimal', 'cards', 'accent'] as const).map((style) => (
               <button key={style} type="button" onClick={() => setSocialShareSettings({ statsStyle: style })}
@@ -543,10 +543,18 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
                 {t(`imageExport.statsStyle${style[0].toUpperCase()}${style.slice(1)}`)}
               </button>
             ))}
-            <label className="ml-auto flex items-center gap-1 text-[11px] opacity-70">
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-[11px] font-medium">
               {t('imageExport.statsColor')}
               <input type="color" value={settings.statsColor ?? '#FFFFFF'} onChange={(event) => setSocialShareSettings({ statsColor: event.target.value })}
-                aria-label={t('imageExport.statsColor')} className="h-6 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+                aria-label={t('imageExport.statsColor')} className="h-7 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+            </label>
+            <label className="flex items-center gap-2 text-[11px] font-medium">
+              <input type="checkbox" checked={settings.showStatsBackground !== false}
+                onChange={(event) => setSocialShareSettings({ showStatsBackground: event.target.checked })}
+                className="accent-[var(--trail-orange)]" />
+              {t('imageExport.statsBackground')}
             </label>
           </div>
           <div className="flex items-center gap-2 text-[11px]">
