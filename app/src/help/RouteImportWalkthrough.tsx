@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { BookmarkPlus, Check, Play, ShieldCheck } from 'lucide-react';
+import { BookmarkPlus, Check, ShieldCheck } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { getProviderGuides } from './helpContent';
 import { RouteImportBookmarklet } from './RouteImportBookmarklet';
@@ -52,6 +52,24 @@ export function RouteImportWalkthrough() {
       {method === 'automatic' ? (
         <div id={`${id}-automatic-panel`} role="tabpanel" aria-labelledby={`${id}-automatic-tab`}>
           <div className="mb-5"><RouteImportBookmarklet /></div>
+          <figure className="mb-5 overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/15 bg-white/90">
+            <video
+              className="aspect-video w-full bg-[var(--evergreen)] object-contain"
+              controls
+              playsInline
+              preload="none"
+              poster="/media/images/seo/route-import-bookmark-tutorial-poster.jpg"
+              width="1280"
+              height="720"
+              aria-label={t(`${content}.videoTitle`)}
+            >
+              <source src="/media/video/route-import-bookmark-tutorial.mp4" type="video/mp4" />
+            </video>
+            <figcaption className="p-4 sm:p-5">
+              <h3 className="text-base font-semibold text-[var(--evergreen)]">{t(`${content}.videoTitle`)}</h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--evergreen-60)]">{t(`${content}.videoDescription`)}</p>
+            </figcaption>
+          </figure>
           <div className="mb-5 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 p-4">
               <h3 className="text-sm font-bold text-[var(--evergreen)]">{t(`${content}.barSetupTitle`)}</h3>
@@ -64,42 +82,25 @@ export function RouteImportWalkthrough() {
               <p className="mt-2 text-xs leading-5 text-[var(--evergreen-60)]">{t(`${content}.hiddenUseBody`)}</p>
             </div>
           </div>
-          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-            <div>
-              <ol className="space-y-3">
-                {automaticSteps.map((step, index) => (
-                  <li key={step} className="flex gap-4 rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 px-4 py-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)] text-sm font-bold text-white">{index + 1}</div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-[var(--evergreen)]">{t(`${content}.steps.${step}.title`)}</h3>
-                      <p className="mt-1 text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.steps.${step}.body`)}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-4 flex items-start gap-3 rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 p-4">
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--evergreen)]" />
-                <p className="text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.privacyNote`)}</p>
-              </div>
-            </div>
-            <div>
-              <figure className="overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/15 bg-white/90">
-                {/* Replace this placeholder with /media/video/route-import-bookmark-tutorial.mp4 when ready. */}
-                <div className="flex aspect-video items-center justify-center bg-[linear-gradient(145deg,var(--evergreen),#314936)] px-6 text-center text-white" role="img" aria-label={t(`${content}.videoPlaceholder`)}>
-                  <div>
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-white/10"><Play className="ml-1 h-6 w-6 fill-current" /></div>
-                    <p className="mt-4 text-sm font-semibold">{t(`${content}.videoPlaceholder`)}</p>
-                  </div>
+          <ol className="grid gap-3 lg:grid-cols-2">
+            {automaticSteps.map((step, index) => (
+              <li key={step} className="flex gap-4 rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 px-4 py-4">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)] text-sm font-bold text-white">{index + 1}</div>
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--evergreen)]">{t(`${content}.steps.${step}.title`)}</h3>
+                  <p className="mt-1 text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.steps.${step}.body`)}</p>
                 </div>
-                <figcaption className="p-4">
-                  <h3 className="text-base font-semibold text-[var(--evergreen)]">{t(`${content}.videoTitle`)}</h3>
-                  <p className="mt-1 text-sm leading-6 text-[var(--evergreen-60)]">{t(`${content}.videoDescription`)}</p>
-                </figcaption>
-              </figure>
-              <div className="mt-4 flex items-start gap-3 rounded-[1.25rem] border border-[var(--evergreen)]/10 bg-white/80 p-4">
-                <Check className="mt-0.5 h-5 w-5 shrink-0 text-[var(--evergreen)]" />
-                <p className="text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.requirements`)}</p>
-              </div>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="flex items-start gap-3 rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 p-4">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--evergreen)]" />
+              <p className="text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.privacyNote`)}</p>
+            </div>
+            <div className="flex items-start gap-3 rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 p-4">
+              <Check className="mt-0.5 h-5 w-5 shrink-0 text-[var(--evergreen)]" />
+              <p className="text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.requirements`)}</p>
             </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--evergreen)]/10 bg-white/70 p-4">

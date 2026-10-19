@@ -16,6 +16,14 @@
   <url>
     <loc>https://trailreplay.com/strava-to-video</loc>
     <video:video>
+      <video:thumbnail_loc>https://trailreplay.com/media/images/seo/route-import-bookmark-tutorial-poster.jpg</video:thumbnail_loc>
+      <video:title>Import a Strava or Wikiloc route into TrailReplay</video:title>
+      <video:description>See how to save one Send to TrailReplay bookmark, use it on a Strava activity or Wikiloc trail, and open the route in a new TrailReplay tab.</video:description>
+      <video:content_loc>https://trailreplay.com/media/video/route-import-bookmark-tutorial.mp4</video:content_loc>
+      <video:duration>143</video:duration>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+    <video:video>
       <video:thumbnail_loc>https://trailreplay.com/media/images/seo/path-export-with-stats-poster.jpg</video:thumbnail_loc>
       <video:title>Strava Activity Animated as a 3D Route Video</video:title>
       <video:description>See a Strava activity GPX animated on a 3D terrain map with live distance, elevation, and pace statistics, exported straight from the browser.</video:description>
@@ -50,7 +58,27 @@
   </url>
 
   <url>
+    <loc>https://trailreplay.com/gpx-download-guide</loc>
+    <video:video>
+      <video:thumbnail_loc>https://trailreplay.com/media/images/seo/route-import-bookmark-tutorial-poster.jpg</video:thumbnail_loc>
+      <video:title>Import a Strava or Wikiloc route into TrailReplay</video:title>
+      <video:description>See how to save one Send to TrailReplay bookmark, use it on a Strava activity or Wikiloc trail, and open the route in a new TrailReplay tab.</video:description>
+      <video:content_loc>https://trailreplay.com/media/video/route-import-bookmark-tutorial.mp4</video:content_loc>
+      <video:duration>143</video:duration>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+
+  <url>
     <loc>https://trailreplay.com/tutorial</loc>
+    <video:video>
+      <video:thumbnail_loc>https://trailreplay.com/media/images/seo/route-import-bookmark-tutorial-poster.jpg</video:thumbnail_loc>
+      <video:title>Import a Strava or Wikiloc route into TrailReplay</video:title>
+      <video:description>See how to save one Send to TrailReplay bookmark, use it on a Strava activity or Wikiloc trail, and open the route in a new TrailReplay tab.</video:description>
+      <video:content_loc>https://trailreplay.com/media/video/route-import-bookmark-tutorial.mp4</video:content_loc>
+      <video:duration>143</video:duration>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
     <video:video>
       <video:thumbnail_loc>https://trailreplay.com/media/images/seo/cinematic-camera-tutorial-poster.jpg</video:thumbnail_loc>
       <video:title>Cinematic camera tutorial</video:title>
