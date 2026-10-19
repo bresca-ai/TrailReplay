@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookmarkPlus } from 'lucide-react';
+import { BookmarkPlus, Copy } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { createRouteImportBookmarkletHref } from '@/utils/routeImportBookmarklet';
 
@@ -11,6 +11,15 @@ export function RouteImportBookmarklet({ placement = 'top' }: { placement?: 'top
   useEffect(() => {
     if (linkRef.current) linkRef.current.href = createRouteImportBookmarkletHref(window.location.origin);
   }, []);
+
+  const copyBookmarklet = () => {
+    const bookmarklet = linkRef.current?.href;
+    if (!bookmarklet || !navigator.clipboard?.writeText) {
+      setCopied(false);
+      return;
+    }
+    void navigator.clipboard.writeText(bookmarklet).then(() => setCopied(true)).catch(() => setCopied(false));
+  };
 
   return (
     <div className={placement === 'top' ? 'rounded-2xl border border-[var(--trail-orange)]/25 bg-white/80 p-4' : 'flex justify-end'}>
@@ -30,12 +39,7 @@ export function RouteImportBookmarklet({ placement = 'top' }: { placement?: 'top
             draggable="true"
             onClick={(event) => {
               event.preventDefault();
-              const bookmarklet = linkRef.current?.href;
-              if (!bookmarklet || !navigator.clipboard?.writeText) {
-                setCopied(false);
-                return;
-              }
-              void navigator.clipboard.writeText(bookmarklet).then(() => setCopied(true)).catch(() => setCopied(false));
+              copyBookmarklet();
             }}
             className="tr-btn tr-btn-primary inline-flex cursor-grab items-center gap-2"
             aria-label={t('help.gpxGuide.importer.dragLabel')}
@@ -45,11 +49,15 @@ export function RouteImportBookmarklet({ placement = 'top' }: { placement?: 'top
             {t('help.gpxGuide.importer.button')}
           </a>
           {placement === 'top' && (
-            <p className="mt-3 text-xs leading-5 text-[var(--evergreen-60)]" aria-live="polite">
-              {copied
-                ? t('help.gpxGuide.importer.copied')
-                : t('help.gpxGuide.importer.copyHint')}
-            </p>
+            <>
+              <button type="button" onClick={copyBookmarklet} className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--trail-orange)] hover:underline">
+                <Copy className="h-4 w-4" />
+                {t('help.gpxGuide.importer.copyButton')}
+              </button>
+              <p className="mt-2 text-xs leading-5 text-[var(--evergreen-60)]" aria-live="polite">
+                {copied ? t('help.gpxGuide.importer.copied') : t('help.gpxGuide.importer.copyHint')}
+              </p>
+            </>
           )}
         </div>
       </div>

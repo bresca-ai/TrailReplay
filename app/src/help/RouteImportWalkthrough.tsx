@@ -52,6 +52,18 @@ export function RouteImportWalkthrough() {
       {method === 'automatic' ? (
         <div id={`${id}-automatic-panel`} role="tabpanel" aria-labelledby={`${id}-automatic-tab`}>
           <div className="mb-5"><RouteImportBookmarklet /></div>
+          <div className="mb-5 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 p-4">
+              <h3 className="text-sm font-bold text-[var(--evergreen)]">{t(`${content}.barSetupTitle`)}</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.barSetupBody`)}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--evergreen-60)]">{t(`${content}.barShortcut`)}</p>
+            </div>
+            <div className="rounded-2xl border border-[var(--evergreen)]/10 bg-white/80 p-4">
+              <h3 className="text-sm font-bold text-[var(--evergreen)]">{t(`${content}.hiddenSetupTitle`)}</h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--evergreen-80)]">{t(`${content}.hiddenSetupBody`)}</p>
+              <p className="mt-2 text-xs leading-5 text-[var(--evergreen-60)]">{t(`${content}.hiddenUseBody`)}</p>
+            </div>
+          </div>
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             <div>
               <ol className="space-y-3">
