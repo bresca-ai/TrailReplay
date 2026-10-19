@@ -30,7 +30,6 @@ export function ExportPanel() {
   const playback = useAppStore((state) => state.playback);
   const exportMode = useAppStore((state) => state.exportSubMode);
   const setExportMode = useAppStore((state) => state.setExportSubMode);
-  const setActivePanel = useAppStore((state) => state.setActivePanel);
   const tracks = useAppStore((state) => state.tracks);
   const isAppExporting = useAppStore((state) => state.isExporting);
   const journeyName = useAppStore((state) => state.journey?.name);
@@ -189,7 +188,6 @@ export function ExportPanel() {
           onAspectRatioChange={coverMode ? changeCoverAspectRatio : undefined}
           onPosterReady={coverMode ? receiveCoverPoster : undefined}
           onUseCover={coverMode ? returnToVideo : undefined}
-          onAddPhoto={() => { setCoverPreviewUrl(null); setActivePanel('pictures'); }}
         />
       ) : (
         <>

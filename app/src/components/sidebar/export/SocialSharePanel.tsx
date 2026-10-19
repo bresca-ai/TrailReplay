@@ -49,10 +49,9 @@ interface Props {
   onAspectRatioChange?: (ratio: SocialShareAspectRatio) => void;
   onPosterReady?: (url: string) => void;
   onUseCover?: () => void;
-  onAddPhoto?: () => void;
 }
 
-export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAspectRatioChange, onPosterReady, onUseCover, onAddPhoto }: Props) {
+export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAspectRatioChange, onPosterReady, onUseCover }: Props) {
   const { t } = useI18n();
   const overlayFont = useAppStore((state) => state.settings.trailStyle.overlayFont);
   const setTrailStyle = useAppStore((state) => state.setTrailStyle);
@@ -74,6 +73,10 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
   const [activePhotoSlotId, setActivePhotoSlotId] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [editingStatIconId, setEditingStatIconId] = useState<string | null>(null);
+  const photoFirstSlotId = settings.photoSlots?.[0]?.id ?? 'photo-first-hero';
+  const photoFirstImageUrl = settings.photoSlots?.[0]?.imageUrl
+    ?? pictures.find((picture) => picture.id === settings.selectedPictureId)?.url
+    ?? null;
 
   const applyPreset = (preset: typeof PRESET_ORDER[number]) => {
     const patch = presetSettings(preset, settings);
@@ -95,7 +98,16 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
     try {
       setPhotoError(null);
       const imageUrl = await compressCoverPhoto(file);
-      updatePhotoSlot(id, { imageUrl, offsetX: 0, offsetY: 0, scale: 1 });
+      const current = useAppStore.getState().socialShareSettings;
+      const slots = current.photoSlots ?? [];
+      const newSlot = { ...createPhotoSlot(id, 0, 0, 1, 1), imageUrl };
+      const photoSlots = slots.some((slot) => slot.id === id)
+        ? slots.map((slot) => slot.id === id ? { ...slot, imageUrl, offsetX: 0, offsetY: 0, scale: 1 } : slot)
+        : [newSlot, ...slots];
+      setSocialShareSettings({
+        photoSlots,
+        ...(current.template === 'photo-first' ? { selectedPictureId: null, photoTransform: { offsetX: 0, offsetY: 0, scale: 1 } } : {}),
+      });
       setActivePhotoSlotId(id);
     } catch (error) {
       setPhotoError(error instanceof Error ? error.message : String(error));
@@ -314,43 +326,38 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
         </div>
       )}
 
-      {/* Photo chooser */}
-      {settings.template === 'photo-first' && <div>
+      {/* Photo-first image uses the same direct upload and library picker as split frames. */}
+      {settings.template === 'photo-first' && <div className="space-y-2">
         <div className="mb-2 flex items-center justify-between gap-2">
           <div className="text-xs uppercase tracking-wide opacity-60">{t('imageExport.photo')}</div>
-          {onAddPhoto ? <button type="button" onClick={onAddPhoto} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]"><ImagePlus className="h-3.5 w-3.5" />{t('imageExport.addPhoto')}</button> : null}
+          {photoFirstImageUrl && <button type="button" onClick={() => openPhotoPicker(photoFirstSlotId)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]"><ImagePlus className="h-3.5 w-3.5" />{t('imageExport.replacePhoto')}</button>}
         </div>
-        {pictures.length === 0 ? (
-          <button type="button" onClick={onAddPhoto} disabled={!onAddPhoto} className="flex min-h-24 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--evergreen)]/25 bg-black/[0.025] px-4 text-center text-xs opacity-70 hover:border-[var(--trail-orange)] hover:text-[var(--trail-orange)] disabled:cursor-default"><ImagePlus className="h-5 w-5" />{t('imageExport.addFirstPhoto')}</button>
-        ) : (
-          <div className="grid max-h-40 grid-cols-4 gap-2 overflow-y-auto">
-            <button
-              onClick={() => setSocialShareSettings({ selectedPictureId: null })}
-              aria-label={t('imageExport.noPhoto')}
-              className={`aspect-square rounded-lg flex items-center justify-center text-lg border-2 transition-colors ${
-                !settings.selectedPictureId
-                  ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]'
-                  : 'border-transparent bg-black/5 hover:bg-black/10'
-              }`}
-            >
-              <X className="h-4 w-4" />
-            </button>
-            {pictures.map((pic) => (
-              <button
-                key={pic.id}
-                onClick={() => setSocialShareSettings({ selectedPictureId: pic.id })}
-                aria-label={pic.originalFileName ?? t('imageExport.photo')}
-                className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                  settings.selectedPictureId === pic.id
-                    ? 'border-[var(--trail-orange)]'
-                    : 'border-transparent'
-                }`}
-              >
-                <img src={pic.url} className="w-full h-full object-cover" alt="" />
-              </button>
-            ))}
-          </div>
-        )}
+        <button type="button" onClick={() => openPhotoPicker(photoFirstSlotId)}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            const file = event.dataTransfer.files[0];
+            const pictureId = event.dataTransfer.getData('text/x-trailreplay-picture');
+            if (file?.type.startsWith('image/')) void loadPhotoIntoSlot(photoFirstSlotId, file);
+            else if (pictureId) void loadLibraryPhotoIntoSlot(photoFirstSlotId, pictureId);
+          }}
+          className="relative flex min-h-28 w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-[var(--evergreen)]/25 bg-black/[0.025] text-xs hover:border-[var(--trail-orange)]">
+          {photoFirstImageUrl ? <img src={photoFirstImageUrl} alt="" className="h-28 w-full object-cover" />
+            : <span className="flex flex-col items-center gap-2 opacity-70"><ImagePlus className="h-6 w-6" />{t('imageExport.addFirstPhoto')}</span>}
+        </button>
+        {photoFirstImageUrl && <button type="button" onClick={() => setSocialShareSettings({
+          photoSlots: (settings.photoSlots ?? []).map((slot, index) => index === 0 ? { ...slot, imageUrl: null } : slot),
+          selectedPictureId: null,
+        })} className="inline-flex items-center gap-1 text-xs text-[var(--evergreen-60)] hover:text-red-600"><X className="h-3.5 w-3.5" />{t('imageExport.removePhoto')}</button>}
+        {pictures.length > 0 && <div className="flex gap-1.5 overflow-x-auto pt-1">
+          {pictures.filter((picture) => !picture.isPlaceholder).map((picture) => <button key={picture.id} type="button" draggable
+            onDragStart={(event) => event.dataTransfer.setData('text/x-trailreplay-picture', picture.id)}
+            onClick={() => { void loadLibraryPhotoIntoSlot(photoFirstSlotId, picture.id); }}
+            className="h-12 w-12 shrink-0 overflow-hidden rounded border border-black/15" title={picture.originalFileName}>
+            <img src={picture.url} alt="" className="h-full w-full object-cover" />
+          </button>)}
+        </div>}
+        {photoError && <p className="text-xs text-red-600" role="alert">{photoError}</p>}
       </div>}
 
       {/* Title */}

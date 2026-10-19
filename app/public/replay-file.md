@@ -514,12 +514,15 @@ or `4` columns; `statsStyle` is `minimal`, `cards`, or `accent`;
 `map:waterfall`, or a searchable Pinhead symbol such as `pinhead:mountain`.
 Older activity and emoji icon values remain drawable in saved projects.
 
-The split layout uses `photoSlots`, an array of `{ id, imageUrl, x, y, w, h,
+The split and photo-first layouts use `photoSlots`, an array of `{ id, imageUrl, x, y, w, h,
 offsetX, offsetY, scale }`. Coordinates are poster fractions. An omitted or
 `null` `imageUrl` creates a clickable empty frame in the cover editor; users can
 upload or drop a photo directly into each frame, then pan and zoom its crop.
 The `ridge-photo` preset uses one frame and `photo-grid` uses two. A recipe
 with `template: "split"` and no slots gets one empty frame automatically.
+Photo-first uses the first slot as its full background photo. Existing projects
+that only specify `selectedPictureId` continue to use that picture until a
+photo is uploaded into the first slot.
 The new `poster` (Anton) and `display` (Bebas Neue) values for
 `settings.trailStyle.overlayFont` apply to both video overlays and the cover.
 

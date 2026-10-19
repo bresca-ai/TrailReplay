@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Download, Loader2, Minus, Move, Plus, X } from 'lucide-react';
+import { Check, Download, ImagePlus, Loader2, Minus, Move, Plus, X } from 'lucide-react';
 import type { SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
@@ -135,9 +135,12 @@ export function SocialSharePreviewModal({
   const showPanelOverlay = !!dataPanelBboxNorm;
   const hasAnyOverlay = showRouteOverlay || showPanelOverlay || !!titleBboxNorm || !!logoBboxNorm;
   const hasEmptySplitFrame = settings.template === 'split' && (!settings.photoSlots?.length || settings.photoSlots.some((slot) => !slot.imageUrl));
+  const photoFirstSlotId = settings.photoSlots?.[0]?.id ?? 'photo-first-hero';
+  const hasPhotoFirstImage = !!settings.photoSlots?.[0]?.imageUrl || !!settings.selectedPictureId;
+  const hasEmptyPhotoFrame = settings.template === 'photo-first' && !hasPhotoFirstImage;
 
   const onPhotoPointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
-    if (settings.template !== 'photo-first' || !photoEditMode) return;
+    if (settings.template !== 'photo-first' || !hasPhotoFirstImage) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = containerRef.current?.getBoundingClientRect();
@@ -423,17 +426,40 @@ export function SocialSharePreviewModal({
             style={inline
               ? { aspectRatio: aspectStyle, width: canvasWidth, height: canvasWidth / aspectNumber }
               : { aspectRatio: aspectStyle, maxHeight: '70vh' }}
+            onDragOver={(event) => { if (settings.template === 'photo-first') event.preventDefault(); }}
+            onDrop={(event) => {
+              if (settings.template !== 'photo-first') return;
+              event.preventDefault();
+              const file = event.dataTransfer.files[0];
+              const pictureId = event.dataTransfer.getData('text/x-trailreplay-picture');
+              if (file?.type.startsWith('image/')) onPhotoSlotFile(photoFirstSlotId, file);
+              else if (pictureId) onPhotoSlotPicture(photoFirstSlotId, pictureId);
+            }}
           >
             <img
               src={previewUrl}
               alt="Social share poster preview"
-              className={`absolute inset-0 w-full h-full object-cover ${photoEditMode ? (photoDragVisual.active ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+              className={`absolute inset-0 w-full h-full object-cover ${settings.template === 'photo-first' && hasPhotoFirstImage ? (photoDragVisual.active ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
               draggable={false}
               onPointerDown={onPhotoPointerDown}
               onPointerMove={onPhotoPointerMove}
               onPointerUp={onPhotoPointerUp}
               onPointerCancel={onPhotoPointerUp}
+              onDoubleClick={() => { if (settings.template === 'photo-first') onPhotoSlotPick(photoFirstSlotId); }}
+              onWheel={(event) => {
+                if (settings.template !== 'photo-first' || !hasPhotoFirstImage) return;
+                event.preventDefault();
+                const transform = settings.photoTransform ?? { offsetX: 0, offsetY: 0, scale: 1 };
+                setSocialShareSettings({ photoTransform: { ...transform, scale: Math.max(1, Math.min(3, transform.scale + (event.deltaY < 0 ? 0.1 : -0.1))) } });
+              }}
             />
+
+            {hasEmptyPhotoFrame && <button type="button" onClick={() => onPhotoSlotPick(photoFirstSlotId)}
+              className="absolute inset-3 z-40 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/75 bg-black/40 px-4 text-center text-sm font-semibold text-white hover:bg-black/50"
+              aria-label={t('imageExport.addPhoto')}>
+              <ImagePlus className="h-7 w-7" aria-hidden="true" />
+              {t('imageExport.addFirstPhoto')}
+            </button>}
 
             {settings.template === 'split' && (settings.photoSlots ?? []).map((slot) => <div key={slot.id}
               className={`absolute select-none border-2 ${slot.imageUrl ? 'border-transparent hover:border-white/90' : 'border-dashed border-white/80 bg-white/5'}`}
@@ -574,8 +600,8 @@ export function SocialSharePreviewModal({
           </button>}
           <button
             onClick={onExport}
-            disabled={isRendering || hasEmptySplitFrame}
-            title={hasEmptySplitFrame ? t('imageExport.addPhoto') : undefined}
+            disabled={isRendering || hasEmptySplitFrame || hasEmptyPhotoFrame}
+            title={hasEmptySplitFrame || hasEmptyPhotoFrame ? t('imageExport.addPhoto') : undefined}
             className={`tr-btn tr-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 ${inline ? 'ml-auto min-w-36' : 'flex-1'}`}
           >
             {isRendering ? (

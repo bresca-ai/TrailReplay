@@ -58,32 +58,38 @@ export function useSocialShareExport() {
 
   const selectablePictures = pictures.filter((p) => !p.isPlaceholder);
   const selectedPicture = selectablePictures.find((p) => p.id === settings.selectedPictureId) ?? null;
+  const photoFirstSlotUrl = settings.template === 'photo-first' ? settings.photoSlots?.[0]?.imageUrl : null;
+  const selectedPhotoUrl = photoFirstSlotUrl ?? selectedPicture?.url ?? null;
+  const selectedPhotoId = photoFirstSlotUrl ?? selectedPicture?.id ?? null;
 
   useEffect(() => {
-    if (!selectedPicture) {
+    if (!selectedPhotoUrl || !selectedPhotoId) {
       photoRef.current = null;
       photoIdRef.current = null;
       setPhotoReadyId(null);
       setPhotoVersion((v) => v + 1);
       return;
     }
-    if (photoIdRef.current === selectedPicture.id && photoRef.current) return;
+    if (photoIdRef.current === selectedPhotoId && photoRef.current) return;
 
     photoRef.current = null;
     photoIdRef.current = null;
     setPhotoReadyId(null);
 
     const img = new Image();
+    let cancelled = false;
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      if (cancelled) return;
       photoRef.current = img;
-      photoIdRef.current = selectedPicture.id;
-      setPhotoReadyId(selectedPicture.id);
+      photoIdRef.current = selectedPhotoId;
+      setPhotoReadyId(selectedPhotoId);
       setPhotoVersion((v) => v + 1);
     };
-    img.onerror = () => setPhotoVersion((v) => v + 1);
-    img.src = selectedPicture.url;
-  }, [selectedPicture]);
+    img.onerror = () => { if (!cancelled) setPhotoVersion((v) => v + 1); };
+    img.src = selectedPhotoUrl;
+    return () => { cancelled = true; };
+  }, [selectedPhotoId, selectedPhotoUrl]);
 
   const buildInput = useCallback((brandLogo: HTMLImageElement, assets: Awaited<ReturnType<typeof loadPosterAssets>>, preCapuredMapCanvas: HTMLCanvasElement | null = null): RenderInput => {
     const summary = buildSocialShareSummary(
@@ -454,7 +460,7 @@ export function useSocialShareExport() {
     previewUrl,
     isRendering,
     selectedPicture,
-    selectedPhotoReady: !!selectedPicture && photoReadyId === selectedPicture.id,
+    selectedPhotoReady: !!selectedPhotoId && photoReadyId === selectedPhotoId,
     generatePreview,
     exportPng,
     fitTrackToMap,
