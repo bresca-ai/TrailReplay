@@ -7,9 +7,9 @@ const HERO_VIDEO = {
 const ROUTE_IMPORT_VIDEO = {
   title: 'Import a Strava or Wikiloc route into TrailReplay',
   description: 'See how to save one Send to TrailReplay bookmark, use it on a Strava activity or Wikiloc trail, and open the route in a new TrailReplay tab.',
-  contentUrl: 'https://trailreplay.com/media/video/route-import-bookmark-tutorial.mp4',
-  thumbnailUrl: 'https://trailreplay.com/media/images/seo/route-import-bookmark-tutorial-poster.jpg',
-  durationSeconds: 143,
+  contentUrl: 'https://trailreplay.com/media/video/strava-wikiloc-import-tutorial.mp4',
+  thumbnailUrl: 'https://trailreplay.com/media/images/seo/strava-wikiloc-import-tutorial-poster.jpg',
+  durationSeconds: 133,
 };
 
 export const VIDEO_PAGES = [

@@ -290,7 +290,7 @@ export const help = {
         },
         privacyNote: 'El marcador lee la ruta en tu navegador y pasa el GPX entre pestañas. TrailReplay no lo sube a nuestros servidores.',
         videoTitle: 'Vídeo: importar desde Strava o Wikiloc',
-        videoDescription: 'Guía para guardar un marcador y usarlo en ambas plataformas. Subtítulos en inglés; sin audio.',
+        videoDescription: 'Guía para guardar un marcador y usarlo en ambas plataformas. Subtítulos en inglés. Se reproduce sin sonido al verse completo; activa el audio con los controles.',
         requirements: 'Usa un navegador de escritorio y permite la nueva pestaña de TrailReplay. Strava necesita una sesión con acceso a la actividad. Wikiloc solo necesita que cargue el mapa; no hace falta iniciar sesión.',
         barSetupTitle: 'Si usas la barra de marcadores',
         barSetupBody: 'Arrastra el botón naranja Enviar a TrailReplay de arriba hasta la barra. Puedes volver a ocultarla después de guardar el marcador.',

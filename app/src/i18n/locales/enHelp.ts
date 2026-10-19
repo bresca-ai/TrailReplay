@@ -290,7 +290,7 @@ export const help = {
         },
         privacyNote: 'The bookmark reads the route in your browser and passes the GPX between tabs. TrailReplay does not upload it to our servers.',
         videoTitle: 'Watch: import from Strava or Wikiloc',
-        videoDescription: 'A walkthrough of saving one bookmark and using it on both sites. English captions; no audio.',
+        videoDescription: 'A walkthrough of saving one bookmark and using it on both sites. English captions. Playback starts muted when fully visible; use the controls for sound.',
         requirements: 'Use a desktop browser and allow the new TrailReplay tab. Strava needs a signed-in session with access to the activity. Wikiloc needs a loaded map, with no sign-in required.',
         barSetupTitle: 'If you use the bookmarks bar',
         barSetupBody: 'Drag the orange Send to TrailReplay button above onto the bar. You can hide the bar again after saving it.',

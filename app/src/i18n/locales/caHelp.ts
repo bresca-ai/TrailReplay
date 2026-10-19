@@ -290,7 +290,7 @@ export const help = {
         },
         privacyNote: 'El marcador llegeix la ruta al navegador i passa el GPX entre pestanyes. TrailReplay no el puja als nostres servidors.',
         videoTitle: 'Vídeo: importar des de Strava o Wikiloc',
-        videoDescription: 'Guia per desar un marcador i fer-lo servir a totes dues plataformes. Subtítols en anglès; sense àudio.',
+        videoDescription: 'Guia per desar un marcador i fer-lo servir a totes dues plataformes. Subtítols en anglès. Comença sense so quan es veu complet; activa l’àudio amb els controls.',
         requirements: 'Fes servir un navegador d’escriptori i permet la pestanya nova de TrailReplay. Strava requereix una sessió amb accés a l’activitat. A Wikiloc només cal que es carregui el mapa; no cal iniciar sessió.',
         barSetupTitle: 'Si fas servir la barra de marcadors',
         barSetupBody: 'Arrossega el botó taronja Envia a TrailReplay de dalt fins a la barra. Pots tornar a amagar-la després de desar el marcador.',

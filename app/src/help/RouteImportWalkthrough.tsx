@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { BookmarkPlus, Check, ShieldCheck } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { getProviderGuides } from './helpContent';
@@ -14,8 +14,49 @@ export function RouteImportWalkthrough() {
   const id = useId();
   const [method, setMethod] = useState<Method>('automatic');
   const [provider, setProvider] = useState<Provider>('Strava');
+  const videoRef = useRef<HTMLVideoElement>(null);
   const guide = getProviderGuides(t).find((item) => item.name === provider);
   const content = 'help.gpxGuide.importer';
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (method !== 'automatic' || !video || !('IntersectionObserver' in window)) return;
+
+    let fullyVisible = false;
+    let pausedByObserver = false;
+    let pausedByUser = false;
+    const onPause = () => {
+      if (!pausedByObserver && fullyVisible && !document.hidden && !video.ended) pausedByUser = true;
+      pausedByObserver = false;
+    };
+    const onPlay = () => { pausedByUser = false; };
+    const syncPlayback = () => {
+      if (fullyVisible && !document.hidden && !video.ended && !pausedByUser) {
+        if (video.paused) void video.play().catch(() => {
+          // Browser settings may still require a manual click.
+        });
+      } else if (!video.paused) {
+        pausedByObserver = true;
+        video.pause();
+      }
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      fullyVisible = entry.intersectionRatio === 1;
+      syncPlayback();
+    }, { threshold: 1 });
+
+    observer.observe(video);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('play', onPlay);
+    document.addEventListener('visibilitychange', syncPlayback);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', syncPlayback);
+      video.removeEventListener('pause', onPause);
+      video.removeEventListener('play', onPlay);
+      video.pause();
+    };
+  }, [method]);
 
   return (
     <section className="rounded-[1.5rem] border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-5 shadow-sm sm:p-6" data-testid="route-import-tutorial">
@@ -52,18 +93,20 @@ export function RouteImportWalkthrough() {
       {method === 'automatic' ? (
         <div id={`${id}-automatic-panel`} role="tabpanel" aria-labelledby={`${id}-automatic-tab`}>
           <div className="mb-5"><RouteImportBookmarklet /></div>
-          <figure className="mb-5 overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/15 bg-white/90">
+          <figure className="mx-auto mb-5 max-w-5xl overflow-hidden rounded-[1.25rem] border border-[var(--evergreen)]/15 bg-white/90">
             <video
+              ref={videoRef}
               className="aspect-video w-full bg-[var(--evergreen)] object-contain"
               controls
+              muted
               playsInline
               preload="none"
-              poster="/media/images/seo/route-import-bookmark-tutorial-poster.jpg"
+              poster="/media/images/seo/strava-wikiloc-import-tutorial-poster.jpg"
               width="1280"
               height="720"
               aria-label={t(`${content}.videoTitle`)}
             >
-              <source src="/media/video/route-import-bookmark-tutorial.mp4" type="video/mp4" />
+              <source src="/media/video/strava-wikiloc-import-tutorial.mp4" type="video/mp4" />
             </video>
             <figcaption className="p-4 sm:p-5">
               <h3 className="text-base font-semibold text-[var(--evergreen)]">{t(`${content}.videoTitle`)}</h3>

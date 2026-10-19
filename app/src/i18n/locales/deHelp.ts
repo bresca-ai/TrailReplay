@@ -290,7 +290,7 @@ export const help = {
         },
         privacyNote: 'Das Lesezeichen liest die Route im Browser und übergibt die GPX-Datei zwischen Tabs. TrailReplay lädt sie nicht auf unsere Server hoch.',
         videoTitle: 'Video: Aus Strava oder Wikiloc importieren',
-        videoDescription: 'Anleitung zum Speichern und Verwenden eines Lesezeichens auf beiden Plattformen. Englische Untertitel; kein Ton.',
+        videoDescription: 'Anleitung zum Speichern und Verwenden eines Lesezeichens auf beiden Plattformen. Englische Untertitel. Bei voller Sicht startet das Video stumm; Ton über die Steuerung einschalten.',
         requirements: 'Verwende einen Desktop-Browser und erlaube den neuen TrailReplay-Tab. Strava benötigt eine Anmeldung mit Zugriff auf die Aktivität. Bei Wikiloc reicht eine geladene Karte; eine Anmeldung ist nicht nötig.',
         barSetupTitle: 'Wenn du die Lesezeichenleiste nutzt',
         barSetupBody: 'Ziehe die orange Schaltfläche An TrailReplay senden oben in die Leiste. Danach kannst du die Leiste wieder ausblenden.',

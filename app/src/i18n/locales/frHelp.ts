@@ -290,7 +290,7 @@ export const help = {
         },
         privacyNote: 'Le favori lit le parcours dans votre navigateur et transmet le GPX entre les onglets. TrailReplay ne l’envoie pas à nos serveurs.',
         videoTitle: 'Vidéo : importer depuis Strava ou Wikiloc',
-        videoDescription: 'Tutoriel pour enregistrer un favori et l’utiliser sur les deux sites. Sous-titres en anglais ; sans son.',
+        videoDescription: 'Tutoriel pour enregistrer un favori et l’utiliser sur les deux sites. Sous-titres en anglais. Lecture sans son lorsque la vidéo est entièrement visible ; activez le son avec les commandes.',
         requirements: 'Utilisez un navigateur sur ordinateur et autorisez le nouvel onglet TrailReplay. Strava exige une session ayant accès à l’activité. Wikiloc demande seulement une carte chargée, sans connexion.',
         barSetupTitle: 'Si vous utilisez la barre des favoris',
         barSetupBody: 'Faites glisser le bouton orange Envoyer vers TrailReplay ci-dessus dans la barre. Vous pouvez la masquer de nouveau après avoir enregistré le favori.',
