@@ -17,7 +17,7 @@ const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
     const bodyText=new DOMParser().parseFromString(gpx,"text/html").body.textContent||"";
     const excerpt=bodyText.replace(/\\s+/g," ").trim().slice(0,140);
     const contentType=response.headers.get("content-type")||"unknown content type";
-    return {gpx:null,error:label+": HTTP "+response.status+", "+contentType+" ("+(title||path)+")"+(excerpt?" — "+excerpt:"")};
+    return {gpx:null,error:label+": HTTP "+response.status+", "+contentType+", "+gpx.length+" characters ("+(title||path)+")"+(excerpt?" — "+excerpt:"")};
   };
   const fetchOriginalGpx=async()=>{
     const pageResponse=await fetch(location.origin+"/wikiloc/download.do?id="+encodeURIComponent(id)+"&event=file",{credentials:"include"});
@@ -33,13 +33,15 @@ const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
     data.set("id",id);data.set("event","download");data.set("format","gpx");data.set("selFormat","gpx");
     if(originalOption)data.set(originalControl.name,originalOption.value);
     else data.set(originalControl.name,originalControl.value);
-    const response=await fetch(form.action||location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:data,credentials:"include"});
+    const action=new URL(form.getAttribute("action")||"/wikiloc/downloadToFile.do",pageResponse.url).href;
+    const response=await fetch(action,{method:"POST",body:data,credentials:"include",referrer:pageResponse.url});
     return await readGpx(response,"Original form");
   };
   const fetchGpx=async filter=>{
     const form=new FormData();
     form.append("id",id);form.append("event","download");form.append("format","gpx");form.append("selFormat","gpx");form.append("filter",filter);
-    const response=await fetch(location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:form,credentials:"include"});
+    const downloadPage=new URL("/wikiloc/download.do?id="+encodeURIComponent(id)+"&event=file",location.origin).href;
+    const response=await fetch(location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:form,credentials:"include",referrer:downloadPage});
     return await readGpx(response,filter);
   };
   const onMessage=async event=>{
