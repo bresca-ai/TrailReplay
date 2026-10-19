@@ -797,7 +797,7 @@ export function SocialSharePreviewModal({
         </div>
 
         <div className={`px-4 py-3 flex gap-2 shrink-0 ${inline ? 'border-t border-white/10 text-white' : 'border-t border-black/10'}`}>
-          {inline && <p className="min-w-0 self-center text-xs leading-4 text-white/60">
+          {inline && <p className="hidden min-w-0 self-center text-xs leading-4 text-white/60 sm:block">
             {t(settings.template === 'map-first' ? 'imageExport.dragMapHint' : settings.template === 'split' ? 'imageExport.dragSplitMapHint' : photoEditMode ? 'imageExport.dragPhotoOnlyHint' : 'imageExport.dragPhotoHint')}
           </p>}
           {!inline && <button onClick={onClose} className="tr-btn tr-btn-secondary flex-1">
@@ -807,7 +807,7 @@ export function SocialSharePreviewModal({
             onClick={onExport}
             disabled={isRendering || hasEmptySplitFrame || hasEmptyPhotoFrame}
             title={hasEmptySplitFrame || hasEmptyPhotoFrame ? t('imageExport.addPhoto') : undefined}
-            className={`tr-btn tr-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 ${inline ? 'ml-auto min-w-36' : 'flex-1'}`}
+            className={`tr-btn tr-btn-primary flex items-center justify-center gap-2 disabled:opacity-60 ${inline ? 'w-full sm:ml-auto sm:w-auto sm:min-w-36' : 'flex-1'}`}
           >
             {isRendering ? (
               <Loader2 className="w-4 h-4 animate-spin" />

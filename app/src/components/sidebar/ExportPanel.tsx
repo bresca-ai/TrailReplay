@@ -37,6 +37,7 @@ export function ExportPanel() {
   const studioDeliveryEmail = useAppStore((state) => state.studioDeliveryEmail);
   const setStudioDeliveryEmail = useAppStore((state) => state.setStudioDeliveryEmail);
   const [showSettings, setShowSettings] = useState(false);
+  const [editingCover, setEditingCover] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [consentDefaultsLoaded, setConsentDefaultsLoaded] = useState(false);
   const consentTouchedRef = useRef(false);
@@ -89,16 +90,20 @@ export function ExportPanel() {
     coverImageUrl: videoExportSettings.includeCover ? coverPreviewUrl : null,
   });
   const studioEmailValid = localStudioDownload || isValidDeliveryEmail(studioDeliveryEmail);
-  const coverMode = exportMode === 'image' && videoExportSettings.includeCover;
+  const coverMode = exportMode === 'image' && editingCover;
   const coverAspectRatio = videoExportSettings.aspectRatio;
   const receiveCoverPoster = useCallback((url: string) => setCoverPreviewUrl(url), [setCoverPreviewUrl]);
   const openCoverEditor = () => {
     setCoverPreviewUrl(null);
     setVideoExportSettings({ includeCover: true });
     setSocialShareSettings({ aspectRatio: coverAspectRatio });
+    setEditingCover(true);
     setExportMode('image');
   };
-  const returnToVideo = () => setExportMode('video');
+  const returnToVideo = () => {
+    setEditingCover(false);
+    setExportMode('video');
+  };
   const changeCoverAspectRatio = (ratio: SocialShareAspectRatio) => {
     setCoverPreviewUrl(null);
     setVideoExportSettings({
@@ -160,7 +165,7 @@ export function ExportPanel() {
       {/* Mode switch */}
       <div className="grid grid-cols-2 gap-1">
         <button
-          onClick={() => setExportMode('video')}
+          onClick={returnToVideo}
           className={`py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5 border transition-colors ${
             exportMode === 'video'
               ? 'bg-[var(--evergreen)] text-[var(--canvas)] border-[var(--evergreen)]'
@@ -170,7 +175,7 @@ export function ExportPanel() {
           <Film className="w-3.5 h-3.5" /> {t('imageExport.modeVideo')}
         </button>
         <button
-          onClick={() => setExportMode('image')}
+          onClick={() => { setEditingCover(false); setExportMode('image'); }}
           className={`py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5 border transition-colors ${
             exportMode === 'image'
               ? 'bg-[var(--evergreen)] text-[var(--canvas)] border-[var(--evergreen)]'

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, ImagePlus, ImageIcon, Loader2, Minus, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, X } from 'lucide-react';
 import { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { useI18n } from '@/i18n/useI18n';
-import { trackEvent } from '@/utils/analytics';
 import { renderActivityIcon } from '@/utils/activityIcons';
 import { AnnotationSymbolPicker } from '@/components/sidebar/AnnotationSymbolPicker';
 import { annotationSymbolLabel, annotationSymbolPath } from '@/components/annotations/annotationSymbol';
@@ -67,7 +66,6 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
     titleBboxNorm,
     logoBboxNorm,
   } = useSocialShareExport();
-  const [showPreview, setShowPreview] = useState(false);
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
@@ -85,6 +83,9 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
   const photoFirstImageUrl = settings.photoSlots?.[0]?.imageUrl
     ?? pictures.find((picture) => picture.id === settings.selectedPictureId)?.url
     ?? null;
+  const hasEmptyRequiredPhoto = settings.template === 'photo-first'
+    ? !photoFirstImageUrl
+    : settings.template === 'split' && (!(settings.photoSlots?.length) || (settings.photoSlots ?? []).some((slot) => !slot.imageUrl));
   const posterSize = getPosterSize(settings.aspectRatio);
   const splitMapFrame = getSplitMapFrame(posterSize.w, posterSize.h, settings.splitMapFrame);
   const updateSplitMapFrame = (patch: Partial<typeof splitMapFrame>) =>
@@ -286,6 +287,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             <button
               key={value}
               onClick={() => value === 'split' ? applyPreset('ridge-photo') : setSocialShareSettings({ template: value, layoutPreset: 'classic' })}
+              aria-pressed={settings.template === value}
               className={`py-2 rounded text-sm font-medium transition-colors ${
                 settings.template === value
                   ? 'bg-[var(--trail-orange)] text-white'
@@ -499,6 +501,9 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           <div className="text-xs uppercase tracking-wide opacity-60">{t('imageExport.location')}</div>
           <button
             onClick={() => setSocialShareSettings({ showLocation: !settings.showLocation })}
+            type="button"
+            aria-label={t('imageExport.location')}
+            aria-pressed={settings.showLocation}
             className={`relative w-9 h-5 rounded-full transition-colors ${
               settings.showLocation ? 'bg-[var(--trail-orange)]' : 'bg-black/20'
             }`}
@@ -747,66 +752,30 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
         <p className="text-xs opacity-50 text-center">{t('imageExport.noTrackHint')}</p>
       )}
 
-      {coverMode && <button type="button"
-        onClick={() => { if (previewUrl) { onPosterReady?.(previewUrl); onUseCover?.(); } }}
-        disabled={!previewUrl || isRendering}
+      <button type="button"
+        onClick={() => {
+          if (!previewUrl) return;
+          if (coverMode) { onPosterReady?.(previewUrl); onUseCover?.(); }
+          else void exportPng();
+        }}
+        disabled={!previewUrl || isRendering || hasEmptyRequiredPhoto}
+        title={hasEmptyRequiredPhoto ? t('imageExport.addPhoto') : undefined}
         className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50"
       >
-        <ArrowLeft className="h-4 w-4" />{t('imageExport.saveCoverBackToVideo')}
-      </button>}
+        {coverMode ? <ArrowLeft className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+        {t(coverMode ? 'imageExport.saveCoverBackToVideo' : 'imageExport.downloadPng')}
+      </button>
 
-      {/* The cover canvas stays in the main map area while its controls remain in the sidebar. */}
-      {coverMode && editorHost && createPortal(
+      {/* The editable poster takes the main map area for both image and video cover design. */}
+      {editorHost && (coverMode || hasTracks) && createPortal(
         previewUrl ? <SocialSharePreviewModal
           previewUrl={previewUrl}
           isRendering={isRendering}
           onClose={() => undefined}
-          onExport={() => { onPosterReady?.(previewUrl); onUseCover?.(); }}
-          settings={settings}
-          setSocialShareSettings={setSocialShareSettings}
-          onMapRouteGesture={transformMapViewport}
-          onPhotoSlotPick={openPhotoPicker}
-          onPhotoSlotFile={(id, file) => { void loadPhotoIntoSlot(id, file); }}
-          onPhotoSlotPicture={(id, pictureId) => { void loadLibraryPhotoIntoSlot(id, pictureId); }}
-          onPhotoSlotChange={updatePhotoSlot}
-          routeBboxNorm={routeBboxNorm}
-          dataPanelBboxNorm={dataPanelBboxNorm}
-          titleBboxNorm={titleBboxNorm}
-          logoBboxNorm={logoBboxNorm}
-          coverMode
-          inline
-        /> : <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#101916] text-sm text-white/70">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('imageExport.rendering')}
-        </div>,
-        editorHost,
-      )}
-
-      {!coverMode && <button
-        onClick={async () => {
-          trackEvent('social_share_preview_opened', {
-            template: settings.template,
-            aspect_ratio: settings.aspectRatio,
-          });
-          await generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first' });
-          setShowPreview(true);
-        }}
-        disabled={isRendering || !hasTracks}
-        className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isRendering ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <ImageIcon className="w-4 h-4" />
-        )}
-        {isRendering ? t('imageExport.rendering') : t(coverMode ? 'imageExport.previewCover' : 'imageExport.previewDownload')}
-      </button>}
-
-      {!coverMode && showPreview && previewUrl && (
-        <SocialSharePreviewModal
-          previewUrl={previewUrl}
-          isRendering={isRendering}
-          onClose={() => setShowPreview(false)}
-          onExport={async () => { if (coverMode) onUseCover?.(); else await exportPng(); setShowPreview(false); }}
+          onExport={() => {
+            if (coverMode) { onPosterReady?.(previewUrl); onUseCover?.(); }
+            else void exportPng();
+          }}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
           onMapRouteGesture={transformMapViewport}
@@ -819,8 +788,13 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           titleBboxNorm={titleBboxNorm}
           logoBboxNorm={logoBboxNorm}
           coverMode={coverMode}
-        />
+          inline
+        /> : <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#101916] text-sm text-white/70">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('imageExport.rendering')}
+        </div>,
+        editorHost,
       )}
+
     </div>
   );
 }
