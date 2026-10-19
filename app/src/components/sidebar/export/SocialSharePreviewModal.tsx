@@ -67,6 +67,23 @@ function chooseStatsColumns(width: number, height: number, count: number): 1 | 2
   return best;
 }
 
+function resizedStatsFrame(
+  frame: RouteBboxNorm, corner: StatsResizeCorner,
+  dx: number, dy: number, containerW: number, containerH: number,
+): RouteBboxNorm {
+  const moveX = dx / containerW;
+  const moveY = dy / containerH;
+  const fromLeft = corner.includes('left');
+  const fromTop = corner.includes('top');
+  const right = frame.x + frame.w;
+  const bottom = frame.y + frame.h;
+  const x = fromLeft ? Math.max(0, Math.min(right - 0.16, frame.x + moveX)) : frame.x;
+  const y = fromTop ? Math.max(0, Math.min(bottom - 0.07, frame.y + moveY)) : frame.y;
+  const w = fromLeft ? right - x : Math.max(0.16, Math.min(1 - x, frame.w + moveX));
+  const h = fromTop ? bottom - y : Math.max(0.07, Math.min(1 - y, frame.h + moveY));
+  return { x, y, w, h };
+}
+
 interface TitleDragState {
   startX: number;
   startY: number;
@@ -105,7 +122,10 @@ export function SocialSharePreviewModal({
   const panelDragRef = useRef<PanelDragState | null>(null);
   const [panelDragVisual, setPanelDragVisual] = useState({ dx: 0, dy: 0, active: false });
   const statsResizeRef = useRef<StatsResizeState | null>(null);
-  const [statsResizeVisual, setStatsResizeVisual] = useState({ dx: 0, dy: 0, corner: 'bottom-right' as StatsResizeCorner, active: false });
+  const [statsResizeVisual, setStatsResizeVisual] = useState<{
+    dx: number; dy: number; corner: StatsResizeCorner; active: boolean;
+    frame: RouteBboxNorm | null; containerW: number; containerH: number;
+  }>({ dx: 0, dy: 0, corner: 'bottom-right', active: false, frame: null, containerW: 0, containerH: 0 });
   const titleDragRef = useRef<TitleDragState | null>(null);
   const [titleDragVisual, setTitleDragVisual] = useState({ dx: 0, dy: 0, active: false });
   const titleResizeRef = useRef<{ x: number; y: number; scale: number; width: number; containerW: number } | null>(null);
@@ -162,6 +182,38 @@ export function SocialSharePreviewModal({
   const showRouteOverlay = !!routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
   const hasVisibleCoverStats = settings.showStats && (settings.stats?.some((stat) => stat.visible) ?? true);
+  const visibleCoverStatCount = Math.max(1, Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3));
+  const resizePreviewFrame = statsResizeVisual.active && statsResizeVisual.frame
+    ? resizedStatsFrame(statsResizeVisual.frame, statsResizeVisual.corner, statsResizeVisual.dx, statsResizeVisual.dy, statsResizeVisual.containerW, statsResizeVisual.containerH)
+    : null;
+  const resizePreviewColumns = resizePreviewFrame
+    ? chooseStatsColumns(resizePreviewFrame.w * statsResizeVisual.containerW, resizePreviewFrame.h * statsResizeVisual.containerH, visibleCoverStatCount)
+    : settings.statsLayout;
+  const guideFrame = statsResizeVisual.frame;
+  const resizeGuideTargets = guideFrame && statsResizeVisual.active
+    ? Array.from({ length: visibleCoverStatCount }, (_, index) => {
+      const columns = index + 1;
+      const rows = Math.ceil(visibleCoverStatCount / columns);
+      const { corner, containerW, containerH } = statsResizeVisual;
+      const frame = guideFrame;
+      const area = frame.w * containerW * frame.h * containerH;
+      const ratio = columns / rows;
+      const naturalW = Math.sqrt(area * ratio);
+      const naturalH = Math.sqrt(area / ratio);
+      const anchorRight = (frame.x + frame.w) * containerW;
+      const anchorBottom = (frame.y + frame.h) * containerH;
+      const availableW = corner.includes('left') ? anchorRight : containerW - frame.x * containerW;
+      const availableH = corner.includes('top') ? anchorBottom : containerH - frame.y * containerH;
+      const fit = Math.min(1, availableW / naturalW, availableH / naturalH);
+      const width = naturalW * fit;
+      const height = naturalH * fit;
+      return {
+        columns, rows, width, height,
+        left: corner.includes('left') ? anchorRight - width : frame.x * containerW,
+        top: corner.includes('top') ? anchorBottom - height : frame.y * containerH,
+      };
+    })
+    : [];
   const hasAnyOverlay = showRouteOverlay || showPanelOverlay || !!titleBboxNorm || !!logoBboxNorm;
   const hasEmptySplitFrame = settings.template === 'split' && (!settings.photoSlots?.length || settings.photoSlots.some((slot) => !slot.imageUrl));
   const photoFirstSlotId = settings.photoSlots?.[0]?.id ?? 'photo-first-hero';
@@ -445,32 +497,22 @@ export function SocialSharePreviewModal({
     if (!rect || !dataPanelBboxNorm) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     statsResizeRef.current = { startX: e.clientX, startY: e.clientY, frame: dataPanelBboxNorm, corner, containerW: rect.width, containerH: rect.height };
-    setStatsResizeVisual({ dx: 0, dy: 0, corner, active: true });
+    setStatsResizeVisual({ dx: 0, dy: 0, corner, active: true, frame: dataPanelBboxNorm, containerW: rect.width, containerH: rect.height });
   };
 
   const onStatsResizeMove = (e: React.PointerEvent) => {
     const drag = statsResizeRef.current;
     if (!drag) return;
-    setStatsResizeVisual({ dx: e.clientX - drag.startX, dy: e.clientY - drag.startY, corner: drag.corner, active: true });
+    setStatsResizeVisual({ dx: e.clientX - drag.startX, dy: e.clientY - drag.startY, corner: drag.corner, active: true, frame: drag.frame, containerW: drag.containerW, containerH: drag.containerH });
   };
 
   const onStatsResizeUp = (e: React.PointerEvent) => {
     const drag = statsResizeRef.current;
     if (!drag) return;
-    const dx = (e.clientX - drag.startX) / drag.containerW;
-    const dy = (e.clientY - drag.startY) / drag.containerH;
-    const fromLeft = drag.corner.includes('left');
-    const fromTop = drag.corner.includes('top');
-    const right = drag.frame.x + drag.frame.w;
-    const bottom = drag.frame.y + drag.frame.h;
-    const x = fromLeft ? Math.max(0, Math.min(right - 0.16, drag.frame.x + dx)) : drag.frame.x;
-    const y = fromTop ? Math.max(0, Math.min(bottom - 0.07, drag.frame.y + dy)) : drag.frame.y;
-    const w = fromLeft ? right - x : Math.max(0.16, Math.min(1 - x, drag.frame.w + dx));
-    const h = fromTop ? bottom - y : Math.max(0.07, Math.min(1 - y, drag.frame.h + dy));
-    const count = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
-    setSocialShareSettings({ statsFrame: { x, y, w, h }, statsLayout: chooseStatsColumns(w * drag.containerW, h * drag.containerH, count) });
+    const frame = resizedStatsFrame(drag.frame, drag.corner, e.clientX - drag.startX, e.clientY - drag.startY, drag.containerW, drag.containerH);
+    setSocialShareSettings({ statsFrame: frame, statsLayout: chooseStatsColumns(frame.w * drag.containerW, frame.h * drag.containerH, visibleCoverStatCount) });
     statsResizeRef.current = null;
-    setStatsResizeVisual({ dx: 0, dy: 0, corner: 'bottom-right', active: false });
+    setStatsResizeVisual({ dx: 0, dy: 0, corner: 'bottom-right', active: false, frame: null, containerW: 0, containerH: 0 });
   };
 
   return (
@@ -636,6 +678,27 @@ export function SocialSharePreviewModal({
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 9L9 1M5 9L9 5" stroke="currentColor" strokeWidth="1.5" /></svg>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {statsResizeVisual.active && resizeGuideTargets.length > 0 && (
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[19]">
+                {resizeGuideTargets.map((target) => {
+                  const active = target.columns === resizePreviewColumns;
+                  return <div key={target.columns}
+                    className={`absolute flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed shadow-lg ${active
+                      ? 'border-[var(--trail-orange)] bg-[#11251b]/75 text-white ring-2 ring-[var(--trail-orange)]/45'
+                      : 'border-white/55 bg-[#11251b]/35 text-white/85'}`}
+                    style={{ left: target.left, top: target.top, width: target.width, height: target.height, zIndex: active ? 2 : 1 }}>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${active ? 'bg-[var(--trail-orange)]' : 'bg-black/55'}`}>
+                      {target.columns} × {target.rows}
+                    </span>
+                    <div className="grid max-w-[70%] gap-0.5" style={{ gridTemplateColumns: `repeat(${target.columns}, minmax(0, 1fr))` }}>
+                      {Array.from({ length: visibleCoverStatCount }, (_, index) => <span key={index}
+                        className={`h-2 w-3 rounded-sm border ${active ? 'border-white bg-white/65' : 'border-white/70 bg-white/35'}`} />)}
+                    </div>
+                  </div>;
+                })}
               </div>
             )}
 
