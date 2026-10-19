@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, X } from 'lucide-react';
 import { useSocialShareExport } from './useSocialShareExport';
-import { SocialSharePreviewModal } from './SocialSharePreviewModal';
+import { SocialSharePreviewModal, type CoverEditorSection } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { useI18n } from '@/i18n/useI18n';
 import { renderActivityIcon } from '@/utils/activityIcons';
@@ -84,6 +84,19 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
   const [activePhotoSlotId, setActivePhotoSlotId] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [editingStatIconId, setEditingStatIconId] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<CoverEditorSection>('layout');
+  const sectionRefs = useRef<Partial<Record<CoverEditorSection, HTMLElement | null>>>({});
+  const sectionNavRef = useRef<HTMLElement | null>(null);
+  const selectSection = (section: CoverEditorSection) => {
+    setSelectedSection(section);
+    window.requestAnimationFrame(() => {
+      const target = sectionRefs.current[section];
+      const scroller = target?.closest<HTMLElement>('[data-sidebar-scroll]');
+      if (!target || !scroller) return;
+      const top = scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - (sectionNavRef.current?.offsetHeight ?? 0) - 12;
+      scroller.scrollTo({ top, behavior: 'smooth' });
+    });
+  };
   const photoFirstSlotId = settings.photoSlots?.[0]?.id ?? 'photo-first-hero';
   const photoFirstImageUrl = settings.photoSlots?.[0]?.imageUrl
     ?? pictures.find((picture) => picture.id === settings.selectedPictureId)?.url
@@ -245,6 +258,15 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
     { value: 'photo-first', label: t('imageExport.templatePhotoFirst') },
     { value: 'split', label: t('imageExport.templateSplit') },
   ];
+  const sections: { id: CoverEditorSection; label: string }[] = [
+    { id: 'layout', label: t('imageExport.designSection') },
+    ...(settings.template === 'map-first' ? [] : [{ id: 'photos' as const, label: t('imageExport.photoFrames') }]),
+    ...(settings.template === 'photo-first' ? [] : [{ id: 'map' as const, label: t('imageExport.mapSection') }]),
+    { id: 'title', label: t('imageExport.title') },
+    { id: 'stats', label: t('imageExport.stats') },
+    ...(settings.template === 'photo-first' ? [{ id: 'route' as const, label: t('imageExport.routeOverlay') }] : []),
+    { id: 'logo', label: t('imageExport.logoSection') },
+  ];
 
   return (
     <div className="space-y-4 text-[var(--evergreen)]">
@@ -267,6 +289,17 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
         event.target.value = '';
       }} />
 
+      <nav ref={sectionNavRef} aria-label={t('imageExport.editorSections')} className="sticky top-0 z-30 grid grid-cols-3 gap-1.5 rounded-xl border border-[var(--evergreen)]/12 bg-[var(--canvas)]/95 p-2 shadow-sm backdrop-blur">
+        {sections.map(({ id, label }) => <button key={id} type="button" onClick={() => selectSection(id)}
+          aria-current={selectedSection === id ? 'true' : undefined}
+          className={`rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${selectedSection === id ? 'bg-[var(--evergreen)] text-white' : 'bg-[var(--evergreen)]/5 hover:bg-[var(--evergreen)]/10'}`}>
+          {label}
+        </button>)}
+      </nav>
+
+      <section ref={(node) => { sectionRefs.current.layout = node; }} onFocusCapture={() => setSelectedSection('layout')} onPointerDownCapture={() => setSelectedSection('layout')}
+        className="space-y-4 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
+      <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.designSection')}</h2>
       <div>
         <div className="mb-2 text-xs uppercase tracking-wide opacity-60">{t('imageExport.layoutPresets')}</div>
         <div className="grid grid-cols-2 gap-2">
@@ -305,11 +338,6 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
         </div>
       </div>
 
-      <div>
-        <label className="mb-2 block text-xs uppercase tracking-wide opacity-60" htmlFor="cover-font">{t('imageExport.coverTypography')}</label>
-        <OverlayFontPicker id="cover-font" value={overlayFont} onChange={(font) => setTrailStyle({ overlayFont: font })} />
-      </div>
-
       {/* Aspect ratio */}
       <div>
         <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.ratio')}</div>
@@ -330,9 +358,12 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           ))}
         </div>
       </div>
+      </section>
 
+      {settings.template !== 'map-first' && <section ref={(node) => { sectionRefs.current.photos = node; }} onFocusCapture={() => setSelectedSection('photos')} onPointerDownCapture={() => setSelectedSection('photos')}
+        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
       {settings.template === 'split' && (
-        <div className="space-y-2 rounded-xl border border-black/10 bg-black/[0.025] p-3">
+        <div className="space-y-2 rounded-xl bg-black/[0.025] p-3">
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.photoFrames')}</div>
             <button type="button" disabled={(settings.photoSlots?.length ?? 0) >= 4} onClick={() => {
@@ -413,10 +444,37 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             <img src={picture.url} alt="" className="h-full w-full object-cover" />
           </button>)}
         </div>}
+          <div className="mt-3 rounded-xl bg-black/[0.035] p-2.5">
+            <div className="mb-2 flex items-center justify-between text-xs">
+              <span className="font-medium">{t('imageExport.photoPosition')}</span>
+              <span className="tabular-nums opacity-60">{photoTransform.scale.toFixed(2)}×</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.photoPosition')}>
+                <span />
+                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.max(-1, photoTransform.offsetY - PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
+                <span />
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.max(-1, photoTransform.offsetX - PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: 0, offsetY: 0, scale: 1 })} aria-label={t('imageExport.resetPhoto')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.min(1, photoTransform.offsetX + PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
+                <span />
+                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.min(1, photoTransform.offsetY + PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
+                <span />
+              </div>
+              <div className="flex flex-col gap-1">
+                <button type="button" onClick={() => setPhotoTransform({ scale: Math.min(3, photoTransform.scale + PHOTO_ZOOM_STEP) })} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setPhotoTransform({ scale: Math.max(1, photoTransform.scale - PHOTO_ZOOM_STEP) })} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
+              </div>
+            </div>
+          </div>
         {photoError && <p className="text-xs text-red-600" role="alert">{photoError}</p>}
       </div>}
+      </section>}
 
-      {settings.template === 'split' && <div className="space-y-3 rounded-xl border border-black/10 bg-black/[0.025] p-3">
+      {settings.template !== 'photo-first' && <section ref={(node) => { sectionRefs.current.map = node; }} onFocusCapture={() => setSelectedSection('map')} onPointerDownCapture={() => setSelectedSection('map')}
+        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
+      <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--evergreen)]">{t('imageExport.mapSection')}</h2>
+      {settings.template === 'split' && <div className="space-y-3 rounded-xl bg-black/[0.025] p-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.mapFrame')}</div>
           <p className="mt-1 text-[11px] leading-4 opacity-60">{t('imageExport.splitMapHint')}</p>
@@ -439,6 +497,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
         </div>
         <button type="button" onClick={() => setSocialShareSettings({ splitMapFrame: undefined })}
           className="rounded-md bg-black/5 px-2.5 py-1.5 text-xs font-medium hover:bg-black/10">{t('imageExport.resetMapFrame')}</button>
+      </div>}
+
         <div>
           <div className="mb-2 text-xs font-medium">{t('imageExport.mapStyle')}</div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -454,11 +514,75 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             </button>)}
           </div>
         </div>
-      </div>}
+
+      {/* Map camera controls */}
+        <div>
+          <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.mapCamera')}</div>
+          <div className="space-y-2 mb-2">
+            <div className="flex items-center gap-3 text-xs">
+              <span className="w-16 shrink-0 opacity-70">{t('imageExport.tilt3D')}</span>
+              <input
+                type="range" min={0} max={60} step={1}
+                value={pitch}
+                onChange={(e) => handlePitch(Number(e.target.value))}
+                onPointerUp={finishCameraDrag}
+                onPointerCancel={finishCameraDrag}
+                onKeyUp={finishCameraDrag}
+                className="flex-1 accent-[var(--trail-orange)]"
+              />
+              <span className="w-8 text-right opacity-50 tabular-nums">{pitch}°</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="w-16 shrink-0 opacity-70">{t('imageExport.rotate')}</span>
+              <input
+                type="range" min={-180} max={180} step={1}
+                value={bearing}
+                onChange={(e) => handleBearing(Number(e.target.value))}
+                onPointerUp={finishCameraDrag}
+                onPointerCancel={finishCameraDrag}
+                onKeyUp={finishCameraDrag}
+                className="flex-1 accent-[var(--trail-orange)]"
+              />
+              <span className="w-8 text-right opacity-50 tabular-nums">{bearing}°</span>
+            </div>
+          </div>
+          <button
+            onClick={centerMap}
+            disabled={!hasTracks}
+            className="w-full text-xs py-1.5 rounded bg-black/5 hover:bg-black/10 transition-colors disabled:opacity-40"
+          >
+            {t('imageExport.fitTrack')}
+          </button>
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-black/[0.035] p-2.5">
+            <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.mapPosition')}>
+              <span />
+              <button type="button" onClick={() => nudgeMap(0, -MAP_NUDGE_PX)} aria-label={t('imageExport.moveMapUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
+              <span />
+              <button type="button" onClick={() => nudgeMap(-MAP_NUDGE_PX, 0)} aria-label={t('imageExport.moveMapLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
+              <button type="button" onClick={centerMap} aria-label={t('imageExport.centerMap')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
+              <button type="button" onClick={() => nudgeMap(MAP_NUDGE_PX, 0)} aria-label={t('imageExport.moveMapRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
+              <span />
+              <button type="button" onClick={() => nudgeMap(0, MAP_NUDGE_PX)} aria-label={t('imageExport.moveMapDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
+              <span />
+            </div>
+            <div className="flex flex-col gap-1">
+              <button type="button" onClick={() => zoomMap('in')} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
+              <button type="button" onClick={() => zoomMap('out')} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
+            </div>
+          </div>
+        </div>
+      </section>}
 
       {/* Title */}
+      <section ref={(node) => { sectionRefs.current.title = node; }} onFocusCapture={() => setSelectedSection('title')} onPointerDownCapture={() => setSelectedSection('title')}
+        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
+      <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.title')}</h2>
       <div>
-        <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.title')}</div>
+        <label className="mb-2 block text-xs uppercase tracking-wide opacity-60" htmlFor="cover-font">{t('imageExport.coverTypography')}</label>
+        <OverlayFontPicker id="cover-font" value={overlayFont} onChange={(font) => setTrailStyle({ overlayFont: font })} />
+      </div>
+
+      <div>
         <div className="grid grid-cols-3 gap-1 mb-2">
           {(['journey-name', 'track-name', 'custom'] as const).map((mode) => (
             <button
@@ -538,8 +662,12 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           />
         )}
       </div>}
+      </section>
 
       {/* Overlays toggles */}
+      <section ref={(node) => { sectionRefs.current.stats = node; }} onFocusCapture={() => setSelectedSection('stats')} onPointerDownCapture={() => setSelectedSection('stats')}
+        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
+      <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.stats')}</h2>
       <div className="flex flex-wrap gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
@@ -571,7 +699,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
       </div>
 
       {settings.showStats && (
-        <div className="space-y-2 rounded-xl border border-black/10 bg-black/[0.025] p-3">
+        <div className="space-y-2 rounded-xl bg-black/[0.025] p-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.customizeStats')}</p>
             <p className="mt-0.5 text-[11px] opacity-60">{t('imageExport.customizeStatsHint')}</p>
@@ -648,68 +776,11 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           </button>
         </div>
       )}
-
-      {/* Map camera controls */}
-      {settings.template !== 'photo-first' && (
-        <div>
-          <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.mapCamera')}</div>
-          <div className="space-y-2 mb-2">
-            <div className="flex items-center gap-3 text-xs">
-              <span className="w-16 shrink-0 opacity-70">{t('imageExport.tilt3D')}</span>
-              <input
-                type="range" min={0} max={60} step={1}
-                value={pitch}
-                onChange={(e) => handlePitch(Number(e.target.value))}
-                onPointerUp={finishCameraDrag}
-                onPointerCancel={finishCameraDrag}
-                onKeyUp={finishCameraDrag}
-                className="flex-1 accent-[var(--trail-orange)]"
-              />
-              <span className="w-8 text-right opacity-50 tabular-nums">{pitch}°</span>
-            </div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="w-16 shrink-0 opacity-70">{t('imageExport.rotate')}</span>
-              <input
-                type="range" min={-180} max={180} step={1}
-                value={bearing}
-                onChange={(e) => handleBearing(Number(e.target.value))}
-                onPointerUp={finishCameraDrag}
-                onPointerCancel={finishCameraDrag}
-                onKeyUp={finishCameraDrag}
-                className="flex-1 accent-[var(--trail-orange)]"
-              />
-              <span className="w-8 text-right opacity-50 tabular-nums">{bearing}°</span>
-            </div>
-          </div>
-          <button
-            onClick={centerMap}
-            disabled={!hasTracks}
-            className="w-full text-xs py-1.5 rounded bg-black/5 hover:bg-black/10 transition-colors disabled:opacity-40"
-          >
-            {t('imageExport.fitTrack')}
-          </button>
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-black/[0.035] p-2.5">
-            <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.mapPosition')}>
-              <span />
-              <button type="button" onClick={() => nudgeMap(0, -MAP_NUDGE_PX)} aria-label={t('imageExport.moveMapUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
-              <span />
-              <button type="button" onClick={() => nudgeMap(-MAP_NUDGE_PX, 0)} aria-label={t('imageExport.moveMapLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
-              <button type="button" onClick={centerMap} aria-label={t('imageExport.centerMap')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
-              <button type="button" onClick={() => nudgeMap(MAP_NUDGE_PX, 0)} aria-label={t('imageExport.moveMapRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
-              <span />
-              <button type="button" onClick={() => nudgeMap(0, MAP_NUDGE_PX)} aria-label={t('imageExport.moveMapDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
-              <span />
-            </div>
-            <div className="flex flex-col gap-1">
-              <button type="button" onClick={() => zoomMap('in')} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
-              <button type="button" onClick={() => zoomMap('out')} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
-            </div>
-          </div>
-        </div>
-      )}
+      </section>
 
       {/* Photo-first route controls */}
-      {settings.template === 'photo-first' && (
+      {settings.template === 'photo-first' && <section ref={(node) => { sectionRefs.current.route = node; }} onFocusCapture={() => setSelectedSection('route')} onPointerDownCapture={() => setSelectedSection('route')}
+        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
         <div>
           <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.routeOverlay')}</div>
           <div className="space-y-2">
@@ -735,31 +806,24 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
               </div>
             ))}
           </div>
-          <div className="mt-3 rounded-xl bg-black/[0.035] p-2.5">
-            <div className="mb-2 flex items-center justify-between text-xs">
-              <span className="font-medium">{t('imageExport.photoPosition')}</span>
-              <span className="tabular-nums opacity-60">{photoTransform.scale.toFixed(2)}×</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="grid grid-cols-3 gap-1" aria-label={t('imageExport.photoPosition')}>
-                <span />
-                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.max(-1, photoTransform.offsetY - PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoUp')} className="rounded-md p-2 hover:bg-black/10"><ArrowUp className="h-4 w-4" /></button>
-                <span />
-                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.max(-1, photoTransform.offsetX - PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoLeft')} className="rounded-md p-2 hover:bg-black/10"><ArrowLeft className="h-4 w-4" /></button>
-                <button type="button" onClick={() => setPhotoTransform({ offsetX: 0, offsetY: 0, scale: 1 })} aria-label={t('imageExport.resetPhoto')} className="rounded-md p-2 hover:bg-black/10"><Crosshair className="h-4 w-4" /></button>
-                <button type="button" onClick={() => setPhotoTransform({ offsetX: Math.min(1, photoTransform.offsetX + PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoRight')} className="rounded-md p-2 hover:bg-black/10"><ArrowRight className="h-4 w-4" /></button>
-                <span />
-                <button type="button" onClick={() => setPhotoTransform({ offsetY: Math.min(1, photoTransform.offsetY + PHOTO_NUDGE_STEP) })} aria-label={t('imageExport.movePhotoDown')} className="rounded-md p-2 hover:bg-black/10"><ArrowDown className="h-4 w-4" /></button>
-                <span />
-              </div>
-              <div className="flex flex-col gap-1">
-                <button type="button" onClick={() => setPhotoTransform({ scale: Math.min(3, photoTransform.scale + PHOTO_ZOOM_STEP) })} aria-label={t('imageExport.zoomIn')} className="rounded-md p-2 hover:bg-black/10"><Plus className="h-4 w-4" /></button>
-                <button type="button" onClick={() => setPhotoTransform({ scale: Math.max(1, photoTransform.scale - PHOTO_ZOOM_STEP) })} aria-label={t('imageExport.zoomOut')} className="rounded-md p-2 hover:bg-black/10"><Minus className="h-4 w-4" /></button>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+      </section>}
+
+      <section ref={(node) => { sectionRefs.current.logo = node; }} onFocusCapture={() => setSelectedSection('logo')} onPointerDownCapture={() => setSelectedSection('logo')}
+        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
+        <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.logoSection')}</h2>
+        <p className="text-[11px] leading-4 opacity-60">{t('imageExport.dragLogo')}</p>
+        <label className="block text-xs">{t('imageExport.horizontal')}
+          <input type="range" min={0} max={Math.max(0, 1 - logoBboxNorm.w)} step={0.01} value={settings.logoPositionX}
+            onChange={(event) => setSocialShareSettings({ logoPositionX: Number(event.target.value) })}
+            className="mt-1 block w-full accent-[var(--trail-orange)]" />
+        </label>
+        <label className="block text-xs">{t('imageExport.vertical')}
+          <input type="range" min={0} max={Math.max(0, 1 - logoBboxNorm.h)} step={0.01} value={settings.logoPositionY}
+            onChange={(event) => setSocialShareSettings({ logoPositionY: Number(event.target.value) })}
+            className="mt-1 block w-full accent-[var(--trail-orange)]" />
+        </label>
+      </section>
 
       {!hasTracks && (
         <p className="text-xs opacity-50 text-center">{t('imageExport.noTrackHint')}</p>
@@ -810,6 +874,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           onPhotoSlotChange={updatePhotoSlot}
           activePhotoSlotId={activePhotoSlotId}
           onPhotoSlotSelect={setActivePhotoSlotId}
+          onElementSelect={selectSection}
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}

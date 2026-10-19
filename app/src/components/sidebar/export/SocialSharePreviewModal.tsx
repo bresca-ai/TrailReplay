@@ -4,7 +4,10 @@ import type { SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
 import { getSplitMapFrame } from './socialShareSplit';
+import { getPosterSize } from './socialShareRenderer';
 import { movePosterFrame, resizePosterFrame, type FrameCorner, type PosterFrame } from './socialShareFrame';
+
+export type CoverEditorSection = 'layout' | 'photos' | 'map' | 'title' | 'stats' | 'route' | 'logo';
 
 interface Props {
   previewUrl: string;
@@ -25,6 +28,7 @@ interface Props {
   onPhotoSlotChange: (id: string, patch: Partial<SocialSharePhotoSlot>) => void;
   activePhotoSlotId: string | null;
   onPhotoSlotSelect: (id: string) => void;
+  onElementSelect?: (section: CoverEditorSection) => void;
   coverMode?: boolean;
   inline?: boolean;
 }
@@ -112,7 +116,7 @@ export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport, onDownload,
   settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
   logoBboxNorm,
-  onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange, activePhotoSlotId, onPhotoSlotSelect,
+  onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange, activePhotoSlotId, onPhotoSlotSelect, onElementSelect,
 }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -153,6 +157,7 @@ export function SocialSharePreviewModal({
   const onSplitPhotoPointerDown = (e: React.PointerEvent, slot: SocialSharePhotoSlot, mode: 'move' | 'resize' | 'crop', corner?: FrameCorner) => {
     e.stopPropagation();
     e.preventDefault();
+    onElementSelect?.('photos');
     onPhotoSlotSelect(slot.id);
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = containerRef.current?.getBoundingClientRect();
@@ -257,6 +262,7 @@ export function SocialSharePreviewModal({
 
   const onPhotoPointerDown = (e: React.PointerEvent<HTMLImageElement>) => {
     if (settings.template !== 'photo-first' || !hasPhotoFirstImage) return;
+    onElementSelect?.('photos');
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = containerRef.current?.getBoundingClientRect();
@@ -296,6 +302,7 @@ export function SocialSharePreviewModal({
   const onTitlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    onElementSelect?.('title');
     const container = containerRef.current;
     if (!container) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -333,6 +340,7 @@ export function SocialSharePreviewModal({
   const onTitleResizeDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    onElementSelect?.('title');
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -353,6 +361,7 @@ export function SocialSharePreviewModal({
   const onLogoPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    onElementSelect?.('logo');
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -388,13 +397,15 @@ export function SocialSharePreviewModal({
   const onRoutePointerDown = (e: React.PointerEvent, type: RouteDragState['type'], corner?: FrameCorner) => {
     e.stopPropagation();
     e.preventDefault();
+    onElementSelect?.(settings.template === 'photo-first' ? 'route' : 'map');
     const container = containerRef.current;
     if (!container) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = container.getBoundingClientRect();
+    const poster = getPosterSize(settings.aspectRatio);
     routeDragRef.current = {
       type,
-      frame: settings.template === 'split' ? getSplitMapFrame(1, 1, settings.splitMapFrame) : undefined,
+      frame: settings.template === 'split' ? getSplitMapFrame(poster.w, poster.h, settings.splitMapFrame) : undefined,
       corner,
       startX: e.clientX,
       startY: e.clientY,
@@ -494,6 +505,7 @@ export function SocialSharePreviewModal({
   const onPanelPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    onElementSelect?.('stats');
     const container = containerRef.current;
     if (!container || !dataPanelBboxNorm) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -534,6 +546,7 @@ export function SocialSharePreviewModal({
   const onStatsResizeDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    onElementSelect?.('stats');
     const corner = e.currentTarget.getAttribute('data-corner') as StatsResizeCorner;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect || !dataPanelBboxNorm) return;
@@ -636,7 +649,7 @@ export function SocialSharePreviewModal({
               }}
             />
 
-            {hasEmptyPhotoFrame && <button type="button" onClick={() => onPhotoSlotPick(photoFirstSlotId)}
+            {hasEmptyPhotoFrame && <button type="button" onClick={() => { onElementSelect?.('photos'); onPhotoSlotPick(photoFirstSlotId); }}
               className="absolute inset-3 z-40 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/75 bg-black/40 px-4 text-center text-sm font-semibold text-white hover:bg-black/50"
               aria-label={t('imageExport.addPhoto')}>
               <ImagePlus className="h-7 w-7" aria-hidden="true" />

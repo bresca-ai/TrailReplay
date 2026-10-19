@@ -753,6 +753,7 @@ export const ca = {
     pasteCoordinates: 'O enganxa les coordenades aquí',
   },
   imageExport: {
+    editorSections: 'Seccions de l’editor de portada', designSection: 'Disseny', mapSection: 'Mapa', logoSection: 'Logotip',
     modeVideo: 'Vídeo',
     modeImage: 'Imatge',
     template: 'Plantilla',

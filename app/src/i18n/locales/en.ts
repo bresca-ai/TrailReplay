@@ -753,6 +753,7 @@ export const en = {
     pasteCoordinates: 'Or paste coordinates here',
   },
   imageExport: {
+    editorSections: 'Cover editor sections', designSection: 'Design', mapSection: 'Map', logoSection: 'Logo',
     modeVideo: 'Video',
     modeImage: 'Image',
     template: 'Template',
