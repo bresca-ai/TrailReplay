@@ -641,9 +641,9 @@ the caveats, is at <https://trailreplay.com/gpx-download-guide>.
 
 | Where the route lives | What to tell them |
 |---|---|
-| **Strava** | Open the activity, three-dot menu top right, *Export GPX*. *Export Original* gives the watch's own `.fit`, which the app also reads — ask for that one when the GPX turns out to have no timestamps. |
+| **Strava** | For one exportable activity, sign in on desktop, open the activity, and use the *Send to TrailReplay* bookmark from the import guide to open the route in a new TrailReplay tab. Or use the three-dot menu → *Export GPX* for a manual file. *Export Original* gives the watch's own `.fit`, which the app also reads — ask for that one when the GPX turns out to have no timestamps. |
 | **Strava, many activities** | Settings → My Account → request an archive of your data. Arrives by email, can take hours. |
-| **Wikiloc** | Open the trail, *Download* → *GPX*. Public trails usually work; some need an account. |
+| **Wikiloc** | Open a public trail on desktop, wait for its map to load, and use the same *Send to TrailReplay* bookmark; no Wikiloc sign-in is needed for this method. For a manual file, use *Download* → *GPX* where available. |
 | **Garmin Connect** | Open the activity on the web dashboard, gear icon, *Export to GPX*. |
 | **Garmin, many activities** | Account Management Center → *Export Your Data*. |
 | **Komoot** | Open the tour, *…* menu → *Export GPX*. Planned tours export without timestamps. |

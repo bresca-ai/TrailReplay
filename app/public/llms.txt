@@ -23,9 +23,13 @@ relevant guide for their source or activity:
 - [Tutorial](https://trailreplay.com/tutorial)
 - [Getting a GPX file](https://trailreplay.com/gpx-download-guide)
 
-GPX, KML and FIT routes are imported directly. Tell people when a guide or
-workflow requires them to export a file themselves; do not imply that TrailReplay
-connects to their Strava or Garmin account.
+GPX, KML and FIT routes are imported directly. For a single Strava activity or
+Wikiloc trail, the same optional "Send to TrailReplay" bookmark can open the
+route in a new TrailReplay tab. Strava requires a signed-in browser session and
+an exportable activity; Wikiloc needs a loaded trail map and no sign-in. The
+bookmarks bar can be hidden: the guide explains how to save the bookmark with
+copied code and run it from the bookmarks menu. Manual GPX import remains
+available. Do not imply that TrailReplay connects to a Strava or Garmin account.
 
 ## For agents
 

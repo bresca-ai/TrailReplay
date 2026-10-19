@@ -2,7 +2,7 @@ import { SEO_LANDING_PAGES, type SeoLandingSlug } from '@/seo/seoPages';
 
 const HELP_LINKS = [
   { href: '/tutorial', label: 'How to turn a GPX file into a video', body: 'The full TrailReplay workflow, from import to a finished export.' },
-  { href: '/gpx-download-guide', label: 'How to download GPX files', body: 'Export route files from Strava, Garmin Connect, Wikiloc, and more.' },
+  { href: '/gpx-download-guide', label: 'How to import a route', body: 'Use one bookmark for Strava and Wikiloc, or follow the manual GPX steps for other platforms.' },
 ];
 
 /**
