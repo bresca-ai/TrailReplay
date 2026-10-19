@@ -1,6 +1,7 @@
 import { ArrowRight, Check, Download, Film, Github, Play, Upload } from 'lucide-react';
 import { useEffect } from 'react';
 import { useI18n } from '@/i18n/useI18n';
+import { RouteImportWalkthrough } from '@/help/RouteImportWalkthrough';
 import { trackEvent } from '@/utils/analytics';
 import { SEO_LANDING_PAGES, type SeoLandingPageConfig } from './seoPages';
 import { SEO_LANDING_PAGES_DE } from './seoPages.de';
@@ -17,6 +18,8 @@ const seoUi = {
     animateGpx: 'Animate your GPX', seeSteps: 'See the steps', tryRoute: 'Try it with your route', gpxGuide: 'GPX guide',
     tutorial: 'Tutorial', questions: 'Common questions', finalTitle: 'Your route already has a story.', finalDescription: 'Turn it into a replay you can share.',
     uploadGpx: 'Upload a GPX', explore: 'Explore more route-video guides', footer: 'Free and open-source GPX storytelling', privacy: 'Privacy', language: 'Language',
+    importRoute: 'Import a route',
+    cameraVideoLabel: 'Cinematic camera tutorial video', cameraVideoCaption: 'Watch how to frame and save camera shots',
   },
   de: {
     animatedExport: 'Animierter TrailReplay-GPX-Export mit Live-Statistiken',
@@ -29,6 +32,8 @@ const seoUi = {
     animateGpx: 'GPX-Datei animieren', seeSteps: 'Schritte ansehen', tryRoute: 'Mit Ihrer Strecke ausprobieren', gpxGuide: 'GPX-Anleitung',
     tutorial: 'Tutorial', questions: 'Häufige Fragen', finalTitle: 'Ihre Strecke hat bereits eine Geschichte.', finalDescription: 'Machen Sie daraus eine Wiedergabe zum Teilen.',
     uploadGpx: 'GPX-Datei hochladen', explore: 'Weitere Anleitungen zu Streckenvideos', footer: 'Kostenloses Open-Source-Storytelling mit GPX', privacy: 'Datenschutz', language: 'Sprache',
+    importRoute: 'Route importieren',
+    cameraVideoLabel: 'Videoanleitung zur filmischen Kamera', cameraVideoCaption: 'Sehen Sie, wie Kameraeinstellungen gerahmt und gespeichert werden',
   },
 } as const;
 
@@ -41,6 +46,28 @@ function trackSeoCta(page: SeoLandingPageConfig, location: string) {
 }
 
 function HeroMedia({ page, ui }: { page: SeoLandingPageConfig; ui: typeof seoUi.en | typeof seoUi.de }) {
+  if (page.slug === 'cinematic-camera') {
+    return (
+      <figure className="overflow-hidden rounded-2xl border-2 border-white/18 bg-[#101713] shadow-[10px_10px_0_rgba(193,101,47,0.28)]">
+        <video
+          className="aspect-video w-full bg-[#101713] object-contain"
+          controls
+          playsInline
+          preload="metadata"
+          poster="/media/images/seo/cinematic-camera-tutorial-poster.jpg"
+          aria-label={ui.cameraVideoLabel}
+        >
+          <source src="/media/video/cinematic-camera-tutorial.webm" type="video/webm" />
+          <source src="/media/video/cinematic-camera-tutorial.mp4" type="video/mp4" />
+        </video>
+        <figcaption className="flex items-center gap-2 px-5 py-4 text-sm font-semibold text-white">
+          <Play className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {ui.cameraVideoCaption}
+        </figcaption>
+      </figure>
+    );
+  }
+
   if (page.heroMedia === 'product-video') {
     return (
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border-2 border-white/18 bg-[#101713] shadow-[10px_10px_0_rgba(193,101,47,0.28)] sm:aspect-video lg:aspect-[4/5]">
@@ -142,8 +169,8 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
               <h1 className="text-4xl font-bold leading-[1.05] tracking-[-0.055em] sm:text-5xl lg:text-6xl">{localizedPage.title}</h1>
               <p className="mt-6 max-w-[62ch] text-base leading-7 text-white/80 sm:text-lg">{localizedPage.description}</p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a href="/" onClick={() => trackSeoCta(localizedPage, 'hero')} className="tr-btn tr-btn-primary inline-flex items-center gap-2 whitespace-nowrap">
-                  {ui.animateGpx} <ArrowRight className="h-4 w-4" />
+                <a href={localizedPage.slug === 'strava-to-video' ? '#strava' : '/'} onClick={() => localizedPage.slug !== 'strava-to-video' && trackSeoCta(localizedPage, 'hero')} className="tr-btn tr-btn-primary inline-flex items-center gap-2 whitespace-nowrap">
+                  {localizedPage.slug === 'strava-to-video' ? ui.importRoute : ui.animateGpx} <ArrowRight className="h-4 w-4" />
                 </a>
                 <a href="#how-it-works" className="inline-flex items-center gap-2 rounded-md border border-white/22 px-4 py-2 font-medium text-white transition-colors hover:bg-white/10">
                   {ui.seeSteps}
@@ -177,6 +204,12 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             ))}
           </ol>
         </section>
+
+        {localizedPage.slug === 'strava-to-video' && (
+          <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:pb-28">
+            <RouteImportWalkthrough />
+          </div>
+        )}
 
         <section className="border-y-2 border-[var(--evergreen)] bg-[var(--canvas)]">
           <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-start lg:py-28">
@@ -224,8 +257,8 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
         <section className="bg-[var(--trail-orange)] text-[var(--canvas)]">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-14 sm:px-6 md:flex-row md:items-center">
             <div><h2 className="text-3xl font-bold tracking-[-0.04em]">{ui.finalTitle}</h2><p className="mt-2 text-white/78">{ui.finalDescription}</p></div>
-            <a href="/" onClick={() => trackSeoCta(localizedPage, 'final')} className="inline-flex items-center gap-2 whitespace-nowrap rounded-md bg-[var(--evergreen)] px-5 py-3 font-bold text-[var(--canvas)] transition-transform active:translate-y-px">
-              {ui.uploadGpx} <Upload className="h-4 w-4" />
+            <a href={localizedPage.slug === 'strava-to-video' ? '#strava' : '/'} onClick={() => localizedPage.slug !== 'strava-to-video' && trackSeoCta(localizedPage, 'final')} className="inline-flex items-center gap-2 whitespace-nowrap rounded-md bg-[var(--evergreen)] px-5 py-3 font-bold text-[var(--canvas)] transition-transform active:translate-y-px">
+              {localizedPage.slug === 'strava-to-video' ? ui.importRoute : ui.uploadGpx} <Upload className="h-4 w-4" />
             </a>
           </div>
         </section>

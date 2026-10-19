@@ -14,6 +14,16 @@ export const VIDEO_PAGES = [
     videos: [{ title: 'Strava Activity Animated as a 3D Route Video', description: 'See a Strava activity GPX animated on a 3D terrain map with live distance, elevation, and pace statistics, exported straight from the browser.', ...HERO_VIDEO }],
   },
   {
+    path: '/cinematic-camera',
+    videos: [{
+      title: 'Cinematic camera tutorial',
+      description: 'Learn how to scrub the replay timeline, aim a shot, save camera keyframes, and let TrailReplay blend the moves.',
+      contentUrl: 'https://trailreplay.com/media/video/cinematic-camera-tutorial.mp4',
+      thumbnailUrl: 'https://trailreplay.com/media/images/seo/cinematic-camera-tutorial-poster.jpg',
+      durationSeconds: 30,
+    }],
+  },
+  {
     path: '/garmin-to-video',
     videos: [{ title: 'Garmin Activity Animated as a 3D Route Video', description: 'See a Garmin Connect activity GPX animated on a 3D terrain map with live distance, elevation, and pace statistics, exported straight from the browser.', ...HERO_VIDEO }],
   },
