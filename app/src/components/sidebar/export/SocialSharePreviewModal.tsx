@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, Download, ImagePlus, Loader2, Minus, Move, Plus, X } from 'lucide-react';
 import type { SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
@@ -570,6 +570,78 @@ export function SocialSharePreviewModal({
     setStatsResizeVisual({ dx: 0, dy: 0, corner: 'bottom-right', active: false, frame: null, containerW: 0, containerH: 0 });
   };
 
+  const photoSlotElements: ReactNode[] = [];
+  if (settings.template === 'split') {
+    for (const slot of settings.photoSlots ?? []) {
+              const frame = splitPhotoDraft?.id === slot.id ? splitPhotoDraft.frame : slot;
+              const selected = activePhotoSlotId === slot.id;
+              const cropping = splitPhotoCropId === slot.id;
+              const photoResizeHandles: ReactNode[] = [];
+              for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
+                photoResizeHandles.push(<div key={corner}
+                  className={`absolute z-30 h-4 w-4 rounded-sm bg-[var(--trail-orange)] shadow ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
+                  style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
+                  onPointerDown={(event) => onSplitPhotoPointerDown(event, slot, 'resize', corner)}
+                  onPointerMove={onSplitPhotoPointerMove}
+                  onPointerUp={onSplitPhotoPointerUp}
+                  onPointerCancel={onSplitPhotoPointerUp}
+                  aria-label={t('imageExport.resizePhotoFrame')} title={t('imageExport.resizePhotoFrame')} />
+                );
+              }
+              photoSlotElements.push(<div key={slot.id}
+                className={`absolute select-none border-2 ${selected ? 'border-[var(--trail-orange)] ring-1 ring-white/80' : slot.imageUrl ? 'border-transparent hover:border-white/90' : 'border-dashed border-white/80 bg-white/5'}`}
+                style={{ left: `${frame.x * 100}%`, top: `${frame.y * 100}%`, width: `${frame.w * 100}%`, height: `${frame.h * 100}%`, zIndex: slot.aboveMap ? 15 : 5, cursor: cropping ? 'move' : 'grab', touchAction: 'none' }}
+                onPointerDown={(event) => onSplitPhotoPointerDown(event, slot, cropping ? 'crop' : 'move')}
+                onPointerMove={onSplitPhotoPointerMove}
+                onPointerUp={onSplitPhotoPointerUp}
+                onPointerCancel={onSplitPhotoPointerUp}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  if (slot.imageUrl) setSplitPhotoCropId(cropping ? null : slot.id);
+                  else onPhotoSlotPick(slot.id);
+                }}
+                onWheel={(event) => { if (!slot.imageUrl) return; event.preventDefault(); onPhotoSlotChange(slot.id, { scale: Math.max(1, Math.min(3, slot.scale + (event.deltaY < 0 ? 0.03 : -0.03))) }); }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const file = event.dataTransfer.files[0];
+                  const pictureId = event.dataTransfer.getData('text/x-trailreplay-picture');
+                  if (file?.type.startsWith('image/')) onPhotoSlotFile(slot.id, file);
+                  else if (pictureId) onPhotoSlotPicture(slot.id, pictureId);
+                }}
+                aria-label={slot.imageUrl ? t(cropping ? 'imageExport.movePhotoCrop' : 'imageExport.movePhotoFrame') : t('imageExport.addPhoto')}
+              >
+                {splitPhotoDraft?.id === slot.id && slot.imageUrl && <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <img src={slot.imageUrl} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${50 + slot.offsetX * 100}% ${50 + slot.offsetY * 100}%`, transform: `scale(${slot.scale})` }} />
+                </div>}
+                {selected && slot.imageUrl && <button type="button"
+                  className="absolute left-1/2 top-2 z-30 -translate-x-1/2 rounded bg-white px-2 py-1 text-[10px] font-semibold text-[var(--evergreen)] shadow"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => { event.stopPropagation(); setSplitPhotoCropId(cropping ? null : slot.id); }}
+                  aria-pressed={cropping}>
+                  {t(cropping ? 'imageExport.doneEditingPhoto' : 'imageExport.cropPhoto')}
+                </button>}
+                {selected && !cropping && photoResizeHandles}
+                {cropping && splitPhotoDragVisual.id === slot.id && (splitPhotoDragVisual.dx !== 0 || splitPhotoDragVisual.dy !== 0) && <span className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-xs text-white">{t('imageExport.movePhotoCrop')}</span>}
+              </div>);
+    }
+  }
+
+  const routeResizeHandles: ReactNode[] = [];
+  for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
+    routeResizeHandles.push(<div key={corner}
+                    className={`absolute z-20 flex h-5 w-5 items-center justify-center rounded-sm bg-[var(--trail-orange)] shadow ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
+                    style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
+                    onPointerDown={(event) => onRoutePointerDown(event, 'resize', corner)}
+                    onPointerMove={onRoutePointerMove}
+                    onPointerUp={onRoutePointerUp}
+                    onPointerCancel={onRoutePointerUp}
+                    aria-label={t('imageExport.resizeMapFrame')} title={t('imageExport.resizeMapFrame')}>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 7L7 1M4 7L7 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </div>
+    );
+  }
+
   return (
     <div
       className={inline
@@ -656,54 +728,7 @@ export function SocialSharePreviewModal({
               {t('imageExport.addFirstPhoto')}
             </button>}
 
-            {settings.template === 'split' && (settings.photoSlots ?? []).map((slot) => {
-              const frame = splitPhotoDraft?.id === slot.id ? splitPhotoDraft.frame : slot;
-              const selected = activePhotoSlotId === slot.id;
-              const cropping = splitPhotoCropId === slot.id;
-              return <div key={slot.id}
-                className={`absolute select-none border-2 ${selected ? 'border-[var(--trail-orange)] ring-1 ring-white/80' : slot.imageUrl ? 'border-transparent hover:border-white/90' : 'border-dashed border-white/80 bg-white/5'}`}
-                style={{ left: `${frame.x * 100}%`, top: `${frame.y * 100}%`, width: `${frame.w * 100}%`, height: `${frame.h * 100}%`, zIndex: slot.aboveMap ? 15 : 5, cursor: cropping ? 'move' : 'grab', touchAction: 'none' }}
-                onPointerDown={(event) => onSplitPhotoPointerDown(event, slot, cropping ? 'crop' : 'move')}
-                onPointerMove={onSplitPhotoPointerMove}
-                onPointerUp={onSplitPhotoPointerUp}
-                onPointerCancel={onSplitPhotoPointerUp}
-                onDoubleClick={(event) => {
-                  event.stopPropagation();
-                  if (slot.imageUrl) setSplitPhotoCropId(cropping ? null : slot.id);
-                  else onPhotoSlotPick(slot.id);
-                }}
-                onWheel={(event) => { if (!slot.imageUrl) return; event.preventDefault(); onPhotoSlotChange(slot.id, { scale: Math.max(1, Math.min(3, slot.scale + (event.deltaY < 0 ? 0.03 : -0.03))) }); }}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const file = event.dataTransfer.files[0];
-                  const pictureId = event.dataTransfer.getData('text/x-trailreplay-picture');
-                  if (file?.type.startsWith('image/')) onPhotoSlotFile(slot.id, file);
-                  else if (pictureId) onPhotoSlotPicture(slot.id, pictureId);
-                }}
-                aria-label={slot.imageUrl ? t(cropping ? 'imageExport.movePhotoCrop' : 'imageExport.movePhotoFrame') : t('imageExport.addPhoto')}
-              >
-                {splitPhotoDraft?.id === slot.id && slot.imageUrl && <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  <img src={slot.imageUrl} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${50 + slot.offsetX * 100}% ${50 + slot.offsetY * 100}%`, transform: `scale(${slot.scale})` }} />
-                </div>}
-                {selected && slot.imageUrl && <button type="button"
-                  className="absolute left-1/2 top-2 z-30 -translate-x-1/2 rounded bg-white px-2 py-1 text-[10px] font-semibold text-[var(--evergreen)] shadow"
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onClick={(event) => { event.stopPropagation(); setSplitPhotoCropId(cropping ? null : slot.id); }}
-                  aria-pressed={cropping}>
-                  {t(cropping ? 'imageExport.doneEditingPhoto' : 'imageExport.cropPhoto')}
-                </button>}
-                {selected && !cropping && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => <div key={corner}
-                  className={`absolute z-30 h-4 w-4 rounded-sm bg-[var(--trail-orange)] shadow ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
-                  style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
-                  onPointerDown={(event) => onSplitPhotoPointerDown(event, slot, 'resize', corner)}
-                  onPointerMove={onSplitPhotoPointerMove}
-                  onPointerUp={onSplitPhotoPointerUp}
-                  onPointerCancel={onSplitPhotoPointerUp}
-                  aria-label={t('imageExport.resizePhotoFrame')} title={t('imageExport.resizePhotoFrame')} />)}
-                {cropping && splitPhotoDragVisual.id === slot.id && (splitPhotoDragVisual.dx !== 0 || splitPhotoDragVisual.dy !== 0) && <span className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-xs text-white">{t('imageExport.movePhotoCrop')}</span>}
-              </div>;
-            })}
+            {photoSlotElements}
 
             <div
               className="absolute z-20 rounded-md border-2 border-dashed border-transparent hover:border-white/85 select-none"
@@ -831,16 +856,7 @@ export function SocialSharePreviewModal({
                   <Move className="h-3.5 w-3.5" />
                 </button>}
                 {settings.template === 'split'
-                  ? (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => <div key={corner}
-                    className={`absolute z-20 flex h-5 w-5 items-center justify-center rounded-sm bg-[var(--trail-orange)] shadow ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
-                    style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
-                    onPointerDown={(event) => onRoutePointerDown(event, 'resize', corner)}
-                    onPointerMove={onRoutePointerMove}
-                    onPointerUp={onRoutePointerUp}
-                    onPointerCancel={onRoutePointerUp}
-                    aria-label={t('imageExport.resizeMapFrame')} title={t('imageExport.resizeMapFrame')}>
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 7L7 1M4 7L7 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  </div>)
+                  ? routeResizeHandles
                   : <div
                     className="absolute bottom-0 right-0 flex h-5 w-5 translate-x-1/2 translate-y-1/2 cursor-nwse-resize items-center justify-center rounded-tl-md bg-[var(--trail-orange)]"
                     onPointerDown={(event) => onRoutePointerDown(event, 'resize')}
