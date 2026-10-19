@@ -9,21 +9,41 @@ const createWikilocBookmarkletSource = (appOrigin: string) => `(()=>{
   if(!app){alert("Allow pop-ups for Wikiloc, then click the TrailReplay bookmark again.");return}
   let timeout;
   const cleanup=()=>{window.removeEventListener("message",onMessage);clearTimeout(timeout)};
-  const fetchGpx=async filter=>{
-    const form=new FormData();
-    form.append("id",id);form.append("event","download");form.append("format","gpx");form.append("selFormat","gpx");form.append("filter",filter);
-    const response=await fetch(location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:form,credentials:"include"});
+  const readGpx=async(response,label)=>{
     const gpx=await response.text();
     if(response.ok&&/<gpx(?:\\s|>)/i.test(gpx))return {gpx,error:null};
     const title=(gpx.match(/<title[^>]*>([^<]{1,120})</i)||[])[1]?.replace(/\\s+/g," ").trim();
     const path=new URL(response.url).pathname;
-    return {gpx:null,error:filter+": HTTP "+response.status+" ("+(title||path)+")"};
+    return {gpx:null,error:label+": HTTP "+response.status+" ("+(title||path)+")"};
+  };
+  const fetchOriginalGpx=async()=>{
+    const pageResponse=await fetch(location.origin+"/wikiloc/download.do?id="+encodeURIComponent(id)+"&event=file",{credentials:"include"});
+    const html=await pageResponse.text();
+    const documentFromPage=new DOMParser().parseFromString(html,"text/html");
+    const form=Array.from(documentFromPage.forms).find(candidate=>candidate.action.includes("downloadToFile.do"))||documentFromPage.forms[0];
+    if(!pageResponse.ok||!form)return {gpx:null,error:"file form: HTTP "+pageResponse.status+" ("+((documentFromPage.title||new URL(pageResponse.url).pathname))+ ")"};
+    const originalOption=Array.from(form.querySelectorAll("select option")).find(option=>/original/i.test(option.textContent||""));
+    const originalLabel=Array.from(form.querySelectorAll("label")).find(label=>/original/i.test(label.textContent||""));
+    const originalControl=originalOption?.parentElement||originalLabel?.control;
+    if(!originalControl?.name)return {gpx:null,error:"file form: Original quality option was not found"};
+    const data=new FormData(form);
+    data.set("id",id);data.set("event","download");data.set("format","gpx");data.set("selFormat","gpx");
+    if(originalOption)data.set(originalControl.name,originalOption.value);
+    else data.set(originalControl.name,originalControl.value);
+    const response=await fetch(form.action||location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:data,credentials:"include"});
+    return await readGpx(response,"Original form");
+  };
+  const fetchGpx=async filter=>{
+    const form=new FormData();
+    form.append("id",id);form.append("event","download");form.append("format","gpx");form.append("selFormat","gpx");form.append("filter",filter);
+    const response=await fetch(location.origin+"/wikiloc/downloadToFile.do",{method:"POST",body:form,credentials:"include"});
+    return await readGpx(response,filter);
   };
   const onMessage=async event=>{
     if(event.origin!==appOrigin||event.source!==app||event.data?.type!=="trailreplay:ready")return;
     cleanup();
     try{
-      let result=await fetchGpx("original"),simplified=false;
+      let result=await fetchOriginalGpx(),simplified=false;
       if(!result.gpx){
         const originalError=result.error;
         result=await fetchGpx("simplified500");
