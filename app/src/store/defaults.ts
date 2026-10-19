@@ -108,9 +108,9 @@ export function createDefaultSocialShareSettings(): SocialShareSettings {
     showLocation: false,
     showStats: true,
     showElevationMiniChart: true,
-    routeTransform: { offsetX: 0, offsetY: 0, scale: 1, opacity: 0.9 },
+    routeTransform: { offsetX: 0, offsetY: 0, scale: 1, opacity: 1 },
     dataPanelOffsetY: 0,
-    routeGlow: true,
+    routeGlow: false,
   };
 }
 
