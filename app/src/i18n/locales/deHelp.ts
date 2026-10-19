@@ -307,6 +307,7 @@ export const help = {
               button: "TrailReplay Wikiloc-Importer",
               dragLabel: "Ziehe den TrailReplay Wikiloc-Importer in die Lesezeichenleiste, um ihn zu speichern",
               invalidGpx: "Wikiloc hat keine GPX-Datei zurückgegeben. Prüfe, ob diese Route heruntergeladen werden kann, oder lade sie manuell herunter.",
+              simplifiedFallback: 'Wikiloc hat den vereinfachten Track mit bis zu 500 Punkten zurückgegeben. Für den vollständigen Track: Manuell → Herunterladen → Datei → GPX → Original.',
           },
         },
         strava: {

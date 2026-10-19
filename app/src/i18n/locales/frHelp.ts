@@ -307,6 +307,7 @@ export const help = {
             button: "Importateur Wikiloc TrailReplay",
             dragLabel: "Faites glisser le bouton Importateur Wikiloc TrailReplay vers la barre des favoris pour l’enregistrer",
             invalidGpx: "Wikiloc n’a pas renvoyé de fichier GPX. Vérifiez que cet itinéraire est téléchargeable ou téléchargez-le manuellement.",
+            simplifiedFallback: 'Wikiloc a renvoyé le tracé simplifié (jusqu’à 500 points). Pour le tracé complet, utilisez Manuel → Télécharger → Fichier → GPX → Original.',
         },
       },
       strava: {

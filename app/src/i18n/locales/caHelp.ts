@@ -307,6 +307,7 @@ export const help = {
               button: "Importador de Wikiloc de TrailReplay",
               dragLabel: "Arrossega el botó Importador de Wikiloc de TrailReplay a la barra de marcadors per desar-lo",
               invalidGpx: "Wikiloc no ha retornat cap fitxer GPX. Comprova que es pot baixar aquesta ruta o descarrega-la manualment.",
+              simplifiedFallback: 'Wikiloc ha retornat el track simplificat (fins a 500 punts). Per obtenir el track complet, fes servir Manual → Descarrega → Fitxer → GPX → Original.',
           },
         },
         strava: {

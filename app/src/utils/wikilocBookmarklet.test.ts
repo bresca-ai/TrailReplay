@@ -9,7 +9,10 @@ describe('createWikilocBookmarkletHref', () => {
     expect(href).toMatch(/^javascript:/);
     expect(source).toContain('wikilocImport=1');
     expect(source).toContain('/wikiloc/downloadToFile.do');
-    expect(source).toContain('form.append("filter","original")');
+    expect(source).toContain('fetchGpx("original")');
+    expect(source).toContain('fetchGpx("simplified500")');
+    expect(source).toContain('Wikiloc responded without a GPX file. Try the importer again');
+    expect(source).toContain('simplified},appOrigin');
     expect(source).toContain('trailreplay:wikiloc-gpx');
     expect(source).toContain('https://trailreplay.example');
   });

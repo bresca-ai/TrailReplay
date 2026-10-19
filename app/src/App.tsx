@@ -235,7 +235,7 @@ function App() {
     let received = false;
     const onProviderMessage = (event: MessageEvent) => {
       if (received || !isProviderOrigin(event.origin) || event.source !== window.opener) return;
-      const payload = event.data as { type?: unknown; fileName?: unknown; gpx?: unknown } | null;
+      const payload = event.data as { type?: unknown; fileName?: unknown; gpx?: unknown; simplified?: unknown } | null;
       if (payload?.type !== messageType || typeof payload.gpx !== 'string') return;
       if (payload.gpx.length === 0 || payload.gpx.length > 50 * 1024 * 1024 || !/<gpx(?:\s|>)/i.test(payload.gpx)) {
         toast.error(t(`help.gpxGuide.providers.${source}.bookmarklet.invalidGpx`));
@@ -254,6 +254,9 @@ function App() {
           if (importedTracks?.length) {
             setShowSidebar(true);
             toast.success(t('workflow.routeImported'));
+            if (source === 'wikiloc' && payload.simplified === true) {
+              toast.warning(t('help.gpxGuide.providers.wikiloc.bookmarklet.simplifiedFallback'));
+            }
             window.history.replaceState(null, '', window.location.pathname);
           }
         })
