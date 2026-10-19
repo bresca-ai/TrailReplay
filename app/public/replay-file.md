@@ -510,8 +510,9 @@ or `custom`. A nonempty `value` overrides the calculated metric, and `label`
 overrides its translated label. Show up to four stats. `statsLayout` is `2`, `3`,
 or `4` columns; `statsStyle` is `minimal`, `cards`, or `accent`;
 `statsColor` is a hex color and `statsScale` ranges from `0.7` to `1.4`.
-`icon` accepts any value from the activity icon list, such as `svg-walking`,
-`svg-biking`, `🥾` or `🧗`.
+`icon` uses the same map symbols as annotation cards, such as `map:summit`,
+`map:waterfall`, or a searchable Pinhead symbol such as `pinhead:mountain`.
+Older activity and emoji icon values remain drawable in saved projects.
 
 The split layout uses `photoSlots`, an array of `{ id, imageUrl, x, y, w, h,
 offsetX, offsetY, scale }`. Coordinates are poster fractions. An omitted or

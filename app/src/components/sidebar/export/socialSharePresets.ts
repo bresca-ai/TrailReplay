@@ -1,4 +1,5 @@
 import type { SocialShareLayoutPreset, SocialSharePhotoSlot, SocialShareSettings } from '@/types';
+import { mapAnnotationSymbol } from '@/components/annotations/annotationSymbol';
 
 export const PRESET_ORDER: SocialShareLayoutPreset[] = ['classic', 'long-way', 'ridge-photo', 'photo-grid'];
 
@@ -51,7 +52,7 @@ export function presetSettings(preset: SocialShareLayoutPreset, current: SocialS
     titleColor: '#21372C',
     statsColor: '#21372C',
     statsLayout: 2,
-    stats: current.stats.map((stat, index) => ({ ...stat, visible: index < 2, icon: index === 0 ? '🥾' : index === 1 ? '🧗' : stat.icon })),
+    stats: current.stats.map((stat, index) => ({ ...stat, visible: index < 2, icon: index === 0 ? mapAnnotationSymbol('summit') : index === 1 ? mapAnnotationSymbol('waypoint') : stat.icon })),
     statsStyle: 'minimal',
     showElevationMiniChart: false,
     routeGlow: false,

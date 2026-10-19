@@ -1,6 +1,7 @@
 import type { SocialShareAspectRatio, SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import { getCropRegion } from '@/utils/crop';
 import { getActivityIconOption } from '@/utils/activityIcons';
+import { annotationSymbolPath, drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
 import { formatPace, metersToFeet } from '@/utils/units';
 import type { SocialShareSummaryData } from './socialShareData';
 import type { CanvasPoint, FitBox } from './socialShareRouteFit';
@@ -310,10 +311,13 @@ function drawStatsBar(
     }
 
     const icon = stat.icon ? getActivityIconOption(stat.icon) : undefined;
+    const mapIconPath = annotationSymbolPath(stat.icon);
     const iconSize = Math.min(rowH * 0.36, colW * 0.16);
     const iconX = cellX + colW * 0.12;
     const iconY = cellY + rowH * 0.48;
-    if (icon?.kind === 'svg' && iconImages[stat.icon!]) {
+    if (mapIconPath) {
+      drawAnnotationSymbol(ctx, stat.icon, iconX + iconSize / 2, iconY + iconSize / 2, iconSize, statsColor);
+    } else if (icon?.kind === 'svg' && iconImages[stat.icon!]) {
       const stencil = document.createElement('canvas');
       stencil.width = Math.ceil(iconSize);
       stencil.height = Math.ceil(iconSize);
@@ -340,7 +344,7 @@ function drawStatsBar(
     const numW = ctx.measureText(num).width;
     ctx.font = `400 ${unitSize}px ${fontFamily}`;
     const unitW = unit ? ctx.measureText(` ${unit}`).width : 0;
-    const startX = cx - (numW + unitW) / 2 + (icon ? iconSize * 0.25 : 0);
+    const startX = cx - (numW + unitW) / 2 + (stat.icon ? iconSize * 0.25 : 0);
 
     ctx.font = `700 ${numSize}px ${fontFamily}`;
     ctx.fillStyle = statsColor;

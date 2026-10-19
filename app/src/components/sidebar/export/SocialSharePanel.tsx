@@ -6,7 +6,9 @@ import { SocialSharePreviewModal } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
-import { ACTIVITY_ICONS, renderActivityIcon } from '@/utils/activityIcons';
+import { renderActivityIcon } from '@/utils/activityIcons';
+import { AnnotationSymbolPicker } from '@/components/sidebar/AnnotationSymbolPicker';
+import { annotationSymbolLabel, annotationSymbolPath } from '@/components/annotations/annotationSymbol';
 import { OVERLAY_FONT_OPTIONS, overlayFontFamily } from '@/utils/typography';
 import { useAppStore } from '@/store/useAppStore';
 import { compressCoverPhoto } from './socialShareMedia';
@@ -70,6 +72,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
   const targetPhotoSlotRef = useRef<string | null>(null);
   const [activePhotoSlotId, setActivePhotoSlotId] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [editingStatIconId, setEditingStatIconId] = useState<string | null>(null);
 
   const applyPreset = (preset: typeof PRESET_ORDER[number]) => {
     const patch = presetSettings(preset, settings);
@@ -513,15 +516,23 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onPos
                 <button type="button" onClick={() => moveStat(index, 1)} disabled={index === stats.length - 1} aria-label={t('imageExport.moveStatDown')} className="rounded p-1 hover:bg-black/5 disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => setSocialShareSettings({ stats: stats.filter((_, i) => i !== index) })} aria-label={t('imageExport.removeStat')} className="rounded p-1 text-red-600 hover:bg-red-500/10"><X className="h-3.5 w-3.5" /></button>
               </div>
-              <label className="flex items-center gap-2 text-[11px]">
-                <span className="w-8 shrink-0">{stat.icon ? renderActivityIcon(stat.icon, { size: 22, color: settings.statsColor }) : null}</span>
-                <span className="shrink-0">{t('imageExport.statIcon')}</span>
-                <select value={stat.icon ?? ''} onChange={(event) => updateStat(index, { icon: event.target.value || undefined })}
-                  className="min-w-0 flex-1 rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs">
-                  <option value="">{t('imageExport.noIcon')}</option>
-                  {ACTIVITY_ICONS.map((icon) => <option key={icon.value} value={icon.value}>{t(icon.labelKey)}</option>)}
-                </select>
-              </label>
+              <div className="flex items-center gap-2 text-[11px]">
+                <button type="button" onClick={() => setEditingStatIconId(editingStatIconId === stat.id ? null : stat.id)}
+                  aria-expanded={editingStatIconId === stat.id}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-left hover:border-[var(--trail-orange)]">
+                  <span className="grid h-6 w-6 shrink-0 place-items-center">
+                    {stat.icon && annotationSymbolPath(stat.icon)
+                      ? <svg aria-hidden="true" width="22" height="22" viewBox="0 0 15 15"><path fill={settings.statsColor} d={annotationSymbolPath(stat.icon) ?? ''} /></svg>
+                      : stat.icon ? renderActivityIcon(stat.icon, { size: 22, color: settings.statsColor }) : null}
+                  </span>
+                  <span className="truncate">{stat.icon ? annotationSymbolLabel(stat.icon) : t('imageExport.noIcon')}</span>
+                </button>
+                {stat.icon && <button type="button" onClick={() => updateStat(index, { icon: undefined })} aria-label={t('imageExport.noIcon')} title={t('imageExport.noIcon')} className="rounded p-1 hover:bg-black/5"><X className="h-3.5 w-3.5" /></button>}
+              </div>
+              {editingStatIconId === stat.id && <div className="rounded-lg border border-black/10 bg-white p-2">
+                <AnnotationSymbolPicker value={stat.icon ?? ''} label={t('imageExport.statIcon')} allowEmoji={false}
+                  onChange={(icon) => { updateStat(index, { icon }); setEditingStatIconId(null); }} />
+              </div>}
               <input type="text" value={stat.label} onChange={(event) => updateStat(index, { label: event.target.value })}
                 placeholder={t('imageExport.statLabel')} className="w-full rounded border border-black/10 bg-[var(--canvas)] px-2 py-1 text-xs" />
               <input type="text" value={stat.value} onChange={(event) => updateStat(index, { value: event.target.value })}

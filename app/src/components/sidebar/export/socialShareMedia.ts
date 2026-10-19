@@ -1,4 +1,6 @@
 import { getActivityIconOption } from '@/utils/activityIcons';
+import { needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { loadPinheadIcons } from '@/components/annotations/pinheadIcons';
 import type { SocialShareSettings } from '@/types';
 
 const imageCache = new Map<string, Promise<HTMLImageElement>>();
@@ -23,6 +25,9 @@ export function loadPosterImage(url: string): Promise<HTMLImageElement> {
 export async function loadPosterAssets(settings: SocialShareSettings) {
   const slotImages: Record<string, HTMLImageElement> = {};
   const statIconImages: Record<string, HTMLImageElement> = {};
+  if (needsPinheadIcons((settings.stats ?? []).map((stat) => stat.icon))) {
+    await loadPinheadIcons().catch((error) => console.warn('Cover map icons could not load', error));
+  }
   await Promise.all((settings.photoSlots ?? []).map(async (slot) => {
     if (slot.imageUrl) slotImages[slot.id] = await loadPosterImage(slot.imageUrl);
   }));
