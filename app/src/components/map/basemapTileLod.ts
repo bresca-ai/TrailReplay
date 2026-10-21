@@ -4,7 +4,8 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 // MapLibre normally lowers raster zoom toward the horizon in pitched views.
 // Satellite providers can use visibly different imagery at adjacent zooms, so
 // mixing those levels in one frame creates colour/exposure seams. One level
-// keeps the frame coherent; the ratio bounds how many tiles that may require.
+// keeps the frame coherent; the native calculator must still enforce the
+// tile-count budget as a cinematic shot tilts toward the horizon.
 export const BASEMAP_MAX_TILE_ZOOM_LEVELS = 1;
 export const BASEMAP_TILE_COUNT_RATIO = 16;
 
@@ -50,16 +51,26 @@ export function applyConsistentBasemapTileLod(
     const source = map.getSource(sourceId) as LodControllableSource | undefined;
     if (!source) continue;
     try {
-      // Use the public setter to invalidate the source's current cover. Replace
-      // its distance-based calculator before that scheduled update runs: the
-      // built-in one-level preset can still decay at extreme perspective,
-      // whereas returning the center zoom is the exact policy required here.
+      // One level keeps imagery coherent. Keep the calculator installed by
+      // the public setter: its high-pitch tile-count correction lowers that
+      // entire level when the horizon would otherwise require too many tiles.
+      // Returning the camera's zoom unconditionally bypassed this safeguard.
       map.setSourceTileLodParams(
         BASEMAP_MAX_TILE_ZOOM_LEVELS,
         BASEMAP_TILE_COUNT_RATIO,
         sourceId,
       );
-      source.calculateTileZoom = createUniformBasemapTileZoomCalculator();
+      const budgetedZoom = source.calculateTileZoom;
+      const stableZoom = createUniformBasemapTileZoomCalculator();
+      source.calculateTileZoom = budgetedZoom
+        ? (zoom, distance2D, distanceZ, centerDistance, fov) => {
+            const budget = budgetedZoom(zoom, distance2D, distanceZ, centerDistance, fov);
+            // Degenerate cover geometry while terrain loads must not poison
+            // the hysteresis with NaN (or an infinite zoom loop).
+            const safeZoom = Number.isFinite(budget) ? Math.min(zoom, budget) : zoom;
+            return stableZoom(safeZoom, distance2D, distanceZ, centerDistance, fov);
+          }
+        : stableZoom;
       appliedSourceIds.push(sourceId);
     } catch {
       // Custom sources may not support MapLibre's tile LOD controls.

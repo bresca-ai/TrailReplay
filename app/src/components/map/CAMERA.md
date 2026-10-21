@@ -159,6 +159,16 @@ brings them into line.
 
 ## How to measure
 
+### Cinematic tile budget
+
+`basemapTileLod.ts` keeps imagery at one zoom level with hysteresis. Its
+calculator must wrap the native calculator installed by `setSourceTileLodParams`,
+including its tile-count correction. Returning the camera zoom unconditionally
+removes that correction: steep authored shots then cover the horizon with
+near-field imagery tiles and stall terrain rendering. Apply the same policy to
+the visible map and the predictive warmup map. Guard non-finite cover geometry
+before passing it to the stateful hysteresis.
+
 ### Playback marker modifiers
 
 The completed-trail source carries an invisible point at the same endpoint as
