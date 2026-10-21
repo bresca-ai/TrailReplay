@@ -1,4 +1,5 @@
 import * as maplibregl from 'maplibre-gl';
+import { PAINTED_TRAIL_TIP_KIND, PAINTED_TRAIL_TIP_LAYER } from '@/utils/paintedTrailTip';
 
 export function setupTrackSources(map: maplibregl.Map, trailColor: string) {
   if (!map.getSource('trail-line')) {
@@ -59,8 +60,21 @@ export function setupTrackSources(map: maplibregl.Map, trailColor: string) {
       id: 'trail-completed',
       type: 'line',
       source: 'trail-completed',
+      filter: ['==', ['geometry-type'], 'LineString'],
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: { 'line-color': '#C1652F', 'line-width': 6 },
+    });
+  }
+
+  if (!map.getLayer(PAINTED_TRAIL_TIP_LAYER)) {
+    map.addLayer({
+      id: PAINTED_TRAIL_TIP_LAYER,
+      type: 'circle',
+      source: 'trail-completed',
+      filter: ['==', ['get', 'kind'], PAINTED_TRAIL_TIP_KIND],
+      // Queryable even though transparent. Rendering this point with the line
+      // lets the DOM adornment follow the tiles actually painted this frame.
+      paint: { 'circle-radius': 1, 'circle-opacity': 0, 'circle-stroke-width': 0 },
     });
   }
 

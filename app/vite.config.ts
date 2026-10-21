@@ -30,11 +30,17 @@ export default defineConfig(({ command, mode }) => {
       },
     } : undefined,
   },
-  // Generate is lazy-loaded. Without an eager prebundle, opening it can make
-  // Vite discover these two packages after the page already holds older dep
-  // URLs, producing 504 "Outdated Optimize Dep" and a failed dynamic import.
+  // Prebundle lazy sidebar dependencies before the browser receives dep URLs.
+  // Discovering these when Style or Generate opens invalidates already loaded
+  // chunks, producing 504 "Outdated Optimize Dep" and failed dynamic imports.
   optimizeDeps: {
-    include: ['fix-webm-duration', 'mp4-muxer'],
+    include: [
+      '@radix-ui/react-label',
+      '@radix-ui/react-slider',
+      '@radix-ui/react-switch',
+      'fix-webm-duration',
+      'mp4-muxer',
+    ],
   },
   plugins: [
     ...(command === 'serve' && !process.env.TRAILREPLAY_PRERENDER ? [{

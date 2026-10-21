@@ -3,7 +3,7 @@ import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import type { StatId } from '@/types';
-import { getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
+import { getActivityIconBackingUrl, getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
 import {
   buildJourneyDistanceProfile,
@@ -325,6 +325,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       const svgIconUrl = getActivityIconOption(iconValue)?.content;
       if (svgIconUrl) {
         preloadSvgMarkerIcon(svgIconUrl);
+        const backingUrl = getActivityIconBackingUrl(iconValue);
+        if (backingUrl) preloadSvgMarkerIcon(backingUrl);
       }
     });
   }, [preloadSvgMarkerIcon, tracks, trailStyle.currentIcon]);

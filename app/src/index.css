@@ -137,9 +137,12 @@ html, body {
   align-items: center;
   justify-content: center;
   z-index: 100;
-  position: relative;
-  /* No transition on `transform`: MapLibre writes the marker's projected
-     screen position onto this element's `transform` on every render. A
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  /* No transition on `transform`: the completed map render writes the tip's
+     screen position onto this element's `transform`. A
      transition would ease each update over 0.2s, so the marker lags behind
      its true position — drifting off the trail tip and rubber-banding during
      camera pans (and baking that offset into video exports, which sample this

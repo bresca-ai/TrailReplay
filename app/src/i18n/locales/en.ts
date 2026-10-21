@@ -450,7 +450,7 @@ export const en = {
     size: 'Size',
     activityIcon: 'Activity Icon',
     changeIcon: 'Change Icon',
-    glowCircle: 'Glow Circle',
+    glowCircle: 'Icon outline',
     selectIcon: 'Select Activity Icon',
     routeAnnotationsTitle: 'Route Annotations',
     routeAnnotationsHint: 'Add a transparent map caption or field note at the current playback position. Field notes slow the replay so viewers can read them.',

@@ -86,6 +86,23 @@ export function getActivityIconOption(value: string): ActivityIconOption | undef
   return activityIconMap.get(value);
 }
 
+export function getActivityIconBackingUrl(value: string): string | undefined {
+  const icon = getActivityIconOption(value);
+  return icon?.kind === 'svg' ? icon.content.replace(/\.svg$/, '-backing.svg') : undefined;
+}
+
+function svgBackingStyle(size: number, url: string): CSSProperties {
+  return {
+    width: size,
+    height: size,
+    display: 'block',
+    backgroundImage: `url("${url}")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center',
+    backgroundSize: 'contain',
+  };
+}
+
 export function isSvgActivityIcon(value: string): boolean {
   return getActivityIconOption(value)?.kind === 'svg';
 }
@@ -103,8 +120,10 @@ export function renderActivityIcon(
       'aria-label': '',
       'aria-hidden': true,
       className,
+      style: svgBackingStyle(size, getActivityIconBackingUrl(value)!),
+    }, createElement('span', {
       style: svgMaskStyle(size, color, icon.content),
-    });
+    }));
   }
 
   return createElement(
@@ -126,11 +145,18 @@ export function renderActivityIcon(
   );
 }
 
+// Apply to a wrapper: a filter on the masked span itself is clipped by its mask.
+// Share the same silhouette treatment with the canvas exporter (scaled to output).
+export function markerIconContrastFilter(scale = 1): string {
+  const edge = 0.75 * scale;
+  return `drop-shadow(${edge}px 0 0 white) drop-shadow(${-edge}px 0 0 white) drop-shadow(0 ${edge}px 0 white) drop-shadow(0 ${-edge}px 0 white) drop-shadow(0 ${2 * scale}px ${3 * scale}px rgba(0,0,0,0.65))`;
+}
+
 export function getActivityIconMarkerHtml(value: string, size: number, color: string): string {
   const icon = getActivityIconOption(value);
 
   if (icon?.kind === 'svg') {
-    return `<span aria-hidden="true" style="width:${size}px;height:${size}px;display:block;background-color:${escapeHtml(color)};mask-image:url('${escapeHtml(icon.content)}');mask-repeat:no-repeat;mask-position:center;mask-size:contain;-webkit-mask-image:url('${escapeHtml(icon.content)}');-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;position:relative;z-index:10;"></span>`;
+    return `<div style="width:${size}px;height:${size}px;background-image:url('${escapeHtml(getActivityIconBackingUrl(value)!)}');background-repeat:no-repeat;background-position:center;background-size:contain;"><span data-icon-backing="${escapeHtml(getActivityIconBackingUrl(value)!)}" aria-hidden="true" style="width:${size}px;height:${size}px;display:block;background-color:${escapeHtml(color)};mask-image:url('${escapeHtml(icon.content)}');mask-repeat:no-repeat;mask-position:center;mask-size:contain;-webkit-mask-image:url('${escapeHtml(icon.content)}');-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:contain;position:relative;z-index:10;"></span></div>`;
   }
 
   return `<span style="width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;font-size:${size}px;line-height:1;position:relative;z-index:10;">${escapeHtml(icon?.content ?? value)}</span>`;
