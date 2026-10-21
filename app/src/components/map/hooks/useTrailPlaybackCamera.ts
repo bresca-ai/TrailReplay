@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Feature, FeatureCollection, LineString } from 'geojson';
+import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
@@ -11,7 +11,7 @@ import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { overlayFontFamily } from '@/utils/typography';
-import { createLatestFrameQueue, type LatestFrameQueue } from '@/utils/latestFrameQueue';
+import { newestPaintedTrailTip, PAINTED_TRAIL_TIP_LAYER, withPaintedTrailTip, type CompletedTrailData } from '@/utils/paintedTrailTip';
 import {
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
@@ -114,33 +114,6 @@ interface UseTrailPlaybackCameraParams {
     showTrackLabels: boolean;
     trailColor: string;
   };
-}
-
-type CompletedTrailData =
-  | Feature<LineString, Record<string, unknown>>
-  | FeatureCollection<LineString, Record<string, unknown>>;
-
-interface CompletedTrailFrame {
-  data: CompletedTrailData;
-  markerPosition: [number, number] | null;
-}
-
-export function lastPaintedCoordinate(data: CompletedTrailData): [number, number] | null {
-  const features = data.type === 'FeatureCollection' ? data.features : [data];
-
-  for (let index = features.length - 1; index >= 0; index -= 1) {
-    const coordinate = features[index].geometry.coordinates.at(-1);
-    if (coordinate) return [coordinate[0], coordinate[1]];
-  }
-
-  return null;
-}
-
-function waitForNextMapRender(map: maplibregl.Map): Promise<void> {
-  return new Promise((resolve) => {
-    map.once('render', () => resolve());
-    map.triggerRepaint();
-  });
 }
 
 export function resolvePlaybackMarkerColor(
@@ -246,14 +219,31 @@ export function useTrailPlaybackCamera({
   const smoothedCenterRef = useRef<[number, number] | null>(null);
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
-  const completedTrailQueueRef = useRef<LatestFrameQueue<CompletedTrailFrame> | null>(null);
-  const completedTrailQueueSourceRef = useRef<maplibregl.GeoJSONSource | null>(null);
+  const trailRevisionRef = useRef(0);
+  const visibleMarkerRevisionRef = useRef(0);
 
-  useEffect(() => () => {
-    completedTrailQueueRef.current?.dispose();
-    completedTrailQueueRef.current = null;
-    completedTrailQueueSourceRef.current = null;
-  }, []);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded) return;
+    const syncPaintedMarker = () => {
+      const marker = markerRef.current;
+      if (!marker || !map.getLayer(PAINTED_TRAIL_TIP_LAYER)) return;
+      const tip = newestPaintedTrailTip(
+        map.queryRenderedFeatures({ layers: [PAINTED_TRAIL_TIP_LAYER] }),
+        visibleMarkerRevisionRef.current,
+      );
+      const element = marker.getElement();
+      element.style.visibility = tip ? 'visible' : 'hidden';
+      if (tip) {
+        visibleMarkerRevisionRef.current = tip.revision;
+        // Reproject on every render, including terrain-height refinements that
+        // do not fire the move event MapLibre normally uses for DOM markers.
+        marker.setLngLat(tip.position);
+      }
+    };
+    map.on('render', syncPaintedMarker);
+    return () => { map.off('render', syncPaintedMarker); };
+  }, [isMapLoaded, mapRef, markerRef]);
 
   // Explicit distance/mode changes should take effect immediately instead of
   // being mistaken for terrain noise by the cinematic target filter.
@@ -279,9 +269,6 @@ export function useTrailPlaybackCamera({
     if (!shouldShowPlaybackAdornment) {
       markerRef.current?.remove();
       markerRef.current = null;
-      completedTrailQueueRef.current?.dispose();
-      completedTrailQueueRef.current = null;
-      completedTrailQueueSourceRef.current = null;
     } else {
       const markerColor = resolvePlaybackMarkerColor(
         trailStyle.markerColor,
@@ -341,7 +328,9 @@ export function useTrailPlaybackCamera({
               }
             : null,
         );
-        markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
+        element.style.visibility = 'hidden';
+        visibleMarkerRevisionRef.current = trailRevisionRef.current + 1;
+        markerRef.current = new maplibregl.Marker({ element, anchor: 'center', subpixelPositioning: true })
           .setLngLat([currentPosition.lon, currentPosition.lat])
           .addTo(mapRef.current);
       } else {
@@ -361,26 +350,15 @@ export function useTrailPlaybackCamera({
 
     const completedTrailSource = mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource | undefined;
     if (completedCoordinates.length > 0 && completedTrailSource) {
-      if (completedTrailQueueSourceRef.current !== completedTrailSource) {
-        const completedTrailMap = mapRef.current;
-        completedTrailQueueRef.current?.dispose();
-        completedTrailQueueSourceRef.current = completedTrailSource;
-        completedTrailQueueRef.current = createLatestFrameQueue<CompletedTrailFrame>({
-          paint: async (frame) => {
-            await completedTrailSource.setData(frame.data);
-            await waitForNextMapRender(completedTrailMap);
-          },
-          commit: (frame) => {
-            if (frame.markerPosition) markerRef.current?.setLngLat(frame.markerPosition);
-          },
-        });
-      }
-
       const paintCompletedTrail = (data: CompletedTrailData) => {
-        completedTrailQueueRef.current?.enqueue({
-          data,
-          markerPosition: lastPaintedCoordinate(data),
-        });
+        // Native source updates coalesce worker work. The rendered tip, rather
+        // than completion of a worker promise or an unrelated render, tells us
+        // which frame's endpoint is actually visible.
+        const revision = ++trailRevisionRef.current;
+        const start = completedCoordinates.at(-1);
+        void completedTrailSource.setData(withPaintedTrailTip(
+          data, revision, start ? [start[0], start[1]] : null,
+        ));
       };
 
       if (trailStyle.colorMode === 'heartRate') {

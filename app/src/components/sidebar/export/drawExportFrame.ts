@@ -301,7 +301,8 @@ export function drawExportFrame({
       context.stroke();
     });
 
-    const markerContainer = pictureHoldActive ? null : document.querySelector('.tr-marker') as HTMLElement | null;
+    const markerElement = document.querySelector('.tr-marker') as HTMLElement | null;
+    const markerContainer = pictureHoldActive || markerElement?.style.visibility === 'hidden' ? null : markerElement;
     if (markerContainer) {
       const markerRect = markerContainer.getBoundingClientRect();
       const markerX = (markerRect.left + markerRect.width / 2 - containerRect.left - cropX) * scaleX;

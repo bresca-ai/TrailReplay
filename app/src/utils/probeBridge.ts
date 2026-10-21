@@ -55,7 +55,7 @@ export function isProbeEnabled(search: string = window.location.search): boolean
 function markerScreenPosition(): { x: number; y: number } | null {
   const marker = document.querySelector('.tr-marker');
   const canvas = mapGlobalRef.current?.getCanvas();
-  if (!marker || !canvas) return null;
+  if (!marker || !canvas || (marker as HTMLElement).style.visibility === 'hidden') return null;
 
   const markerBox = marker.getBoundingClientRect();
   const canvasBox = canvas.getBoundingClientRect();
