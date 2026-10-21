@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import type { PaintedTrailMarker } from '@/utils/paintedTrailMarker';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -47,7 +48,7 @@ export function TrailMap(_props: TrailMapProps) {
   const mapContainer = _props.mapContainerRef ?? internalMapContainerRef;
   const onReadyChange = _props.onReadyChange;
   const map = useRef<maplibregl.Map | null>(null);
-  const markerRef = useRef<maplibregl.Marker | null>(null);
+  const markerRef = useRef<PaintedTrailMarker | null>(null);
   const smoothBearingRef = useRef<number>(0);
   const targetBearingRef = useRef<number>(0);
   const loadZoomDoneRef = useRef<boolean>(false);

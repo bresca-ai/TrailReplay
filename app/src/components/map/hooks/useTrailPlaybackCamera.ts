@@ -11,7 +11,8 @@ import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { overlayFontFamily } from '@/utils/typography';
-import { newestPaintedTrailTip, PAINTED_TRAIL_TIP_LAYER, withPaintedTrailTip, type CompletedTrailData } from '@/utils/paintedTrailTip';
+import { withPaintedTrailTip, type CompletedTrailData } from '@/utils/paintedTrailTip';
+import { bindPaintedTrailMarker, PaintedTrailMarker } from '@/utils/paintedTrailMarker';
 import {
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
@@ -80,7 +81,7 @@ interface UseTrailPlaybackCameraParams {
   isInTransport: boolean;
   isMapLoaded: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
-  markerRef: React.MutableRefObject<maplibregl.Marker | null>;
+  markerRef: React.MutableRefObject<PaintedTrailMarker | null>;
   playbackProgress: number;
   segmentTimings: Array<{
     segmentIndex: number;
@@ -154,11 +155,17 @@ export function shouldRenderPlaybackAdornment({
       || (animationPhase === 'idle' && playbackProgress > 0));
 }
 
+const markerAppearanceCache = new WeakMap<HTMLElement, { html: string; label: string }>();
+
 export function updatePlaybackMarkerElement(
   element: HTMLElement,
   markerHtml: string,
   label: { color: string; fontFamily: string; text: string } | null,
 ) {
+  const labelSignature = JSON.stringify(label);
+  const previous = markerAppearanceCache.get(element);
+  if (previous?.html === markerHtml && previous.label === labelSignature) return;
+  markerAppearanceCache.set(element, { html: markerHtml, label: labelSignature });
   element.innerHTML = markerHtml;
   if (!label) return;
 
@@ -220,29 +227,16 @@ export function useTrailPlaybackCamera({
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
   const trailRevisionRef = useRef(0);
-  const visibleMarkerRevisionRef = useRef(0);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;
-    const syncPaintedMarker = () => {
-      const marker = markerRef.current;
-      if (!marker || !map.getLayer(PAINTED_TRAIL_TIP_LAYER)) return;
-      const tip = newestPaintedTrailTip(
-        map.queryRenderedFeatures({ layers: [PAINTED_TRAIL_TIP_LAYER] }),
-        visibleMarkerRevisionRef.current,
-      );
-      const element = marker.getElement();
-      element.style.visibility = tip ? 'visible' : 'hidden';
-      if (tip) {
-        visibleMarkerRevisionRef.current = tip.revision;
-        // Reproject on every render, including terrain-height refinements that
-        // do not fire the move event MapLibre normally uses for DOM markers.
-        marker.setLngLat(tip.position);
-      }
+    const unbind = bindPaintedTrailMarker(map, () => markerRef.current);
+    return () => {
+      unbind();
+      markerRef.current?.remove();
+      markerRef.current = null;
     };
-    map.on('render', syncPaintedMarker);
-    return () => { map.off('render', syncPaintedMarker); };
   }, [isMapLoaded, mapRef, markerRef]);
 
   // Explicit distance/mode changes should take effect immediately instead of
@@ -315,7 +309,6 @@ export function useTrailPlaybackCamera({
         element.style.alignItems = 'center';
         element.style.display = 'flex';
         element.style.justifyContent = 'center';
-        element.style.position = 'relative';
         element.style.zIndex = '100';
         updatePlaybackMarkerElement(
           element,
@@ -328,11 +321,9 @@ export function useTrailPlaybackCamera({
               }
             : null,
         );
-        element.style.visibility = 'hidden';
-        visibleMarkerRevisionRef.current = trailRevisionRef.current + 1;
-        markerRef.current = new maplibregl.Marker({ element, anchor: 'center', subpixelPositioning: true })
-          .setLngLat([currentPosition.lon, currentPosition.lat])
-          .addTo(mapRef.current);
+        markerRef.current = new PaintedTrailMarker(
+          element, mapRef.current.getCanvasContainer(), trailRevisionRef.current + 1,
+        );
       } else {
         updatePlaybackMarkerElement(
           markerRef.current.getElement(),

@@ -6,6 +6,19 @@ import {
 } from './useTrailPlaybackCamera';
 
 describe('playback marker presentation', () => {
+  it('preserves the icon, pulse, and label nodes during unchanged playback updates', () => {
+    const element = document.createElement('div');
+    const html = '<span class="pulse">runner</span>';
+    const label = { color: '#123456', fontFamily: 'Inter', text: 'Race' };
+    updatePlaybackMarkerElement(element, html, label);
+    const iconNode = element.firstChild;
+    const labelNode = element.lastChild;
+    updatePlaybackMarkerElement(element, html, { ...label });
+    expect(element.firstChild).toBe(iconNode);
+    expect(element.lastChild).toBe(labelNode);
+    updatePlaybackMarkerElement(element, html, { ...label, text: 'Second leg' });
+    expect(element.querySelector('.tr-marker-label')?.textContent).toBe('Second leg');
+  });
   it('uses each journey track color while the marker color remains linked to the active track', () => {
     expect(resolvePlaybackMarkerColor('#C1652F', '#c1652f', '#3B82F6')).toBe('#3B82F6');
     expect(resolvePlaybackMarkerColor('#111111', '#C1652F', '#3B82F6')).toBe('#111111');

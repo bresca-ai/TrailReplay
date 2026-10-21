@@ -159,6 +159,23 @@ brings them into line.
 
 ## How to measure
 
+### Playback marker modifiers
+
+The completed-trail source carries an invisible point at the same endpoint as
+the painted line. `paintedTrailMarker.ts` reads its newest rendered revision and
+projects the DOM marker once, on the map's `render` event. Keep that as the sole
+position writer: a normal MapLibre `Marker` also repositions on `move`,
+`moveend`, `terrain`, and `idle`, which can move the DOM between canvas frames.
+Those extra updates can make an aligned marker look as though it jitters.
+
+Keep subpixel coordinates and absolute positioning; do not add a CSS transform
+transition or ease the marker separately from the line. A temporary missing-tip
+query during tile replacement retains the last painted anchor. Annotation holds
+and the existing playback visibility rules explicitly remove the adornment.
+Unchanged icon/label markup is retained so playback does not restart the pulse
+animation or recreate the marker's children every frame. Export captures the
+same DOM position after the map settles.
+
 ### Pure functions: vitest, offline
 
 Fastest loop by far, and it works on the real sample routes:
