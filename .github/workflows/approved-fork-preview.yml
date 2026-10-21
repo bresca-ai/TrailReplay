@@ -123,7 +123,7 @@ jobs:
           node-version: 22
 
       - name: Install pinned Wrangler
-        run: npm install --global wrangler@4.53.0
+        run: npm install --global wrangler@4.151.3
 
       - name: Deploy the static artifact and report the GitHub deployment
         env:
