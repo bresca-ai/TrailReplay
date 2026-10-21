@@ -450,7 +450,7 @@ export const es = {
     size: 'Tamaño',
     activityIcon: 'Icono de actividad',
     changeIcon: 'Cambiar icono',
-    glowCircle: 'Círculo de brillo',
+    glowCircle: 'Contorno del icono',
     selectIcon: 'Selecciona un icono de actividad',
     routeAnnotationsTitle: 'Anotaciones de ruta',
     routeAnnotationsHint: 'Añade una leyenda transparente o una nota de ruta en la posición actual. Las notas ralentizan el recorrido para poder leerlas.',

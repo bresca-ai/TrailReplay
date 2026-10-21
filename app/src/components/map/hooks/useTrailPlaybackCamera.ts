@@ -3,7 +3,7 @@ import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
-import { getActivityIconMarkerHtml, isSvgActivityIcon } from '@/utils/activityIcons';
+import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
@@ -273,7 +273,7 @@ export function useTrailPlaybackCamera({
 
       if (trailStyle.showMarker && trailStyle.markerType === 'dot') {
         const dotSize = Math.round(14 * trailStyle.markerSize);
-        markerHtml = `<div style="
+        markerHtml = `<div data-marker-dot style="
           width: ${dotSize}px;
           height: ${dotSize}px;
           background: ${markerColor};
@@ -284,23 +284,11 @@ export function useTrailPlaybackCamera({
         "></div>`;
       } else if (trailStyle.showMarker) {
         const fontSize = Math.round(28 * trailStyle.markerSize);
-        const circleSize = Math.round(40 * trailStyle.markerSize);
         const iconColor = isSvgActivityIcon(icon) ? markerColor : currentColor;
         const iconHtml = getActivityIconMarkerHtml(icon, fontSize, iconColor);
-        const glowBackground = isSvgActivityIcon(icon) ? 'rgba(22, 32, 40, 0.72)' : `${markerColor}40`;
-        markerHtml = `
-          ${trailStyle.showCircle ? `<div style="
-            position: absolute;
-            width: ${circleSize}px;
-            height: ${circleSize}px;
-            background: ${glowBackground};
-            border: 2px solid ${markerColor};
-            border-radius: 50%;
-            animation: pulse 1.5s ease-in-out infinite;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
-          "></div>` : ''}
-          ${iconHtml}
-        `;
+        // Keep showCircle as the saved setting for recipe/project compatibility.
+        // Contrast follows the icon silhouette, without a disc or pulse animation.
+        markerHtml = `<div data-marker-icon style="filter:${trailStyle.showCircle ? markerIconContrastFilter() : 'none'};">${iconHtml}</div>`;
       }
 
       if (!markerRef.current) {

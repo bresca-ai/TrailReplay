@@ -450,7 +450,7 @@ export const de = {
     size: 'Größe',
     activityIcon: 'Aktivitätssymbol',
     changeIcon: 'Symbol ändern',
-    glowCircle: 'Glühkreis',
+    glowCircle: 'Symbolkontur',
     selectIcon: 'Wähle Aktivitätssymbol',
     routeAnnotationsTitle: 'Routenanmerkungen',
     routeAnnotationsHint: 'Füge an der aktuellen Position eine transparente Kartenbeschriftung oder Routennotiz hinzu. Notizen verlangsamen die Wiedergabe zum Lesen.',

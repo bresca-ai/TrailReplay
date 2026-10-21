@@ -450,7 +450,7 @@ export const fr = {
     size: 'Taille',
     activityIcon: 'Icône d\'activité',
     changeIcon: 'Changer l\'icône',
-    glowCircle: 'Halo lumineux',
+    glowCircle: 'Contour de l’icône',
     selectIcon: 'Sélectionner une icône d\'activité',
     routeAnnotationsTitle: 'Annotations du parcours',
     routeAnnotationsHint: 'Ajoutez une légende transparente ou une note de parcours à la position actuelle. Les notes ralentissent le parcours pour faciliter la lecture.',

@@ -172,9 +172,11 @@ Keep subpixel coordinates and absolute positioning; do not add a CSS transform
 transition or ease the marker separately from the line. A temporary missing-tip
 query during tile replacement retains the last painted anchor. Annotation holds
 and the existing playback visibility rules explicitly remove the adornment.
-Unchanged icon/label markup is retained so playback does not restart the pulse
-animation or recreate the marker's children every frame. Export captures the
-same DOM position after the map settles.
+Unchanged icon/label markup is retained so playback does not recreate the
+marker's children every frame. Export captures the same DOM position after the
+map settles. The legacy `showCircle` setting now enables a silhouette outline
+and shadow, shared with export through `markerIconContrastFilter`; it must not
+add an animated disc or change the marker position.
 
 ### Pure functions: vitest, offline
 

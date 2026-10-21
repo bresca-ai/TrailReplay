@@ -126,6 +126,13 @@ export function renderActivityIcon(
   );
 }
 
+// Apply to a wrapper: a filter on the masked span itself is clipped by its mask.
+// Share the same silhouette treatment with the canvas exporter (scaled to output).
+export function markerIconContrastFilter(scale = 1): string {
+  const edge = 0.75 * scale;
+  return `drop-shadow(${edge}px 0 0 white) drop-shadow(${-edge}px 0 0 white) drop-shadow(0 ${edge}px 0 white) drop-shadow(0 ${-edge}px 0 white) drop-shadow(0 ${2 * scale}px ${3 * scale}px rgba(0,0,0,0.65))`;
+}
+
 export function getActivityIconMarkerHtml(value: string, size: number, color: string): string {
   const icon = getActivityIconOption(value);
 
