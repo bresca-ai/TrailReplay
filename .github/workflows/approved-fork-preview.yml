@@ -6,6 +6,12 @@ on:
     types: [completed]
   pull_request_target:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to preview
+        required: true
+        type: number
 
 permissions:
   actions: read
@@ -13,6 +19,45 @@ permissions:
   pull-requests: read
 
 jobs:
+  manual-mirror:
+    name: Create preview for fork PR
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'alexalmansa'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Validate and mirror the current PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          case "$PR_NUMBER" in
+            ''|*[!0-9]*)
+              echo "Enter a valid pull request number."
+              exit 1
+              ;;
+          esac
+
+          pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          state="$(jq -r '.state' <<<"$pr_json")"
+          head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+          head_repo="$(jq -r '.head.repo.full_name' <<<"$pr_json")"
+
+          test "$state" = open
+          test "$head_repo" != "$GITHUB_REPOSITORY"
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
+
+          gh auth setup-git
+          git init mirror
+          git -C mirror remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -C mirror fetch --no-tags --depth=1 origin "pull/${PR_NUMBER}/head"
+          test "$(git -C mirror rev-parse FETCH_HEAD)" = "$head_sha"
+          git -C mirror push --force origin \
+            "$head_sha:refs/heads/cloudflare-preview/pr-${PR_NUMBER}"
+
   mirror:
     name: Mirror approved fork commit
     if: >-
@@ -84,6 +129,10 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           ref="repos/${GITHUB_REPOSITORY}/git/ref/heads/cloudflare-preview/pr-${PR_NUMBER}"
-          if gh api "$ref" >/dev/null 2>&1; then
-            gh api --method DELETE "$ref"
+          if ! gh api --method DELETE "$ref" >/dev/null 2>&1; then
+            # The branch may already be gone, including in a concurrent cleanup.
+            if gh api "$ref" >/dev/null 2>&1; then
+              echo "Could not delete ${ref}."
+              exit 1
+            fi
           fi

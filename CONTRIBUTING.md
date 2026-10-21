@@ -28,7 +28,7 @@ npm run verify:release
 
 ## Pull requests
 
-Create a focused branch from `main`, explain the user impact, and include evidence in the pull request template. Every pull request receives CI and a Cloudflare Pages preview. Do not merge a change based solely on a successful build: test the affected user flow in the preview when practical.
+Create a focused branch from `main`, explain the user impact, and include evidence in the pull request template. Every pull request receives CI. Pull requests from this repository receive Cloudflare Pages previews automatically; a maintainer can create a preview for a fork pull request by running the **Approved fork preview** workflow from the Actions tab and entering its PR number. Do not merge a change based solely on a successful build: test the affected user flow in the preview when practical.
 
 Keep commits and pull requests small enough to review. Add or update tests for behavior changes. Changes that alter public behavior, configuration, privacy, deployment, or project-file compatibility need matching documentation.
 
