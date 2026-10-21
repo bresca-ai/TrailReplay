@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Feature, LineString } from 'geojson';
+import type { Feature, FeatureCollection, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
@@ -11,6 +11,7 @@ import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { overlayFontFamily } from '@/utils/typography';
+import { createLatestFrameQueue, type LatestFrameQueue } from '@/utils/latestFrameQueue';
 import {
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
@@ -113,6 +114,33 @@ interface UseTrailPlaybackCameraParams {
     showTrackLabels: boolean;
     trailColor: string;
   };
+}
+
+type CompletedTrailData =
+  | Feature<LineString, Record<string, unknown>>
+  | FeatureCollection<LineString, Record<string, unknown>>;
+
+interface CompletedTrailFrame {
+  data: CompletedTrailData;
+  markerPosition: [number, number] | null;
+}
+
+export function lastPaintedCoordinate(data: CompletedTrailData): [number, number] | null {
+  const features = data.type === 'FeatureCollection' ? data.features : [data];
+
+  for (let index = features.length - 1; index >= 0; index -= 1) {
+    const coordinate = features[index].geometry.coordinates.at(-1);
+    if (coordinate) return [coordinate[0], coordinate[1]];
+  }
+
+  return null;
+}
+
+function waitForNextMapRender(map: maplibregl.Map): Promise<void> {
+  return new Promise((resolve) => {
+    map.once('render', () => resolve());
+    map.triggerRepaint();
+  });
 }
 
 export function resolvePlaybackMarkerColor(
@@ -218,6 +246,14 @@ export function useTrailPlaybackCamera({
   const smoothedCenterRef = useRef<[number, number] | null>(null);
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
+  const completedTrailQueueRef = useRef<LatestFrameQueue<CompletedTrailFrame> | null>(null);
+  const completedTrailQueueSourceRef = useRef<maplibregl.GeoJSONSource | null>(null);
+
+  useEffect(() => () => {
+    completedTrailQueueRef.current?.dispose();
+    completedTrailQueueRef.current = null;
+    completedTrailQueueSourceRef.current = null;
+  }, []);
 
   // Explicit distance/mode changes should take effect immediately instead of
   // being mistaken for terrain noise by the cinematic target filter.
@@ -243,6 +279,9 @@ export function useTrailPlaybackCamera({
     if (!shouldShowPlaybackAdornment) {
       markerRef.current?.remove();
       markerRef.current = null;
+      completedTrailQueueRef.current?.dispose();
+      completedTrailQueueRef.current = null;
+      completedTrailQueueSourceRef.current = null;
     } else {
       const markerColor = resolvePlaybackMarkerColor(
         trailStyle.markerColor,
@@ -306,7 +345,6 @@ export function useTrailPlaybackCamera({
           .setLngLat([currentPosition.lon, currentPosition.lat])
           .addTo(mapRef.current);
       } else {
-        markerRef.current.setLngLat([currentPosition.lon, currentPosition.lat]);
         updatePlaybackMarkerElement(
           markerRef.current.getElement(),
           markerHtml,
@@ -321,7 +359,30 @@ export function useTrailPlaybackCamera({
       }
     }
 
-    if (completedCoordinates.length > 0 && mapRef.current.getSource('trail-completed')) {
+    const completedTrailSource = mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource | undefined;
+    if (completedCoordinates.length > 0 && completedTrailSource) {
+      if (completedTrailQueueSourceRef.current !== completedTrailSource) {
+        const completedTrailMap = mapRef.current;
+        completedTrailQueueRef.current?.dispose();
+        completedTrailQueueSourceRef.current = completedTrailSource;
+        completedTrailQueueRef.current = createLatestFrameQueue<CompletedTrailFrame>({
+          paint: async (frame) => {
+            await completedTrailSource.setData(frame.data);
+            await waitForNextMapRender(completedTrailMap);
+          },
+          commit: (frame) => {
+            if (frame.markerPosition) markerRef.current?.setLngLat(frame.markerPosition);
+          },
+        });
+      }
+
+      const paintCompletedTrail = (data: CompletedTrailData) => {
+        completedTrailQueueRef.current?.enqueue({
+          data,
+          markerPosition: lastPaintedCoordinate(data),
+        });
+      };
+
       if (trailStyle.colorMode === 'heartRate') {
         const features: Array<Feature<LineString, { color: string }>> = [];
         const heartRatePoints = activeTrack && !computedJourney
@@ -340,7 +401,7 @@ export function useTrailPlaybackCamera({
           });
         }
 
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData({
+        paintCompletedTrail({
           type: 'FeatureCollection',
           features,
         });
@@ -365,7 +426,7 @@ export function useTrailPlaybackCamera({
           partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
         });
 
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData({
+        paintCompletedTrail({
           type: 'FeatureCollection',
           features: zoneFeatures,
         });
@@ -380,7 +441,7 @@ export function useTrailPlaybackCamera({
           partialSegmentIndex: currentSegment?.segment.segmentIndex ?? null,
         });
 
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData(
+        paintCompletedTrail(
           coloredFeatures.length > 0
             ? {
                 type: 'FeatureCollection',
