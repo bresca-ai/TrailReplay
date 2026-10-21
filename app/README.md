@@ -36,3 +36,7 @@ npm run build
 ## Build Output
 
 Vite builds this package for the site root, and production output is written to `app/dist`.
+
+## Fork Pull Request Previews
+
+Cloudflare Pages does not automatically preview pull requests opened from forks. A maintainer can create one from **Actions → Approved fork preview** by entering the pull request number. The workflow mirrors the current fork commit to a managed branch so Cloudflare can build it and report the required `Cloudflare Pages` check on that commit.
