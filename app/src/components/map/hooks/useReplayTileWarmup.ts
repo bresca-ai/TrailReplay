@@ -95,17 +95,31 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       container.style.width = `${visibleContainer.clientWidth || WARMUP_VIEWPORT.width}px`;
       container.style.height = `${visibleContainer.clientHeight || WARMUP_VIEWPORT.height}px`;
     }
+    // Tile discovery needs imagery and DEM requests, not a second terrain
+    // mesh rendered into textures on every pose. An invisible hillshade keeps
+    // the DEM source active without the expensive terrain render pass.
+    const discoveryStyle: maplibregl.StyleSpecification = {
+      ...MAP_STYLE as unknown as maplibregl.StyleSpecification,
+      layers: [
+        ...MAP_STYLE.layers as unknown as maplibregl.LayerSpecification[],
+        { id: 'warmup-dem', type: 'hillshade', source: 'terrain-dem', paint: { 'hillshade-exaggeration': 0 } },
+      ],
+    };
+    delete discoveryStyle.terrain;
     const warmupMap = new maplibregl.Map({
       attributionControl: false,
       container,
       interactive: false,
+      // Match authored shots; the default 60-degree cap missed their horizon.
+      maxPitch: 85,
+      cancelPendingTileRequestsWhileZooming: false,
       // The primary map owns decoded replay tiles. Discovery only needs a
       // small working set; completed requests remain in the browser cache.
       maxTileCacheSize: 256,
       // Discovery uses CSS viewport coverage, not retina-quality output. The
       // hidden 1920x1080 retina map was competing with playback for the GPU.
       pixelRatio: 1,
-      style: MAP_STYLE as unknown as maplibregl.StyleSpecification,
+      style: discoveryStyle,
     });
     warmupMapRef.current = warmupMap;
     const resizeObserver = visibleContainer ? new ResizeObserver(() => {

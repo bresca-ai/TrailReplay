@@ -7,7 +7,10 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 // keeps the frame coherent; the native calculator must still enforce the
 // tile-count budget as a cinematic shot tilts toward the horizon.
 export const BASEMAP_MAX_TILE_ZOOM_LEVELS = 1;
-export const BASEMAP_TILE_COUNT_RATIO = 16;
+// A 16x cover creates thousands of tiles at steep authored pitches. Exchanging
+// an entire pyramid then hits quadratic loaded/abort scans in the tile manager.
+// Keep a coherent image level within a bounded 4x cover instead.
+export const BASEMAP_TILE_COUNT_RATIO = 4;
 
 type TileZoomCalculator = (
   requestedCenterZoom: number,

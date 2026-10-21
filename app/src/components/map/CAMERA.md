@@ -190,10 +190,16 @@ only exist on explicitly probe-enabled pages and never appear in normal exports.
 
 `basemapTileLod.ts` keeps imagery at one zoom level with hysteresis. Its
 calculator must wrap the native calculator installed by `setSourceTileLodParams`,
-including its tile-count correction. Returning the camera zoom unconditionally
+including its tile-count correction. Bound the steep-shot cover at 4x the
+normal tile count: 16x produced bulk cleanup stalls at imagery-level changes.
+Returning the camera zoom unconditionally
 removes that correction: steep authored shots then cover the horizon with
 near-field imagery tiles and stall terrain rendering. Apply the same policy to
-the visible map and the predictive warmup map. Guard non-finite cover geometry
+the visible map and the predictive warmup map. The warmup camera must allow the
+same 85-degree pitch as authored shots; MapLibre's default 60-degree cap misses
+their horizon. Discovery requests DEM tiles through an invisible hillshade but
+never renders a second terrain mesh alongside the visible replay. Its CSS
+viewport follows the visible map, at pixel ratio 1. Guard non-finite cover geometry
 before passing it to the stateful hysteresis.
 
 ### Playback marker modifiers
