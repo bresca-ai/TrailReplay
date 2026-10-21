@@ -288,6 +288,7 @@ export function TrailMap(_props: TrailMapProps) {
     exportFrame: _props.exportFrame ?? null,
     followBehindZoomLevel,
     isExporting,
+    isPlaying: playback.isPlaying,
     isInTransport,
     isMapLoaded,
     mapRef: map,
@@ -316,6 +317,8 @@ export function TrailMap(_props: TrailMapProps) {
   // Applies in every camera mode, and to manual navigation as much as to the
   // replay: whatever moves the camera, it does not end up underground.
   useCameraTerrainClearance({
+    playbackOwnsCamera: cameraMode === 'cinematic'
+      && (isExporting || playback.isPlaying || animationPhase === 'intro' || animationPhase === 'outro'),
     isMapLoaded,
     mapRef: map,
     show3DTerrain: settings.show3DTerrain,
@@ -349,6 +352,7 @@ export function TrailMap(_props: TrailMapProps) {
     cameraMode,
     cinematicKeyframes,
     diagnostics: tileDiagnostics,
+    visibleMapRef: map,
     elevationData,
     // Deterministic export already advances the visible map one frame at a
     // time. Keeping the second, offscreen MapLibre instance alive at the same

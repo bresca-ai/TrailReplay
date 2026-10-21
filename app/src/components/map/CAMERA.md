@@ -159,6 +159,33 @@ brings them into line.
 
 ## How to measure
 
+### Cinematic height and shot continuity
+
+Apply center elevation and the complete pose in one `jumpTo`. `setCenterElevation`
+is itself another `jumpTo`, so calling it first applies the new elevation to the
+old shot, runs collision handling twice and publishes two camera movements.
+While cinematic playback owns elevation, temporarily disable MapLibre's
+`centerClampedToGround`: its render loop otherwise overwrites the explicit
+filtered height with raw DEM height after the pose is applied. Restore the prior
+setting when playback releases ownership. Native camera collision remains active.
+
+Cinematic height is a fixed symmetric Blackman average along the planned camera
+anchor path (`cinematicCameraElevation.ts`), with a soft framing bound for close
+shots. It is spatial, not a wall-clock chase: a constant climb has no lag.
+Sample terrain in pairs so missing tiles cannot bias the window to one side.
+The custom post-render pitch servo yields to MapLibre 6's own atomic collision
+handling during cinematic playback/export; normal manual navigation retains it.
+
+Smooth authored shots use time-aware, shape-preserving Hermite tangents. Do not
+restore unscaled Catmull-Rom plus hard clamping: unequal shot spacing then
+produces velocity discontinuities and overshoot that sticks against the clamp.
+
+For a complete replay capture, open `?probe=1`, load the project, click **Record
+camera diagnostics**, play through the ending and click **Save camera diagnostics**.
+The JSON records simulated time, wall time, center elevation, pitch, pitch ceiling,
+zoom, bearing and camera movement count per sampled playback frame. These controls
+only exist on explicitly probe-enabled pages and never appear in normal exports.
+
 ### Cinematic tile budget
 
 `basemapTileLod.ts` keeps imagery at one zoom level with hysteresis. Its

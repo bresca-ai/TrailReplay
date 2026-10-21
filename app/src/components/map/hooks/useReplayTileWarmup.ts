@@ -48,6 +48,7 @@ interface UseReplayTileWarmupParams {
   followBehindZoomLevel: number;
   isMapLoaded: boolean;
   isPlaying: boolean;
+  visibleMapRef: React.MutableRefObject<maplibregl.Map | null>;
   mapStyle: string;
   playbackProgress: number;
   playbackSpeed: number;
@@ -89,14 +90,34 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     });
     document.body.appendChild(container);
 
+    const visibleContainer = params.visibleMapRef.current?.getContainer();
+    if (visibleContainer) {
+      container.style.width = `${visibleContainer.clientWidth || WARMUP_VIEWPORT.width}px`;
+      container.style.height = `${visibleContainer.clientHeight || WARMUP_VIEWPORT.height}px`;
+    }
     const warmupMap = new maplibregl.Map({
       attributionControl: false,
       container,
       interactive: false,
-      maxTileCacheSize: 1_200,
+      // The primary map owns decoded replay tiles. Discovery only needs a
+      // small working set; completed requests remain in the browser cache.
+      maxTileCacheSize: 256,
+      // Discovery uses CSS viewport coverage, not retina-quality output. The
+      // hidden 1920x1080 retina map was competing with playback for the GPU.
+      pixelRatio: 1,
       style: MAP_STYLE as unknown as maplibregl.StyleSpecification,
     });
     warmupMapRef.current = warmupMap;
+    const resizeObserver = visibleContainer ? new ResizeObserver(() => {
+      const width = visibleContainer.clientWidth;
+      const height = visibleContainer.clientHeight;
+      if (width <= 0 || height <= 0) return;
+      if (container.style.width === `${width}px` && container.style.height === `${height}px`) return;
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+      warmupMap.resize();
+    }) : null;
+    if (visibleContainer) resizeObserver?.observe(visibleContainer);
     const onLoading = (event: unknown) => {
       if (!isWarmupPoseActiveRef.current) return;
       const key = getMapLibreTileKey(event);
@@ -134,11 +155,12 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     return () => {
       warmupMap.off('sourcedataloading', onLoading);
       warmupMap.off('sourcedata', onData);
+      resizeObserver?.disconnect();
       warmupMap.remove();
       container.remove();
       warmupMapRef.current = null;
     };
-  }, [params.diagnostics, params.enabled, params.isMapLoaded, scheduler]);
+  }, [params.diagnostics, params.enabled, params.isMapLoaded, params.visibleMapRef, scheduler]);
 
   useEffect(() => {
     if (!params.enabled) return;
