@@ -31,6 +31,7 @@ function drawTintedSvgIcon(
     color: string;
     height: number;
     width: number;
+    backing?: HTMLImageElement;
   },
 ) {
   const offscreen = document.createElement('canvas');
@@ -47,6 +48,11 @@ function drawTintedSvgIcon(
   offscreenContext.globalCompositeOperation = 'source-in';
   offscreenContext.fillStyle = options.color;
   offscreenContext.fillRect(0, 0, offscreen.width, offscreen.height);
+  if (options.backing) {
+    // Compose the opaque interior before applying the shared outline/shadow.
+    offscreenContext.globalCompositeOperation = 'destination-over';
+    offscreenContext.drawImage(options.backing, (offscreen.width - width) / 2, (offscreen.height - height) / 2, width, height);
+  }
 
   context.drawImage(
     offscreen,
@@ -343,10 +349,14 @@ export function drawExportFrame({
         if (maskUrl) {
           const markerSvg = svgMarkerImageCacheRef.current.get(maskUrl);
           if (markerSvg) {
+            const backingUrl = markerIcon.dataset.iconBacking;
+            const backing = backingUrl ? svgMarkerImageCacheRef.current.get(backingUrl) : undefined;
+            if (backingUrl && !backing) preloadSvgMarkerIcon(backingUrl);
             drawTintedSvgIcon(context, markerSvg, {
               centerX: markerX,
               centerY: markerY,
               color: markerIcon.style.backgroundColor || '#000000',
+              backing,
               width: markerIconWidth,
               height: markerIconHeight,
             });
