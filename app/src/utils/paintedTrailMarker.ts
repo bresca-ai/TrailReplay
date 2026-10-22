@@ -1,8 +1,8 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { newestPaintedTrailTip, PAINTED_TRAIL_TIP_LAYER } from './paintedTrailTip';
+import { newestPaintedTrailTip, PAINTED_TRAIL_TIP_KIND, PAINTED_TRAIL_TIP_LAYER } from './paintedTrailTip';
 
 type PaintedTip = NonNullable<ReturnType<typeof newestPaintedTrailTip>>;
-export type PaintedMarkerMap = Pick<MapLibreMap, 'getLayer' | 'queryRenderedFeatures' | 'project' | 'on' | 'off'>;
+export type PaintedMarkerMap = Pick<MapLibreMap, 'getLayer' | 'querySourceFeatures' | 'project' | 'on' | 'off'>;
 
 /** A render-only adornment. Camera move events must never reposition it. */
 export class PaintedTrailMarker {
@@ -49,7 +49,14 @@ export function bindPaintedTrailMarker(
     const marker = getMarker();
     if (!marker || !map.getLayer(PAINTED_TRAIL_TIP_LAYER)) return;
     marker.render(newestPaintedTrailTip(
-      map.queryRenderedFeatures({ layers: [PAINTED_TRAIL_TIP_LAYER] }),
+      // Read the tiles used by this render, not a screen-space hit test. At
+      // steep terrain angles that test can miss a visible endpoint for seconds
+      // while both the trail and camera continue to advance. Source queries
+      // use renderable tiles, so this still follows the painted worker revision
+      // rather than jumping ahead to the latest submitted playback position.
+      map.querySourceFeatures('trail-completed', {
+        filter: ['==', ['get', 'kind'], PAINTED_TRAIL_TIP_KIND],
+      }),
       marker.minimumRevision,
     ), map);
   };
