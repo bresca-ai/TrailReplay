@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { createDefaultSocialShareSettings } from '@/store/defaults';
 import { resolveSocialShareTitle } from './socialShareData';
+import { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePanel } from './SocialSharePanel';
 
 const names = {
@@ -23,6 +24,9 @@ vi.mock('./useSocialShareExport', () => ({
     };
   },
 }));
+function TestPanel(props: { onUseCover?: () => void; coverMode?: boolean }) {
+  return <SocialSharePanel {...props} exportController={useSocialShareExport()} />;
+}
 const initial = useAppStore.getState();
 beforeEach(() => {
   useAppStore.setState(initial, true);
@@ -32,9 +36,14 @@ beforeEach(() => {
 afterEach(() => { cleanup(); useAppStore.setState(initial, true); });
 
 describe('cover title and places controls', () => {
+  it.each([false, true])('shows Back to video from the image tab (cover enabled: %s)', (coverMode) => {
+    render(<TestPanel coverMode={coverMode} onUseCover={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Back to video export' })).toBeInTheDocument();
+  });
+
   it.each(['journey-name', 'track-name'] as const)('always exposes the resolved %s title for editing', (titleMode) => {
     useAppStore.getState().setSocialShareSettings({ titleMode });
-    render(<SocialSharePanel />);
+    render(<TestPanel />);
     const title = titleMode === 'journey-name' ? names.journey.name : names.tracks[0].name;
     const input = screen.getByRole('textbox', { name: 'Title' });
     expect(input).toHaveValue(title);
@@ -46,14 +55,14 @@ describe('cover title and places controls', () => {
   });
 
   it('lets a user intentionally clear the title', () => {
-    render(<SocialSharePanel />);
+    render(<TestPanel />);
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: '' } });
     expect(useAppStore.getState().socialShareSettings.customTitle).toBe('');
     expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('');
   });
 
   it('defaults cover places off and exposes one action to show or hide them', () => {
-    render(<SocialSharePanel />);
+    render(<TestPanel />);
     const show = screen.getByRole('button', { name: 'Show places' });
     expect(show).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(show);

@@ -11,15 +11,6 @@ import { useSocialShareExport } from './export/useSocialShareExport';
 import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
 import type { SocialShareAspectRatio } from '@/types';
 
-function AutomaticCoverRenderer({ onReady }: { onReady: (url: string) => void }) {
-  const { previewUrl, settings, selectedPhotoReady } = useSocialShareExport();
-  useEffect(() => {
-    const splitReady = settings.template !== 'split' || (!!settings.photoSlots?.length && settings.photoSlots.every((slot) => !!slot.imageUrl));
-    if (previewUrl && splitReady && (settings.template !== 'photo-first' || selectedPhotoReady)) onReady(previewUrl);
-  }, [onReady, previewUrl, selectedPhotoReady, settings]);
-  return null;
-}
-
 export function ExportPanel() {
   const { t } = useI18n();
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
@@ -37,7 +28,6 @@ export function ExportPanel() {
   const studioDeliveryEmail = useAppStore((state) => state.studioDeliveryEmail);
   const setStudioDeliveryEmail = useAppStore((state) => state.setStudioDeliveryEmail);
   const [showSettings, setShowSettings] = useState(false);
-  const [editingCover, setEditingCover] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [consentDefaultsLoaded, setConsentDefaultsLoaded] = useState(false);
   const consentTouchedRef = useRef(false);
@@ -90,18 +80,17 @@ export function ExportPanel() {
     coverImageUrl: videoExportSettings.includeCover ? coverPreviewUrl : null,
   });
   const studioEmailValid = localStudioDownload || isValidDeliveryEmail(studioDeliveryEmail);
-  const coverMode = exportMode === 'image' && editingCover;
+  const coverMode = videoExportSettings.includeCover;
+  // One renderer owns the preview across both tabs, including in-flight edits.
+  const socialExport = useSocialShareExport(exportMode === 'image' || (coverMode && !coverPreviewUrl));
   const coverAspectRatio = videoExportSettings.aspectRatio;
   const receiveCoverPoster = useCallback((url: string) => setCoverPreviewUrl(url), [setCoverPreviewUrl]);
   const openCoverEditor = () => {
-    setCoverPreviewUrl(null);
     setVideoExportSettings({ includeCover: true });
     setSocialShareSettings({ aspectRatio: coverAspectRatio });
-    setEditingCover(true);
     setExportMode('image');
   };
   const returnToVideo = () => {
-    setEditingCover(false);
     setExportMode('video');
   };
   const changeCoverAspectRatio = (ratio: SocialShareAspectRatio) => {
@@ -133,9 +122,6 @@ export function ExportPanel() {
 
   return (
     <div className="space-y-4">
-      {exportMode === 'video' && videoExportSettings.includeCover && !coverPreviewUrl && tracks.length > 0 && (
-        <AutomaticCoverRenderer onReady={receiveCoverPoster} />
-      )}
       {/* Save Project */}
       <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3">
         <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('export.saveProjectTitle')}</h3>
@@ -175,7 +161,7 @@ export function ExportPanel() {
           <Film className="w-3.5 h-3.5" /> {t('imageExport.modeVideo')}
         </button>
         <button
-          onClick={() => { setEditingCover(false); setExportMode('image'); }}
+          onClick={() => setExportMode('image')}
           className={`py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5 border transition-colors ${
             exportMode === 'image'
               ? 'bg-[var(--evergreen)] text-[var(--canvas)] border-[var(--evergreen)]'
@@ -188,11 +174,12 @@ export function ExportPanel() {
 
       {exportMode === 'image' ? (
         <SocialSharePanel
+          exportController={socialExport}
           coverMode={coverMode}
           aspectRatioOverride={coverMode ? coverAspectRatio : undefined}
           onAspectRatioChange={coverMode ? changeCoverAspectRatio : undefined}
           onPosterReady={coverMode ? receiveCoverPoster : undefined}
-          onUseCover={coverMode ? returnToVideo : undefined}
+          onUseCover={returnToVideo}
         />
       ) : (
         <>
@@ -304,7 +291,7 @@ export function ExportPanel() {
             <button
               onClick={handleStartExport}
               disabled={playback.totalDuration === 0
-                || (videoExportSettings.includeCover && !coverPreviewUrl)
+                || (videoExportSettings.includeCover && (!coverPreviewUrl || socialExport.isRendering))
                 || (videoExportSettings.qualityMode === 'studio' && !studioEmailValid)}
               className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >

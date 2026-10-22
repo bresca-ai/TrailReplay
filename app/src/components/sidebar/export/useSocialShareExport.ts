@@ -34,7 +34,7 @@ export type MapRouteGesture =
   | { type: 'move'; deltaX: number; deltaY: number }
   | { type: 'resize'; scaleFactor: number; anchorX: number; anchorY: number };
 
-export function useSocialShareExport() {
+export function useSocialShareExport(enabled = true) {
   const settings = useAppStore((s) => s.socialShareSettings);
   const setSocialShareSettings = useAppStore((s) => s.setSocialShareSettings);
   const tracks = useAppStore((s) => s.tracks);
@@ -308,6 +308,12 @@ export function useSocialShareExport() {
 
       const url = renderSocialPoster(input);
       setPreviewUrl(url);
+      // Persist completed previews even if the user has switched back to Video
+      // while tiles or fonts were loading. Incomplete photo layouts stay drafts.
+      const photosReady = settings.template === 'split'
+        ? !!settings.photoSlots?.length && settings.photoSlots.every((slot) => !!slot.imageUrl)
+        : settings.template !== 'photo-first' || !!photoRef.current;
+      if (photosReady) useAppStore.getState().setVideoCoverImageUrl(url);
     } catch (e) {
       console.error('Social share preview failed', e);
     } finally {
@@ -356,8 +362,17 @@ export function useSocialShareExport() {
     }, 450);
   }, [generatePreview, settings.aspectRatio, settings.splitMapFrame, settings.template]);
 
+  const lastAutomaticRenderRef = useRef<{ generate: typeof generatePreview; photoVersion: number } | null>(null);
   useEffect(() => {
-    const render = () => void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first', reuseMapCapture: true });
+    if (!enabled) return;
+    // Returning to the image tab alone must not recapture the video camera or
+    // replace the composition that the user already designed.
+    const previous = lastAutomaticRenderRef.current;
+    if (previous?.generate === generatePreview && previous.photoVersion === photoVersion) return;
+    const render = () => {
+      lastAutomaticRenderRef.current = { generate: generatePreview, photoVersion };
+      void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first', reuseMapCapture: true });
+    };
     if (settings.template === 'photo-first' || mapGlobalRef.current) {
       render();
       return;
@@ -371,6 +386,7 @@ export function useSocialShareExport() {
     }, 150);
     return () => window.clearInterval(timer);
   }, [
+    enabled,
     settings.template,
     settings.aspectRatio,
     settings.selectedPictureId,

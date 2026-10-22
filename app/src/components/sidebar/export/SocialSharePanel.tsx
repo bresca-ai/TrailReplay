@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, X } from 'lucide-react';
-import { useSocialShareExport } from './useSocialShareExport';
+import type { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal, type CoverEditorSection } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { REPLAY_CAMERA_MAX_PITCH } from '@/utils/cameraLimits';
@@ -51,6 +51,7 @@ const DEFAULT_SOCIAL_STATS: SocialShareStat[] = [
 ];
 
 interface Props {
+  exportController: ReturnType<typeof useSocialShareExport>;
   coverMode?: boolean;
   aspectRatioOverride?: SocialShareAspectRatio;
   onAspectRatioChange?: (ratio: SocialShareAspectRatio) => void;
@@ -58,7 +59,7 @@ interface Props {
   onUseCover?: () => void;
 }
 
-export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAspectRatioChange, onPosterReady, onUseCover }: Props) {
+export function SocialSharePanel({ exportController, coverMode = false, aspectRatioOverride, onAspectRatioChange, onPosterReady, onUseCover }: Props) {
   const { t } = useI18n();
   const overlayFont = useAppStore((state) => state.settings.trailStyle.overlayFont);
   const setTrailStyle = useAppStore((state) => state.setTrailStyle);
@@ -72,7 +73,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
     titleBboxNorm,
     logoBboxNorm,
     resolvedTitle,
-  } = useSocialShareExport();
+  } = exportController;
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
@@ -856,7 +857,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           <Download className="h-4 w-4" />
           {t(coverMode ? 'imageExport.savePng' : 'imageExport.downloadPng')}
         </button>
-        {coverMode && <button type="button"
+        {onUseCover && <button type="button"
           onClick={() => { if (previewUrl) { onPosterReady?.(previewUrl); onUseCover?.(); } }}
           disabled={!previewUrl || isRendering || hasEmptyRequiredPhoto}
           title={hasEmptyRequiredPhoto ? t('imageExport.addPhoto') : undefined}
@@ -874,10 +875,10 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           isRendering={isRendering}
           onClose={() => undefined}
           onExport={() => {
-            if (coverMode) { onPosterReady?.(previewUrl); onUseCover?.(); }
+            if (onUseCover) { onPosterReady?.(previewUrl); onUseCover(); }
             else void exportPng();
           }}
-          onDownload={coverMode ? () => { onPosterReady?.(previewUrl); void exportPng(); } : undefined}
+          onDownload={onUseCover ? () => { onPosterReady?.(previewUrl); void exportPng(); } : undefined}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
           onMapRouteGesture={transformMapViewport}
@@ -892,7 +893,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}
           logoBboxNorm={logoBboxNorm}
-          coverMode={coverMode}
+          coverMode={!!onUseCover}
           inline
         /> : <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#101916] text-sm text-white/70">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('imageExport.rendering')}
