@@ -59,14 +59,14 @@ describe('render-only playback marker', () => {
 
   it('advances with renderable trail tiles even when steep-terrain screen queries miss the endpoint', () => {
     const h = harness();
-    h.tip(335, [1.836937, 41.573107]);
+    h.tip(335, [1.2, 41.3]);
     h.emit('render');
     // The opening cinematic pan used to hold revision 335 while the rendered
     // source advanced to 373, because the circle layer's hit test returned [].
-    h.tip(373, [1.840481, 41.573437]);
+    h.tip(373, [1.3, 41.4]);
     h.emit('render');
     expect(h.marker.minimumRevision).toBe(373);
-    expect(h.map.project).toHaveBeenLastCalledWith([1.840481, 41.573437]);
+    expect(h.map.project).toHaveBeenLastCalledWith([1.3, 41.4]);
     expect(h.map.querySourceFeatures).toHaveBeenLastCalledWith('trail-completed', {
       filter: ['==', ['get', 'kind'], 'playback-tip'],
     });
