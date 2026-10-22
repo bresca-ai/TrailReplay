@@ -206,6 +206,9 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       ),
     }];
   });
+  const focusedPoints = focusedSection
+    ? profileData.pointsBySegment.get(focusedSection.segmentIndex) ?? []
+    : [];
   const sectionMetrics = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
     ? {
         kind: focusedSection.kind,
@@ -213,15 +216,11 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           ? `+${formatElevation(focusedSection.elevationGain, settings.unitSystem)}`
           : `-${formatElevation(focusedSection.elevationLoss, settings.unitSystem)}`,
         start: formatElevation(
-          focusedSection.kind === 'climb'
-            ? focusedSection.minElevation
-            : focusedSection.maxElevation,
+          getElevationAtProgress(focusedPoints, focusedSection.startProgress),
           settings.unitSystem,
         ),
         end: formatElevation(
-          focusedSection.kind === 'climb'
-            ? focusedSection.maxElevation
-            : focusedSection.minElevation,
+          getElevationAtProgress(focusedPoints, focusedSection.endProgress),
           settings.unitSystem,
         ),
         distance: formatDistance(focusedSection.distance, settings.unitSystem),
