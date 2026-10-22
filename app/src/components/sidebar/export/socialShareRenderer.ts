@@ -476,13 +476,6 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
     }
   }
 
-  if (settings.layoutPreset === 'long-way') {
-    ctx.save();
-    ctx.fillStyle = 'rgba(8, 35, 22, 0.18)';
-    ctx.fillRect(0, 0, w, h);
-    ctx.restore();
-  }
-
   // Subtle top scrim — only enough to make the logo + title readable
   const topGrad = ctx.createLinearGradient(0, 0, 0, h * 0.22);
   topGrad.addColorStop(0, 'rgba(0,0,0,0.62)');
@@ -490,22 +483,12 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
   ctx.fillStyle = topGrad;
   ctx.fillRect(0, 0, w, h * 0.22);
 
-  if (settings.layoutPreset === 'long-way') {
-    const titleScrim = ctx.createLinearGradient(0, 0, w * 0.88, 0);
-    titleScrim.addColorStop(0, 'rgba(3,18,13,0.58)');
-    titleScrim.addColorStop(1, 'rgba(3,18,13,0)');
-    ctx.fillStyle = titleScrim;
-    // Keep the title contrast continuous: a fixed-height rectangle leaves a
-    // horizontal edge above the empty stats area when statistics are hidden.
-    ctx.fillRect(0, 0, w, h);
-  }
-
   // Route glow (3-D layered) — full poster, no clipping
   if (projectedRouteForMap && projectedRouteForMap.length > 1) {
     if (settings.routeGlow) {
       drawRouteGlow(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
-    } else if (!mapCanvas || settings.layoutPreset === 'long-way') {
-      drawRoutePlain(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, settings.layoutPreset === 'long-way' ? '#FF7A1A' : input.routeColor);
+    } else if (!mapCanvas) {
+      drawRoutePlain(ctx, projectedRouteForMap, Math.round(w * 0.014), settings.routeTransform.opacity, input.routeColor);
     }
   }
 

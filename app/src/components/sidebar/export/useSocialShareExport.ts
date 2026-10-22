@@ -274,9 +274,6 @@ export function useSocialShareExport() {
             preCapuredMapCanvas = cached.canvas;
           } else {
             preCapuredMapCanvas = await captureSocialMap(map, {
-              routeGlow: settings.template === 'split' ? false : settings.routeGlow,
-              routeOpacity: settings.routeTransform.opacity,
-              highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
               waitForTiles: !options.fastMapCapture,
             });
             if (preCapuredMapCanvas) lastMapSnapshotRef.current = { key: snapshotKey, canvas: preCapuredMapCanvas };
@@ -429,11 +426,7 @@ export function useSocialShareExport() {
       if (settings.template !== 'photo-first') {
         const map = mapGlobalRef.current;
         if (map) {
-          preCapuredMapCanvas = await captureSocialMap(map, {
-            routeGlow: settings.template === 'split' ? false : settings.routeGlow,
-            routeOpacity: settings.routeTransform.opacity,
-            highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
-          });
+          preCapuredMapCanvas = await captureSocialMap(map);
         }
       }
       const [, brandLogo, assets] = await Promise.all([
