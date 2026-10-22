@@ -48,6 +48,18 @@ function recordedTime(track: GPXTrack | undefined, mode: DurationMode = 'total')
     : track.totalTime || track.movingTime;
 }
 
+const journeyLegs = new WeakMap<ComputedJourney, Map<number, JourneyPoint[]>>();
+function journeyLegPoints(journey: ComputedJourney, timing: SegmentTiming): JourneyPoint[] {
+  let legs = journeyLegs.get(journey);
+  if (!legs) { legs = new Map(); journeyLegs.set(journey, legs); }
+  let points = legs.get(timing.segmentIndex);
+  if (!points) {
+    points = journey.coordinates.slice(timing.startCoordIndex, timing.endCoordIndex + 1);
+    legs.set(timing.segmentIndex, points);
+  }
+  return points;
+}
+
 export function calculateElevationGain(
   points: Array<{ elevation: number }>,
   upToIndex: number,
@@ -241,7 +253,7 @@ function coordinateAtJourneyDistance(
   if (computedJourney && segmentTimings.length > 0) {
     for (const timing of segmentTimings) {
       if (targetMeters < timing.startDistance || targetMeters > timing.endDistance) continue;
-      const segment = computedJourney.coordinates.slice(timing.startCoordIndex, timing.endCoordIndex + 1);
+      const segment = journeyLegPoints(computedJourney, timing);
       const localDistance = targetMeters - timing.startDistance;
       let low = 0;
       let high = segment.length - 1;
@@ -336,7 +348,7 @@ export function calculateCurrentLiveStats({
     // thousand metres into the leg.
     for (const timing of segmentTimings) {
       if (timing.type !== 'track') continue;
-      const segment = computedJourney.coordinates.slice(timing.startCoordIndex, timing.endCoordIndex + 1);
+      const segment = journeyLegPoints(computedJourney, timing);
 
       if (timing.segmentIndex < currentPosition.segmentIndex) {
         if (!resetThisSegment) elevationGain += calculateElevationGain(segment, segment.length - 1);
