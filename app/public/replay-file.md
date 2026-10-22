@@ -678,6 +678,7 @@ present; repeated plays of one track should have distinct segment IDs.
       "zoom": 12.5,
       "frame": "world",
       "easing": "smooth",
+      "target": { "lon": -3.72, "lat": 40.41, "elevationMeters": 1450 },
       "terrain": { "rationale": "Open view across the sampled ridge", "confidence": 0.8, "warnings": [] }
     }]
   }
@@ -690,6 +691,10 @@ is in `[0, 360)`, `pitchDeg` in `[0, 85]`, and `zoom` in `[0, 20]`. `frame` is
 `world` or `route`; `easing` is `smooth`, `linear`, or `hold`. Optional terrain
 metadata records rationale, confidence (`0`–`1`), and warnings. These values
 explain an authored choice; they do not establish rendered quality.
+Optional `target` fixes the geographic look-at point for this shot; its
+elevation is unexaggerated metres above sea level, not the camera's location.
+Longitude must be `[-180, 180]`, latitude `[-85, 85]`, and elevation
+`[-12000, 100000]` metres.
 
 See [camera-authoring.md](https://trailreplay.com/camera-authoring.md) for the
 optional Node CLI workflow and numeric evaluation limits. The field schema is

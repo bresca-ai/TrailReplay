@@ -1,5 +1,5 @@
 import type { GPXTrack, JourneySegment } from '@/types';
-import { buildComputedJourney, buildJourneyDistanceProfile } from '@/utils/journeyUtils';
+import { buildComputedJourney, buildJourneyDistanceProfile, getJourneyPointAtProgress, getSegmentAtProgress } from '@/utils/journeyUtils';
 import { deriveCinematicKeyframeProgress, prepareCinematicKeyframeTrack, getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
 import type { CinematicCameraKeyframe } from '@/utils/cinematicCameraPlan';
 import { getRouteBearingAtProgress } from '@/utils/replayCameraPlan';
@@ -8,6 +8,8 @@ import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
 import { getSmoothedCameraAnchor } from '@/utils/cinematicCameraAnchor';
 import { cinematicAnchorSmoothingHalfWindow } from '@/components/map/cameraUtils';
 import { terrainContextFingerprint } from './context';
+import { composeRouteCandidates, groupOverlappingRouteFootprints, routePointInFrame } from './routeComposition';
+import type { RouteCompositionPoint } from './routeComposition';
 import type { BuildTerrainCameraBriefOptions, EvaluateTerrainCameraPlanOptions, TerrainAnchor, TerrainCameraBrief, TerrainCameraEvaluation, TerrainCameraKeyframe, TerrainSampler } from './types';
 export * from './types';
 export { terrainContextFingerprint } from './context';
@@ -22,6 +24,7 @@ const WIDTH_PX = 1280;
 const MPP_Z0 = 40075016.686 / 512;
 const VERTICAL_FOV_DEG = 36;
 const MAX_FRAMES = 12;
+const ROUTE_VISIBILITY_SAMPLES = 20;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const norm = (v: number) => (v % 360 + 360) % 360;
 const angleDelta = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
@@ -43,6 +46,65 @@ function coordinateAt(track: GPXTrack, distance: number): [number, number] | nul
 async function sampleFinite(sampler: TerrainSampler, lon: number, lat: number): Promise<number | null> {
   const value = await sampler.sampleElevation(lon, lat);
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function routePointsFor(track: GPXTrack): RouteCompositionPoint[] {
+  if (track.points.length === 0) return [];
+  const count = Math.min(ROUTE_VISIBILITY_SAMPLES, track.points.length);
+  const sampled = count <= 1 ? track.points.map(p => p) : Array.from({ length: count }, (_, i) => {
+    const point = track.points[Math.round(i * (track.points.length - 1) / (count - 1))];
+    return point;
+  });
+  const minBy = (selector: (point: GPXTrack['points'][number]) => number) => track.points.reduce((a, b) => selector(a) <= selector(b) ? a : b);
+  const maxBy = (selector: (point: GPXTrack['points'][number]) => number) => track.points.reduce((a, b) => selector(a) >= selector(b) ? a : b);
+  const knownElevationPoints = track.points.filter(point => Number.isFinite(point.elevation));
+  const extrema = [track.points[0], track.points[track.points.length - 1], minBy(point => point.lat), maxBy(point => point.lat), minBy(point => point.lon), maxBy(point => point.lon)];
+  if (knownElevationPoints.length) extrema.push(knownElevationPoints.reduce((a, b) => a.elevation <= b.elevation ? a : b));
+  if (knownElevationPoints.length) extrema.push(knownElevationPoints.reduce((a, b) => a.elevation >= b.elevation ? a : b));
+  return [...new Set([...sampled, ...extrema])].map((point) => ({
+    lon: point.lon, lat: point.lat, elevationMeters: Number.isFinite(point.elevation) ? point.elevation : null,
+    ...(point === track.points[0] ? { isStart: true } : {}),
+  }));
+}
+
+async function evaluateRouteVisibility(points: RouteCompositionPoint[], candidate: { target: { lon: number; lat: number; elevationMeters: number }; bearingDeg: number; pitchDeg: number; zoom: number }, viewport: { widthPx: number; heightPx: number; verticalFovDeg: number; terrainExaggeration: number }, sampler: TerrainSampler, signal?: AbortSignal) {
+  const projected = points.filter(point => routePointInFrame(point, { ...candidate, coverage: 0, mountainAlignment: 0, startVisible: false }, viewport));
+  const routeChecks = projected.length <= 8 ? projected : Array.from({ length: 8 }, (_, i) => projected[Math.round(i * (projected.length - 1) / 7)]);
+  const starts = points.filter(point => point.isStart);
+  for (const start of starts) if (projected.includes(start) && !routeChecks.includes(start)) routeChecks.push(start);
+  const clearPoints = new Set<RouteCompositionPoint>();
+  const unknownPoints = new Set<RouteCompositionPoint>();
+  let unknown = 0;
+  for (const point of routeChecks) {
+    abort(signal);
+    if (point.elevationMeters === null) { unknown++; unknownPoints.add(point); continue; }
+    const mpp = 40075016.686 * Math.cos(candidate.target.lat * Math.PI / 180) / (512 * 2 ** candidate.zoom);
+    const focalPx = viewport.heightPx / (2 * Math.tan(viewport.verticalFovDeg * Math.PI / 360));
+    const cameraDistance = Math.max(1, focalPx * mpp);
+    const pitch = candidate.pitchDeg * Math.PI / 180;
+    const cameraGroundDistance = cameraDistance * Math.sin(pitch);
+    const cameraAltitude = candidate.target.elevationMeters * viewport.terrainExaggeration + cameraDistance * Math.cos(pitch);
+    const [cx, cy] = offset(candidate.target.lon, candidate.target.lat, norm(candidate.bearingDeg + 180), cameraGroundDistance);
+    const bearingToPoint = bearing(cx, cy, point.lon, point.lat);
+    const distance = Math.hypot((point.lon - cx) * metersLon(candidate.target.lat), (point.lat - cy) * M_PER_DEG_LAT);
+    let clear = true, hasUnknown = false;
+    for (const t of [.1, .2, .3, .4, .5, .6, .7, .8, .9]) {
+      const [lon, lat] = offset(cx, cy, bearingToPoint, distance * t);
+      const terrain = await sampleFinite(sampler, lon, lat);
+      if (terrain === null) { hasUnknown = true; continue; }
+      const sightline = cameraAltitude + (point.elevationMeters * viewport.terrainExaggeration - cameraAltitude) * t;
+      if (terrain * viewport.terrainExaggeration > sightline + 2) clear = false;
+    }
+    if (hasUnknown) { unknown++; unknownPoints.add(point); }
+    else if (clear) clearPoints.add(point);
+  }
+  const startInFrameCount = starts.filter(start => projected.includes(start)).length;
+  const startVisibleCount = starts.filter(start => clearPoints.has(start)).length;
+  const startUnknownCount = starts.filter(start => unknownPoints.has(start)).length;
+  const startOccludedCount = starts.filter(start => projected.includes(start) && !unknownPoints.has(start) && !clearPoints.has(start)).length;
+  const allStartsInFrame = starts.length > 0 && startInFrameCount === starts.length;
+  const allStartsVisible = starts.length > 0 && startVisibleCount === starts.length;
+  return { sampled: routeChecks.length, visible: clearPoints.size, unknown, coverage: routeChecks.length ? (projected.length / points.length) * clearPoints.size / routeChecks.length : null, startVisible: allStartsVisible, startInFrame: allStartsInFrame, startOccluded: startOccludedCount > 0, startUnknown: startUnknownCount > 0, startCount: starts.length, startInFrameCount, startVisibleCount, startOccludedCount, startUnknownCount };
 }
 
 async function resolveSampler(options: { sampler?: TerrainSampler; sampleElevation?: (lon: number, lat: number) => Promise<number | null>; signal?: AbortSignal }): Promise<TerrainSampler> {
@@ -139,10 +201,60 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
     warningSet.add('The 5–12 shot budget leaves some route segments without a dedicated keyframe; the intervals between selected shots are still sampled.');
   }
   const routeTimingMode = options.routeTimingMode ?? 'recorded';
-  const distanceProfile = computed ? buildJourneyDistanceProfile(computed.coordinates) : null;
-  const cameraPath = buildCameraPathCoordinates(computed, distanceProfile, undefined, routeTimingMode);
   const cameraStability = options.cameraStability ?? 0.5;
   const smoothingHalfWindow = cinematicAnchorSmoothingHalfWindow(cameraStability, (computed?.totalDuration ?? 0) / 1000);
+  const viewportSize = { widthPx: options.viewport?.widthPx ?? WIDTH_PX, heightPx: options.viewport?.heightPx ?? 720, verticalFovDeg: options.viewport?.verticalFovDeg ?? VERTICAL_FOV_DEG, terrainExaggeration: options.viewport?.terrainExaggeration ?? EXAGGERATION };
+  const routePointsBySegment = new Map<string, RouteCompositionPoint[]>();
+  for (const segment of segments) {
+    if (segment.type !== 'track' || routePointsBySegment.has(segment.id) || !selectedSegments.has(segment.id)) continue;
+    const track = trackFor(tracks, segment.trackId);
+    if (!track) continue;
+    // The trail is draped on the map DEM; recorded GPS altitude can disagree
+    // with that surface, so use the same terrain for fitting and occlusion.
+    const points = routePointsFor(track);
+    for (const point of points) {
+      abort(signal);
+      point.elevationMeters = await sampleFinite(sampler, point.lon, point.lat);
+    }
+    routePointsBySegment.set(segment.id, points);
+  }
+  // Nearby course footprints share a composition target so the framing does not jump between overlapping tracks.
+  const compositionBySegment = new Map<string, { groupIds: string[]; points: RouteCompositionPoint[]; candidates: ReturnType<typeof composeRouteCandidates> }>();
+  const routeGroups = groupOverlappingRouteFootprints([...routePointsBySegment].map(([id, points]) => ({ id, points })));
+  for (const groupIds of routeGroups) {
+    const points = groupIds.flatMap(id => routePointsBySegment.get(id) ?? []);
+    const groupComposition = { groupIds, points, candidates: composeRouteCandidates(points, viewportSize) };
+    for (const id of groupIds) compositionBySegment.set(id, groupComposition);
+  }
+  // Resolve composition once per connected group. All beats and segments in that group reuse its fixed pose.
+  type ChosenComposition = { frame: Omit<TerrainCameraKeyframe, 'id' | 'title' | 'anchor'>; evaluation: TerrainCameraEvaluation; routeVisibility: Awaited<ReturnType<typeof evaluateRouteVisibility>> };
+  const chosenCompositionBySegment = new Map<string, ChosenComposition>();
+  const completedGroups = new Set<string>();
+  for (const [segmentId, composition] of compositionBySegment) {
+    const groupKey = composition.groupIds.join('|');
+    if (completedGroups.has(groupKey)) continue;
+    completedGroups.add(groupKey);
+    const finalists = composition.candidates;
+    const courseHigh = Math.max(...composition.points.map(point => point.elevationMeters ?? 0)) * viewportSize.terrainExaggeration;
+    let selectedComposition: ChosenComposition | null = null;
+    let selectedScore = Number.POSITIVE_INFINITY;
+    for (const candidate of finalists) {
+      const routeVisibility = await evaluateRouteVisibility(composition.points, candidate, viewportSize, sampler, signal);
+      const anchor = selected.find(item => composition.groupIds.includes(item.anchor.segmentId))?.anchor ?? { trackId: '', segmentId, distanceMeters: 0 };
+      const evaluation = await evaluatePose(`terrain-segment-${segmentId}`, anchor, [candidate.target.lon, candidate.target.lat], candidate.bearingDeg, candidate.pitchDeg, candidate.zoom, sampler, options.viewport ?? {}, smoothingHalfWindow, cameraStability, signal, candidate.target.elevationMeters);
+      evaluation.routeVisibility = routeVisibility;
+      const cameraGroundClearance = evaluation.clearanceSamples[0]?.clearanceMeters;
+      const score = (1 - (routeVisibility.coverage ?? 0)) * 100_000 + (routeVisibility.startVisible ? 0 : 100_000)
+        + routeVisibility.unknown * 1_000 + (cameraGroundClearance === null || cameraGroundClearance === undefined ? 50_000 : Math.max(0, 40 - cameraGroundClearance) * 500)
+        + candidate.mountainAlignment * 8 + Math.abs(82 - candidate.pitchDeg) * 20 + (14 - candidate.zoom) * 4
+        + Math.max(0, (evaluation.estimate.cameraAltitudeMeters ?? courseHigh) - courseHigh) * .5;
+      if (score < selectedScore) {
+        selectedScore = score;
+        selectedComposition = { frame: { bearingDeg: candidate.bearingDeg, pitchDeg: candidate.pitchDeg, zoom: candidate.zoom, target: candidate.target, frame: 'world', easing: 'smooth' }, evaluation, routeVisibility };
+      }
+    }
+    if (selectedComposition) for (const groupSegmentId of composition.groupIds) chosenCompositionBySegment.set(groupSegmentId, selectedComposition);
+  }
   const moments: TerrainCameraBrief['moments'] = [], frames: TerrainCameraKeyframe[] = [];
   let centerKnown = 0, radialKnownTotal = 0;
   onProgress?.({ completed: 0, total: selected.length });
@@ -155,36 +267,22 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
     if (result.center === null || radialKnown < 24) warningSet.add('Some terrain samples are unavailable; unknown terrain was not treated as flat.');
     const id = `terrain-${i + 1}`;
     moments.push({ id, title: c.title, anchor: c.anchor, elevationMeters: result.center, reliefMeters: result.relief, reason: c.reason, radialRelief: result.profile });
-    const frameProgress = computed ? deriveCinematicKeyframeProgress({ routeSegmentId: c.anchor.segmentId, routeSegmentDistance: c.anchor.distanceMeters }, computed.segmentTimings, computed.coordinates, routeTimingMode) : null;
-    const routeBearing = frameProgress === null ? 0 : getRouteBearingAtProgress(cameraPath, frameProgress) ?? 0;
-    let bestBearing = norm(routeBearing + 145), bestScore = Number.POSITIVE_INFINITY;
-    for (const direction of DIRECTIONS) {
-      const cameraSide = norm(direction + 180);
-      const hs = result.radial.filter((x) => x.bearing === cameraSide).map((x) => x.elevation).filter((x): x is number => x !== null);
-      const relief = hs.length >= 2 ? Math.max(...hs) - Math.min(...hs) : Number.POSITIVE_INFINITY;
-      const score = relief + angleDelta(direction, norm(routeBearing + 145)) * 0.15;
-      if (score < bestScore) { bestScore = score; bestBearing = direction; }
-    }
     const baseConfidence = result.center !== null && radialKnown === 24 ? 0.72 : result.center !== null && radialKnown >= 16 ? 0.34 : result.center !== null ? 0.12 : 0;
-    let best: { frame: TerrainCameraKeyframe; evaluation: TerrainCameraEvaluation; score: number } | null = null;
-    for (const variant of [{ pitch: 28, zoom: 12 }, { pitch: 45, zoom: 13 }, { pitch: 62, zoom: 14 }]) {
-      const frame: TerrainCameraKeyframe = { id, title: c.title, anchor: c.anchor, bearingDeg: bestBearing, pitchDeg: variant.pitch, zoom: variant.zoom, frame: 'world', easing: 'smooth' };
-      const cameraCenter = frameProgress === null ? c.coord : getSmoothedCameraAnchor({ coordinates: cameraPath, progress: frameProgress, smoothingHalfWindow, markerPosition: c.coord, zoom: frame.zoom });
-      const evaluation = await evaluatePose(id, c.anchor, cameraCenter, frame.bearingDeg, frame.pitchDeg, frame.zoom, sampler, options.viewport ?? {}, smoothingHalfWindow, cameraStability, signal);
-      const clearances = evaluation.clearanceSamples.filter((x) => !x.targetEndpoint).map((x) => x.clearanceMeters).filter((x): x is number => x !== null);
-      const unknowns = 8 - clearances.length;
-      const intersections = clearances.filter((x) => x < 0).length;
-      const minClearance = clearances.length ? Math.min(...clearances) : Number.POSITIVE_INFINITY;
-      const score = unknowns * 100_000 + intersections * 10_000 + Math.abs(minClearance - 50) + (14 - variant.zoom) * 4;
-      if (!best || score < best.score) best = { frame, evaluation, score };
-    }
-    const chosen = best!;
+    const picked = chosenCompositionBySegment.get(c.anchor.segmentId);
+    if (!picked) continue;
+    const frame: TerrainCameraKeyframe = { ...picked.frame, id, title: c.title, anchor: c.anchor };
+    const chosen = { frame, evaluation: { ...picked.evaluation, frameId: id } };
     const warnings = [...chosen.evaluation.warnings];
     if (radialKnown < 24) warnings.push('Incomplete radial DEM coverage limits this recommendation.');
+    if (!picked.routeVisibility.startInFrame) warnings.push('One or more nearby course origins are outside the generated camera frame.');
+    else if (picked.routeVisibility.startOccluded) warnings.push('Sampled terrain occludes one or more nearby course origins from this camera position.');
+    else if (picked.routeVisibility.startUnknown) warnings.push('Line of sight to one or more nearby course origins is unknown because DEM samples are incomplete.');
+    if ((picked.routeVisibility.coverage ?? 0) < 0.8) warnings.push('The complete course was not confirmed visible in this frame.');
+    if (picked.routeVisibility.unknown > 0) warnings.push('Route line-of-sight checks include unknown DEM samples; unknown terrain was not treated as visible.');
     chosen.frame.terrain = {
-      rationale: 'Bearing favors a lower measured camera-side relief profile. Pitch and zoom were compared using approximate terrain clearance samples.',
-      confidence: Math.min(baseConfidence, chosen.evaluation.confidence), warnings,
-      estimatedMinClearanceMeters: chosen.evaluation.clearanceSamples.filter((x) => !x.targetEndpoint).map((x) => x.clearanceMeters).filter((x): x is number => x !== null).reduce<number | null>((min, value) => min === null ? value : Math.min(min, value), null),
+      rationale: 'A fixed low course target keeps the complete sampled track in a mountain-facing frame; bearing, pitch, zoom, route visibility, and sampled terrain clearance were compared.',
+      confidence: Math.min(baseConfidence, chosen.evaluation.confidence, (picked.routeVisibility.coverage ?? 0) * (picked.routeVisibility.unknown > 0 ? 0.45 : 0.9)), warnings,
+      estimatedMinClearanceMeters: chosen.evaluation.clearanceSamples.map((x) => x.clearanceMeters).filter((x): x is number => x !== null).reduce<number | null>((min, value) => min === null ? value : Math.min(min, value), null),
     };
     frames.push(chosen.frame);
     onProgress?.({ completed: i + 1, total: selected.length });
@@ -194,6 +292,7 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
     const review = await evaluateTerrainCameraPlan({ frames, tracks, journeySegments: segments, routeTimingMode, cameraStability, viewport: options.viewport, signal, sampler });
     cameraSamplesComplete = review.length > 0 && review.every((item) => item.estimate.cameraAltitudeMeters !== null
       && item.clearanceSamples.every((sample) => sample.terrainMeters !== null)
+      && (item.routeVisibility === undefined || item.routeVisibility.unknown === 0)
       && item.radialRelief.every((direction) => direction.samples.every((sample) => sample.elevationMeters !== null))
       && !item.warnings.some((warning) => warning.includes('Missing DEM') || warning.includes('256 check limit')));
     for (const item of review) {
@@ -217,6 +316,8 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
       }
       if (item.warnings.some((warning) => warning.includes('Missing DEM'))) warningSet.add('Terrain coverage is incomplete along one or more camera transitions.');
       if (item.warnings.some((warning) => warning.includes('intersects'))) warningSet.add('Terrain may intersect one or more estimated camera sight lines.');
+      if (item.routeVisibility && (item.routeVisibility.coverage ?? 0) < 0.8) warningSet.add('The camera route visibility review found course points outside the frame or behind sampled terrain.');
+      if (item.routeVisibility?.unknown) warningSet.add('Course route visibility is incomplete because some line-of-sight DEM samples are unknown.');
       if (item.warnings.some((warning) => warning.includes('256 check limit'))) warningSet.add('Terrain path evaluation was limited to 256 checks distributed across the full route.');
     }
     if (!cameraSamplesComplete) warningSet.add('Camera path terrain sampling is incomplete.');
@@ -229,7 +330,7 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
 }
 
 function visibleWidth(zoom: number, lat: number, widthPx: number) { return MPP_Z0 * Math.cos(clamp(lat, -85, 85) * Math.PI / 180) / 2 ** zoom * widthPx; }
-async function evaluatePose(frameId: string, anchor: TerrainAnchor, coord: [number, number], bearingDeg: number, pitchDeg: number, zoom: number, sampler: TerrainSampler, viewport: NonNullable<EvaluateTerrainCameraPlanOptions['viewport']>, smoothingHalfWindow: number, cameraStability: number, signal?: AbortSignal): Promise<TerrainCameraEvaluation> {
+async function evaluatePose(frameId: string, anchor: TerrainAnchor, coord: [number, number], bearingDeg: number, pitchDeg: number, zoom: number, sampler: TerrainSampler, viewport: NonNullable<EvaluateTerrainCameraPlanOptions['viewport']>, smoothingHalfWindow: number, cameraStability: number, signal?: AbortSignal, centerElevationMeters?: number): Promise<TerrainCameraEvaluation> {
   abort(signal);
   const widthPx = viewport.widthPx ?? WIDTH_PX, heightPx = viewport.heightPx ?? 720;
   const fovDeg = viewport.verticalFovDeg ?? VERTICAL_FOV_DEG, exaggeration = viewport.terrainExaggeration ?? EXAGGERATION;
@@ -241,7 +342,8 @@ async function evaluatePose(frameId: string, anchor: TerrainAnchor, coord: [numb
   const verticalOffset = cameraCenterDistanceMeters * Math.cos(clamp(pitchDeg, 0, 85) * Math.PI / 180);
   const cameraGroundCoord = offset(...coord, norm(bearingDeg + 180), horizontalOffset);
   const cameraGround = await sampleFinite(sampler, ...cameraGroundCoord);
-  const cameraAltitude = center !== null ? center * exaggeration + verticalOffset : null;
+  const centerElevation = centerElevationMeters !== undefined && Number.isFinite(centerElevationMeters) ? centerElevationMeters : center;
+  const cameraAltitude = centerElevation !== null ? centerElevation * exaggeration + verticalOffset : null;
   const radialRelief: TerrainCameraEvaluation['radialRelief'] = [];
   for (const dir of DIRECTIONS) {
     const samples: Array<{ distanceMeters: number; elevationMeters: number | null }> = [];
@@ -250,23 +352,26 @@ async function evaluatePose(frameId: string, anchor: TerrainAnchor, coord: [numb
     radialRelief.push({ bearingDeg: dir, samples, reliefMeters: h.length === DISTANCES.length ? Math.max(...h) - Math.min(...h) : null });
   }
   const clearanceSamples: TerrainCameraEvaluation['clearanceSamples'] = [];
-  const endpoint = center === null ? null : center * exaggeration;
-  for (let i = 0; i <= 8; i++) {
+  const endpoint = centerElevation === null ? null : centerElevation * exaggeration;
+  const clearanceSteps = centerElevationMeters !== undefined ? [0] : Array.from({ length: 9 }, (_, i) => i);
+  for (const i of clearanceSteps) {
     const t = i / 8, d = horizontalOffset * t, [lon, lat] = offset(...cameraGroundCoord, bearingDeg, d);
     const e = await sampleFinite(sampler, lon, lat);
     const sightline = cameraAltitude !== null && endpoint !== null ? cameraAltitude + (endpoint - cameraAltitude) * t : null;
     clearanceSamples.push({ distanceMeters: d, targetEndpoint: i === 8, terrainMeters: e === null ? null : e * exaggeration, sightlineMeters: sightline, clearanceMeters: e !== null && sightline !== null ? sightline - e * exaggeration : null });
   }
   const warnings: string[] = [];
-  if (center === null || horizontalOffset > 0 && cameraGround === null || clearanceSamples.some((x) => !x.targetEndpoint && x.clearanceMeters === null)) warnings.push('Missing DEM samples make one or more line of sight checks unknown.');
-  if (clearanceSamples.some((x) => !x.targetEndpoint && x.clearanceMeters !== null && x.clearanceMeters < -2)) warnings.push('Sampled terrain intersects the estimated line of sight; adjust and review this shot visually.');
+  if ((centerElevationMeters === undefined && center === null) || horizontalOffset > 0 && cameraGround === null || clearanceSamples.some((x) => x.clearanceMeters === null)) warnings.push('Missing DEM samples make one or more line of sight checks unknown.');
+  if (clearanceSamples.some((x) => x.clearanceMeters !== null && x.clearanceMeters < -2)) warnings.push(centerElevationMeters === undefined
+    ? 'Sampled terrain intersects the estimated line of sight; adjust and review this shot visually.'
+    : 'The estimated camera position intersects sampled terrain; increase camera height or adjust the framing.');
   warnings.push('Camera height, field of view, and sampled line of sight are approximate and cannot guarantee a clear view.');
-  warnings.push('The runtime smooths camera center elevation over the route; this clearance estimate uses the sampled center elevation directly.');
-  const knownCount = clearanceSamples.filter((x) => !x.targetEndpoint && x.clearanceMeters !== null).length;
-  const intersects = clearanceSamples.some((x) => !x.targetEndpoint && x.clearanceMeters !== null && x.clearanceMeters < -2);
-  const unknown = center === null || horizontalOffset > 0 && cameraGround === null || clearanceSamples.some((x) => !x.targetEndpoint && x.clearanceMeters === null);
+  if (centerElevationMeters === undefined) warnings.push('The runtime may smooth camera center elevation over the route; this clearance estimate uses the sampled center elevation directly.');
+  const knownCount = clearanceSamples.filter((x) => x.clearanceMeters !== null).length;
+  const intersects = clearanceSamples.some((x) => x.clearanceMeters !== null && x.clearanceMeters < -2);
+  const unknown = (centerElevationMeters === undefined && center === null) || horizontalOffset > 0 && cameraGround === null || clearanceSamples.some((x) => x.clearanceMeters === null);
   const visibility: TerrainCameraEvaluation['visibility'] = unknown ? 'unknown' : intersects ? 'intersects-sampled-terrain' : 'clear-sampled';
-  const confidence = center === null ? 0 : knownCount / 8 * (horizontalOffset > 0 && cameraGround === null ? 0.35 : intersects ? 0.2 : 0.75);
+  const confidence = centerElevationMeters === undefined && center === null ? 0 : knownCount / clearanceSteps.length * (horizontalOffset > 0 && cameraGround === null ? 0.35 : intersects ? 0.2 : 0.75);
   return { frameId, anchor, visibility, confidence, warnings, estimate: { cameraDistanceMeters: horizontalOffset, cameraAltitudeMeters: cameraAltitude, viewportWidthMeters: width, viewportWidthPx: widthPx, viewportHeightPx: heightPx, verticalFovDeg: fovDeg, terrainExaggeration: exaggeration, cameraStability, anchorSmoothingHalfWindow: smoothingHalfWindow, pitchDeg }, radialRelief, clearanceSamples };
 }
 
@@ -282,7 +387,7 @@ export async function evaluateTerrainCameraPlan(options: EvaluateTerrainCameraPl
   const cinematicFrames: Array<{ keyframe: CinematicCameraKeyframe; progress: number; anchor: TerrainAnchor }> = [];
   const unresolvedFrames: typeof options.frames = [];
   for (const frame of options.frames) {
-    const keyframe: CinematicCameraKeyframe = { id: frame.id, title: frame.title, anchor: { routeSegmentId: frame.anchor.segmentId, routeSegmentDistance: frame.anchor.distanceMeters }, bearingDeg: frame.bearingDeg, pitchDeg: frame.pitchDeg, zoom: frame.zoom, frame: frame.frame, easing: frame.easing };
+    const keyframe: CinematicCameraKeyframe = { id: frame.id, title: frame.title, anchor: { routeSegmentId: frame.anchor.segmentId, routeSegmentDistance: frame.anchor.distanceMeters }, bearingDeg: frame.bearingDeg, pitchDeg: frame.pitchDeg, zoom: frame.zoom, frame: frame.frame, easing: frame.easing, target: frame.target };
     const segmentTiming = computed.segmentTimings.find((timing) => timing.segmentId === frame.anchor.segmentId);
     const track = trackFor(options.tracks, frame.anchor.trackId);
     const validOccurrence = segmentTiming?.type === 'track' && segmentTiming.trackId === frame.anchor.trackId
@@ -294,12 +399,57 @@ export async function evaluateTerrainCameraPlan(options: EvaluateTerrainCameraPl
   }
   const prepared = prepareCinematicKeyframeTrack(cinematicFrames, coordinates);
   const unresolvedResults: TerrainCameraEvaluation[] = unresolvedFrames.map((frame) => ({ frameId: frame.id, phase: 'keyframe', confidence: 0, visibility: 'unknown', warnings: ['Anchor does not resolve to a current track segment occurrence.'], anchor: frame.anchor, estimate: { cameraDistanceMeters: 0, cameraAltitudeMeters: null, viewportWidthMeters: 0, viewportWidthPx: options.viewport?.widthPx ?? WIDTH_PX, viewportHeightPx: options.viewport?.heightPx ?? 720, verticalFovDeg: options.viewport?.verticalFovDeg ?? VERTICAL_FOV_DEG, terrainExaggeration: options.viewport?.terrainExaggeration ?? EXAGGERATION, cameraStability, anchorSmoothingHalfWindow: smoothingHalfWindow, pitchDeg: frame.pitchDeg }, radialRelief: [], clearanceSamples: [] }));
+  const poseEvaluationCache = new Map<string, TerrainCameraEvaluation>();
+  const routePointsCache = new Map<string, RouteCompositionPoint[]>();
+  const routeVisibilityCache = new Map<string, Awaited<ReturnType<typeof evaluateRouteVisibility>>>();
   const checkPoseAt = async (progress: number, anchor: TerrainAnchor, id: string, phase: 'keyframe' | 'transition') => {
     const pose = getCinematicCameraPose({ keyframes: prepared, coordinates, progress, routeHeadingDeg: getRouteBearingAtProgress(coordinates, progress) });
     if (!pose) return;
-    const cameraCenter = getSmoothedCameraAnchor({ coordinates, progress, smoothingHalfWindow, markerPosition: pose.center, zoom: pose.zoom });
-    const checked = await evaluatePose(id, anchor, cameraCenter, pose.bearing, pose.pitch, pose.zoom, sampler, options.viewport ?? {}, smoothingHalfWindow, cameraStability, options.signal);
-    checked.phase = phase; checked.progress = progress; results.push(checked);
+    const cameraCenter = pose.centerElevationMeters === undefined ? getSmoothedCameraAnchor({ coordinates, progress, smoothingHalfWindow, markerPosition: pose.center, zoom: pose.zoom }) : pose.center;
+    const cacheKey = [cameraCenter[0], cameraCenter[1], pose.centerElevationMeters ?? '', pose.bearing, pose.pitch, pose.zoom].map(value => typeof value === 'number' ? value.toFixed(6) : value).join('|');
+    let checked = poseEvaluationCache.get(cacheKey);
+    if (!checked) {
+      checked = await evaluatePose(id, anchor, cameraCenter, pose.bearing, pose.pitch, pose.zoom, sampler, options.viewport ?? {}, smoothingHalfWindow, cameraStability, options.signal, pose.centerElevationMeters);
+      poseEvaluationCache.set(cacheKey, checked);
+    }
+    const activeSegment = getSegmentAtProgress(progress, computed.segmentTimings)?.segment;
+    const activeTrack = activeSegment?.type === 'track' && activeSegment.trackId ? trackFor(options.tracks, activeSegment.trackId) : undefined;
+    let routeVisibility: Awaited<ReturnType<typeof evaluateRouteVisibility>> | undefined;
+    if (activeTrack) {
+      const routeCacheKey = `${cacheKey}|${activeTrack.id}`;
+      routeVisibility = routeVisibilityCache.get(routeCacheKey);
+      if (!routeVisibility) {
+        let points = routePointsCache.get(activeTrack.id);
+        if (!points) {
+          points = routePointsFor(activeTrack);
+          for (const point of points) {
+            abort(options.signal);
+            point.elevationMeters = await sampleFinite(sampler, point.lon, point.lat);
+          }
+          routePointsCache.set(activeTrack.id, points);
+        }
+        const evaluatedCenterElevation = pose.centerElevationMeters ?? await sampleFinite(sampler, cameraCenter[0], cameraCenter[1])
+          ?? getJourneyPointAtProgress(progress, computed.coordinates, computed.segmentTimings)?.elevation ?? 0;
+        routeVisibility = await evaluateRouteVisibility(points, { target: { lon: cameraCenter[0], lat: cameraCenter[1], elevationMeters: evaluatedCenterElevation }, bearingDeg: pose.bearing, pitchDeg: pose.pitch, zoom: pose.zoom }, {
+          widthPx: options.viewport?.widthPx ?? WIDTH_PX, heightPx: options.viewport?.heightPx ?? 720,
+          verticalFovDeg: options.viewport?.verticalFovDeg ?? VERTICAL_FOV_DEG, terrainExaggeration: options.viewport?.terrainExaggeration ?? EXAGGERATION,
+        }, sampler, options.signal);
+        routeVisibilityCache.set(routeCacheKey, routeVisibility);
+      }
+    }
+    const warnings = [...checked.warnings];
+    let confidence = checked.confidence, visibility = checked.visibility;
+    if (routeVisibility) {
+      if (!routeVisibility.startInFrame) warnings.push('The active course start is outside the camera frame.');
+      else if (routeVisibility.startOccluded) warnings.push('Sampled terrain occludes the active course start from this camera position.');
+      else if (routeVisibility.startUnknown) warnings.push('Active course start line of sight is unknown because DEM samples are incomplete.');
+      if ((routeVisibility.coverage ?? 0) < 0.8) warnings.push('The active course is not fully visible in the camera frame.');
+      if (routeVisibility.unknown > 0) warnings.push('Route line-of-sight checks include unknown DEM samples; unknown terrain was not treated as visible.');
+      confidence = Math.min(confidence, (routeVisibility.coverage ?? 0) * (routeVisibility.unknown > 0 ? 0.45 : 0.9) * (routeVisibility.startVisible ? 1 : 0.5));
+      if (routeVisibility.unknown > 0) visibility = 'unknown';
+      else if (routeVisibility.startOccluded || (routeVisibility.coverage ?? 0) < 0.8) visibility = 'intersects-sampled-terrain';
+    }
+    results.push({ ...checked, frameId: id, anchor, phase, progress, confidence, visibility, warnings: [...new Set(warnings)], ...(routeVisibility ? { routeVisibility } : {}) });
   };
   // Keep a bounded, evenly distributed set of terrain checks over the entire camera path.
   // Endpoint checks are explicit because playback holds the first and last pose outside the keys.

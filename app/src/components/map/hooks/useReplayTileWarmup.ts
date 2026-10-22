@@ -14,6 +14,7 @@ import {
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import { toMapCameraOptions } from '@/utils/cameraTarget';
 import {
   deduplicateCameraPoses,
   getReplayWarmupPose,
@@ -219,7 +220,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         resolve();
       };
       isWarmupPoseActiveRef.current = true;
-      map.jumpTo(pose);
+      map.jumpTo(toMapCameraOptions(map, pose));
       timeoutId = setTimeout(finish, DISCOVERY_RENDER_WINDOW_MS);
     });
 

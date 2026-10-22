@@ -3,7 +3,8 @@ import { help } from './esHelp';
 export const es = {
   terrainCamera: {
     title: 'Planifica con las montañas',
-    description: 'Analiza el terreno para encontrar ideas de cámara, o dale indicaciones de la ruta a un agente y revisa aquí su receta.',
+    description: "Mantén visibles el inicio y el trazado desde una vista estable orientada hacia la montaña, o revisa la receta de cámara de tu agente.",
+    fixedTarget: "Encuadre del recorrido · la cámara mantiene la ruta visible mientras se mueve el marcador.",
     intent: 'Indicaciones creativas para el agente',
     intentPlaceholder: 'Muestra las crestas, abre el plano en las subidas y mantén las transiciones suaves…',
     analyze: 'Analizar el terreno y sugerir planos',

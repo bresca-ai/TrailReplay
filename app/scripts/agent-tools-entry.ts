@@ -184,6 +184,7 @@ async function main() {
       zoom: frame.zoom,
       frame: frame.frame,
       easing: frame.easing,
+      ...(frame.target ? { target: { ...frame.target } } : {}),
       ...(frame.terrain ? { terrain: { rationale: frame.terrain.rationale ?? '', confidence: frame.terrain.confidence ?? 0, warnings: frame.terrain.warnings ?? [] } } : {}),
     };
   });

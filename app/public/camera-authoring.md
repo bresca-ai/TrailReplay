@@ -4,10 +4,13 @@ This guide describes an optional, local Node.js workflow for agents authoring
 cinematic camera keyframes in a TrailReplay recipe. It does not require an AI
 service, an account, or a route upload.
 
-Shots set an orbit around the replay subject: bearing, pitch and zoom determine
-the viewpoint, while the target follows TrailReplay's existing smoothed route.
-An external agent uses the terrain evidence and your creative brief to choose
-and revise shots. The website also offers a deterministic starting plan.
+Shots set a bearing, pitch and zoom around a look-at target. Generated terrain
+plans use a fixed course target: keep the start visible, fit the painted route
+with room for stats and the elevation profile, and look toward the mountain
+from near its height. This avoids chasing the marker uphill or flying over the
+summit. Targetless recipes retain the existing smoothed route-following orbit.
+An external agent uses terrain evidence and your creative brief to revise shots.
+The website offers a deterministic starting plan and a draft preview.
 
 ## Review in the website
 
@@ -131,6 +134,7 @@ schema, see [camera-recipe.schema.json](https://trailreplay.com/camera-recipe.sc
         "zoom": 12.5,
         "frame": "world",
         "easing": "smooth",
+        "target": { "lon": -3.72, "lat": 40.41, "elevationMeters": 1450 },
         "terrain": {
           "rationale": "The sampled ridge has clear relief above the approach.",
           "confidence": 0.82,
@@ -148,6 +152,10 @@ schema, see [camera-recipe.schema.json](https://trailreplay.com/camera-recipe.sc
 behind an authored choice; `estimatedMinClearanceMeters` is an optional numeric
 estimate produced from sampled terrain. These values do not certify that the
 scene looks right.
+An optional `target` fixes the camera look-at point for a shot. Its
+`elevationMeters` is unexaggerated elevation above sea level, not camera
+location; longitude is limited to `[-180, 180]`, latitude to `[-85, 85]`, and
+elevation to `[-12000, 100000]` metres.
 
 ## Evaluate numeric terrain clearance
 
@@ -161,15 +169,18 @@ node agent-tools.mjs evaluate \
 ```
 
 Evaluation reports terrain coverage, radial relief, estimated camera distance
-and altitude, and sampled sightline clearance. It is a numeric check only. Open
+and altitude, sampled course coverage, start visibility and sightline clearance. It is a numeric check only. Open
 the recipe and routes in TrailReplay and inspect the rendered replay to verify
 composition, camera motion, terrain appearance, and tile availability.
 
 The terrain provider is shared with the visible map. Surveys inspect eight
 directions at 250, 750 and 1500 metres around selected moments. Evaluations
-use the same replay timing, camera path, spline and horizontal target smoothing
-as playback, with explicit viewport, field of view, exaggeration and stability
-assumptions. Adaptive transition sampling is bounded at 256 checks, with a
+use the same replay timing and pose spline as playback, with explicit viewport,
+field of view, exaggeration and stability assumptions. Fixed course targets keep
+their authored elevation; legacy shots use route target smoothing. Candidate
+selection checks all eight bearings and three low viewing pitches, padded
+perspective framing and sampled terrain rays to the course, including its start.
+Unknown terrain never counts as confirmed visibility. Adaptive transition sampling is bounded at 256 checks, with a
 warning when the requested density is capped. Missing tiles and unknown
 clearance remain explicit. `clear-sampled` describes sampled sight lines;
 `renderStatus: "not-run"` records that numeric assessment has not rendered a

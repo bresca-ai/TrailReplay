@@ -3,7 +3,8 @@ import { help } from './frHelp';
 export const fr = {
   terrainCamera: {
     title: 'Composer avec les montagnes',
-    description: 'Analysez le relief pour trouver des idées de cadrage, ou donnez des consignes de parcours à un agent et examinez sa recette ici.',
+    description: "Gardez le départ et le tracé visibles depuis un point de vue stable face à la montagne, ou examinez la recette caméra de votre agent.",
+    fixedTarget: "Cadrage du parcours · la caméra garde le tracé visible pendant que le marqueur avance.",
     intent: 'Consignes créatives pour l’agent',
     intentPlaceholder: 'Faites ressortir les crêtes, élargissez le cadre dans les montées et gardez des transitions douces…',
     analyze: 'Analyser le relief et proposer des plans',

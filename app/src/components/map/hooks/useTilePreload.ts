@@ -5,6 +5,7 @@ import {
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import { toMapCameraOptions } from '@/utils/cameraTarget';
 import {
   deduplicateCameraPoses,
   getDeterministicIntroStartPose,
@@ -93,14 +94,21 @@ export function useTilePreload({
       setAnimationPhase('intro');
       return;
     }
-    const overview = getDeterministicIntroStartPose({
+    const overviewBase = getDeterministicIntroStartPose({
       coordinates: allCoordinates,
       introTo: introPose,
     });
-    if (!overview) {
+    if (!overviewBase) {
       setAnimationPhase('intro');
       return;
     }
+    // Authored targets can occur after progress zero. Keep the deterministic
+    // intro fallback at sea level so a later warmup pose cannot leave its
+    // elevated target behind when the primary map returns to the opening view.
+    const overview = cameraMode === 'cinematic'
+      && (cinematicKeyframes ?? []).some((keyframe) => keyframe.target !== undefined)
+      ? { ...overviewBase, centerElevationMeters: 0 }
+      : overviewBase;
     const finalPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
@@ -151,7 +159,7 @@ export function useTilePreload({
       if (hasAdvancedRef.current || cancelled) return;
       hasAdvancedRef.current = true;
       if (activeTimeout) clearTimeout(activeTimeout);
-      map.jumpTo(overview);
+      map.jumpTo(toMapCameraOptions(map, overview));
       if (introPose) {
         smoothBearingRef.current = introPose.bearing;
         targetBearingRef.current = introPose.bearing;
@@ -169,7 +177,7 @@ export function useTilePreload({
         resolve();
       };
 
-      map.jumpTo(pose);
+      map.jumpTo(toMapCameraOptions(map, pose));
       map.once('idle', finish);
       activeTimeout = setTimeout(finish, Math.max(0, deadline - Date.now()));
     });
@@ -185,7 +193,7 @@ export function useTilePreload({
     return () => {
       cancelled = true;
       if (activeTimeout) clearTimeout(activeTimeout);
-      if (!hasAdvancedRef.current) map.jumpTo(overview);
+      if (!hasAdvancedRef.current) map.jumpTo(toMapCameraOptions(map, overview));
     };
   }, [
     allCoordinates,

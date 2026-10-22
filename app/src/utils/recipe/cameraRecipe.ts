@@ -57,6 +57,15 @@ export function resolveRecipeCameraKeyframes(
     if (!finite(frame.zoom) || frame.zoom < 0 || frame.zoom > 20) throw new RecipeError(`${label}.zoom must be in [0, 20]`);
     if (frame.frame !== 'world' && frame.frame !== 'route') throw new RecipeError(`${label}.frame must be "world" or "route"`);
     if (!['smooth', 'linear', 'hold'].includes(frame.easing)) throw new RecipeError(`${label}.easing must be "smooth", "linear" or "hold"`);
+    if (frame.target !== undefined) {
+      const target = frame.target;
+      if (!target || typeof target !== 'object' || Array.isArray(target)
+        || !finite(target.lon) || target.lon < -180 || target.lon > 180
+        || !finite(target.lat) || target.lat < -85 || target.lat > 85
+        || !finite(target.elevationMeters) || target.elevationMeters < -12000 || target.elevationMeters > 100000) {
+        throw new RecipeError(`${label}.target requires finite lon [-180, 180], lat [-85, 85], and elevationMeters [-12000, 100000]`);
+      }
+    }
     if (frame.terrain !== undefined && (!frame.terrain || typeof frame.terrain !== 'object' || Array.isArray(frame.terrain))) {
       throw new RecipeError(`${label}.terrain must be an object`);
     }
@@ -78,6 +87,7 @@ export function resolveRecipeCameraKeyframes(
       zoom: frame.zoom,
       frame: frame.frame,
       easing: frame.easing,
+      ...(frame.target ? { target: { ...frame.target } } : {}),
       ...(frame.terrain ? { terrain: frame.terrain } : {}),
     };
   });
@@ -164,6 +174,7 @@ export function serializeCameraRecipe(state: AppState, routeFiles?: Map<string, 
       zoom: keyframe.zoom,
       frame: keyframe.frame,
       easing: keyframe.easing,
+      ...(keyframe.target ? { target: { ...keyframe.target } } : {}),
       ...(keyframe.terrain ? { terrain: keyframe.terrain } : {}),
     }];
   });

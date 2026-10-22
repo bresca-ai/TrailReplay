@@ -121,6 +121,17 @@
         "zoom": { "type": "number", "minimum": 0, "maximum": 20 },
         "frame": { "enum": ["world", "route"] },
         "easing": { "enum": ["smooth", "linear", "hold"] },
+        "target": {
+          "type": "object",
+          "description": "Fixed geographic camera look-at point; elevation is unexaggerated metres above sea level, not camera location.",
+          "required": ["lon", "lat", "elevationMeters"],
+          "properties": {
+            "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+            "lat": { "type": "number", "minimum": -85, "maximum": 85 },
+            "elevationMeters": { "type": "number", "minimum": -12000, "maximum": 100000 }
+          },
+          "additionalProperties": false
+        },
         "terrain": {
           "type": "object",
           "properties": {

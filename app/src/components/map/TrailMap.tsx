@@ -275,6 +275,7 @@ export function TrailMap(_props: TrailMapProps) {
     animationPhase,
     cameraMode,
     cameraStability: cameraSettings.cameraStability,
+    show3DTerrain: settings.show3DTerrain,
     cinematicKeyframes,
     completedCoordinates,
     computedJourney,

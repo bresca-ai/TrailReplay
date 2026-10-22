@@ -37,6 +37,7 @@ import {
 } from '@/utils/replayCameraPlan';
 import { getCinematicCenterElevation } from '@/utils/cinematicCameraElevation';
 import { getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
+import { toMapCameraOptions } from '@/utils/cameraTarget';
 import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
 import {
@@ -54,6 +55,7 @@ interface UseTrailPlaybackCameraParams {
   cameraMode: 'overview' | 'follow' | 'follow-behind' | 'cinematic';
   /** 0 = maximally stable/smooth camera, 1 = maximally reactive/tight tracking. */
   cameraStability: number;
+  show3DTerrain: boolean;
   /**
    * Cinematic mode keyframes, already sorted and progress-derived (see
    * `prepareCinematicKeyframeTrack`). Not reachable from the app's camera
@@ -200,6 +202,7 @@ export function useTrailPlaybackCamera({
   animationPhase,
   cameraMode,
   cameraStability,
+  show3DTerrain,
   cinematicKeyframes,
   completedCoordinates,
   computedJourney,
@@ -266,7 +269,8 @@ export function useTrailPlaybackCamera({
   }, [isMapLoaded, mapRef, markerRef]);
 
   const ownsCinematicElevation = cameraMode === 'cinematic'
-    && animationPhase === 'playing' && (isPlaying || isExporting);
+    && ((animationPhase === 'playing' && (isPlaying || isExporting))
+      || (cinematicKeyframes ?? []).some((keyframe) => keyframe.target !== undefined));
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded || !ownsCinematicElevation) return;
@@ -521,7 +525,8 @@ export function useTrailPlaybackCamera({
       // noise this mode doesn't have, and would turn an authored move into a
       // stepped or laggy one. Bypass it the same way 'follow' already does.
       // CINEMATIC_CAMERA_PLAN.md section 5.
-      const usesRawPose = shouldBypassProceduralCameraSmoothing(
+      const hasAuthoredTarget = targetPose.centerElevationMeters !== undefined;
+      const usesRawPose = hasAuthoredTarget || shouldBypassProceduralCameraSmoothing(
         cameraMode,
         cinematicKeyframes?.length ?? 0,
       );
@@ -599,7 +604,9 @@ export function useTrailPlaybackCamera({
       // could never do, and which costs no lag precisely because it is
       // symmetric. The marker stays exactly on its trace and weaves inside
       // the frame; the frame itself glides. See cinematicCameraAnchor.ts.
-      const smoothedCenter = cameraMode === 'cinematic'
+      const smoothedCenter = hasAuthoredTarget
+        ? targetPose.center
+        : cameraMode === 'cinematic'
         ? getSmoothedCameraAnchor({
             coordinates: cameraCoordinates,
             progress: playbackProgress,
@@ -638,7 +645,10 @@ export function useTrailPlaybackCamera({
       // Cinematic height follows a symmetric spatial average on the planned
       // anchor path. Raw terrain under one point makes the view bob over mesh
       // detail; a time chase instead lags behind genuine sustained climbs.
-      if (cameraMode === 'cinematic') {
+      if (hasAuthoredTarget) {
+        elevationSum = toMapCameraOptions(mapRef.current!, targetPose, show3DTerrain).elevation ?? 0;
+        elevationSamples = 1;
+      } else if (cameraMode === 'cinematic') {
         const halfWindowSeconds = 0.15 + 0.75 * (1 - Math.max(0, Math.min(1, cameraStability)));
         const sampled = getCinematicCenterElevation({
           coordinates: cinematicElevationPath,
@@ -696,9 +706,8 @@ export function useTrailPlaybackCamera({
       // `smoothedCenter` reproduces the same lag deterministically, both
       // paths apply identical values the same way.
       mapRef.current.jumpTo({
-        ...targetPose,
+        ...toMapCameraOptions(mapRef.current, { ...targetPose, center: smoothedCenter }, show3DTerrain),
         ...centerElevation,
-        center: smoothedCenter,
         zoom: usesRawPose ? targetPose.zoom : newZoom,
         pitch: usesRawPose ? targetPose.pitch : newPitch,
         bearing: usesRawPose ? targetPose.bearing : smoothBearingRef.current,
@@ -725,6 +734,7 @@ export function useTrailPlaybackCamera({
     animationPhase,
     cameraMode,
     cameraStability,
+    show3DTerrain,
     cameraCoordinates,
     cinematicKeyframes,
     cinematicElevationPath,
@@ -797,7 +807,7 @@ export function useTrailPlaybackCamera({
       mapRef.current.stop();
       if (introStartPose) mapRef.current.jumpTo(introStartPose);
       mapRef.current.flyTo({
-        ...introPose,
+        ...toMapCameraOptions(mapRef.current, introPose, show3DTerrain),
         duration: INTRO_DURATION,
         // Ease both ends: linger just long enough on the country-scale start
         // marker to establish location, then settle into the first playback
@@ -831,6 +841,7 @@ export function useTrailPlaybackCamera({
     allCoordinates,
     animationPhase,
     cameraMode,
+    show3DTerrain,
     cameraCoordinates,
     cinematicKeyframes,
     elevationData,

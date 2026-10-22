@@ -17,6 +17,7 @@ import {
   getCinematicCameraPose,
   type CinematicKeyframeEasing,
   type CinematicKeyframeFrame,
+  type CinematicCameraKeyframe,
 } from '@/utils/cinematicCameraPlan';
 import { isFocusedViaPointer } from '@/utils/focusModality';
 import { isTypingTarget, shouldHandleEnterAsPrimaryAction } from '@/utils/keyboardShortcuts';
@@ -81,7 +82,7 @@ export function CinematicCameraEditor() {
   const { computedJourney, currentPosition, currentSegment, cameraPathCoordinates, elevationData } = useComputedJourney();
   const preparedKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
 
-  const [draftPose, setDraftPose] = useState({ bearingDeg: 180, pitchDeg: 55, zoom: 14 });
+  const [draftPose, setDraftPose] = useState<{ bearingDeg: number; pitchDeg: number; zoom: number; target?: CinematicCameraKeyframe['target'] }>({ bearingDeg: 180, pitchDeg: 55, zoom: 14 });
   const [showInfo, setShowInfo] = useState(false);
 
   const routeHeadingDeg = cameraPathCoordinates.length > 0
@@ -122,7 +123,9 @@ export function CinematicCameraEditor() {
       progress: playback.progress,
     });
     if (pose) {
-      setDraftPose({ bearingDeg: pose.bearing, pitchDeg: pose.pitch, zoom: pose.zoom });
+      setDraftPose({ bearingDeg: pose.bearing, pitchDeg: pose.pitch, zoom: pose.zoom,
+        target: pose.centerElevationMeters === undefined ? undefined : { lon: pose.center[0], lat: pose.center[1], elevationMeters: pose.centerElevationMeters },
+      });
     }
     // Deliberately keyed on progress and on whether we are composing at all:
     // this is "arriving at a new moment", not "the pose at this moment
@@ -131,10 +134,8 @@ export function CinematicCameraEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playback.progress, isComposing, preparedKeyframes]);
 
-  // The ball (and zoom slider) are the source of truth for the live preview
-  // *while composing*. The centre is always the marker's true position —
-  // never the pan position free map dragging could leave it at — so there is
-  // nothing here that can decouple what's shown from what gets captured.
+  // Preserve the planned course target while changing orbit and zoom. Legacy
+  // shots without an authored target continue to orbit the marker.
   useEffect(() => {
     if (!isComposing) return;
 
@@ -142,7 +143,8 @@ export function CinematicCameraEditor() {
     if (!map || !currentPosition) return;
 
     map.jumpTo({
-      center: [currentPosition.lon, currentPosition.lat],
+      center: draftPose.target ? [draftPose.target.lon, draftPose.target.lat] : [currentPosition.lon, currentPosition.lat],
+      ...(draftPose.target ? { elevation: draftPose.target.elevationMeters * (map.getTerrain()?.exaggeration ?? 0) } : {}),
       bearing: draftPose.bearingDeg,
       pitch: draftPose.pitchDeg,
       zoom: draftPose.zoom,
@@ -228,6 +230,7 @@ export function CinematicCameraEditor() {
         pitchDeg: draftPose.pitchDeg,
         zoom: draftPose.zoom,
         frame: 'world',
+        target: draftPose.target,
       });
     } else {
       addCinematicCameraKeyframe({
@@ -244,6 +247,7 @@ export function CinematicCameraEditor() {
         zoom: draftPose.zoom,
         frame: 'world',
         easing: 'smooth',
+        target: draftPose.target,
       });
     }
     // A dedicated event rather than the generic `feature_enabled`, because
@@ -303,7 +307,7 @@ export function CinematicCameraEditor() {
   return (
     <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg space-y-3">
       <TerrainCameraPlanner />
-      <p className="text-xs text-[var(--evergreen-60)]">{t('settings.cinematicCamera.hint')}</p>
+      <p className="text-xs text-[var(--evergreen-60)]">{t(draftPose.target ? 'terrainCamera.fixedTarget' : 'settings.cinematicCamera.hint')}</p>
 
       <button
         type="button"

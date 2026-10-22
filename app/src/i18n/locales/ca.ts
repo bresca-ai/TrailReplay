@@ -3,7 +3,8 @@ import { help } from './caHelp';
 export const ca = {
   terrainCamera: {
     title: 'Planifica amb les muntanyes',
-    description: 'Analitza el terreny per trobar idees de càmera, o dona indicacions de la ruta a un agent i revisa aquí la seva recepta.',
+    description: "Mantén visibles la sortida i el traçat des d’una vista estable orientada a la muntanya, o revisa la recepta de càmera del teu agent.",
+    fixedTarget: "Enquadrament del recorregut · la càmera manté la ruta visible mentre es mou el marcador.",
     intent: 'Indicacions creatives per a l’agent',
     intentPlaceholder: 'Mostra les carenes, obre el pla a les pujades i mantén les transicions suaus…',
     analyze: 'Analitza el terreny i proposa plans',

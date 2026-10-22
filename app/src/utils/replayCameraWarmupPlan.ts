@@ -60,6 +60,7 @@ export function deduplicateCameraPoses(poses: Array<ReplayCameraPose | null>): R
       pose.zoom.toFixed(2),
       pose.pitch.toFixed(1),
       pose.bearing.toFixed(1),
+      pose.centerElevationMeters?.toFixed(1) ?? 'terrain',
     ].join(':');
     if (seen.has(key)) return false;
     seen.add(key);
@@ -94,6 +95,7 @@ export function getDeterministicIntroStartPose({
     zoom: Math.max(0, Math.min(INTRO_COUNTRY_ZOOM, introTo.zoom - INTRO_MIN_ZOOM_DELTA)),
     pitch: 0,
     bearing: 0,
+    ...(introTo.centerElevationMeters === undefined ? {} : { centerElevationMeters: 0 }),
   };
 }
 
@@ -164,6 +166,9 @@ export function sampleCameraTransition(
       zoom: from.zoom + (to.zoom - from.zoom) * progress,
       pitch: from.pitch + (to.pitch - from.pitch) * progress,
       bearing: from.bearing + bearingDelta * progress,
+      ...(from.centerElevationMeters !== undefined && to.centerElevationMeters !== undefined
+        ? { centerElevationMeters: from.centerElevationMeters + (to.centerElevationMeters - from.centerElevationMeters) * progress }
+        : {}),
     };
   });
 }

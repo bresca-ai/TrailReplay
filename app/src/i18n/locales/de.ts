@@ -3,7 +3,8 @@ import { help } from './deHelp';
 export const de = {
   terrainCamera: {
     title: 'Mit den Bergen planen',
-    description: 'Analysiere das Gelände für Kameraideen oder gib einem Agenten Routenvorgaben und prüfe hier sein Rezept.',
+    description: "Behalte Start und Strecke aus einer ruhigen Perspektive zum Berg im Blick oder prüfe das Kamerarezept deines Agenten.",
+    fixedTarget: "Streckenansicht · die Kamera hält die Route im Bild, während sich die Markierung bewegt.",
     intent: 'Kreative Vorgaben für den Agenten',
     intentPlaceholder: 'Zeige die Grate, halte den Bildausschnitt an Anstiegen weit und gestalte Übergänge ruhig…',
     analyze: 'Gelände analysieren und Einstellungen vorschlagen',

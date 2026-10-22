@@ -9,6 +9,8 @@ export type ReplayCameraMode = 'overview' | 'follow' | 'follow-behind';
 export interface ReplayCameraPose {
   bearing: number;
   center: [number, number];
+  /** Explicit terrain-aware camera aim height, in metres above sea level. */
+  centerElevationMeters?: number;
   pitch: number;
   zoom: number;
 }

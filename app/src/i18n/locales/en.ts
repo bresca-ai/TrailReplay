@@ -3,7 +3,8 @@ import { help } from './enHelp';
 export const en = {
   terrainCamera: {
     title: 'Plan with the mountains',
-    description: 'Survey the terrain for camera ideas, or give a route brief to an agent and review its recipe here.',
+    description: "Keep the course start and trail visible from a stable mountain-facing view, or review a camera recipe from your agent.",
+    fixedTarget: "Course framing · the camera holds the route in view while the marker moves.",
     intent: 'Creative brief for your agent',
     intentPlaceholder: 'Reveal the ridges, stay wide on climbs, and keep transitions calm…',
     analyze: 'Survey terrain & suggest shots',

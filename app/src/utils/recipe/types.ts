@@ -98,6 +98,8 @@ export interface RecipeCameraFrame {
   zoom: number;
   frame: 'world' | 'route';
   easing: 'smooth' | 'linear' | 'hold';
+  /** Optional fixed geographic look-at point. Elevation is unexaggerated metres above sea level. */
+  target?: { lon: number; lat: number; elevationMeters: number };
   terrain?: { rationale?: string; confidence?: number; warnings?: string[]; estimatedMinClearanceMeters?: number | null };
 }
 

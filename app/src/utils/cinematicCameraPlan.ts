@@ -48,6 +48,8 @@ export interface CinematicCameraKeyframe {
   /** How the camera arrives at this keyframe. */
   easing: CinematicKeyframeEasing;
   terrain?: { rationale?: string; confidence?: number; warnings?: string[]; estimatedMinClearanceMeters?: number | null };
+  /** Fixed authored camera aim point. When present, this frame does not follow the marker. */
+  target?: { lon: number; lat: number; elevationMeters: number };
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -96,6 +98,7 @@ export interface PreparedCinematicKeyframe {
   pitchDeg: number;
   zoom: number;
   easing: CinematicKeyframeEasing;
+  target?: { lon: number; lat: number; elevationMeters: number };
 }
 
 /**
@@ -136,6 +139,7 @@ export function prepareCinematicKeyframeTrack(
       pitchDeg: keyframe.pitchDeg,
       zoom: keyframe.zoom,
       easing: keyframe.easing,
+      target: keyframe.target,
     };
   });
 }
@@ -173,15 +177,32 @@ function poseFromValues(
   bearingDeg: number,
   pitchDeg: number,
   zoom: number,
+  target?: { lon: number; lat: number; elevationMeters: number },
 ): ReplayCameraPose | null {
-  const center = getRouteCoordinateAtProgress(coordinates, progress);
+  const center = target ? [target.lon, target.lat] as [number, number] : getRouteCoordinateAtProgress(coordinates, progress);
   if (!center) return null;
 
   return {
     center,
+    ...(target ? { centerElevationMeters: target.elevationMeters } : {}),
     bearing: normalizeAngle(bearingDeg),
     pitch: clamp(pitchDeg, PITCH_MIN, PITCH_MAX),
     zoom: clamp(zoom, CINEMATIC_ZOOM_MIN, CINEMATIC_ZOOM_MAX),
+  };
+}
+
+function interpolateTarget(lower: PreparedCinematicKeyframe, upper: PreparedCinematicKeyframe, t: number,
+  coordinates: number[][]): { lon: number; lat: number; elevationMeters: number } | undefined {
+  if (!lower.target && !upper.target) return undefined;
+  const routeLower = getRouteCoordinateAtProgress(coordinates, lower.progress);
+  const routeUpper = getRouteCoordinateAtProgress(coordinates, upper.progress);
+  const a = lower.target ?? (routeLower ? { lon: routeLower[0], lat: routeLower[1], elevationMeters: upper.target?.elevationMeters ?? 0 } : undefined);
+  const b = upper.target ?? (routeUpper ? { lon: routeUpper[0], lat: routeUpper[1], elevationMeters: lower.target?.elevationMeters ?? 0 } : undefined);
+  if (!a || !b) return lower.target ?? upper.target;
+  return {
+    lon: a.lon + (b.lon - a.lon) * t,
+    lat: a.lat + (b.lat - a.lat) * t,
+    elevationMeters: a.elevationMeters + (b.elevationMeters - a.elevationMeters) * t,
   };
 }
 
@@ -238,17 +259,17 @@ export function getCinematicCameraPose(options: CinematicCameraPoseOptions): Rep
 
   if (keyframes.length === 1) {
     const only = keyframes[0];
-    return poseFromValues(coordinates, clampedProgress, heldBearingDeg(only, routeHeadingDeg), only.pitchDeg, only.zoom);
+    return poseFromValues(coordinates, clampedProgress, heldBearingDeg(only, routeHeadingDeg), only.pitchDeg, only.zoom, only.target);
   }
 
   const first = keyframes[0];
   if (clampedProgress <= first.progress) {
-    return poseFromValues(coordinates, clampedProgress, heldBearingDeg(first, routeHeadingDeg), first.pitchDeg, first.zoom);
+    return poseFromValues(coordinates, clampedProgress, heldBearingDeg(first, routeHeadingDeg), first.pitchDeg, first.zoom, first.target);
   }
 
   const last = keyframes[keyframes.length - 1];
   if (clampedProgress >= last.progress) {
-    return poseFromValues(coordinates, clampedProgress, heldBearingDeg(last, routeHeadingDeg), last.pitchDeg, last.zoom);
+    return poseFromValues(coordinates, clampedProgress, heldBearingDeg(last, routeHeadingDeg), last.pitchDeg, last.zoom, last.target);
   }
 
   const upperIndex = keyframes.findIndex((keyframe) => keyframe.progress > clampedProgress);
@@ -257,11 +278,12 @@ export function getCinematicCameraPose(options: CinematicCameraPoseOptions): Rep
   const upper = keyframes[upperIndex];
   const span = upper.progress - lower.progress;
   const t = span > 0 ? (clampedProgress - lower.progress) / span : 0;
+  const targetT = upper.easing === 'linear' ? t : (upper.easing === 'hold' ? 0 : t * t * (3 - 2 * t));
 
   if (upper.easing === 'hold') {
     // Freezes the previous keyframe's pose until this one is reached — a
     // locked-off shot, then (from the next segment onward) a move.
-    return poseFromValues(coordinates, clampedProgress, lower.worldBearingDeg, lower.pitchDeg, lower.zoom);
+    return poseFromValues(coordinates, clampedProgress, lower.worldBearingDeg, lower.pitchDeg, lower.zoom, lower.target);
   }
 
   if (upper.easing === 'linear') {
@@ -271,6 +293,7 @@ export function getCinematicCameraPose(options: CinematicCameraPoseOptions): Rep
       lower.worldBearingDeg + (upper.worldBearingDeg - lower.worldBearingDeg) * t,
       lower.pitchDeg + (upper.pitchDeg - lower.pitchDeg) * t,
       lower.zoom + (upper.zoom - lower.zoom) * t,
+      interpolateTarget(lower, upper, targetT, coordinates),
     );
   }
 
@@ -295,5 +318,6 @@ export function getCinematicCameraPose(options: CinematicCameraPoseOptions): Rep
     clamp(bearing, bearingLo, bearingHi),
     clamp(pitch, pitchLo, pitchHi),
     clamp(zoom, zoomLo, zoomHi),
+    interpolateTarget(lower, upper, targetT, coordinates),
   );
 }
