@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://trailreplay.com/camera-recipe.schema.json",
+  "title": "TrailReplay camera recipe fields",
+  "description": "Version 1 schema for cameraKeyframes, stable track IDs, explicit journey segments, and occurrence-local route anchors. Other recipe fields are allowed.",
+  "type": "object",
+  "additionalProperties": true,
+  "dependentRequired": { "cameraKeyframes": ["segments"] },
+  "properties": {
+    "tracks": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "file": { "type": "string", "minLength": 1 },
+              "name": { "type": "string" },
+              "color": { "type": "string" },
+              "activityIcon": { "type": "string" },
+              "visible": { "type": "boolean" },
+              "duration": { "type": "number", "exclusiveMinimum": 0 },
+              "offset": { "type": "number" }
+            },
+            "additionalProperties": true
+          }
+        },
+        {
+          "type": "object",
+          "required": ["files"],
+          "properties": {
+            "files": { "type": "string", "minLength": 1 },
+            "order": { "enum": ["chronological", "as-dropped", "name"] },
+            "color": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
+            "activityIcon": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["id", "trackId", "duration"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "type": { "const": "track" },
+              "trackId": { "type": "string", "minLength": 1 },
+              "duration": { "type": "number", "exclusiveMinimum": 0 }
+            },
+            "additionalProperties": true
+          },
+          {
+            "type": "object",
+            "required": ["id", "type", "mode", "from", "to", "duration", "distance"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "type": { "const": "transport" },
+              "mode": { "enum": ["car", "bus", "train", "plane", "bike", "walk", "ferry"] },
+              "from": { "$ref": "#/$defs/transportPoint" },
+              "to": { "$ref": "#/$defs/transportPoint" },
+              "duration": { "type": "number", "exclusiveMinimum": 0 },
+              "distance": { "type": "number", "minimum": 0 }
+            },
+            "additionalProperties": true
+          }
+        ]
+      }
+    },
+    "cameraKeyframes": {
+      "type": "object",
+      "required": ["version", "frames"],
+      "properties": {
+        "version": { "const": 1 },
+        "contextFingerprint": { "type": "string", "minLength": 1 },
+        "frames": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": { "$ref": "#/$defs/cameraFrame" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "transportPoint": {
+      "type": "object",
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 },
+        "name": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "cameraAnchor": {
+      "type": "object",
+      "required": ["trackId", "segmentId", "distanceMeters"],
+      "properties": {
+        "trackId": { "type": "string", "minLength": 1 },
+        "segmentId": { "type": "string", "minLength": 1 },
+        "distanceMeters": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "cameraFrame": {
+      "type": "object",
+      "required": ["id", "anchor", "bearingDeg", "pitchDeg", "zoom", "frame", "easing"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "anchor": { "$ref": "#/$defs/cameraAnchor" },
+        "bearingDeg": { "type": "number" },
+        "pitchDeg": { "type": "number", "minimum": 0, "maximum": 85 },
+        "zoom": { "type": "number", "minimum": 0, "maximum": 20 },
+        "frame": { "enum": ["world", "route"] },
+        "easing": { "enum": ["smooth", "linear", "hold"] },
+        "terrain": {
+          "type": "object",
+          "properties": {
+            "rationale": { "type": "string" },
+            "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+            "estimatedMinClearanceMeters": { "type": ["number", "null"] },
+            "warnings": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "frame": { "const": "world" } }, "required": ["frame"] },
+          "then": { "properties": { "bearingDeg": { "minimum": 0, "exclusiveMaximum": 360 } } }
+        },
+        {
+          "if": { "properties": { "frame": { "const": "route" } }, "required": ["frame"] },
+          "then": { "properties": { "bearingDeg": { "minimum": -360, "maximum": 360 } } }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

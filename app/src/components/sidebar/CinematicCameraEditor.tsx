@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppState } from '@/store/storeTypes';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
-import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
+import { useCinematicCameraKeyframes, usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
+import { TerrainCameraPlanner } from './TerrainCameraPlanner';
 import { useI18n } from '@/i18n/useI18n';
 import { createId } from '@/utils/id';
 import { mapGlobalRef } from '@/utils/mapRef';
@@ -68,7 +69,7 @@ function shortestAngleDelta(fromDeg: number, toDeg: number): number {
  */
 export function CinematicCameraEditor() {
   const { t } = useI18n();
-  const keyframes = useAppStore((state) => state.cinematicCameraKeyframes);
+  const keyframes = useCinematicCameraKeyframes();
   const playback = useAppStore((state) => state.playback);
   const animationPhase = useAppStore((state) => state.animationPhase);
   const isExporting = useAppStore((state) => state.isExporting);
@@ -128,7 +129,7 @@ export function CinematicCameraEditor() {
     // changed" (which happens on every ball drag and would fight the drag by
     // resetting it).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playback.progress, isComposing]);
+  }, [playback.progress, isComposing, preparedKeyframes]);
 
   // The ball (and zoom slider) are the source of truth for the live preview
   // *while composing*. The centre is always the marker's true position —
@@ -301,6 +302,7 @@ export function CinematicCameraEditor() {
 
   return (
     <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg space-y-3">
+      <TerrainCameraPlanner />
       <p className="text-xs text-[var(--evergreen-60)]">{t('settings.cinematicCamera.hint')}</p>
 
       <button
@@ -406,6 +408,12 @@ export function CinematicCameraEditor() {
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
+              {keyframe.title && <p className="text-xs font-medium text-[var(--evergreen)]">{keyframe.title}</p>}
+              {keyframe.terrain && <div className="space-y-1 text-[10px] text-[var(--evergreen-60)]">
+                {keyframe.terrain.rationale && <p>{keyframe.terrain.rationale}</p>}
+                {keyframe.terrain.confidence !== undefined && <p>{t('terrainCamera.confidence', { value: Math.round(keyframe.terrain.confidence * 100) })}</p>}
+                {keyframe.terrain.warnings?.map((warning) => <p key={warning}>{warning}</p>)}
+              </div>}
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-[10px] text-[var(--evergreen-60)]">
                   {t('settings.cinematicCamera.frame')}

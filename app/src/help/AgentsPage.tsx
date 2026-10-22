@@ -288,6 +288,35 @@ export function AgentsPage() {
       </section>
 
       <section>
+        <div className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-white/80 p-6 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]">
+              <SlidersHorizontal className="size-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Cinematic camera tools for agents</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--evergreen-80)]">
+                An optional Node.js 20+ CLI reads GPX, KML, or .replay files locally. It uses TrailReplay's shared route and recipe engine to inspect playback context, sample public terrain tiles, and evaluate authored camera keyframes.
+              </p>
+            </div>
+          </div>
+          <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-[var(--evergreen)] px-4 py-3 font-mono text-[12px] leading-5 text-white/85">
+{`node agent-tools.mjs inspect --recipe recipe.json --routes route.gpx --out context.json
+node agent-tools.mjs terrain --recipe recipe.json --routes route.gpx --out terrain-brief.json
+node agent-tools.mjs evaluate --recipe recipe.json --routes route.gpx --out evaluation.json`}
+          </pre>
+          <p className="mt-3 text-xs leading-5 text-[var(--evergreen-60)]">
+            Route files stay on the machine; terrain commands send requested tile coordinates to AWS Terrarium. Numeric evaluation does not verify the rendered replay. FIT is not supported by this CLI.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-[var(--trail-orange)]">
+            <a href="/agent-tools.mjs" download onClick={() => trackEvent('agents_resource_clicked', { resource: '/agent-tools.mjs' })} className="hover:underline">Download agent-tools.mjs</a>
+            <a href="/camera-authoring.md" onClick={() => trackEvent('agents_resource_clicked', { resource: '/camera-authoring.md' })} className="hover:underline">Camera authoring guide</a>
+            <a href="/agent-tools.json" onClick={() => trackEvent('agents_resource_clicked', { resource: '/agent-tools.json' })} className="hover:underline">Tool manifest</a>
+          </div>
+        </div>
+      </section>
+
+      <section>
         <h2 className="text-xl font-bold">{t('help.agents.resources.title')}</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--evergreen-80)]">
           {t('help.agents.resources.intro')}

@@ -54,6 +54,18 @@ below for every cover field and examples.
 - [Giving TrailReplay a route](https://trailreplay.com/replay-file.md): the
   recipe format, the derived sets (`overnight-stops`, `start-finish`), and the
   `.replay` project format. Read this before writing anything.
+- [Camera authoring for agents](https://trailreplay.com/camera-authoring.md): an
+  optional local Node workflow for inspecting route context, sampling terrain,
+  authoring recipe keyframes, and checking numeric camera clearance.
+- [Camera recipe JSON Schema](https://trailreplay.com/camera-recipe.schema.json):
+  machine-readable fields and validation bounds for camera recipes.
+- [Agent tool manifest](https://trailreplay.com/agent-tools.json): supported
+  commands, route formats, runtime, data handling, pinned download URL, and
+  SHA-256 verification hash.
+- [Download agent-tools.mjs](https://trailreplay.com/agent-tools.mjs): a
+  self-contained Node 20+ CLI bundled from TrailReplay's shared parser, recipe,
+  and terrain engine. FIT is unsupported. Numeric evaluation does not verify
+  the rendered replay.
 - [make-replay.mjs](https://trailreplay.com/make-replay.mjs): optional. Packs a
   recipe and its routes into one `.replay` file, when a single file suits better
   than a folder. It only zips — the app still does the resolving. Node built-ins
@@ -96,8 +108,8 @@ For a Follow Behind camera, use `cameraSettings.followBehindPreset` with
 as the website control. Only use `followBehindZoomLevel` for an exact slider
 stop: `0`, `11`, `22`, `33`, `49.5`, `66`, `83`, or `100`, from farthest to
 closest. Do not use `cameraSettings.zoom` for Follow Behind. Cinematic uses a
-separate map-zoom range of `8` to `20`, and its keyframes are authored in the
-website after the recipe is imported.
+separate map-zoom range of `8` to `20`. Recipe keyframes use a distinct schema;
+see the camera authoring guide.
 
 ## About
 

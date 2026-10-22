@@ -20,6 +20,9 @@ build/
 .cache/
 .next/
 out/
+app/public/agent-tools.mjs
+app/public/agent-tools.*.mjs
+app/public/agent-tools.json
 
 # Local Cloudflare Pages/D1 state and generated landmark-import artifacts
 .wrangler/

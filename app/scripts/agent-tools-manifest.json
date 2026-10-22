@@ -1,0 +1,28 @@
+{
+  "name": "TrailReplay Agent Tools",
+  "contractVersion": 1,
+  "engineVersion": "generated from bundled sources",
+  "download": "generated immutable bundle URL",
+  "latestDownload": "https://trailreplay.com/agent-tools.mjs",
+  "sha256": "generated from exact bundle bytes",
+  "runtime": "Node.js 20 or later",
+  "network": {
+    "inspect": "No network request.",
+    "terrain": "Fetches public AWS Terrarium elevation tiles.",
+    "evaluate": "Fetches public AWS Terrarium elevation tiles."
+  },
+  "privacy": "Route files and recipes are read locally. Terrain commands send requested tile coordinates to the public AWS Terrarium tile service; route files are not uploaded. No AI credentials or TrailReplay upload API are used.",
+  "commands": {
+    "inspect": "Read route and recipe context, resolve anchors with TrailReplay's shared parser and recipe engine, and report warnings.",
+    "terrain": "Sample bounded public Terrarium elevation data and produce terrain context for camera authoring.",
+    "evaluate": "Numerically evaluate recipe camera keyframes against terrain samples. This does not verify visual rendering."
+  },
+  "routeFormats": ["GPX", "KML", ".replay"],
+  "replayArchiveScope": "Extracts GPX/KML route files only. Pass --recipe separately; project.json is not read.",
+  "unsupportedRouteFormats": ["FIT"],
+  "docs": {
+    "cameraAuthoring": "https://trailreplay.com/camera-authoring.md",
+    "recipeFormat": "https://trailreplay.com/replay-file.md",
+    "cameraRecipeSchema": "https://trailreplay.com/camera-recipe.schema.json"
+  }
+}

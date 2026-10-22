@@ -37,6 +37,7 @@ export function createAppStore() {
           state.journey = null;
           state.journeySegments = [];
           state.cinematicCameraKeyframes = [];
+          state.cameraPlanReview = null;
           state.pictures = [];
           state.pendingPicturePlacements = [];
           state.videos = [];

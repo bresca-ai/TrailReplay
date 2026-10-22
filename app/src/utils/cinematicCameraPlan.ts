@@ -31,6 +31,7 @@ export interface KeyframeAnchor {
 
 export interface CinematicCameraKeyframe {
   id: string;
+  title?: string;
   anchor: KeyframeAnchor;
   /**
    * Which way the camera faces, in degrees. Interpretation depends on `frame`:
@@ -46,6 +47,7 @@ export interface CinematicCameraKeyframe {
   frame: CinematicKeyframeFrame;
   /** How the camera arrives at this keyframe. */
   easing: CinematicKeyframeEasing;
+  terrain?: { rationale?: string; confidence?: number; warnings?: string[]; estimatedMinClearanceMeters?: number | null };
 }
 
 function clamp(value: number, min: number, max: number): number {

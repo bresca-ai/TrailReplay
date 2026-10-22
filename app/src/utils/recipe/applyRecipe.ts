@@ -105,6 +105,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     // Kept so saving preserves where this came from, not only what it became.
     sourceRecipe: recipe,
     activeTrackId: resolved.activeTrackId,
+    comparisonTracks: resolved.comparisonTracks,
     journey: {
       id: 'recipe-journey',
       name: recipe.name ?? activeTrack.name,
@@ -121,7 +122,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     iconChanges: resolved.iconChanges,
     pictures: [],
     videos: [],
-    cinematicCameraKeyframes: [],
+    cinematicCameraKeyframes: resolved.cinematicCameraKeyframes,
     hiddenLandmarkIds: [],
     selectedLandmarkId: null,
     isPlacingLandmark: false,
@@ -133,8 +134,14 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
       ...createDefaultPlayback(),
       routeTimingMode: recipe.routeTimingMode ?? 'recorded',
     },
-    settings: mergeSettings(recipe, activeTrack.color, activeTrack.activityIcon),
-    cameraSettings: mergeRecipeCameraSettings(recipe),
+    settings: {
+      ...mergeSettings(recipe, activeTrack.color, activeTrack.activityIcon),
+      ...(resolved.cinematicCameraKeyframes.length > 0 ? { cameraMode: 'cinematic' as const } : {}),
+    },
+    cameraSettings: {
+      ...mergeRecipeCameraSettings(recipe),
+      ...(resolved.cinematicCameraKeyframes.length > 0 ? { mode: 'cinematic' as const } : {}),
+    },
     videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
     socialShareSettings: {
       ...mergedCover,

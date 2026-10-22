@@ -654,8 +654,46 @@ second of three equal legs sits past `0.333`.
 
 `pictures` and `videos` are route-timed media annotations, separate from cover
 `photoSlots`. Saved projects reopen those annotations as placeholders, so
-authoring them from outside is not useful. `cinematicCameraKeyframes` is intentionally not part of recipe
-input. Import the recipe first, then author Cinematic shots in the website.
+authoring them from outside is not useful. `cinematicCameraKeyframes` is the
+saved-project form; recipes author Cinematic shots through `cameraKeyframes`.
+
+### 5.12 `cameraKeyframes` — cinematic camera shots
+
+Camera keyframes anchor to route distance within a specific playback segment
+occurrence. Explicit `segments` with stable IDs are required when frames are
+present; repeated plays of one track should have distinct segment IDs.
+
+```json
+{
+  "tracks": [{ "id": "ridge", "file": "ridge.gpx" }],
+  "segments": [{ "id": "ridge-play", "trackId": "ridge", "duration": 60000 }],
+  "cameraKeyframes": {
+    "version": 1,
+    "frames": [{
+      "id": "summit-overview",
+      "title": "Summit overview",
+      "anchor": { "trackId": "ridge", "segmentId": "ridge-play", "distanceMeters": 8400 },
+      "bearingDeg": 235,
+      "pitchDeg": 62,
+      "zoom": 12.5,
+      "frame": "world",
+      "easing": "smooth",
+      "terrain": { "rationale": "Open view across the sampled ridge", "confidence": 0.8, "warnings": [] }
+    }]
+  }
+}
+```
+
+`trackId` references a recipe track ID, `segmentId` references a segment ID, and
+`distanceMeters` is measured along that track for that occurrence. `bearingDeg`
+is in `[0, 360)`, `pitchDeg` in `[0, 85]`, and `zoom` in `[0, 20]`. `frame` is
+`world` or `route`; `easing` is `smooth`, `linear`, or `hold`. Optional terrain
+metadata records rationale, confidence (`0`–`1`), and warnings. These values
+explain an authored choice; they do not establish rendered quality.
+
+See [camera-authoring.md](https://trailreplay.com/camera-authoring.md) for the
+optional Node CLI workflow and numeric evaluation limits. The field schema is
+published at [camera-recipe.schema.json](https://trailreplay.com/camera-recipe.schema.json).
 
 ---
 
@@ -782,7 +820,10 @@ flat profile. Worth saying so before they wonder why.
 
 ---
 
-*Recipes and `.replay` format version 1. The offline builder and a worked
-example are served alongside this page: <https://trailreplay.com/make-replay.mjs> and
+*Recipes and `.replay` format version 1. The offline archive builder, camera
+authoring guide, self-contained agent CLI, and a worked recipe are served
+alongside this page: <https://trailreplay.com/make-replay.mjs>,
+<https://trailreplay.com/camera-authoring.md>,
+<https://trailreplay.com/agent-tools.json>, <https://trailreplay.com/agent-tools.mjs>, and
 <https://trailreplay.com/example-recipe.json>. Source:
 <https://github.com/bresca-ai/TrailReplay> (`app/src/utils/projectFile/`).*

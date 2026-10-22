@@ -2,6 +2,7 @@ import { zip, type Zippable } from 'fflate';
 import type { AppState } from '@/store/storeTypes';
 import { serializeTrackToGpx } from '@/utils/gpxParser';
 import type { GPXTrack } from '@/types';
+import { serializeCameraRecipe } from '@/utils/recipe/cameraRecipe';
 import {
   APP_VERSION,
   CURRENT_FORMAT_VERSION,
@@ -101,6 +102,16 @@ export async function buildReplayArchive(state: AppState): Promise<Blob> {
     offset: state.comparisonTracks[index].offset,
     routeFile: meta.routeFile,
   }));
+  const routeFiles = new Map<string, string>([
+    ...state.tracks.map((track, index) => [track.id, trackMetas[index].routeFile] as const),
+    ...state.comparisonTracks.flatMap((entry, index) => [
+      [entry.id, comparisonMetas[index].routeFile] as const,
+      [entry.track.id, comparisonMetas[index].routeFile] as const,
+    ]),
+  ]);
+  const recipe = state.sourceRecipe || state.cinematicCameraKeyframes.length > 0
+    ? serializeCameraRecipe(state, routeFiles)
+    : null;
 
   const project: ReplayProjectFile = {
     formatVersion: CURRENT_FORMAT_VERSION,
@@ -147,8 +158,8 @@ export async function buildReplayArchive(state: AppState): Promise<Blob> {
     'project.json': encoder.encode(JSON.stringify(project, null, 2)),
     // The source, when there was one. A project saved from a recipe can then be
     // reopened, edited as a recipe, and rebuilt, rather than being a dead end.
-    ...(state.sourceRecipe
-      ? { 'recipe.json': encoder.encode(JSON.stringify(state.sourceRecipe, null, 2)) }
+    ...(recipe
+      ? { 'recipe.json': encoder.encode(JSON.stringify(recipe, null, 2)) }
       : {}),
   };
 

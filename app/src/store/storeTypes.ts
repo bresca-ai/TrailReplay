@@ -29,6 +29,14 @@ export interface FileImportStatus {
   fileCount: number;
 }
 
+/** A camera-only proposal. Saved projects and video exports use accepted shots. */
+export interface CameraPlanReview {
+  frames: CinematicCameraKeyframe[];
+  contextFingerprint: string;
+  previewing: boolean;
+  warnings: string[];
+}
+
 export interface AppState {
   tracks: GPXTrack[];
   activeTrackId: string | null;
@@ -36,6 +44,11 @@ export interface AppState {
   journey: Journey | null;
   journeySegments: JourneySegment[];
   cinematicCameraKeyframes: CinematicCameraKeyframe[];
+  cameraPlanReview: CameraPlanReview | null;
+  stageCameraPlan: (review: Omit<CameraPlanReview, 'previewing'>) => void;
+  previewCameraPlan: (previewing: boolean) => void;
+  applyCameraPlan: (currentFingerprint: string) => void;
+  discardCameraPlan: () => void;
   pictures: PictureAnnotation[];
   pendingPicturePlacements: PendingPicturePlacement[];
   videos: VideoAnnotation[];

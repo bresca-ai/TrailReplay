@@ -1,4 +1,4 @@
-import type { GPXTrack, IconChange, JourneySegment, RouteTimingMode, TextAnnotation } from '@/types';
+import type { ComparisonTrack, GPXTrack, IconChange, JourneySegment, RouteTimingMode, TextAnnotation } from '@/types';
 import {
   buildComputedJourney,
   buildJourneyDistanceProfile,
@@ -12,6 +12,7 @@ import { anchorOnRoute, buildLegs, type RouteAnchor, type RouteLeg } from './anc
 import { matchTrackFiles } from './matchTrackFiles';
 import { deriveOvernightStops, describeStop } from './overnightStops';
 import { calculateDistance } from '@/utils/gpx/trackStats';
+import { resolveRecipeCameraKeyframes } from './cameraRecipe';
 import {
   RecipeError,
   type Recipe,
@@ -33,6 +34,8 @@ export interface ResolvedRecipe {
   textAnnotations: TextAnnotation[];
   iconChanges: IconChange[];
   report: RecipeReport;
+  cinematicCameraKeyframes: import('@/utils/cinematicCameraPlan').CinematicCameraKeyframe[];
+  comparisonTracks: ComparisonTrack[];
 }
 
 function entry(
@@ -188,17 +191,27 @@ export function resolveRecipe(
   fileNames: string[],
 ): ResolvedRecipe {
   const matched = matchTrackFiles(recipe.tracks, tracks, fileNames);
+  if (matched.length === 0) throw new RecipeError('A recipe needs at least one playback track');
+  for (const { spec } of matched) {
+    if (spec.id !== undefined && (typeof spec.id !== 'string' || !spec.id.trim())) throw new RecipeError('tracks[].id must be a non-empty string');
+    if (recipe.cameraKeyframes && !spec.id) throw new RecipeError('cameraKeyframes require explicit stable tracks[].id values');
+  }
 
   const named = matched.map((match, index) => ({
-    track: match.track,
+    track: match.spec.id ? { ...match.track, id: match.spec.id } : match.track,
     name: match.spec.name ?? match.track.name,
     duration: match.spec.duration,
     spec: match.spec,
     index,
   }));
+  const stableTrackIds = new Set<string>();
+  for (const item of named) {
+    if (stableTrackIds.has(item.track.id)) throw new RecipeError(`tracks: duplicate stable id "${item.track.id}"`);
+    stableTrackIds.add(item.track.id);
+  }
 
-  const stitched = (recipe.mode ?? 'stitch') === 'stitch' && named.length > 1;
-  const { legs, durations } = buildLegs(named, {
+  const stitched = recipe.segments ? recipe.segments.length > 1 : (recipe.mode ?? 'stitch') === 'stitch' && named.length > 1;
+  let { legs, durations } = buildLegs(named, {
     stitched,
     legDuration: recipe.legDuration ?? 'by-distance',
     totalDuration: recipe.totalDuration ?? DEFAULT_TOTAL_DURATION_MS,
@@ -220,15 +233,31 @@ export function resolveRecipe(
     if (item.spec.visible === false) track.visible = false;
     return track;
   });
+  const resolvedComparisonTracks: ComparisonTrack[] = recipe.comparisonTracks
+    ? matchTrackFiles(recipe.comparisonTracks, tracks, fileNames).map(({ track: matchedTrack, spec }) => {
+      const track = spec.id ? { ...matchedTrack, id: spec.id } : matchedTrack;
+      return {
+        id: track.id,
+        name: spec.name ?? track.name,
+        color: spec.color ?? track.color,
+        visible: spec.visible !== false,
+        offset: spec.offset ?? 0,
+        track,
+      };
+    })
+    : [];
 
   const activeIndex = typeof recipe.activeTrack === 'number'
     ? recipe.activeTrack
     : recipe.activeTrack
-      ? named.findIndex((item) => item.name.toLowerCase() === String(recipe.activeTrack).toLowerCase())
+      ? (() => {
+        const byId = named.findIndex((item) => item.track.id === recipe.activeTrack);
+        return byId >= 0 ? byId : named.findIndex((item) => item.name.toLowerCase() === String(recipe.activeTrack).toLowerCase());
+      })()
       : 0;
   const activeTrack = resolvedTracks[activeIndex] ?? resolvedTracks[0];
 
-  const journeySegments: JourneySegment[] = (stitched ? resolvedTracks : [activeTrack])
+  const defaultJourneySegments: JourneySegment[] = (stitched ? resolvedTracks : [activeTrack])
     .map((track) => ({
       id: createId(`segment-${track.id}`),
       type: 'track' as const,
@@ -237,6 +266,52 @@ export function resolveRecipe(
         ? durations[resolvedTracks.indexOf(track)]
         : (recipe.totalDuration ?? DEFAULT_TOTAL_DURATION_MS),
     }));
+  if (recipe.segments !== undefined && !Array.isArray(recipe.segments)) throw new RecipeError('segments must be an array');
+  const seenSegmentIds = new Set<string>();
+  const journeySegments: JourneySegment[] = recipe.segments
+    ? recipe.segments.map((segment, index) => {
+      if (!segment?.id || typeof segment.id !== 'string') throw new RecipeError(`segments[${index}].id must be a non-empty string`);
+      if (seenSegmentIds.has(segment.id)) throw new RecipeError(`segments[${index}].id is duplicated`);
+      seenSegmentIds.add(segment.id);
+      if (typeof segment.duration !== 'number' || !Number.isFinite(segment.duration) || segment.duration <= 0) throw new RecipeError(`segments[${index}].duration must be a positive finite number`);
+      if (segment.type === 'transport') {
+        if (!['car', 'bus', 'train', 'plane', 'bike', 'walk', 'ferry'].includes(segment.mode)) throw new RecipeError(`segments[${index}].mode is invalid`);
+        if (!Number.isFinite(segment.distance) || segment.distance < 0) throw new RecipeError(`segments[${index}].distance must be a non-negative finite number`);
+        for (const point of [segment.from, segment.to]) {
+          if (!point || !Number.isFinite(point.lat) || point.lat < -90 || point.lat > 90 || !Number.isFinite(point.lon) || point.lon < -180 || point.lon > 180) throw new RecipeError(`segments[${index}] has invalid transport coordinates`);
+        }
+        return { ...segment, type: 'transport' };
+      }
+      if (segment.type !== undefined && segment.type !== 'track') throw new RecipeError(`segments[${index}].type must be "track" or "transport"`);
+      const track = resolvedTracks.find((entry) => entry.id === segment.trackId);
+      if (!track) throw new RecipeError(`segments[${index}].trackId "${segment.trackId}" is unknown`);
+      return { id: segment.id, type: 'track', trackId: track.id, duration: segment.duration };
+    })
+    : defaultJourneySegments;
+  if (recipe.segments && journeySegments.length === 0) throw new RecipeError('segments must contain at least one journey segment');
+  if (recipe.segments) {
+    const totalDuration = journeySegments.reduce((sum, segment) => sum + segment.duration, 0);
+    let elapsedDuration = 0;
+    let elapsedDistance = 0;
+    legs = [];
+    durations = [];
+    for (const segment of journeySegments) {
+      durations.push(segment.duration);
+      if (segment.type === 'track') {
+        const track = resolvedTracks.find((entry) => entry.id === segment.trackId)!;
+        const namedTrack = named.find((entry) => entry.track.id === track.id)!;
+        legs.push({
+          track, name: namedTrack.name, segmentId: segment.id,
+          progressStart: elapsedDuration / totalDuration,
+          progressShare: segment.duration / totalDuration,
+          journeyStartMeters: elapsedDistance,
+        });
+        elapsedDistance += track.totalDistance;
+      } else elapsedDistance += calculateDistance(segment.from.lat, segment.from.lon, segment.to.lat, segment.to.lon);
+      elapsedDuration += segment.duration;
+    }
+  }
+  if (recipe.cameraKeyframes && !recipe.segments) throw new RecipeError('cameraKeyframes require explicit segments with stable IDs');
 
   const timingMode: RouteTimingMode = recipe.routeTimingMode ?? 'recorded';
   const computedJourney = buildComputedJourney(journeySegments, resolvedTracks);
@@ -264,6 +339,7 @@ export function resolveRecipe(
    * recipe exact rather than close.
    */
   const progressAt = (at: RouteAnchor, label: string): number => {
+    if (at.authoredProgress) return at.progress;
     if (!journeyTrackIds.has(at.leg.track.id)) {
       // Its route is loaded but not in the timeline, so this has no moment in
       // the replay at all and would fire wherever its number happens to land.
@@ -318,7 +394,7 @@ export function resolveRecipe(
     const label = `landmarks[${index}]${spec.title ? ` "${spec.title}"` : ''}`;
     if (spec.auto) {
       for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings, spec.track, label).entries()) {
-        const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
+        const at = anchorOnRoute({ track: derived.track, segmentId: legs[derived.track]?.segmentId, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);
         landmarks.push(landmarkFrom(spec, at, spec.id ?? createId('recipe-landmark'), title, true, progress));
@@ -340,7 +416,7 @@ export function resolveRecipe(
     const label = `annotations[${index}]${spec.title ? ` "${spec.title}"` : ''}`;
     if (spec.auto) {
       for (const [autoIndex, derived] of expandAuto(spec.auto, legs, warnings, spec.track, label).entries()) {
-        const at = anchorOnRoute({ track: derived.track, km: derived.km }, legs, label);
+        const at = anchorOnRoute({ track: derived.track, segmentId: legs[derived.track]?.segmentId, km: derived.km }, legs, label);
         const title = spec.title ? `${spec.title} ${autoIndex + 1}` : derived.title;
         const progress = progressAt(at, title);
         annotations.push(annotationFrom(spec, at, spec.id ?? createId('recipe-note'), title, progress));
@@ -384,7 +460,7 @@ export function resolveRecipe(
   warnings.push(...collidingPins(landmarks));
   warnings.push(...overlappingCards(
     annotations.map((card, index) => ({ card, legName: annotationLegs[index] })),
-    recipe.totalDuration ?? DEFAULT_TOTAL_DURATION_MS,
+    totalMs,
     stitched,
   ));
 
@@ -395,6 +471,8 @@ export function resolveRecipe(
     userLandmarks: landmarks,
     textAnnotations: annotations,
     iconChanges,
+    cinematicCameraKeyframes: resolveRecipeCameraKeyframes(recipe, resolvedTracks, journeySegments),
+    comparisonTracks: resolvedComparisonTracks,
     report: {
       trackCount: resolvedTracks.length,
       totalDistanceMeters: resolvedTracks.reduce((sum, track) => sum + track.totalDistance, 0),

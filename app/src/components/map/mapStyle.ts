@@ -1,3 +1,5 @@
+import { TERRAIN_PROVIDER } from '@/utils/terrainCamera/provider';
+
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 export const BASEMAP_FALLBACK_MAX_ZOOM = 12;
@@ -119,10 +121,10 @@ export const MAP_STYLE = {
     'fallback-mapbox-streets': fallbackRasterSource(MAPBOX_STREET_TILES, MAPBOX_ATTRIBUTION, 512),
     'terrain-dem': {
       type: 'raster-dem',
-      tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      encoding: 'terrarium',
-      maxzoom: 15,
+      tiles: [TERRAIN_PROVIDER.tileUrl],
+      tileSize: TERRAIN_PROVIDER.tileSize,
+      encoding: TERRAIN_PROVIDER.encoding,
+      maxzoom: TERRAIN_PROVIDER.maxZoom,
     },
   },
   layers: [
@@ -149,7 +151,7 @@ export const MAP_STYLE = {
   ],
   terrain: {
     source: 'terrain-dem',
-    exaggeration: 1.2,
+    exaggeration: TERRAIN_PROVIDER.exaggeration,
   },
 } as const;
 

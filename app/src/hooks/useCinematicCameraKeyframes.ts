@@ -1,12 +1,26 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { buildComputedJourney } from '@/utils/journeyUtils';
+import { terrainContextFingerprint } from '@/utils/terrainCamera/context';
 import {
   deriveCinematicKeyframeProgress,
   prepareCinematicKeyframeTrack,
   type CinematicCameraKeyframe,
   type PreparedCinematicKeyframe,
 } from '@/utils/cinematicCameraPlan';
+
+/** Preview only changes the rendered camera. Exports always use accepted shots. */
+export function useCinematicCameraKeyframes(): CinematicCameraKeyframe[] {
+  const accepted = useAppStore((state) => state.cinematicCameraKeyframes);
+  const review = useAppStore((state) => state.cameraPlanReview);
+  const tracks = useAppStore((state) => state.tracks);
+  const segments = useAppStore((state) => state.journeySegments);
+  const timing = useAppStore((state) => state.playback.routeTimingMode);
+  const exporting = useAppStore((state) => state.isExporting);
+  const hasReview = review !== null;
+  const fingerprint = useMemo(() => hasReview ? terrainContextFingerprint(tracks, segments, timing) : '', [hasReview, tracks, segments, timing]);
+  return !exporting && review?.previewing && review.contextFingerprint === fingerprint ? review.frames : accepted;
+}
 
 /**
  * The stored keyframes (anchor-based), sorted and progress-derived against
@@ -18,7 +32,7 @@ import {
 export function usePreparedCinematicCameraKeyframes(
   cameraPathCoordinates: number[][],
 ): PreparedCinematicKeyframe[] {
-  const keyframes = useAppStore((state) => state.cinematicCameraKeyframes);
+  const keyframes = useCinematicCameraKeyframes();
   const journeySegments = useAppStore((state) => state.journeySegments);
   const tracks = useAppStore((state) => state.tracks);
   const routeTimingMode = useAppStore((state) => state.playback.routeTimingMode);

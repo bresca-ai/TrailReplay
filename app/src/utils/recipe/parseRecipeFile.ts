@@ -26,11 +26,12 @@ export async function parseRecipeFile(file: File): Promise<Recipe> {
   const hasRecipeShape = 'tracks' in recipe
     || 'landmarks' in recipe
     || 'annotations' in recipe
+    || 'cameraKeyframes' in recipe
     || 'trailreplay' in recipe;
 
   if (!hasRecipeShape) {
     throw new RecipeError(
-      `${file.name} has no "tracks", "landmarks" or "annotations" — `
+      `${file.name} has no "tracks", "landmarks", "annotations" or "cameraKeyframes" — `
       + 'see https://trailreplay.com/replay-file.md',
     );
   }

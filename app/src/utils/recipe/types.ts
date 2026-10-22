@@ -40,6 +40,9 @@ export interface Recipe {
   landmarks?: RecipeLandmark[];
   annotations?: RecipeAnnotation[];
   iconChanges?: RecipeIconChange[];
+  cameraKeyframes?: RecipeCameraKeyframes;
+  /** Explicit playback order; entries can repeat a track as a distinct occurrence. */
+  segments?: RecipeSegmentSpec[];
 
   activeTrack?: string | number;
   routeTimingMode?: RouteTimingMode;
@@ -63,6 +66,8 @@ export type DeepPartial<T> = {
 };
 
 export interface RecipeTrackSpec {
+  /** Stable ID used by camera anchors and explicit journey segments. */
+  id?: string;
   /** File name of a GPX/KML dropped alongside the recipe. Matched loosely — see matchTrackFiles. */
   file: string;
   name?: string;
@@ -73,6 +78,27 @@ export interface RecipeTrackSpec {
   duration?: number;
   /** comparisonTracks only: start offset in seconds. */
   offset?: number;
+}
+
+export type RecipeSegmentSpec = RecipeTrackSegmentSpec | RecipeTransportSegmentSpec;
+export interface RecipeTrackSegmentSpec { id: string; type?: 'track'; trackId: string; duration: number }
+export interface RecipeTransportSegmentSpec {
+  id: string; type: 'transport'; mode: import('@/types').TransportMode;
+  from: { lat: number; lon: number; name?: string }; to: { lat: number; lon: number; name?: string };
+  duration: number; distance: number;
+}
+
+export interface RecipeCameraKeyframes { version: 1; contextFingerprint?: string; frames: RecipeCameraFrame[] }
+export interface RecipeCameraFrame {
+  id: string;
+  title?: string;
+  anchor: { trackId: string; segmentId: string; distanceMeters: number };
+  bearingDeg: number;
+  pitchDeg: number;
+  zoom: number;
+  frame: 'world' | 'route';
+  easing: 'smooth' | 'linear' | 'hold';
+  terrain?: { rationale?: string; confidence?: number; warnings?: string[]; estimatedMinClearanceMeters?: number | null };
 }
 
 /** `{ files: "*.gpx", order: "chronological" }` — take whatever was dropped. */
@@ -93,6 +119,12 @@ export interface RecipeAnchor {
   progress?: number;
   /** Which track a `km` is measured along: index, or name. Defaults to the first. */
   track?: string | number;
+  /** Stable ID of one journey occurrence; required when a route occurs more than once. */
+  segmentId?: string;
+  /** Stable ID of the route, for generated or renamed recipes. */
+  trackId?: string;
+  /** Exact distance in metres from the selected occurrence's start. */
+  distanceMeters?: number;
 }
 
 export interface RecipeLandmark extends RecipeAnchor {

@@ -23,6 +23,7 @@ import {
 } from '@/utils/journeyUtils';
 import { DEFAULT_ACTIVITY_ICON } from '@/utils/activityIcons';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
+import { buildCameraPathCoordinates } from '@/utils/cameraPathCoordinates';
 import type { GPXTrack, JourneySegment, RouteTimingMode } from '@/types';
 
 const computedJourneyCache = new WeakMap<
@@ -140,8 +141,6 @@ function getCachedElevationData(
   return elevationData;
 }
 
-const CAMERA_PATH_SAMPLE_COUNT = 601;
-
 function getCachedCameraPath(
   computedJourney: ComputedJourney | null,
   journeyDistanceProfile: JourneyDistanceProfile | null,
@@ -152,11 +151,7 @@ function getCachedCameraPath(
     if (!activeTrack || activeTrack.points.length === 0) return [];
     let coordinates = trackCameraPathCache.get(activeTrack);
     if (!coordinates) {
-      coordinates = Array.from({ length: CAMERA_PATH_SAMPLE_COUNT }, (_, index) => {
-        const progress = index / (CAMERA_PATH_SAMPLE_COUNT - 1);
-        const point = interpolateTrackPoint(activeTrack, activeTrack.totalDistance * progress);
-        return point ? [point.lon, point.lat] : [];
-      }).filter((coordinate) => coordinate.length === 2);
+      coordinates = buildCameraPathCoordinates(null, journeyDistanceProfile, activeTrack, routeTimingMode);
       trackCameraPathCache.set(activeTrack, coordinates);
     }
     return coordinates;
@@ -169,20 +164,7 @@ function getCachedCameraPath(
   }
   let coordinates = timingCache.get(routeTimingMode);
   if (!coordinates) {
-    coordinates = Array.from({ length: CAMERA_PATH_SAMPLE_COUNT }, (_, index) => {
-      const progress = index / (CAMERA_PATH_SAMPLE_COUNT - 1);
-      const point = routeTimingMode === 'uniform' && journeyDistanceProfile
-        ? getJourneyPointAtDistance(
-            journeyDistanceProfile,
-            journeyDistanceProfile.totalDistance * progress,
-          )
-        : getJourneyPointAtProgress(
-            progress,
-            computedJourney.coordinates,
-            computedJourney.segmentTimings,
-          );
-      return point ? [point.lon, point.lat] : [];
-    }).filter((coordinate) => coordinate.length === 2);
+    coordinates = buildCameraPathCoordinates(computedJourney, journeyDistanceProfile, activeTrack, routeTimingMode);
     timingCache.set(routeTimingMode, coordinates);
   }
   return coordinates;

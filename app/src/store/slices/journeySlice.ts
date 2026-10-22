@@ -7,6 +7,11 @@ type JourneySlice = Pick<
   | 'journey'
   | 'journeySegments'
   | 'cinematicCameraKeyframes'
+  | 'cameraPlanReview'
+  | 'stageCameraPlan'
+  | 'previewCameraPlan'
+  | 'applyCameraPlan'
+  | 'discardCameraPlan'
   | 'createJourney'
   | 'updateJourneyName'
   | 'addJourneySegment'
@@ -27,6 +32,21 @@ export const createJourneySlice: AppSliceCreator<JourneySlice> = (set) => ({
   // segment anchor and are meaningless without the route they were captured
   // on. See CINEMATIC_CAMERA_PLAN.md section 3.4.
   cinematicCameraKeyframes: [],
+  cameraPlanReview: null,
+  stageCameraPlan: (review) => set((state) => {
+    state.cameraPlanReview = { ...review, previewing: false };
+  }),
+  previewCameraPlan: (previewing) => set((state) => {
+    if (state.cameraPlanReview) state.cameraPlanReview.previewing = previewing;
+  }),
+  applyCameraPlan: (currentFingerprint) => set((state) => {
+    if (!state.cameraPlanReview || state.cameraPlanReview.contextFingerprint !== currentFingerprint) return;
+    state.cinematicCameraKeyframes = state.cameraPlanReview.frames;
+    state.cameraPlanReview = null;
+    state.cameraSettings.mode = 'cinematic';
+    state.settings.cameraMode = 'cinematic';
+  }),
+  discardCameraPlan: () => set((state) => { state.cameraPlanReview = null; }),
 
   createJourney: (name) =>
     set((state) => {
@@ -86,17 +106,30 @@ export const createJourneySlice: AppSliceCreator<JourneySlice> = (set) => ({
 
   addCinematicCameraKeyframe: (keyframe) =>
     set((state) => {
-      state.cinematicCameraKeyframes.push(keyframe);
+      const frames = state.cameraPlanReview?.previewing ? state.cameraPlanReview.frames : state.cinematicCameraKeyframes;
+      frames.push(keyframe);
     }),
 
   updateCinematicCameraKeyframe: (keyframeId, updates) =>
     set((state) => {
-      const keyframe = state.cinematicCameraKeyframes.find((entry) => entry.id === keyframeId);
-      if (keyframe) Object.assign(keyframe, updates);
+      const frames = state.cameraPlanReview?.previewing ? state.cameraPlanReview.frames : state.cinematicCameraKeyframes;
+      const keyframe = frames.find((entry) => entry.id === keyframeId);
+      if (keyframe) {
+        Object.assign(keyframe, updates);
+        if (keyframe.terrain && ['bearingDeg', 'pitchDeg', 'zoom', 'anchor', 'frame', 'easing'].some((key) => key in updates)) {
+          keyframe.terrain.confidence = undefined;
+          keyframe.terrain.estimatedMinClearanceMeters = undefined;
+          keyframe.terrain.warnings = ['Shot edited since terrain assessment. Reassess before accepting.'];
+        }
+      }
     }),
 
   removeCinematicCameraKeyframe: (keyframeId) =>
     set((state) => {
-      state.cinematicCameraKeyframes = state.cinematicCameraKeyframes.filter((entry) => entry.id !== keyframeId);
+      if (state.cameraPlanReview?.previewing) {
+        state.cameraPlanReview.frames = state.cameraPlanReview.frames.filter((entry) => entry.id !== keyframeId);
+      } else {
+        state.cinematicCameraKeyframes = state.cinematicCameraKeyframes.filter((entry) => entry.id !== keyframeId);
+      }
     }),
 });

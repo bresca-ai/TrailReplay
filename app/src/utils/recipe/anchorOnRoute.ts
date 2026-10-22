@@ -5,6 +5,7 @@ import { RecipeError, type RecipeAnchor } from './types';
 
 /** A track plus where it sits in the replay's timeline. */
 export interface RouteLeg {
+  segmentId?: string;
   track: GPXTrack;
   name: string;
   /** Fraction of the whole replay this leg starts at. */
@@ -32,11 +33,39 @@ export interface RouteAnchor {
   routeDistanceMeters: number;
   /** Fraction of the whole replay. */
   progress: number;
+  authoredProgress?: boolean;
   offRouteMeters?: number;
   leg: RouteLeg;
 }
 
 function pickLeg(anchor: RecipeAnchor, legs: RouteLeg[], label: string): RouteLeg {
+  if (legs.length === 0) throw new RecipeError(`${label}: no track segment is available for this anchor`);
+  if (anchor.segmentId !== undefined) {
+    const segment = legs.find((leg) => leg.segmentId === anchor.segmentId);
+    if (!segment) throw new RecipeError(`${label}: no active journey segment named "${anchor.segmentId}"`);
+    if (anchor.trackId && segment.track.id !== anchor.trackId) throw new RecipeError(`${label}: segment "${anchor.segmentId}" does not belong to track "${anchor.trackId}"`);
+    return segment;
+  }
+  if (anchor.trackId !== undefined) {
+    const matches = legs.filter((leg) => leg.track.id === anchor.trackId);
+    if (matches.length > 1) throw new RecipeError(`${label}: track "${anchor.trackId}" occurs more than once; specify segmentId`);
+    if (!matches[0]) throw new RecipeError(`${label}: track "${anchor.trackId}" is not active`);
+    return matches[0];
+  }
+  if (anchor.progress !== undefined && anchor.track === undefined) {
+    if (!Number.isFinite(anchor.progress) || anchor.progress < 0 || anchor.progress > 1) throw new RecipeError(`${label}: progress must be in [0, 1]`);
+    const current = legs.find((leg) => anchor.progress! >= leg.progressStart && anchor.progress! <= leg.progressStart + leg.progressShare);
+    if (current) return current;
+    // A progress inside a transport leg has no track geometry. Keep the exact
+    // authored timeline position while using the nearest track endpoint only
+    // to resolve the note's secondary route-distance metadata.
+    return [...legs].sort((a, b) => {
+      const gap = (leg: RouteLeg) => anchor.progress! < leg.progressStart
+        ? leg.progressStart - anchor.progress!
+        : anchor.progress! - (leg.progressStart + leg.progressShare);
+      return gap(a) - gap(b);
+    })[0];
+  }
   if (anchor.track === undefined) return legs[0];
 
   if (typeof anchor.track === 'number') {
@@ -84,26 +113,30 @@ export function anchorOnRoute(
   legs: RouteLeg[],
   label: string,
 ): RouteAnchor {
+  if (anchor.progress !== undefined && (!Number.isFinite(anchor.progress) || anchor.progress < 0 || anchor.progress > 1)) {
+    throw new RecipeError(`${label}: progress must be in [0, 1]`);
+  }
   const leg = pickLeg(anchor, legs, label);
   const { track } = leg;
+  if (anchor.segmentId === undefined && anchor.progress === undefined && legs.filter((candidate) => candidate.track.id === track.id).length > 1) {
+    throw new RecipeError(`${label}: track "${track.id}" occurs more than once; specify segmentId`);
+  }
 
   let trackMeters: number;
   let offRouteMeters: number | undefined;
 
-  if (anchor.km !== undefined) {
+  if (anchor.progress !== undefined) {
+    const local = leg.progressShare > 0 ? (anchor.progress - leg.progressStart) / leg.progressShare : 0;
+    trackMeters = Math.max(0, Math.min(1, local)) * track.totalDistance;
+  } else if (anchor.distanceMeters !== undefined) {
+    trackMeters = clampToTrack(anchor.distanceMeters, track, label);
+  } else if (anchor.km !== undefined) {
     trackMeters = clampToTrack(anchor.km * 1000, track, label);
   } else if (anchor.lat !== undefined && anchor.lon !== undefined) {
     const match = projectCoordinateToTrack(track, anchor.lat, anchor.lon, 0);
     if (!match) throw new RecipeError(`${label}: the track has no points to place this against`);
     trackMeters = match.progress * track.totalDistance;
     offRouteMeters = match.distanceMeters;
-  } else if (anchor.progress !== undefined) {
-    // A bare progress addresses the whole replay, so it has to come back into
-    // the leg's own frame before it means a distance.
-    const local = leg.progressShare > 0
-      ? (anchor.progress - leg.progressStart) / leg.progressShare
-      : 0;
-    trackMeters = Math.max(0, Math.min(1, local)) * track.totalDistance;
   } else {
     throw new RecipeError(`${label}: needs one of "km", "lat" + "lon", or "progress"`);
   }
@@ -123,7 +156,8 @@ export function anchorOnRoute(
     elevation: point.elevation,
     trackMeters,
     routeDistanceMeters: leg.journeyStartMeters + trackMeters,
-    progress: Math.max(0, Math.min(1, leg.progressStart + localFraction * leg.progressShare)),
+    progress: anchor.progress ?? Math.max(0, Math.min(1, leg.progressStart + localFraction * leg.progressShare)),
+    ...(anchor.progress !== undefined ? { authoredProgress: true } : {}),
     offRouteMeters,
     leg,
   };
@@ -137,7 +171,7 @@ export function anchorOnRoute(
  * default is what makes a multi-day journey feel wrong.
  */
 export function buildLegs(
-  tracks: Array<{ track: GPXTrack; name: string; duration?: number }>,
+  tracks: Array<{ track: GPXTrack; name: string; duration?: number; segmentId?: string }>,
   options: { stitched: boolean; legDuration: 'by-distance' | 'equal' | number; totalDuration: number },
 ): { legs: RouteLeg[]; durations: number[] } {
   const { stitched, legDuration, totalDuration } = options;
@@ -159,6 +193,7 @@ export function buildLegs(
 
   for (const [index, entry] of tracks.entries()) {
     legs.push({
+      ...(entry.segmentId ? { segmentId: entry.segmentId } : {}),
       track: entry.track,
       name: entry.name,
       progressStart: stitched ? elapsedWeight / weightTotal : 0,
