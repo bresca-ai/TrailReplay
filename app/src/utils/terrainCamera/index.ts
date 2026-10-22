@@ -229,6 +229,7 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
   // Resolve composition once per connected group. All beats and segments in that group reuse its fixed pose.
   type ChosenComposition = { frame: Omit<TerrainCameraKeyframe, 'id' | 'title' | 'anchor'>; evaluation: TerrainCameraEvaluation; routeVisibility: Awaited<ReturnType<typeof evaluateRouteVisibility>> };
   const chosenCompositionBySegment = new Map<string, ChosenComposition>();
+  const orbitBySegment = new Map<string, { kind: 'orbit' | 'dolly'; direction: number; degrees: number; zoom: number; pitch: number; start: number; end: number }>();
   const completedGroups = new Set<string>();
   for (const [segmentId, composition] of compositionBySegment) {
     const groupKey = composition.groupIds.join('|');
@@ -253,7 +254,59 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
         selectedComposition = { frame: { bearingDeg: candidate.bearingDeg, pitchDeg: candidate.pitchDeg, zoom: candidate.zoom, target: candidate.target, frame: 'world', easing: 'smooth' }, evaluation, routeVisibility };
       }
     }
-    if (selectedComposition) for (const groupSegmentId of composition.groupIds) chosenCompositionBySegment.set(groupSegmentId, selectedComposition);
+    if (selectedComposition) {
+      for (const groupSegmentId of composition.groupIds) chosenCompositionBySegment.set(groupSegmentId, selectedComposition);
+      // Try real, gentle orbit arcs around the fixed route composition. Every checked
+      // pose must retain the padded full-course fit, sampled LOS, and 40 m clearance.
+      const groupTimings = computed?.segmentTimings.filter(timing => composition.groupIds.includes(timing.segmentId)) ?? [];
+      const start = groupTimings.length ? Math.min(...groupTimings.map(timing => timing.progressStartRatio)) : 0;
+      const end = groupTimings.length ? Math.max(...groupTimings.map(timing => timing.progressEndRatio)) : 1;
+      let motion: { kind: 'orbit' | 'dolly'; direction: number; degrees: number; zoom: number; pitch: number; start: number; end: number } | null = null;
+      const base = selectedComposition.frame;
+      if (base.target) {
+        const target = base.target;
+        const checks = [0, .125, .25, .375, .5, .625, .75, .875, 1];
+        const checkMotion = async (kind: 'orbit' | 'dolly', direction: number, degrees: number, zoom: number) => {
+          for (const phase of checks) {
+            const zoomAt = kind === 'dolly' ? base.zoom + direction * degrees * Math.sin(Math.PI * phase) : zoom;
+            const pitchAt = Math.acos(clamp(Math.cos(base.pitchDeg * Math.PI / 180) * 2 ** (zoomAt - base.zoom), -1, 1)) * 180 / Math.PI;
+            const orbitBearing = kind === 'orbit' ? norm(base.bearingDeg + direction * degrees * .5 * (phase * 2 - 1)) : base.bearingDeg;
+            if (pitchAt > 85 || pitchAt < 0) return false;
+            const pose = { ...base, target, bearingDeg: orbitBearing, pitchDeg: pitchAt, zoom: zoomAt };
+            if (!composition.points.every(point => routePointInFrame(point, { ...pose, coverage: 0, mountainAlignment: 0, startVisible: false }, viewportSize))) return false;
+            const visibility = await evaluateRouteVisibility(composition.points, pose, viewportSize, sampler, signal);
+            if ((visibility.coverage ?? 0) < .8 || visibility.unknown > 0 || !visibility.startVisible) return false;
+            const clearance = await evaluatePose(`motion-check-${segmentId}`, selected.find(item => composition.groupIds.includes(item.anchor.segmentId))?.anchor ?? { trackId: '', segmentId, distanceMeters: 0 }, [target.lon, target.lat], orbitBearing, pitchAt, zoomAt, sampler, options.viewport ?? {}, smoothingHalfWindow, cameraStability, signal, target.elevationMeters);
+            const minimum = clearance.clearanceSamples.map(sample => sample.clearanceMeters).filter((value): value is number => value !== null).reduce<number | null>((min, value) => min === null ? value : Math.min(min, value), null);
+            if (minimum === null || minimum < 40) return false;
+          }
+          return true;
+        };
+        // Create breathing room first; choose the largest safe sweep before a smaller one.
+        outer: for (const degrees of [24, 18, 12, 6]) {
+          for (const pullback of [.1, .2, .35]) {
+            const zoom = base.zoom - pullback;
+            const pitch = Math.acos(clamp(Math.cos(base.pitchDeg * Math.PI / 180) * 2 ** (zoom - base.zoom), -1, 1)) * 180 / Math.PI;
+            if (pitch > 85) continue;
+            for (const direction of [1, -1]) {
+              if (await checkMotion('orbit', direction, degrees, zoom)) {
+                motion = { kind: 'orbit', direction, degrees, zoom, pitch, start, end };
+                break outer;
+              }
+            }
+          }
+        }
+        // A small checked pullback/push variation keeps the camera alive when no orbit fits.
+        if (!motion) for (const direction of [1, -1]) {
+          if (await checkMotion('dolly', direction, .15, base.zoom)) {
+            motion = { kind: 'dolly', direction, degrees: .15, zoom: base.zoom, pitch: base.pitchDeg, start, end };
+            break;
+          }
+        }
+      }
+      if (motion) for (const groupSegmentId of composition.groupIds) orbitBySegment.set(groupSegmentId, motion);
+      else warningSet.add('Terrain and framing checks rejected camera motion for one or more route groups; those groups retain their safe fixed composition.');
+    }
   }
   const moments: TerrainCameraBrief['moments'] = [], frames: TerrainCameraKeyframe[] = [];
   let centerKnown = 0, radialKnownTotal = 0;
@@ -270,7 +323,12 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
     const baseConfidence = result.center !== null && radialKnown === 24 ? 0.72 : result.center !== null && radialKnown >= 16 ? 0.34 : result.center !== null ? 0.12 : 0;
     const picked = chosenCompositionBySegment.get(c.anchor.segmentId);
     if (!picked) continue;
-    const frame: TerrainCameraKeyframe = { ...picked.frame, id, title: c.title, anchor: c.anchor };
+    const motion = orbitBySegment.get(c.anchor.segmentId);
+    const progress = computed ? deriveCinematicKeyframeProgress({ routeSegmentId: c.anchor.segmentId, routeSegmentDistance: c.anchor.distanceMeters }, computed.segmentTimings, computed.coordinates, routeTimingMode) : null;
+    const phase = progress === null || !motion || motion.end <= motion.start ? .5 : clamp((progress - motion.start) / (motion.end - motion.start), 0, 1);
+    const motionZoom = motion ? (motion.kind === 'dolly' ? motion.zoom + motion.direction * motion.degrees * Math.sin(Math.PI * phase) : motion.zoom) : picked.frame.zoom;
+    const motionPitch = motion ? Math.acos(clamp(Math.cos(picked.frame.pitchDeg * Math.PI / 180) * 2 ** (motionZoom - picked.frame.zoom), -1, 1)) * 180 / Math.PI : picked.frame.pitchDeg;
+    const frame: TerrainCameraKeyframe = { ...picked.frame, zoom: motionZoom, pitchDeg: motionPitch, ...(motion?.kind === 'orbit' ? { bearingDeg: norm(picked.frame.bearingDeg + motion.direction * motion.degrees * .5 * (phase * 2 - 1)) } : {}), id, title: c.title, anchor: c.anchor };
     const chosen = { frame, evaluation: { ...picked.evaluation, frameId: id } };
     const warnings = [...chosen.evaluation.warnings];
     if (radialKnown < 24) warnings.push('Incomplete radial DEM coverage limits this recommendation.');
@@ -280,13 +338,38 @@ export async function buildTerrainCameraBrief(options: BuildTerrainCameraBriefOp
     if ((picked.routeVisibility.coverage ?? 0) < 0.8) warnings.push('The complete course was not confirmed visible in this frame.');
     if (picked.routeVisibility.unknown > 0) warnings.push('Route line-of-sight checks include unknown DEM samples; unknown terrain was not treated as visible.');
     chosen.frame.terrain = {
-      rationale: 'A fixed low course target keeps the complete sampled track in a mountain-facing frame; bearing, pitch, zoom, route visibility, and sampled terrain clearance were compared.',
+      rationale: 'A slow camera move around a low course target keeps the route and its start in view; the sweep, framing, terrain visibility and camera clearance were checked.',
       confidence: Math.min(baseConfidence, chosen.evaluation.confidence, (picked.routeVisibility.coverage ?? 0) * (picked.routeVisibility.unknown > 0 ? 0.45 : 0.9)), warnings,
       estimatedMinClearanceMeters: chosen.evaluation.clearanceSamples.map((x) => x.clearanceMeters).filter((x): x is number => x !== null).reduce<number | null>((min, value) => min === null ? value : Math.min(min, value), null),
     };
     frames.push(chosen.frame);
     onProgress?.({ completed: i + 1, total: selected.length });
   }
+  // Keep motion authored across each connected course, including exact segment
+  // endpoints; the ordinary highlight budget may have skipped those candidates.
+  const endpointKeys = new Set(frames.map(frame => `${frame.anchor.segmentId}:${frame.anchor.distanceMeters.toFixed(3)}`));
+  for (const segmentId of compositionBySegment.keys()) {
+    const segment = segments.find(segment => segment.id === segmentId);
+    const track = segment?.type === 'track' ? trackFor(tracks, segment.trackId) : undefined;
+    const picked = chosenCompositionBySegment.get(segmentId);
+    if (!track || !picked) continue;
+    const motion = orbitBySegment.get(segmentId);
+    for (const distanceMeters of [0, track.totalDistance]) {
+      const key = `${segmentId}:${distanceMeters.toFixed(3)}`;
+      if (endpointKeys.has(key)) continue;
+      endpointKeys.add(key);
+      const anchor = { trackId: track.id, segmentId, distanceMeters };
+      const progress = computed ? deriveCinematicKeyframeProgress({ routeSegmentId: segmentId, routeSegmentDistance: distanceMeters }, computed.segmentTimings, computed.coordinates, routeTimingMode) : null;
+      const phase = progress === null || !motion || motion.end <= motion.start ? .5 : clamp((progress - motion.start) / (motion.end - motion.start), 0, 1);
+      const motionZoom = motion ? (motion.kind === 'dolly' ? motion.zoom + motion.direction * motion.degrees * Math.sin(Math.PI * phase) : motion.zoom) : picked.frame.zoom;
+      const motionPitch = motion ? Math.acos(clamp(Math.cos(picked.frame.pitchDeg * Math.PI / 180) * 2 ** (motionZoom - picked.frame.zoom), -1, 1)) * 180 / Math.PI : picked.frame.pitchDeg;
+      frames.push({ ...picked.frame, zoom: motionZoom, pitchDeg: motionPitch, ...(motion?.kind === 'orbit' ? { bearingDeg: norm(picked.frame.bearingDeg + motion.direction * motion.degrees * .5 * (phase * 2 - 1)) } : {}), id: `terrain-course-${frames.length + 1}`, title: `${track.name}: ${distanceMeters === 0 ? 'start' : 'finish'}`, anchor });
+    }
+  }
+  if (computed) frames.sort((a, b) => {
+    const progress = (frame: TerrainCameraKeyframe) => deriveCinematicKeyframeProgress({ routeSegmentId: frame.anchor.segmentId, routeSegmentDistance: frame.anchor.distanceMeters }, computed.segmentTimings, computed.coordinates, routeTimingMode) ?? 0;
+    return progress(a) - progress(b);
+  });
   let cameraSamplesComplete = false;
   if (frames.length) {
     const review = await evaluateTerrainCameraPlan({ frames, tracks, journeySegments: segments, routeTimingMode, cameraStability, viewport: options.viewport, signal, sampler });

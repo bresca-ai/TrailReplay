@@ -5,9 +5,10 @@ cinematic camera keyframes in a TrailReplay recipe. It does not require an AI
 service, an account, or a route upload.
 
 Shots set a bearing, pitch and zoom around a look-at target. Generated terrain
-plans use a fixed course target: keep the start visible, fit the painted route
-with room for stats and the elevation profile, and look toward the mountain
-from near its height. This avoids chasing the marker uphill or flying over the
+plans orbit a fixed course target gently: keep the start visible, fit the painted
+route with room for stats and the elevation profile, and look toward the mountain
+from near its height. The aim point stays anchored while bearing and distance
+change through the replay; a fixed target does not mean a stationary camera. This avoids chasing the marker uphill or flying over the
 summit. Targetless recipes retain the existing smoothed route-following orbit.
 An external agent uses terrain evidence and your creative brief to revise shots.
 The website offers a deterministic starting plan and a draft preview.
