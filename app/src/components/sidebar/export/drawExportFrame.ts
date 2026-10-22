@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { DEFAULT_SKY_COLOR } from '@/components/map/mapSky';
 import { getCropRegion } from '@/utils/crop';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
@@ -121,11 +122,12 @@ export function drawExportFrame({
       ?? document.querySelector('.maplibregl-canvas')) as HTMLCanvasElement | null;
     const container = document.getElementById('map-capture-container');
 
-    if (!mapCanvas || !container) {
-      context.fillStyle = '#000';
-      context.fillRect(0, 0, recordW, recordH);
-      return;
-    }
+    // Transparent map pixels must never retain terrain, labels or a cover from
+    // a previous frame. This also supplies sky while the map is loading.
+    context.fillStyle = DEFAULT_SKY_COLOR;
+    context.fillRect(0, 0, recordW, recordH);
+
+    if (!mapCanvas || !container) return;
 
     const containerRect = container.getBoundingClientRect();
     const { cropX, cropY, cropW, cropH } = getCropRegion(containerRect, recordW, recordH);

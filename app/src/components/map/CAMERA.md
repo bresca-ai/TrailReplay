@@ -186,6 +186,14 @@ The JSON records simulated time, wall time, center elevation, pitch, pitch ceili
 zoom, bearing and camera movement count per sampled playback frame. These controls
 only exist on explicitly probe-enabled pages and never appear in normal exports.
 
+### Sky and exported frame backgrounds
+
+The shared map style uses `mapSky.ts` for an opaque blue sky in manual navigation,
+playback, cover captures and video exports. Keep the export compositor's blue
+full-frame reset before drawing the map: a transparent map pixel otherwise leaves
+terrain, labels or a cover from the previous recording frame behind, producing
+repeated ground textures above the horizon during steep pans.
+
 ### Cinematic tile budget
 
 `basemapTileLod.ts` keeps imagery at one zoom level with hysteresis. Its
