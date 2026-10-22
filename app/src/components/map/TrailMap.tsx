@@ -371,6 +371,7 @@ export function TrailMap(_props: TrailMapProps) {
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying: playback.isPlaying,
+    visibleMapRef: map,
     mapStyle: settings.mapStyle,
     playbackProgress: playback.progress,
     playbackSpeed: playback.speed,

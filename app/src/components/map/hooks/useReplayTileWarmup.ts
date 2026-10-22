@@ -1,3 +1,4 @@
+import { REPLAY_CAMERA_MAX_PITCH } from '@/utils/cameraLimits';
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import {
@@ -30,7 +31,8 @@ import {
 const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // Discovery only needs MapLibre to submit its tile requests. Waiting for idle
 // serializes the entire horizon behind slow imagery; the scheduler owns the
-// completion lifecycle, so each predicted pose gets a short render window.
+// completion lifecycle, so each predicted pose needs only one discovery frame.
+// Keep a timeout for background tabs where requestAnimationFrame is suspended.
 const DISCOVERY_RENDER_WINDOW_MS = 100;
 const RESCHEDULE_INTERVAL_MS = 1500;
 const NORMAL_HORIZON_MS = 20000;
@@ -48,6 +50,7 @@ interface UseReplayTileWarmupParams {
   followBehindZoomLevel: number;
   isMapLoaded: boolean;
   isPlaying: boolean;
+  visibleMapRef: React.MutableRefObject<maplibregl.Map | null>;
   mapStyle: string;
   playbackProgress: number;
   playbackSpeed: number;
@@ -89,14 +92,48 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     });
     document.body.appendChild(container);
 
+    const visibleContainer = params.visibleMapRef.current?.getContainer();
+    if (visibleContainer) {
+      container.style.width = `${visibleContainer.clientWidth || WARMUP_VIEWPORT.width}px`;
+      container.style.height = `${visibleContainer.clientHeight || WARMUP_VIEWPORT.height}px`;
+    }
+    // Tile discovery needs imagery and DEM requests, not a second terrain
+    // mesh rendered into textures on every pose. An invisible hillshade keeps
+    // the DEM source active without the expensive terrain render pass.
+    const discoveryStyle: maplibregl.StyleSpecification = {
+      ...MAP_STYLE as unknown as maplibregl.StyleSpecification,
+      layers: [
+        ...MAP_STYLE.layers as unknown as maplibregl.LayerSpecification[],
+        { id: 'warmup-dem', type: 'hillshade', source: 'terrain-dem', paint: { 'hillshade-exaggeration': 0 } },
+      ],
+    };
+    delete discoveryStyle.terrain;
     const warmupMap = new maplibregl.Map({
       attributionControl: false,
       container,
       interactive: false,
-      maxTileCacheSize: 1_200,
-      style: MAP_STYLE as unknown as maplibregl.StyleSpecification,
+      // Match authored shots; the default 60-degree cap missed their horizon.
+      maxPitch: REPLAY_CAMERA_MAX_PITCH,
+      cancelPendingTileRequestsWhileZooming: false,
+      // The primary map owns decoded replay tiles. Discovery only needs a
+      // small working set; completed requests remain in the browser cache.
+      maxTileCacheSize: 256,
+      // Discovery uses CSS viewport coverage, not retina-quality output. The
+      // hidden 1920x1080 retina map was competing with playback for the GPU.
+      pixelRatio: 1,
+      style: discoveryStyle,
     });
     warmupMapRef.current = warmupMap;
+    const resizeObserver = visibleContainer ? new ResizeObserver(() => {
+      const width = visibleContainer.clientWidth;
+      const height = visibleContainer.clientHeight;
+      if (width <= 0 || height <= 0) return;
+      if (container.style.width === `${width}px` && container.style.height === `${height}px`) return;
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+      warmupMap.resize();
+    }) : null;
+    if (visibleContainer) resizeObserver?.observe(visibleContainer);
     const onLoading = (event: unknown) => {
       if (!isWarmupPoseActiveRef.current) return;
       const key = getMapLibreTileKey(event);
@@ -134,11 +171,12 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     return () => {
       warmupMap.off('sourcedataloading', onLoading);
       warmupMap.off('sourcedata', onData);
+      resizeObserver?.disconnect();
       warmupMap.remove();
       container.remove();
       warmupMapRef.current = null;
     };
-  }, [params.diagnostics, params.enabled, params.isMapLoaded, scheduler]);
+  }, [params.diagnostics, params.enabled, params.isMapLoaded, params.visibleMapRef, scheduler]);
 
   useEffect(() => {
     if (!params.enabled) return;
@@ -171,10 +209,13 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     let cancelled = false;
     let isWarming = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let finishActivePose: (() => void) | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const warmPose = (map: maplibregl.Map, pose: ReplayCameraPose) => new Promise<void>((resolve) => {
       const finish = () => {
+        map.off('render', finish);
+        finishActivePose = null;
         if (timeoutId) {
           clearTimeout(timeoutId);
           timeoutId = null;
@@ -183,8 +224,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         resolve();
       };
       isWarmupPoseActiveRef.current = true;
-      map.jumpTo(pose);
+      finishActivePose = finish;
+      map.once('render', finish);
       timeoutId = setTimeout(finish, DISCOVERY_RENDER_WINDOW_MS);
+      map.jumpTo(pose);
     });
 
     const warmFuture = async () => {
@@ -273,6 +316,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
 
     return () => {
       cancelled = true;
+      finishActivePose?.();
       scheduler.clear();
       isWarmupPoseActiveRef.current = false;
       if (timeoutId) clearTimeout(timeoutId);

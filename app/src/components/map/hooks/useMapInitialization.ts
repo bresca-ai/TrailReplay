@@ -1,3 +1,4 @@
+import { REPLAY_CAMERA_MAX_PITCH } from '@/utils/cameraLimits';
 import { useEffect } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
@@ -35,7 +36,7 @@ export function useMapInitialization({
       zoom: 2,
       pitch: 0,
       bearing: 0,
-      maxPitch: 85,
+      maxPitch: REPLAY_CAMERA_MAX_PITCH,
       // MapLibre 5+ ignores the top-level `preserveDrawingBuffer`
       // option; it must be passed as a WebGL context attribute. Without it the
       // map canvas reads back as transparent outside MapLibre's own render
