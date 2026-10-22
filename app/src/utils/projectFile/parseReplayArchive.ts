@@ -65,6 +65,9 @@ export async function parseReplayArchive(file: File): Promise<ParsedProject> {
   const routes = Object.entries(files)
     .filter(([path]) => /\.(gpx|kml)$/i.test(path))
     .map(([path, content]) => ({ fileName: path, gpxText: decoder.decode(content) }));
+  const coverPhotos = Object.entries(files)
+    .filter(([path]) => /\.(jpe?g|png|webp|avif)$/i.test(path))
+    .map(([fileName, bytes]) => ({ fileName, bytes }));
 
   const recipe = decodeJson<Recipe>(files, 'recipe.json');
   const project = decodeJson<ReplayProjectFile>(files, 'project.json');
@@ -118,5 +121,5 @@ export async function parseReplayArchive(file: File): Promise<ParsedProject> {
     return { meta, gpxText: decoder.decode(bytes) };
   });
 
-  return { manifest, project, recipe, routes, tracks, comparisonTracks };
+  return { manifest, project, recipe, routes, coverPhotos, tracks, comparisonTracks };
 }

@@ -3,7 +3,7 @@ import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import type { StatId } from '@/types';
-import { getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
+import { getActivityIconBackingUrl, getActivityIconOption, isSvgActivityIcon } from '@/utils/activityIcons';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
 import {
   buildJourneyDistanceProfile,
@@ -69,11 +69,12 @@ function getHoldOverlayEvery(): number {
 
 export interface UseVideoExportRecorderOptions {
   studioDelivery?: StudioDeliveryRequest;
+  coverImageUrl?: string | null;
 }
 
 export function useVideoExportRecorderCore(options: UseVideoExportRecorderOptions = {}) {
   const { t, language } = useI18n();
-  const { studioDelivery } = options;
+  const { studioDelivery, coverImageUrl } = options;
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
   const configuredStats = useAppStore((state) => state.settings.visibleStats);
   const showElevationProfile = useAppStore((state) => state.settings.showElevationProfile);
@@ -266,6 +267,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const recordingStartTimeRef = useRef(0);
+  const coverImageRef = useRef<HTMLImageElement | null>(null);
+  const coverFrameStartTimeRef = useRef<number | null>(null);
   const isRecordingRef = useRef(false);
   const recordingCancelledRef = useRef(false);
   const mp4EncoderRef = useRef<Mp4CanvasEncoder | null>(null);
@@ -322,11 +325,42 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       const svgIconUrl = getActivityIconOption(iconValue)?.content;
       if (svgIconUrl) {
         preloadSvgMarkerIcon(svgIconUrl);
+        const backingUrl = getActivityIconBackingUrl(iconValue);
+        if (backingUrl) preloadSvgMarkerIcon(backingUrl);
       }
     });
   }, [preloadSvgMarkerIcon, tracks, trailStyle.currentIcon]);
 
+  const loadCoverImage = useCallback(async () => {
+    if (!videoExportSettings.includeCover) return;
+    if (!coverImageUrl) throw new Error(t('export.videoCoverMissing'));
+    const image = new Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error(t('export.videoCoverLoadFailed')));
+      image.src = coverImageUrl;
+    });
+    coverImageRef.current = image;
+  }, [coverImageUrl, t, videoExportSettings.includeCover]);
+
+  const drawVideoCoverFrame = useCallback(() => {
+    const canvas = recordingCanvasRef.current;
+    const context = recordingContextRef.current;
+    const image = coverImageRef.current;
+    if (!canvas || !context || !image) return false;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return true;
+  }, []);
+
   const captureFrame = useCallback(() => {
+    const coverStartedAt = coverFrameStartTimeRef.current;
+    if (
+      videoExportSettings.includeCover
+      && coverStartedAt !== null
+      && performance.now() - coverStartedAt < 1000
+      && drawVideoCoverFrame()
+    ) return;
     const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     drawExportFrame({
       recordingCanvasRef,
@@ -350,7 +384,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (profileStartedAt > 0) {
       markExportProfileStage('frameComposite', performance.now() - profileStartedAt);
     }
-  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayFramesSinceRefreshRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
+  }, [cachedOverlayRef, drawElevationProgress, drawStatsValues, drawVideoCoverFrame, drawVideoFrame, getTrackLabel, overlayBusyRef, overlayFramesSinceRefreshRef, overlayLastUpdateRef, overlayRefreshIntervalMs, preloadSvgMarkerIcon, t, updateOverlayAsync, videoExportSettings]);
 
   // When encoding via WebCodecs, push the freshly drawn canvas to the encoder.
   // No-op for the MediaRecorder path, which samples the canvas stream itself.
@@ -371,16 +405,18 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     const map = mapGlobalRef.current;
     const targetFrameInterval = 1000 / videoExportSettings.fps;
     let lastCaptureTime = 0;
+    const captureAtFrameRate = () => {
+      const now = performance.now();
+      if (now - lastCaptureTime < targetFrameInterval) return;
+      captureFrame();
+      void encodeWebCodecsFrame();
+      lastCaptureTime = now;
+    };
 
     if (!map) {
       const captureLoop = () => {
         if (!isRecordingRef.current) return;
-        const now = performance.now();
-        if (now - lastCaptureTime >= targetFrameInterval) {
-          captureFrame();
-          void encodeWebCodecsFrame();
-          lastCaptureTime = now;
-        }
+        captureAtFrameRate();
         frameRequestRef.current = requestAnimationFrame(captureLoop);
       };
       frameRequestRef.current = requestAnimationFrame(captureLoop);
@@ -389,12 +425,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     const onRender = () => {
       if (!isRecordingRef.current) return;
-      const now = performance.now();
-      if (now - lastCaptureTime >= targetFrameInterval) {
-        captureFrame();
-        void encodeWebCodecsFrame();
-        lastCaptureTime = now;
-      }
+      // A still cover must be submitted even if the map has no render event.
+      if (coverFrameStartTimeRef.current === null) captureAtFrameRate();
     };
 
     map.on('render', onRender);
@@ -402,6 +434,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     const keepRendering = () => {
       if (!isRecordingRef.current) return;
+      if (coverFrameStartTimeRef.current !== null) captureAtFrameRate();
       map.triggerRepaint();
       frameRequestRef.current = requestAnimationFrame(keepRendering);
     };
@@ -484,9 +517,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     stats.frames += 1;
     stats.waitedMs += result.waitedMs;
     if (result.timedOut) stats.timedOutFrames += 1;
-    if (result.timedOut) {
-      throw new Error(`Studio map tiles did not settle within ${STUDIO_FRAME_SETTLE_TIMEOUT_MS / 1000} seconds`);
-    }
+    // A slow or unavailable tile must not abort the whole export. Capture the
+    // best frame MapLibre currently has and report the count in the completed
+    // Studio status, so a timeout is visible without losing the finished video.
   }, [renderMapOnce, waitForMapFrame]);
 
   /**
@@ -784,6 +817,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
+    loadCoverImage, drawVideoCoverFrame, coverFrameStartTimeRef,
     applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   };

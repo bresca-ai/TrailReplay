@@ -56,28 +56,28 @@ export function getSampleTracks(t: Translate): SampleTrack[] {
 export function getTutorialFeatures(t: Translate) {
   return [
     {
-      title: t('help.tutorial.features.multiTrack.title'),
-      body: t('help.tutorial.features.multiTrack.body'),
+      title: t('help.tutorial.features.routes.title'),
+      body: t('help.tutorial.features.routes.body'),
     },
     {
-      title: t('help.tutorial.features.comparison.title'),
-      body: t('help.tutorial.features.comparison.body'),
+      title: t('help.tutorial.features.timeline.title'),
+      body: t('help.tutorial.features.timeline.body'),
+    },
+    {
+      title: t('help.tutorial.features.style.title'),
+      body: t('help.tutorial.features.style.body'),
+    },
+    {
+      title: t('help.tutorial.features.mapCamera.title'),
+      body: t('help.tutorial.features.mapCamera.body'),
     },
     {
       title: t('help.tutorial.features.media.title'),
       body: t('help.tutorial.features.media.body'),
     },
     {
-      title: t('help.tutorial.features.mapStyle.title'),
-      body: t('help.tutorial.features.mapStyle.body'),
-    },
-    {
-      title: t('help.tutorial.features.export.title'),
-      body: t('help.tutorial.features.export.body'),
-    },
-    {
-      title: t('help.tutorial.features.journey.title'),
-      body: t('help.tutorial.features.journey.body'),
+      title: t('help.tutorial.features.generate.title'),
+      body: t('help.tutorial.features.generate.body'),
     },
   ];
 }
@@ -189,10 +189,10 @@ export function getAgentExamples(t: Translate): AgentExample[] {
     { "auto": "start-finish", "type": "trailhead", "icon": "town" }
   ],
   "annotations": [
-    { "km": 6.5,  "title": "Avituallament 1 — Collet de Barraques" },
-    { "km": 13,   "title": "Avituallament 2 — Torrent Gros" },
-    { "km": 17,   "title": "Avituallament 3 — Dòrria" },
-    { "km": 25,   "title": "Avituallament 4 — Les Casetes" }
+    { "km": 6.5,  "title": "Avituallament 1 - Collet de Barraques" },
+    { "km": 13,   "title": "Avituallament 2 - Torrent Gros" },
+    { "km": 17,   "title": "Avituallament 3 - Dòrria" },
+    { "km": 25,   "title": "Avituallament 4 - Les Casetes" }
   ]
 }`,
     },

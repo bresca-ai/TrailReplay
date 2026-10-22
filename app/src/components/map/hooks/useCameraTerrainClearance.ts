@@ -20,10 +20,12 @@ export function useCameraTerrainClearance({
   isMapLoaded,
   mapRef,
   show3DTerrain,
+  playbackOwnsCamera = false,
 }: {
   isMapLoaded: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
   show3DTerrain: boolean;
+  playbackOwnsCamera?: boolean;
 }) {
   const limitRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number | null>(null);
@@ -40,8 +42,10 @@ export function useCameraTerrainClearance({
     limitRef.current = ceilingDeg;
     lastFrameTimeRef.current = null;
 
-    if (!show3DTerrain) {
-      // Flat ground: there is nothing to be inside of.
+    if (!show3DTerrain || playbackOwnsCamera) {
+      // MapLibre 6 already resolves terrain/near-plane collisions atomically
+      // in jumpTo. A second wall-clock servo after render fights authored
+      // playback and makes pitch depend on preview/export rendering speed.
       map.setMaxPitch(ceilingDeg);
       return;
     }
@@ -86,5 +90,5 @@ export function useCameraTerrainClearance({
       map.off('render', update);
       map.setMaxPitch(ceilingDeg);
     };
-  }, [isMapLoaded, mapRef, show3DTerrain]);
+  }, [isMapLoaded, mapRef, show3DTerrain, playbackOwnsCamera]);
 }

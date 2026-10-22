@@ -18,7 +18,7 @@ export const SUPPORTED_FORMAT_VERSIONS = [1];
 
 // This must match the root and app package versions. It is diagnostic metadata
 // in saved archives rather than a project-format compatibility switch.
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.3.0';
 
 export const MAX_ARCHIVE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
 
@@ -165,6 +165,8 @@ export interface ParsedProject {
   recipe: Recipe | null;
   /** Every route in the archive, whether or not a project references it. */
   routes: Array<{ fileName: string; gpxText: string }>;
+  /** Images included beside routes for a recipe-authored cover. */
+  coverPhotos?: Array<{ fileName: string; bytes: Uint8Array }>;
   tracks: Array<{ meta: ReplayTrackMeta; gpxText: string }>;
   comparisonTracks: Array<{ meta: ReplayComparisonTrackMeta; gpxText: string }>;
 }

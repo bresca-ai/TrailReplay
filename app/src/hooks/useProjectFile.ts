@@ -11,6 +11,7 @@ import { ReplayArchiveError, type ReplayArchiveErrorCode } from '@/utils/project
 import { parseRouteFiles } from '@/utils/gpxParser';
 import { resolveRecipe } from '@/utils/recipe/resolveRecipe';
 import { applyRecipe } from '@/utils/recipe/applyRecipe';
+import { resolveCoverPhotos } from '@/utils/recipe/resolveCoverPhotos';
 import { RecipeError } from '@/utils/recipe/types';
 
 export function isReplayFile(file: File): boolean {
@@ -76,7 +77,10 @@ export function useProjectFile() {
           parsedRoutes.map((route) => route.track),
           parsedRoutes.map((route) => route.fileName),
         );
-        applyRecipe(parsed.recipe, resolved, useAppStore.getState());
+        const coverImageUrls = await resolveCoverPhotos(parsed.recipe, (parsed.coverPhotos ?? []).map(({ fileName, bytes }) =>
+          new File([bytes as BlobPart], fileName)
+        ));
+        applyRecipe(parsed.recipe, resolved, useAppStore.getState(), coverImageUrls);
         useAppStore.getState().setRecipeReport(resolved.report);
       }
 

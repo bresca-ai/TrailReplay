@@ -1,15 +1,15 @@
 import type { LayerSpecification } from 'maplibre-gl';
 import {
   landmarkIconSizeExpression,
-  landmarkTextHaloWidth,
+  landmarkLabelIconSizeExpression,
   landmarkTextOpacityExpression,
-  landmarkTextSizeExpression,
 } from '@/components/map/landmarkSymbolStyle';
 
 export const LANDMARK_SOURCE_ID = 'route-landmarks';
 export const LANDMARK_ICON_LAYER_ID = 'route-landmarks-icon';
 export const LANDMARK_LABEL_LAYER_ID = 'route-landmarks-label';
 export const LANDMARK_IMAGE_PREFIX = 'route-landmark-glyph-';
+export const LANDMARK_LABEL_IMAGE_PREFIX = 'route-landmark-label-';
 
 /**
  * Every landmark icon is drawn, always: overlap is allowed so collisions never
@@ -42,24 +42,19 @@ export function landmarkLabelLayer(scale: number, labelFade: boolean): LayerSpec
     type: 'symbol',
     source: LANDMARK_SOURCE_ID,
     layout: {
-      'text-field': ['get', 'title'],
-      'text-font': ['Open Sans Bold'],
-      'text-size': landmarkTextSizeExpression(scale),
-      'text-max-width': 11,
-      'text-offset': [0, 1.7],
-      'text-anchor': 'top',
+      'icon-image': ['get', 'labelImageId'],
+      'icon-size': landmarkLabelIconSizeExpression(scale),
+      'icon-offset': [0, 18],
+      'icon-anchor': 'top',
+      'icon-pitch-alignment': 'viewport',
+      'icon-rotation-alignment': 'viewport',
       // Labels, unlike icons, drop out when they cannot be placed without
       // overlapping — a wall of colliding names is worse than a missing one.
-      'text-optional': true,
-      'text-pitch-alignment': 'viewport',
+      'icon-optional': true,
       'symbol-sort-key': ['get', 'importance'],
     },
     paint: {
-      'text-color': '#ffffff',
-      'text-halo-color': '#030506',
-      'text-halo-width': landmarkTextHaloWidth(scale),
-      'text-halo-blur': 0.6,
-      'text-opacity': landmarkTextOpacityExpression(labelFade),
+      'icon-opacity': landmarkTextOpacityExpression(labelFade),
     },
   } as LayerSpecification;
 }

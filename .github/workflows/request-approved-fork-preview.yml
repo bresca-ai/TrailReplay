@@ -25,3 +25,20 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           echo "Cloudflare preview requested for PR #${PR_NUMBER} at ${HEAD_SHA}."
+
+      - name: Save request metadata for the privileged workflow
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p fork-preview-request
+          printf '%s\n' "$PR_NUMBER" > fork-preview-request/pr-number
+          printf '%s\n' "$HEAD_SHA" > fork-preview-request/head-sha
+
+      - name: Upload request metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: approved-fork-preview-request
+          path: fork-preview-request/
+          if-no-files-found: error
+          retention-days: 1

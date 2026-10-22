@@ -184,17 +184,40 @@ function poseFromValues(
   };
 }
 
-/** Cubic Hermite interpolation at `t` in [0,1] between p1 and p2, with Catmull-Rom tangents derived from the neighbouring p0/p3. */
-function hermite(p0: number, p1: number, p2: number, p3: number, t: number): number {
+/** Time-aware, shape-preserving tangents: no overshoot followed by a hard clamp. */
+function smoothChannel(
+  keyframes: PreparedCinematicKeyframe[],
+  lowerIndex: number,
+  channel: 'worldBearingDeg' | 'pitchDeg' | 'zoom',
+  t: number,
+): number {
+  const upperIndex = lowerIndex + 1;
+  const lower = keyframes[lowerIndex];
+  const upper = keyframes[upperIndex];
+  const span = upper.progress - lower.progress;
+  if (span <= 0) return upper[channel];
+  const slopeAt = (index: number): number => {
+    // Held shots outside the authored interval have zero velocity.
+    if (index === 0 || index === keyframes.length - 1) return 0;
+    const before = keyframes[index - 1];
+    const current = keyframes[index];
+    const after = keyframes[index + 1];
+    const beforeSpan = current.progress - before.progress;
+    const afterSpan = after.progress - current.progress;
+    if (beforeSpan <= 0 || afterSpan <= 0) return 0;
+    const incoming = (current[channel] - before[channel]) / beforeSpan;
+    const outgoing = (after[channel] - current[channel]) / afterSpan;
+    if (incoming * outgoing <= 0) return 0;
+    const w1 = 2 * afterSpan + beforeSpan;
+    const w2 = afterSpan + 2 * beforeSpan;
+    return (w1 + w2) / (w1 / incoming + w2 / outgoing);
+  };
   const t2 = t * t;
   const t3 = t2 * t;
-  const m1 = (p2 - p0) / 2;
-  const m2 = (p3 - p1) / 2;
-
-  return (2 * t3 - 3 * t2 + 1) * p1
-    + (t3 - 2 * t2 + t) * m1
-    + (-2 * t3 + 3 * t2) * p2
-    + (t3 - t2) * m2;
+  return (2 * t3 - 3 * t2 + 1) * lower[channel]
+    + (t3 - 2 * t2 + t) * span * slopeAt(lowerIndex)
+    + (-2 * t3 + 3 * t2) * upper[channel]
+    + (t3 - t2) * span * slopeAt(upperIndex);
 }
 
 /**
@@ -250,27 +273,14 @@ export function getCinematicCameraPose(options: CinematicCameraPoseOptions): Rep
     );
   }
 
-  // 'smooth': cubic Hermite through the neighbouring keyframes with
-  // Catmull-Rom tangents. The sequence's own ends stand in for the missing
-  // neighbour on the first/last segment, so those segments get a defined
-  // tangent without extrapolating past the authored keyframes.
-  const before = keyframes[lowerIndex - 1] ?? lower;
-  const after = keyframes[upperIndex + 1] ?? upper;
+  // Shape-preserving Hermite uses replay-time spacing for continuous velocity
+  // at unevenly spaced shots. Flat channels stay flat; direction changes ease
+  // through zero rather than hitting a clamp and sticking before moving again.
+  const bearing = smoothChannel(keyframes, lowerIndex, 'worldBearingDeg', t);
+  const pitch = smoothChannel(keyframes, lowerIndex, 'pitchDeg', t);
+  const zoom = smoothChannel(keyframes, lowerIndex, 'zoom', t);
 
-  const bearing = hermite(before.worldBearingDeg, lower.worldBearingDeg, upper.worldBearingDeg, after.worldBearingDeg, t);
-  const pitch = hermite(before.pitchDeg, lower.pitchDeg, upper.pitchDeg, after.pitchDeg, t);
-  const zoom = hermite(before.zoom, lower.zoom, upper.zoom, after.zoom, t);
-
-  // Plain Catmull-Rom can overshoot past either endpoint's value — here that
-  // means the pose punching past a limit the user never authored, between
-  // two keyframes that were themselves legal. This is most visible with
-  // keyframes placed close together in time: the tangent at each end is
-  // derived from the *values* at its other neighbour, not scaled down for a
-  // short segment, so a short segment between two very differently-posed
-  // keyframes can overshoot by a huge margin — a bearing swinging hundreds
-  // of degrees past either endpoint reads as the camera whipping around and
-  // the marker "jumping". Clamp every channel, including bearing, to the
-  // segment's own min/max regardless of how the spline got there.
+  // Numerical safety at the endpoints; the interpolant stays inside them.
   const pitchLo = Math.min(lower.pitchDeg, upper.pitchDeg);
   const pitchHi = Math.max(lower.pitchDeg, upper.pitchDeg);
   const zoomLo = Math.min(lower.zoom, upper.zoom);

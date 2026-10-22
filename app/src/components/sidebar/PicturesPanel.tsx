@@ -20,6 +20,7 @@ export function PicturesPanel() {
   const removePicture = useAppStore((state) => state.removePicture);
   const removeVideo = useAppStore((state) => state.removeVideo);
   const updatePictureDuration = useAppStore((state) => state.updatePictureDuration);
+  const updatePictureMetadata = useAppStore((state) => state.updatePictureMetadata);
   const seekToProgress = useAppStore((state) => state.seekToProgress);
   const setSelectedPictureId = useAppStore((state) => state.setSelectedPictureId);
   const relinkPictureFile = useAppStore((state) => state.relinkPictureFile);
@@ -35,6 +36,7 @@ export function PicturesPanel() {
   );
   const [editingPicture, setEditingPicture] = useState<string | null>(null);
   const [durationValue, setDurationValue] = useState(3);
+  const [descriptionValue, setDescriptionValue] = useState('');
   const relinkTargetRef = useRef<{ kind: 'picture' | 'video'; id: string } | null>(null);
   const relinkInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,6 +97,8 @@ export function PicturesPanel() {
 
   const handleSaveDuration = (pictureId: string) => {
     updatePictureDuration(pictureId, durationValue * 1000);
+    const picture = pictures.find((entry) => entry.id === pictureId);
+    if (picture) updatePictureMetadata(pictureId, picture.title || '', descriptionValue.trim());
     setEditingPicture(null);
   };
 
@@ -311,6 +315,7 @@ export function PicturesPanel() {
                       onClick={() => {
                         setEditingPicture(picture.id);
                         setDurationValue((picture.displayDuration || DEFAULT_DISPLAY_DURATION) / 1000);
+                        setDescriptionValue(picture.description || '');
                       }}
                       className="flex items-center justify-center rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/5 px-3 py-2 hover:bg-[var(--evergreen)]/10"
                       title={t('media.editDuration')}
@@ -334,6 +339,17 @@ export function PicturesPanel() {
                   {/* Duration Editor */}
                   {editingPicture === picture.id && (
                     <div className="mt-3 pt-3 border-t border-[var(--evergreen)]/10">
+                      <label className="mb-2 block text-xs text-[var(--evergreen-60)]">
+                        {t('media.pictureAnnotationLabel')}
+                        <textarea
+                          value={descriptionValue}
+                          onChange={(event) => setDescriptionValue(event.target.value)}
+                          maxLength={120}
+                          rows={2}
+                          placeholder={t('media.pictureAnnotationHint')}
+                          className="mt-1 w-full resize-none rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] placeholder:text-[var(--evergreen-60)]/60"
+                        />
+                      </label>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="w-full text-xs text-[var(--evergreen-60)]">{t('media.displayFor')}</span>
                         <input

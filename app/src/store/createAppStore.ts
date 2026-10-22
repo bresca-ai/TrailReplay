@@ -58,6 +58,7 @@ export function createAppStore() {
           state.cameraSettings = createDefaultCameraSettings();
           state.videoExportSettings = createDefaultVideoExportSettings();
           state.socialShareSettings = createDefaultSocialShareSettings();
+          state.videoCoverImageUrl = null;
           state.studioDeliveryEmail = '';
           state.isExporting = false;
           state.exportProgress = 0;

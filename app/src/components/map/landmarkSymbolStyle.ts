@@ -41,6 +41,17 @@ export function landmarkTextSizeExpression(scale: number | undefined): Expressio
   ] as ExpressionSpecification;
 }
 
+/** Canvas-rendered landmark labels use a 12 px source font at icon-size 1. */
+export function landmarkLabelIconSizeExpression(scale: number | undefined): ExpressionSpecification {
+  const factor = clampLandmarkScale(scale);
+  return [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    ...BASE_TEXT_SIZE_STOPS.flatMap(([zoom, size]) => [zoom, round(size * factor / 12)]),
+  ] as ExpressionSpecification;
+}
+
 /**
  * Icon size ramp. The same setting drives the pins as the labels, so a landmark
  * grows as one piece rather than sprouting an oversized name over a tiny pin.

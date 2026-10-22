@@ -13,6 +13,7 @@ type SettingsSlice = Pick<
   | 'cameraSettings'
   | 'videoExportSettings'
   | 'socialShareSettings'
+  | 'videoCoverImageUrl'
   | 'isExporting'
   | 'isDeterministicExport'
   | 'exportProgress'
@@ -26,6 +27,7 @@ type SettingsSlice = Pick<
   | 'setTrailStyle'
   | 'setVideoExportSettings'
   | 'setSocialShareSettings'
+  | 'setVideoCoverImageUrl'
   | 'exportSubMode'
   | 'setExportSubMode'
   | 'setIsExporting'
@@ -40,6 +42,7 @@ export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
   cameraSettings: createDefaultCameraSettings(),
   videoExportSettings: createDefaultVideoExportSettings(),
   socialShareSettings: createDefaultSocialShareSettings(),
+  videoCoverImageUrl: null,
   exportSubMode: 'video',
   isExporting: false,
   isDeterministicExport: false,
@@ -86,6 +89,11 @@ export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
   setSocialShareSettings: (settings) =>
     set((state) => {
       Object.assign(state.socialShareSettings, settings);
+    }),
+
+  setVideoCoverImageUrl: (url) =>
+    set((state) => {
+      state.videoCoverImageUrl = url;
     }),
 
   setExportSubMode: (mode) =>

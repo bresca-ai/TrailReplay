@@ -1,18 +1,32 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useProjectFile } from '@/hooks/useProjectFile';
 import { ExportSettingsModal } from './export/ExportSettingsModal';
-import { QUALITY_OPTIONS } from './export/exportConfig';
+import { getResolution, QUALITY_OPTIONS } from './export/exportConfig';
 import { useVideoExportRecorder } from './export/useVideoExportRecorder';
 import { isValidDeliveryEmail, localStudioDownload } from './export/studioDelivery';
 import { SocialSharePanel } from './export/SocialSharePanel';
+import { useSocialShareExport } from './export/useSocialShareExport';
 import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
+import type { SocialShareAspectRatio } from '@/types';
+
+function AutomaticCoverRenderer({ onReady }: { onReady: (url: string) => void }) {
+  const { previewUrl, settings, selectedPhotoReady } = useSocialShareExport();
+  useEffect(() => {
+    const splitReady = settings.template !== 'split' || (!!settings.photoSlots?.length && settings.photoSlots.every((slot) => !!slot.imageUrl));
+    if (previewUrl && splitReady && (settings.template !== 'photo-first' || selectedPhotoReady)) onReady(previewUrl);
+  }, [onReady, previewUrl, selectedPhotoReady, settings]);
+  return null;
+}
 
 export function ExportPanel() {
   const { t } = useI18n();
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
   const setVideoExportSettings = useAppStore((state) => state.setVideoExportSettings);
+  const setSocialShareSettings = useAppStore((state) => state.setSocialShareSettings);
+  const coverPreviewUrl = useAppStore((state) => state.videoCoverImageUrl);
+  const setCoverPreviewUrl = useAppStore((state) => state.setVideoCoverImageUrl);
   const playback = useAppStore((state) => state.playback);
   const exportMode = useAppStore((state) => state.exportSubMode);
   const setExportMode = useAppStore((state) => state.setExportSubMode);
@@ -23,6 +37,7 @@ export function ExportPanel() {
   const studioDeliveryEmail = useAppStore((state) => state.studioDeliveryEmail);
   const setStudioDeliveryEmail = useAppStore((state) => state.setStudioDeliveryEmail);
   const [showSettings, setShowSettings] = useState(false);
+  const [editingCover, setEditingCover] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [consentDefaultsLoaded, setConsentDefaultsLoaded] = useState(false);
   const consentTouchedRef = useRef(false);
@@ -72,8 +87,31 @@ export function ExportPanel() {
       email: studioDeliveryEmail,
       marketingConsent,
     },
+    coverImageUrl: videoExportSettings.includeCover ? coverPreviewUrl : null,
   });
   const studioEmailValid = localStudioDownload || isValidDeliveryEmail(studioDeliveryEmail);
+  const coverMode = exportMode === 'image' && editingCover;
+  const coverAspectRatio = videoExportSettings.aspectRatio;
+  const receiveCoverPoster = useCallback((url: string) => setCoverPreviewUrl(url), [setCoverPreviewUrl]);
+  const openCoverEditor = () => {
+    setCoverPreviewUrl(null);
+    setVideoExportSettings({ includeCover: true });
+    setSocialShareSettings({ aspectRatio: coverAspectRatio });
+    setEditingCover(true);
+    setExportMode('image');
+  };
+  const returnToVideo = () => {
+    setEditingCover(false);
+    setExportMode('video');
+  };
+  const changeCoverAspectRatio = (ratio: SocialShareAspectRatio) => {
+    setCoverPreviewUrl(null);
+    setVideoExportSettings({
+      aspectRatio: ratio,
+      resolution: getResolution(videoExportSettings.quality, ratio),
+    });
+    setSocialShareSettings({ aspectRatio: ratio });
+  };
 
   // The Instagram share prompt used to be a small card buried in the
   // scrollable sidebar (easy to miss). Surface it as a centered overlay
@@ -95,6 +133,9 @@ export function ExportPanel() {
 
   return (
     <div className="space-y-4">
+      {exportMode === 'video' && videoExportSettings.includeCover && !coverPreviewUrl && tracks.length > 0 && (
+        <AutomaticCoverRenderer onReady={receiveCoverPoster} />
+      )}
       {/* Save Project */}
       <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3">
         <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('export.saveProjectTitle')}</h3>
@@ -124,7 +165,7 @@ export function ExportPanel() {
       {/* Mode switch */}
       <div className="grid grid-cols-2 gap-1">
         <button
-          onClick={() => setExportMode('video')}
+          onClick={returnToVideo}
           className={`py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5 border transition-colors ${
             exportMode === 'video'
               ? 'bg-[var(--evergreen)] text-[var(--canvas)] border-[var(--evergreen)]'
@@ -134,7 +175,7 @@ export function ExportPanel() {
           <Film className="w-3.5 h-3.5" /> {t('imageExport.modeVideo')}
         </button>
         <button
-          onClick={() => setExportMode('image')}
+          onClick={() => { setEditingCover(false); setExportMode('image'); }}
           className={`py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5 border transition-colors ${
             exportMode === 'image'
               ? 'bg-[var(--evergreen)] text-[var(--canvas)] border-[var(--evergreen)]'
@@ -146,7 +187,13 @@ export function ExportPanel() {
       </div>
 
       {exportMode === 'image' ? (
-        <SocialSharePanel />
+        <SocialSharePanel
+          coverMode={coverMode}
+          aspectRatioOverride={coverMode ? coverAspectRatio : undefined}
+          onAspectRatioChange={coverMode ? changeCoverAspectRatio : undefined}
+          onPosterReady={coverMode ? receiveCoverPoster : undefined}
+          onUseCover={coverMode ? returnToVideo : undefined}
+        />
       ) : (
         <>
           <div className="bg-[var(--evergreen)] text-[var(--canvas)] p-4 rounded-lg">
@@ -213,10 +260,51 @@ export function ExportPanel() {
             </p>
           </div>
 
+          {(!exportedBlob || videoExportSettings.includeCover) && (
+            <div className="rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/[0.03] p-3 text-[var(--evergreen)]">
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={videoExportSettings.includeCover}
+                  disabled={isExporting || !!exportedBlob}
+                  onChange={(event) => {
+                    if (event.target.checked) openCoverEditor();
+                    else {
+                      setVideoExportSettings({ includeCover: false });
+                      setCoverPreviewUrl(null);
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 accent-[var(--trail-orange)]"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">{t('export.addVideoCover')}</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-[var(--evergreen-60)]">{t('export.addVideoCoverHint')}</span>
+                </span>
+              </label>
+              {videoExportSettings.includeCover && coverPreviewUrl && (
+                <div className="mt-3 flex items-center gap-3 rounded-lg border border-[var(--evergreen)]/10 bg-white/70 p-2">
+                  <img
+                    src={coverPreviewUrl}
+                    alt={t('imageExport.videoCover')}
+                    className="max-h-36 w-auto max-w-24 shrink-0 rounded-md object-contain shadow-sm"
+                  />
+                  <span className="text-xs leading-5 text-[var(--evergreen-60)]">{t('imageExport.videoCoverHint')}</span>
+                </div>
+              )}
+              {videoExportSettings.includeCover && !isExporting && !exportedBlob ? (
+                <button type="button" onClick={openCoverEditor} className="tr-btn tr-btn-secondary mt-3 flex w-full items-center justify-center gap-2 py-2 text-xs">
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  {coverPreviewUrl ? t('export.editVideoCover') : t('export.designVideoCover')}
+                </button>
+              ) : null}
+            </div>
+          )}
+
           {!isExporting && !exportedBlob && (
             <button
               onClick={handleStartExport}
               disabled={playback.totalDuration === 0
+                || (videoExportSettings.includeCover && !coverPreviewUrl)
                 || (videoExportSettings.qualityMode === 'studio' && !studioEmailValid)}
               className="w-full tr-btn tr-btn-primary flex items-center justify-center gap-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -224,6 +312,10 @@ export function ExportPanel() {
               {t('export.generateVideo')}
             </button>
           )}
+
+          {!isExporting && !exportedBlob && videoExportSettings.includeCover && !coverPreviewUrl ? (
+            <p className="text-center text-xs text-[var(--canvas)]/70">{t('export.designCoverBeforeExport')}</p>
+          ) : null}
 
           {playback.totalDuration === 0 && !isExporting && (
             <p className="text-xs text-center text-[var(--evergreen-60)]">

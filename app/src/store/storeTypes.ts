@@ -73,6 +73,8 @@ export interface AppState {
   cameraSettings: CameraSettings;
   videoExportSettings: VideoExportSettings;
   socialShareSettings: SocialShareSettings;
+  /** Generated cover image kept in memory while the user switches sidebar panels. */
+  videoCoverImageUrl: string | null;
   /** Runtime-only delivery address for repeated Studio exports in the current project. */
   studioDeliveryEmail: string;
   exportSubMode: 'video' | 'image';
@@ -177,6 +179,7 @@ export interface AppState {
   setTrailStyle: (settings: Partial<TrailStyleSettings>) => void;
   setVideoExportSettings: (settings: Partial<VideoExportSettings>) => void;
   setSocialShareSettings: (settings: Partial<SocialShareSettings>) => void;
+  setVideoCoverImageUrl: (url: string | null) => void;
   setStudioDeliveryEmail: (email: string) => void;
   setExportSubMode: (mode: 'video' | 'image') => void;
   setIsExporting: (isExporting: boolean) => void;

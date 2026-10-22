@@ -41,6 +41,7 @@ export const ASPECT_RATIO_OPTIONS: Array<{
   descriptionKey: string;
 }> = [
   { id: '16:9', label: '16:9', icon: '▬', descriptionKey: 'export.aspectLandscape' },
+  { id: '4:5', label: '4:5', icon: '▮', descriptionKey: 'export.aspectPortrait' },
   { id: '1:1', label: '1:1', icon: '■', descriptionKey: 'export.aspectSquare' },
   { id: '9:16', label: '9:16', icon: '▮', descriptionKey: 'export.aspectPortrait' },
 ];
@@ -75,6 +76,11 @@ export function getResolution(
     case '1:1': {
       const size = Math.round((longEdge * 9) / 16);
       return { width: size, height: size };
+    }
+    case '4:5': {
+      const height = longEdge;
+      const width = Math.round((longEdge * 4) / 5);
+      return { width, height };
     }
     case '9:16': {
       const height = longEdge;

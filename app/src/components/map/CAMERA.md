@@ -159,6 +159,68 @@ brings them into line.
 
 ## How to measure
 
+### Cinematic height and shot continuity
+
+Apply center elevation and the complete pose in one `jumpTo`. `setCenterElevation`
+is itself another `jumpTo`, so calling it first applies the new elevation to the
+old shot, runs collision handling twice and publishes two camera movements.
+While cinematic playback owns elevation, temporarily disable MapLibre's
+`centerClampedToGround`: its render loop otherwise overwrites the explicit
+filtered height with raw DEM height after the pose is applied. Restore the prior
+setting when playback releases ownership. Native camera collision remains active.
+
+Cinematic height is a fixed symmetric Blackman average along the planned camera
+anchor path (`cinematicCameraElevation.ts`), with a soft framing bound for close
+shots. It is spatial, not a wall-clock chase: a constant climb has no lag.
+Sample terrain in pairs so missing tiles cannot bias the window to one side.
+The custom post-render pitch servo yields to MapLibre 6's own atomic collision
+handling during cinematic playback/export; normal manual navigation retains it.
+
+Smooth authored shots use time-aware, shape-preserving Hermite tangents. Do not
+restore unscaled Catmull-Rom plus hard clamping: unequal shot spacing then
+produces velocity discontinuities and overshoot that sticks against the clamp.
+
+For a complete replay capture, open `?probe=1`, load the project, click **Record
+camera diagnostics**, play through the ending and click **Save camera diagnostics**.
+The JSON records simulated time, wall time, center elevation, pitch, pitch ceiling,
+zoom, bearing and camera movement count per sampled playback frame. These controls
+only exist on explicitly probe-enabled pages and never appear in normal exports.
+
+### Cinematic tile budget
+
+`basemapTileLod.ts` keeps imagery at one zoom level with hysteresis. Its
+calculator must wrap the native calculator installed by `setSourceTileLodParams`,
+including its tile-count correction. Bound the steep-shot cover at 4x the
+normal tile count: 16x produced bulk cleanup stalls at imagery-level changes.
+Returning the camera zoom unconditionally
+removes that correction: steep authored shots then cover the horizon with
+near-field imagery tiles and stall terrain rendering. Apply the same policy to
+the visible map and the predictive warmup map. The warmup camera must allow the
+same 85-degree pitch as authored shots; MapLibre's default 60-degree cap misses
+their horizon. Discovery requests DEM tiles through an invisible hillshade but
+never renders a second terrain mesh alongside the visible replay. Its CSS
+viewport follows the visible map, at pixel ratio 1. Guard non-finite cover geometry
+before passing it to the stateful hysteresis.
+
+### Playback marker modifiers
+
+The completed-trail source carries an invisible point at the same endpoint as
+the painted line. `paintedTrailMarker.ts` reads its newest rendered revision and
+projects the DOM marker once, on the map's `render` event. Keep that as the sole
+position writer: a normal MapLibre `Marker` also repositions on `move`,
+`moveend`, `terrain`, and `idle`, which can move the DOM between canvas frames.
+Those extra updates can make an aligned marker look as though it jitters.
+
+Keep subpixel coordinates and absolute positioning; do not add a CSS transform
+transition or ease the marker separately from the line. A temporary missing-tip
+query during tile replacement retains the last painted anchor. Annotation holds
+and the existing playback visibility rules explicitly remove the adornment.
+Unchanged icon/label markup is retained so playback does not recreate the
+marker's children every frame. Export captures the same DOM position after the
+map settles. The legacy `showCircle` setting now enables a silhouette outline
+and shadow, shared with export through `markerIconContrastFilter`; it must not
+add an animated disc or change the marker position.
+
 ### Pure functions: vitest, offline
 
 Fastest loop by far, and it works on the real sample routes:

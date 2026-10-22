@@ -6,7 +6,7 @@ import {
   getPicturePopupLayout,
   type PicturePopupExportFrame,
 } from '@/utils/picturePopup';
-import { MapPin, Calendar, ImageOff, Link2 } from 'lucide-react';
+import { ImageOff, Link2 } from 'lucide-react';
 
 interface PicturePopupProps {
   picture: PictureAnnotation;
@@ -15,19 +15,14 @@ interface PicturePopupProps {
   playbackCurrentTime?: number;
 }
 
-// How long the "fake zoom" grows in / shrinks out. Kept shorter than
-// `displayDuration` so there's always a visible held-still window in between.
-const ZOOM_ENTER_MS = 450;
-const ZOOM_EXIT_MS = 350;
-const ZOOM_ENTER_SCALE = 0.15;
-const ZOOM_EXIT_SCALE = 0.85;
+// A large, calm reveal reads better than the previous thumbnail-like pop.
+// Keep both phases inside the photo hold so there is a clear still moment.
+const REVEAL_MS = 700;
+const EXIT_MS = 300;
+const REVEAL_SCALE = 0.965;
 
 function easeOutCubic(t: number) {
   return 1 - (1 - t) ** 3;
-}
-
-function easeInCubic(t: number) {
-  return t ** 3;
 }
 
 // Computes scale/opacity directly from elapsed time instead of toggling CSS
@@ -40,25 +35,24 @@ function easeInCubic(t: number) {
 // in the output. Deriving the values from `elapsed` directly makes the
 // animation a pure function of the (possibly synthetic, export-driven) clock
 // passed in, independent of how long each frame actually took to render.
-function getZoomStyle(elapsed: number, displayDuration: number): { opacity: number; scale: number } {
+function getZoomStyle(elapsed: number, displayDuration: number): { opacity: number; scale: number; translateY: number } {
   const clamped = Math.max(0, elapsed);
-  if (clamped < ZOOM_ENTER_MS) {
-    const t = easeOutCubic(Math.min(1, clamped / ZOOM_ENTER_MS));
-    return { opacity: t, scale: ZOOM_ENTER_SCALE + (1 - ZOOM_ENTER_SCALE) * t };
+  if (clamped < REVEAL_MS) {
+    const t = easeOutCubic(Math.min(1, clamped / REVEAL_MS));
+    return { opacity: t, scale: REVEAL_SCALE + (1 - REVEAL_SCALE) * t, translateY: 10 * (1 - t) };
   }
-  const exitStart = displayDuration - ZOOM_EXIT_MS;
+  const exitStart = Math.max(REVEAL_MS, displayDuration - EXIT_MS);
   if (clamped > exitStart) {
-    const t = easeInCubic(Math.min(1, (clamped - exitStart) / ZOOM_EXIT_MS));
-    return { opacity: 1 - t, scale: 1 - (1 - ZOOM_EXIT_SCALE) * t };
+    const t = Math.min(1, (clamped - exitStart) / EXIT_MS);
+    return { opacity: 1 - t, scale: 1 - 0.01 * t, translateY: 0 };
   }
-  return { opacity: 1, scale: 1 };
+  return { opacity: 1, scale: 1, translateY: 0 };
 }
 
 export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTime }: PicturePopupProps) {
   const { t } = useI18n();
   const relinkPictureFile = useAppStore((state) => state.relinkPictureFile);
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [displayProgress, setDisplayProgress] = useState(0);
   const [imageSrc, setImageSrc] = useState(picture.url);
   const progressIntervalRef = useRef<number | null>(null);
   const fallbackImageUrlRef = useRef<string | null>(null);
@@ -67,7 +61,7 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
   const relinkInputRef = useRef<HTMLInputElement>(null);
 
   const displayDuration = picture.displayDuration || 3000;
-  const { imageBoxWidth, imageBoxHeight, isExportSafe, popupStyle } = getPicturePopupLayout(exportFrame);
+  const { imageBoxWidth, imageBoxHeight, popupStyle } = getPicturePopupLayout(exportFrame);
 
   useEffect(() => () => {
     if (fallbackImageUrlRef.current !== null) {
@@ -98,8 +92,6 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
     const startTime = Date.now();
     progressIntervalRef.current = window.setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const progress = Math.min((elapsed / displayDuration) * 100, 100);
-      setDisplayProgress(progress);
       setElapsedMs(elapsed);
 
       if (elapsed >= displayDuration) {
@@ -123,8 +115,6 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
     }
 
     const elapsed = Math.max(0, playbackCurrentTime - playbackPopupStartTimeRef.current);
-    const progress = Math.min((elapsed / displayDuration) * 100, 100);
-    setDisplayProgress(progress);
     setElapsedMs(elapsed);
 
     if (elapsed >= displayDuration) {
@@ -132,16 +122,13 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
     }
   }, [displayDuration, playbackCurrentTime, requestClose]);
 
-  const { opacity, scale } = getZoomStyle(elapsedMs, displayDuration);
+  const { opacity, scale, translateY } = getZoomStyle(elapsedMs, displayDuration);
 
   return (
     <div className="absolute z-[200]" style={{ ...popupStyle, width: imageBoxWidth, height: imageBoxHeight }}>
-      {/* Near-fullscreen box: fills the sized wrapper above, rounded,
-          overflow-hidden. object-contain keeps the whole photo visible
-          (never cropped) regardless of its aspect ratio vs. the box's — any
-          letterbox gap is transparent, showing the map behind it, rather
-          than a solid fill. This box also carries the "fake zoom"
-          scale/opacity, driven directly from elapsed time (see
+      {/* Near-fullscreen box: fills the sized wrapper above with a clean
+          light edge. The photo fills the box for an uninterrupted image.
+          Opacity, scale, and position are derived from the replay clock (see
           `getZoomStyle`) rather than a CSS transition.
           Note: the size lives on the *outer* wrapper (whose percentage
           values resolve against the map container, a definite-size
@@ -150,13 +137,8 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
           treats percentage-width children as 0, which collapsed the photo
           to nothing. */}
       <div
-        // No box-shadow here: html2canvas approximates box-shadow by
-        // painting a filled shape behind the element, and since this box
-        // has no background of its own (transparent, letterboxed), that
-        // shadow fill was bleeding through as a solid black patch in the
-        // exported video's letterbox gaps.
-        className="tr-picture-popup relative w-full h-full overflow-hidden rounded-xl origin-bottom"
-        style={{ opacity, transform: `scale(${scale})` }}
+        className="tr-picture-popup relative w-full h-full overflow-hidden rounded-xl border-[3px] border-white/90 bg-black/40 origin-center"
+        style={{ opacity, transform: `translateY(${translateY}px) scale(${scale})` }}
       >
         {picture.isPlaceholder ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[var(--evergreen)]/10 text-[var(--evergreen-60)] text-sm">
@@ -183,60 +165,34 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
             />
           </div>
         ) : imageSrc ? (
-          <img
-            src={imageSrc}
-            alt={picture.title || t('media.trailPictureAlt')}
-            className="absolute inset-0 w-full h-full object-contain"
-            onError={() => {
-              if (picture.displayFile && imageSrc === picture.url) {
-                fallbackImageUrlRef.current = URL.createObjectURL(picture.displayFile);
-                setImageSrc(fallbackImageUrlRef.current);
-                return;
-              }
-              setImageSrc('');
-            }}
-          />
+          <>
+            <img
+              src={imageSrc}
+              alt={picture.title || t('media.trailPictureAlt')}
+              className="absolute inset-1 w-[calc(100%-0.5rem)] h-[calc(100%-0.5rem)] rounded-lg object-cover"
+              onError={() => {
+                if (picture.displayFile && imageSrc === picture.url) {
+                  fallbackImageUrlRef.current = URL.createObjectURL(picture.displayFile);
+                  setImageSrc(fallbackImageUrlRef.current);
+                  return;
+                }
+                setImageSrc('');
+              }}
+            />
+            {picture.description?.trim() && (
+              <div className="absolute inset-x-1 bottom-1 rounded-b-lg bg-gradient-to-t from-black/75 via-black/40 to-transparent px-5 pb-4 pt-12 sm:px-7 sm:pb-6 sm:pt-16 pointer-events-none">
+                <p className="mx-auto max-w-3xl text-center text-sm font-medium leading-relaxed text-white drop-shadow-md sm:text-base [text-wrap:pretty] line-clamp-2">
+                  {picture.description.trim()}
+                </p>
+              </div>
+            )}
+          </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--evergreen)]/10 text-[var(--evergreen-60)] text-sm">
             {t('media.imageUnavailable')}
           </div>
         )}
 
-        {/* Progress Bar */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-black/20 z-10">
-          <div
-            className="h-full bg-[var(--trail-orange)] transition-all duration-50"
-            style={{ width: `${displayProgress}%` }}
-          />
-        </div>
-
-        {/* Caption + metadata overlay */}
-        {(picture.title || picture.description || (picture.lat !== undefined && picture.lon !== undefined) || picture.timestamp) && (
-          <div className="absolute bottom-0 left-0 right-0 px-4 pt-10 pb-3 bg-gradient-to-t from-black/75 to-transparent">
-            {picture.title && (
-              <p className={`font-medium text-white ${isExportSafe ? 'text-xs' : 'text-base'}`}>{picture.title}</p>
-            )}
-            {picture.description && (
-              <p className={`text-white/85 mt-0.5 ${isExportSafe ? 'text-[11px]' : 'text-sm'}`}>{picture.description}</p>
-            )}
-            {(picture.lat !== undefined && picture.lon !== undefined || picture.timestamp) && (
-              <div className={`flex items-center gap-3 text-white/70 mt-1.5 ${isExportSafe ? 'text-[10px]' : 'text-xs'}`}>
-                {picture.lat !== undefined && picture.lon !== undefined && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {picture.lat.toFixed(4)}, {picture.lon.toFixed(4)}
-                  </span>
-                )}
-                {picture.timestamp && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {picture.timestamp.toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

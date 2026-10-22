@@ -34,9 +34,11 @@ function IconButton({ path, label, selected, onClick }: {
  * The built-in trail glyphs as quick picks, plus a search over the whole
  * Pinhead library, which only loads once someone starts typing.
  */
-export function AnnotationSymbolPicker({ value, onChange }: {
+export function AnnotationSymbolPicker({ value, onChange, label, allowEmoji = true }: {
   value: string;
   onChange: (value: string) => void;
+  label?: string;
+  allowEmoji?: boolean;
 }) {
   const { t, language } = useI18n();
   const [query, setQuery] = useState('');
@@ -67,7 +69,7 @@ export function AnnotationSymbolPicker({ value, onChange }: {
   };
 
   return <fieldset className="w-full space-y-2">
-    <legend className="text-xs font-medium text-[var(--evergreen)]">{t('annotations.logoLabel')}</legend>
+    <legend className="text-xs font-medium text-[var(--evergreen)]">{label ?? t('annotations.logoLabel')}</legend>
 
     <div className="flex flex-wrap gap-1.5">
       {LANDMARK_GLYPH_KEYS.map((glyph) => <IconButton
@@ -83,10 +85,11 @@ export function AnnotationSymbolPicker({ value, onChange }: {
         selected
         onClick={() => undefined}
       />}
-      <button type="button" aria-label={t('annotations.emojiLabel')} title={t('annotations.emojiLabel')} aria-pressed={isEmoji} onClick={() => onChange('🚰')}
+      {allowEmoji && <button type="button" aria-label={t('annotations.emojiLabel')} title={t('annotations.emojiLabel')} aria-pressed={isEmoji} onClick={() => onChange('🚰')}
         className={`rounded-md border px-2 text-xs ${isEmoji ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20'}`}>{t('annotations.emojiLabel')}</button>
+      }
     </div>
-    {isEmoji && <input aria-label={`${t('annotations.logoLabel')} ${t('annotations.emojiLabel')}`} value={value} onChange={(event) => onChange(event.target.value)} maxLength={8}
+    {allowEmoji && isEmoji && <input aria-label={`${t('annotations.logoLabel')} ${t('annotations.emojiLabel')}`} value={value} onChange={(event) => onChange(event.target.value)} maxLength={8}
       className="w-20 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-1 text-sm" />}
 
     <label className="relative block">

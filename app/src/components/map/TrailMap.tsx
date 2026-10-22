@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import type { PaintedTrailMarker } from '@/utils/paintedTrailMarker';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -29,7 +30,6 @@ import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
 import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
 import { useTilePreloadDiagnostics } from './hooks/useTilePreloadDiagnostics';
-import { projectCoordinateToJourney, projectCoordinateToTrack } from '@/utils/routeProjection';
 import type { CropPreviewMetrics } from '@/utils/crop';
 
 interface TrailMapProps {
@@ -48,7 +48,7 @@ export function TrailMap(_props: TrailMapProps) {
   const mapContainer = _props.mapContainerRef ?? internalMapContainerRef;
   const onReadyChange = _props.onReadyChange;
   const map = useRef<maplibregl.Map | null>(null);
-  const markerRef = useRef<maplibregl.Marker | null>(null);
+  const markerRef = useRef<PaintedTrailMarker | null>(null);
   const smoothBearingRef = useRef<number>(0);
   const targetBearingRef = useRef<number>(0);
   const loadZoomDoneRef = useRef<boolean>(false);
@@ -129,21 +129,9 @@ export function TrailMap(_props: TrailMapProps) {
     }
   }, []);
 
-  const findNearestRoutePoint = useCallback((lat: number, lon: number) => {
-    if (computedJourney && computedJourney.coordinates.length > 0) {
-      return projectCoordinateToJourney(computedJourney, lat, lon, playback.progress);
-    }
-
-    const track = activeTrack || tracks[0];
-    if (!track || track.points.length === 0) return null;
-
-    return projectCoordinateToTrack(track, lat, lon, playback.progress);
-  }, [activeTrack, computedJourney, playback.progress, tracks]);
-
   useManualPicturePlacement({
     addPicture,
     addVideo,
-    findNearestRoutePoint,
     isMapLoaded,
     mapRef: map,
     pendingPicturePlacements,
@@ -180,6 +168,7 @@ export function TrailMap(_props: TrailMapProps) {
     isMapLoaded,
     labelFade: settings.landmarkLabelFade,
     scale: settings.landmarkScale,
+    overlayFont: trailStyle.overlayFont,
     landmarks,
     mapRef: map,
     onSelectLandmark: handleSelectLandmark,
@@ -188,7 +177,6 @@ export function TrailMap(_props: TrailMapProps) {
   });
 
   useLandmarkPlacement({
-    findNearestRoutePoint,
     isMapLoaded,
     isPlacingLandmark,
     mapRef: map,
@@ -300,6 +288,7 @@ export function TrailMap(_props: TrailMapProps) {
     exportFrame: _props.exportFrame ?? null,
     followBehindZoomLevel,
     isExporting,
+    isPlaying: playback.isPlaying,
     isInTransport,
     isMapLoaded,
     mapRef: map,
@@ -328,6 +317,8 @@ export function TrailMap(_props: TrailMapProps) {
   // Applies in every camera mode, and to manual navigation as much as to the
   // replay: whatever moves the camera, it does not end up underground.
   useCameraTerrainClearance({
+    playbackOwnsCamera: cameraMode === 'cinematic'
+      && (isExporting || playback.isPlaying || animationPhase === 'intro' || animationPhase === 'outro'),
     isMapLoaded,
     mapRef: map,
     show3DTerrain: settings.show3DTerrain,
@@ -361,6 +352,7 @@ export function TrailMap(_props: TrailMapProps) {
     cameraMode,
     cinematicKeyframes,
     diagnostics: tileDiagnostics,
+    visibleMapRef: map,
     elevationData,
     // Deterministic export already advances the visible map one frame at a
     // time. Keeping the second, offscreen MapLibre instance alive at the same

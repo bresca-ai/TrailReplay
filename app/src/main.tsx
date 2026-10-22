@@ -50,12 +50,17 @@ import '@fontsource/montserrat/latin-700.css'
 import '@fontsource/montserrat/latin-ext-700.css'
 import '@fontsource/montserrat/latin-800.css'
 import '@fontsource/montserrat/latin-ext-800.css'
+import '@fontsource/anton/latin-400.css'
+import '@fontsource/anton/latin-ext-400.css'
+import '@fontsource/bebas-neue/latin-400.css'
+import '@fontsource/bebas-neue/latin-ext-400.css'
 import './index.css'
 import App from './App.tsx'
-import { initAnalytics } from '@/utils/analytics'
+import { captureLeadAttribution, initAnalytics } from '@/utils/analytics'
 import { startWebVitalsTracking } from '@/utils/performance'
 
 void initAnalytics({ page_type: 'app', page_group: 'product' });
+void captureLeadAttribution();
 void startWebVitalsTracking();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

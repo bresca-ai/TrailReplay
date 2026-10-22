@@ -4,13 +4,13 @@ import { useI18n } from '@/i18n/useI18n';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { ACTIVITY_ICONS, isSvgActivityIcon, renderActivityIcon } from '@/utils/activityIcons';
+import { ACTIVITY_ICONS, isSvgActivityIcon, markerIconContrastFilter, renderActivityIcon } from '@/utils/activityIcons';
 import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
 import { Trash2 } from 'lucide-react';
-import { OVERLAY_FONT_OPTIONS, overlayFontFamily } from '@/utils/typography';
+import { OverlayFontPicker } from './OverlayFontPicker';
 
 function parsePercent(raw: string): number | null {
   const parsed = parseFloat(raw.replace(',', '.'));
@@ -316,23 +316,14 @@ export function AnnotationsPanel() {
           <Label htmlFor="overlay-font" className="text-xs text-[var(--evergreen-60)] uppercase tracking-wide">
             {t('annotations.fontLabel')}
           </Label>
-          <select
+          <OverlayFontPicker
             id="overlay-font"
             value={trailStyle.overlayFont}
-            onChange={(event) => {
-              const overlayFont = event.target.value as typeof trailStyle.overlayFont;
+            onChange={(overlayFont) => {
               setTrailStyle({ overlayFont });
               trackEvent('settings_changed', { setting_name: 'overlay_font', setting_value: overlayFont });
             }}
-            className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none transition-colors focus:border-[var(--trail-orange)] focus:ring-2 focus:ring-[var(--trail-orange)]/20"
-            style={{ fontFamily: overlayFontFamily(trailStyle.overlayFont) }}
-          >
-            {OVERLAY_FONT_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id} style={{ fontFamily: overlayFontFamily(option.id) }}>
-                {t(option.labelKey)}
-              </option>
-            ))}
-          </select>
+          />
         </div>
         <p className="text-[10px] leading-4 text-[var(--evergreen-60)]">
           {t('annotations.typographyOpenSource')}
@@ -802,10 +793,9 @@ export function AnnotationsPanel() {
                     <Label className="text-sm text-[var(--evergreen)]">{t('annotations.activityIcon')}</Label>
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-12 h-12 rounded-full border-2 border-[var(--evergreen)]/20 flex items-center justify-center"
+                        className="w-12 h-12 flex items-center justify-center"
                         style={{
-                          backgroundColor: trailStyle.showCircle ? `${trailStyle.markerColor}40` : 'transparent',
-                          borderColor: trailStyle.markerColor,
+                          filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none',
                         }}
                       >
                         {renderActivityIcon(displayedIcon, { size: 32, color: currentIconColor })}

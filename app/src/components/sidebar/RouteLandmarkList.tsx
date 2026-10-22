@@ -1,17 +1,22 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Pencil, Plus, Trash2, Undo2, X } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useAllRouteLandmarks } from '@/hooks/useAllRouteLandmarks';
 import {
-  LANDMARK_COLORS,
-  LANDMARK_GLYPH_KEYS,
-  LANDMARK_GLYPH_LABELS,
-  PINHEAD_PATHS,
   colorForLandmark,
   glyphForLandmark,
+  LANDMARK_COLORS,
+  LANDMARK_GLYPH_KEYS,
+  PINHEAD_PATHS,
 } from '@/components/map/landmarkGlyphs';
 import { trackEvent } from '@/utils/analytics';
 import type { RouteLandmark } from '@/types/landmarks';
+import { sanitizeCoordinates } from '@/components/sidebar/landmarks/coordinates.ts';
+import { mapGlobalRef } from '@/utils/mapRef.ts';
+import { createUserLandmark } from '@/utils/createUserLandmark.ts';
+import { useFindNearestRoutePoint } from '@/components/map/hooks/useFindNearestRoutePoint.ts';
+import { useI18n } from '@/i18n/useI18n';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback.ts';
 
 function GlyphIcon({ glyph, color, size = 16 }: { glyph: string; color: string; size?: number }) {
   return (
@@ -27,6 +32,7 @@ function GlyphIcon({ glyph, color, size = 16 }: { glyph: string; color: string; 
  * map can be renamed, re-iconed, recolored or removed through the same form.
  */
 function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
+  const { t } = useI18n();
   const userLandmarks = useAppStore((state) => state.userLandmarks);
   const updateLandmark = useAppStore((state) => state.updateLandmark);
   const removeLandmark = useAppStore((state) => state.removeLandmark);
@@ -46,18 +52,18 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
   return (
     <div className="space-y-3 rounded-lg border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-[var(--evergreen)]">Edit landmark</span>
+        <span className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.editLandmark')}</span>
         <button
           onClick={() => selectLandmark(null)}
           className="rounded p-1 text-[var(--evergreen-60)] hover:text-[var(--evergreen)]"
-          aria-label="Close landmark editor"
+          aria-label={t('routeLandmarks.closeEditor')}
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
       <label className="block">
-        <span className="block text-[11px] text-[var(--evergreen-60)]">Name</span>
+        <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.name')}</span>
         <input
           type="text"
           value={landmark.title}
@@ -67,14 +73,14 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
       </label>
 
       <div>
-        <span className="block text-[11px] text-[var(--evergreen-60)]">Icon</span>
+        <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.icon')}</span>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {LANDMARK_GLYPH_KEYS.map((key) => (
             <button
               key={key}
               onClick={() => edit({ icon: key })}
-              title={LANDMARK_GLYPH_LABELS[key]}
-              aria-label={LANDMARK_GLYPH_LABELS[key]}
+              title={t(`routeLandmarks.glyphs.${key}`)}
+              aria-label={t(`routeLandmarks.glyphs.${key}`)}
               aria-pressed={glyph === key}
               className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-colors ${
                 glyph === key
@@ -89,13 +95,13 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
       </div>
 
       <div>
-        <span className="block text-[11px] text-[var(--evergreen-60)]">Color</span>
+        <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.color')}</span>
         <div className="mt-1 flex flex-wrap gap-1.5">
           {LANDMARK_COLORS.map((swatch) => (
             <button
               key={swatch}
               onClick={() => edit({ color: swatch })}
-              aria-label={`Use color ${swatch}`}
+              aria-label={t('routeLandmarks.useColor', { color: swatch })}
               aria-pressed={color.toLowerCase() === swatch.toLowerCase()}
               style={{ backgroundColor: swatch }}
               className={`h-6 w-6 rounded-full border-2 ${
@@ -120,13 +126,16 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
         className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/40 px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-500/10"
       >
         <Trash2 className="h-3.5 w-3.5" />
-        Remove from map
+        {t('routeLandmarks.removeFromMap')}
       </button>
     </div>
   );
 }
 
+type Coordinates = [number, number];
+
 export function RouteLandmarkList() {
+  const { t } = useI18n();
   const landmarks = useAllRouteLandmarks();
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const selectLandmark = useAppStore((state) => state.selectLandmark);
@@ -135,6 +144,45 @@ export function RouteLandmarkList() {
   const hiddenLandmarkIds = useAppStore((state) => state.hiddenLandmarkIds);
   const restoreHiddenLandmarks = useAppStore((state) => state.restoreHiddenLandmarks);
   const userLandmarks = useAppStore((state) => state.userLandmarks);
+  const addLandmark = useAppStore((state) => state.addLandmark);
+  const findNearestRoutePoint = useFindNearestRoutePoint();
+  const [landmarkCoordinates, setLandmarkCoordinates] = useState<string>('');
+
+  const [addLandmarkDelayed, cancelCoordinatesDelayed, hasDelay] = useDebouncedCallback((props: {
+    coordinates: Coordinates
+  }): void => {
+    mapGlobalRef.current?.flyTo({
+      center: { lng: props.coordinates[1], lat: props.coordinates[0] }
+    });
+
+    const nearest = findNearestRoutePoint(props.coordinates[0], props.coordinates[1])
+
+    const landmark = createUserLandmark({
+      lat: props.coordinates[0],
+      lon: props.coordinates[1],
+      progress: nearest?.progress ?? null,
+    });
+
+    addLandmark(landmark);
+    setIsPlacingLandmark(false);
+    selectLandmark(landmark.id);
+
+    setLandmarkCoordinates('');
+  }, 1);
+
+  const setCoordinatesDelayed = (coordinates: Coordinates | undefined): void => {
+    if (coordinates) {
+      addLandmarkDelayed({ coordinates });
+    } else {
+      cancelCoordinatesDelayed();
+    }
+  }
+
+  useEffect(() => {
+    if (!isPlacingLandmark) {
+      cancelCoordinatesDelayed();
+    }
+  }, [isPlacingLandmark, cancelCoordinatesDelayed]);
 
   const ordered = useMemo(
     () => [...landmarks].sort((left, right) => (left.progress ?? 1) - (right.progress ?? 1)),
@@ -150,7 +198,7 @@ export function RouteLandmarkList() {
   return (
     <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-[var(--evergreen)]">Landmarks on the map</p>
+        <p className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.onMap')}</p>
         <span className="text-[11px] text-[var(--evergreen-60)]">{ordered.length}</span>
       </div>
 
@@ -164,6 +212,8 @@ export function RouteLandmarkList() {
               feature_state: 'enabled',
               feature_context: 'landmarks',
             });
+          } else {
+            setLandmarkCoordinates('');
           }
         }}
         className={`flex w-full items-center justify-center gap-1.5 rounded-lg border-2 px-2 py-1.5 text-xs font-medium transition-colors ${
@@ -173,14 +223,32 @@ export function RouteLandmarkList() {
         }`}
       >
         {isPlacingLandmark ? <MapPin className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-        {isPlacingLandmark ? 'Click the map to place it' : 'Add landmark'}
+        {isPlacingLandmark ? t('routeLandmarks.clickMapToPlace') : t('routeLandmarks.addLandmark')}
       </button>
+
+      {isPlacingLandmark && <label className="block">
+        <div className="block text-[11px] text-[var(--evergreen-60)] flex items-center justify-start gap-2">
+          <span>{t('routeLandmarks.pasteCoordinates')}</span>
+          {hasDelay && <div
+            className="mx-auto h-3 w-3 rounded-full border-1 border-[var(--trail-orange)] border-t-transparent animate-spin" />}
+
+        </div>
+        <input
+          type="text"
+          value={landmarkCoordinates}
+          onChange={(event) => {
+            setLandmarkCoordinates(event.target.value);
+            setCoordinatesDelayed(sanitizeCoordinates(event.target.value));
+          }}
+          className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/30 bg-[var(--canvas)] px-2 py-1.5 text-sm text-[var(--evergreen)] focus:border-[var(--trail-orange)] focus:outline-none"
+        />
+      </label>}
 
       {selected && <LandmarkEditor landmark={selected} />}
 
       {ordered.length === 0 ? (
         <p className="text-[11px] text-[var(--evergreen-60)]">
-          No landmarks yet. Turn on route moments or nearby places above, or add your own.
+          {t('routeLandmarks.empty')}
         </p>
       ) : (
         <ul className="max-h-64 space-y-1 overflow-y-auto">
@@ -213,7 +281,7 @@ export function RouteLandmarkList() {
           className="flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-[var(--evergreen-60)] hover:text-[var(--evergreen)]"
         >
           <Undo2 className="h-3 w-3" />
-          Restore {restorableCount} removed landmark{restorableCount === 1 ? '' : 's'}
+          {t(restorableCount === 1 ? 'routeLandmarks.restoreRemovedLandmark' : 'routeLandmarks.restoreRemovedLandmarks', { count: restorableCount })}
         </button>
       )}
     </div>
