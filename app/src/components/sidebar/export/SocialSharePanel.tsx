@@ -71,6 +71,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
     transformMapViewport,
     titleBboxNorm,
     logoBboxNorm,
+    resolvedTitle,
   } = useSocialShareExport();
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
@@ -516,6 +517,13 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           </div>
         </div>
 
+        <button type="button"
+          aria-pressed={settings.showMapPlaces === true}
+          onClick={() => setSocialShareSettings({ showMapPlaces: !settings.showMapPlaces })}
+          className={`w-full rounded-lg px-3 py-2 text-xs font-medium ${settings.showMapPlaces ? 'bg-[var(--trail-orange)] text-white' : 'bg-black/5 hover:bg-black/10'}`}>
+          {t(settings.showMapPlaces ? 'imageExport.hideMapPlaces' : 'imageExport.showMapPlaces')}
+        </button>
+
       {/* Map camera controls */}
         <div>
           <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.mapCamera')}</div>
@@ -589,7 +597,11 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           {(['journey-name', 'track-name', 'custom'] as const).map((mode) => (
             <button
               key={mode}
-              onClick={() => setSocialShareSettings({ titleMode: mode })}
+              onClick={() => setSocialShareSettings({
+                titleMode: mode,
+                ...(mode === 'custom' && settings.titleMode !== 'custom' && !settings.customTitle
+                  ? { customTitle: resolvedTitle } : {}),
+              })}
               className={`py-1.5 rounded text-xs font-medium transition-colors ${
                 settings.titleMode === mode
                   ? 'bg-[var(--trail-orange)] text-white'
@@ -604,15 +616,14 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             </button>
           ))}
         </div>
-        {settings.titleMode === 'custom' && (
-          <textarea
-            rows={3}
-            value={settings.customTitle}
-            onChange={(e) => setSocialShareSettings({ customTitle: e.target.value })}
-            placeholder={t('imageExport.titlePlaceholder')}
-            className="w-full resize-y bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
-          />
-        )}
+        <textarea
+          rows={3}
+          aria-label={t('imageExport.title')}
+          value={resolvedTitle}
+          onChange={(e) => setSocialShareSettings({ titleMode: 'custom', customTitle: e.target.value })}
+          placeholder={t('imageExport.titlePlaceholder')}
+          className="w-full resize-y bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
+        />
         <div className="mt-2 flex items-center gap-2 rounded-lg border border-black/10 bg-black/[0.025] p-2">
           <label className="min-w-0 flex-1 text-[11px] font-medium">
             {t('imageExport.titleSize')}

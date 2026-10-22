@@ -4,7 +4,7 @@ import { mapGlobalRef } from '@/utils/mapRef';
 import { getCropRegion } from '@/utils/crop';
 import { trackEvent } from '@/utils/analytics';
 import { trackSocialExportConfiguration } from '@/utils/configurationAnalytics';
-import { buildSocialShareSummary } from './socialShareData';
+import { buildSocialShareSummary, resolveSocialShareTitle } from './socialShareData';
 import { translate } from '@/i18n/translations';
 import { getPosterSize, renderSocialPoster, exportSocialPosterBlob } from './socialShareRenderer';
 import type { RenderInput } from './socialShareRenderer';
@@ -264,7 +264,7 @@ export function useSocialShareExport() {
           const center = map.getCenter();
           const snapshotKey = [
             settings.template, settings.routeGlow, settings.routeTransform.opacity,
-            settings.layoutPreset, mapStyle,
+            settings.layoutPreset, settings.showMapPlaces, mapStyle,
             center.lng, center.lat, map.getZoom(), map.getPitch(), map.getBearing(),
             map.getCanvas().width, map.getCanvas().height,
             ...visibleTracks.map((track) => `${track.id}:${track.points.length}:${track.color}`),
@@ -274,6 +274,7 @@ export function useSocialShareExport() {
             preCapuredMapCanvas = cached.canvas;
           } else {
             preCapuredMapCanvas = await captureSocialMap(map, {
+              showPlaces: settings.showMapPlaces,
               waitForTiles: !options.fastMapCapture,
             });
             if (preCapuredMapCanvas) lastMapSnapshotRef.current = { key: snapshotKey, canvas: preCapuredMapCanvas };
@@ -381,6 +382,7 @@ export function useSocialShareExport() {
     settings.logoPositionY,
     settings.locationLabel,
     settings.showLocation,
+    settings.showMapPlaces,
     settings.showStats,
     settings.showElevationMiniChart,
     settings.routeTransform.scale,
@@ -426,7 +428,7 @@ export function useSocialShareExport() {
       if (settings.template !== 'photo-first') {
         const map = mapGlobalRef.current;
         if (map) {
-          preCapuredMapCanvas = await captureSocialMap(map);
+          preCapuredMapCanvas = await captureSocialMap(map, { showPlaces: settings.showMapPlaces });
         }
       }
       const [, brandLogo, assets] = await Promise.all([
@@ -497,6 +499,7 @@ export function useSocialShareExport() {
   })();
 
   return {
+    resolvedTitle: resolveSocialShareTitle(settings, tracks, activeTrackId, journey),
     previewUrl,
     isRendering,
     selectedPicture,

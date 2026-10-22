@@ -5,7 +5,7 @@ let captureQueue: Promise<unknown> = Promise.resolve();
 /** Capture all routes with their completed-replay styling, without advancing playback. */
 export function captureSocialMap(
   map: maplibregl.Map,
-  options: { waitForTiles?: boolean } = {},
+  options: { waitForTiles?: boolean; showPlaces?: boolean } = {},
 ): Promise<HTMLCanvasElement | null> {
   const capture = async (): Promise<HTMLCanvasElement | null> => {
     const paints: Array<{ id: string; property: Parameters<maplibregl.Map['getPaintProperty']>[1]; value: ReturnType<maplibregl.Map['getPaintProperty']> }> = [];
@@ -13,6 +13,10 @@ export function captureSocialMap(
 
     try {
       for (const layer of map.getStyle().layers ?? []) {
+        if (['route-landmarks-icon', 'route-landmarks-label', 'carto-labels'].includes(layer.id)) {
+          visibility.push({ id: layer.id, value: map.getLayoutProperty(layer.id, 'visibility') as 'visible' | 'none' | undefined });
+          map.setLayoutProperty(layer.id, 'visibility', options.showPlaces ? 'visible' : 'none');
+        }
         if (layer.id !== 'trail-line' && !layer.id.startsWith('comparison-trail-line-')) continue;
         const completedId = layer.id.replace('trail-line', 'trail-completed');
         if (!map.getLayer(completedId)) continue;
