@@ -753,6 +753,7 @@ export const es = {
     pasteCoordinates: 'O inserta las coordenadas aquí',
   },
   imageExport: {
+    showMapPlaces: 'Mostrar lugares', hideMapPlaces: 'Ocultar lugares',
     editorSections: 'Secciones del editor de portada', designSection: 'Diseño', mapSection: 'Mapa', logoSection: 'Logo',
     modeVideo: 'Vídeo',
     modeImage: 'Imagen',

@@ -186,6 +186,14 @@ The JSON records simulated time, wall time, center elevation, pitch, pitch ceili
 zoom, bearing and camera movement count per sampled playback frame. These controls
 only exist on explicitly probe-enabled pages and never appear in normal exports.
 
+### Sky and exported frame backgrounds
+
+The shared map style uses `mapSky.ts` for an opaque blue sky in manual navigation,
+playback, cover captures and video exports. Keep the export compositor's blue
+full-frame reset before drawing the map: a transparent map pixel otherwise leaves
+terrain, labels or a cover from the previous recording frame behind, producing
+repeated ground textures above the horizon during steep pans.
+
 ### Cinematic tile budget
 
 `basemapTileLod.ts` keeps imagery at one zoom level with hysteresis. Its
@@ -205,11 +213,17 @@ before passing it to the stateful hysteresis.
 ### Playback marker modifiers
 
 The completed-trail source carries an invisible point at the same endpoint as
-the painted line. `paintedTrailMarker.ts` reads its newest rendered revision and
+the painted line. `paintedTrailMarker.ts` reads its newest renderable-tile revision and
 projects the DOM marker once, on the map's `render` event. Keep that as the sole
 position writer: a normal MapLibre `Marker` also repositions on `move`,
 `moveend`, `terrain`, and `idle`, which can move the DOM between canvas frames.
 Those extra updates can make an aligned marker look as though it jitters.
+
+Use `querySourceFeatures` on the completed-trail source after render, with a
+tip-only filter. It reads the source's renderable tiles, preserving worker/line
+synchronization. Do not use a screen-space `queryRenderedFeatures` hit test to
+find that point: steep terrain views can miss it for seconds even while newer
+trail tiles are painted, leaving the marker anchored behind the animation.
 
 Keep subpixel coordinates and absolute positioning; do not add a CSS transform
 transition or ease the marker separately from the line. A temporary missing-tip

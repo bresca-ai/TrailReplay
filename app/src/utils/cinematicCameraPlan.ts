@@ -1,3 +1,4 @@
+import { REPLAY_CAMERA_MAX_PITCH } from '@/utils/cameraLimits';
 import type { RouteTimingMode } from '@/types';
 import type { ComputedJourney, SegmentTiming } from '@/utils/journeyUtils';
 import { progressForRouteDistance, routeDistanceForSegmentAnchor } from '@/utils/journeyUtils';
@@ -156,7 +157,7 @@ export interface CinematicCameraPoseOptions {
 }
 
 const PITCH_MIN = 0;
-const PITCH_MAX = 85;
+const PITCH_MAX = REPLAY_CAMERA_MAX_PITCH;
 
 function heldBearingDeg(keyframe: PreparedCinematicKeyframe, routeHeadingDeg: number | null): number {
   if (keyframe.frame !== 'route' || routeHeadingDeg === null || keyframe.routeHeadingAtAnchorDeg === null) {

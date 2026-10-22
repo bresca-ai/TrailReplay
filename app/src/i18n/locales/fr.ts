@@ -753,6 +753,7 @@ export const fr = {
     pasteCoordinates: 'Ou insère les coordonnées ici',
   },
   imageExport: {
+    showMapPlaces: 'Afficher les lieux', hideMapPlaces: 'Masquer les lieux',
     editorSections: 'Sections de l’éditeur de couverture', designSection: 'Design', mapSection: 'Carte', logoSection: 'Logo',
     modeVideo: 'Vidéo',
     modeImage: 'Image',

@@ -4,7 +4,7 @@ import { mapGlobalRef } from '@/utils/mapRef';
 import { getCropRegion } from '@/utils/crop';
 import { trackEvent } from '@/utils/analytics';
 import { trackSocialExportConfiguration } from '@/utils/configurationAnalytics';
-import { buildSocialShareSummary } from './socialShareData';
+import { buildSocialShareSummary, resolveSocialShareTitle } from './socialShareData';
 import { translate } from '@/i18n/translations';
 import { getPosterSize, renderSocialPoster, exportSocialPosterBlob } from './socialShareRenderer';
 import type { RenderInput } from './socialShareRenderer';
@@ -34,7 +34,7 @@ export type MapRouteGesture =
   | { type: 'move'; deltaX: number; deltaY: number }
   | { type: 'resize'; scaleFactor: number; anchorX: number; anchorY: number };
 
-export function useSocialShareExport() {
+export function useSocialShareExport(enabled = true) {
   const settings = useAppStore((s) => s.socialShareSettings);
   const setSocialShareSettings = useAppStore((s) => s.setSocialShareSettings);
   const tracks = useAppStore((s) => s.tracks);
@@ -264,7 +264,7 @@ export function useSocialShareExport() {
           const center = map.getCenter();
           const snapshotKey = [
             settings.template, settings.routeGlow, settings.routeTransform.opacity,
-            settings.layoutPreset, mapStyle,
+            settings.layoutPreset, settings.showMapPlaces, mapStyle,
             center.lng, center.lat, map.getZoom(), map.getPitch(), map.getBearing(),
             map.getCanvas().width, map.getCanvas().height,
             ...visibleTracks.map((track) => `${track.id}:${track.points.length}:${track.color}`),
@@ -274,9 +274,7 @@ export function useSocialShareExport() {
             preCapuredMapCanvas = cached.canvas;
           } else {
             preCapuredMapCanvas = await captureSocialMap(map, {
-              routeGlow: settings.template === 'split' ? false : settings.routeGlow,
-              routeOpacity: settings.routeTransform.opacity,
-              highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
+              showPlaces: settings.showMapPlaces,
               waitForTiles: !options.fastMapCapture,
             });
             if (preCapuredMapCanvas) lastMapSnapshotRef.current = { key: snapshotKey, canvas: preCapuredMapCanvas };
@@ -310,6 +308,12 @@ export function useSocialShareExport() {
 
       const url = renderSocialPoster(input);
       setPreviewUrl(url);
+      // Persist completed previews even if the user has switched back to Video
+      // while tiles or fonts were loading. Incomplete photo layouts stay drafts.
+      const photosReady = settings.template === 'split'
+        ? !!settings.photoSlots?.length && settings.photoSlots.every((slot) => !!slot.imageUrl)
+        : settings.template !== 'photo-first' || !!photoRef.current;
+      if (photosReady) useAppStore.getState().setVideoCoverImageUrl(url);
     } catch (e) {
       console.error('Social share preview failed', e);
     } finally {
@@ -358,8 +362,17 @@ export function useSocialShareExport() {
     }, 450);
   }, [generatePreview, settings.aspectRatio, settings.splitMapFrame, settings.template]);
 
+  const lastAutomaticRenderRef = useRef<{ generate: typeof generatePreview; photoVersion: number } | null>(null);
   useEffect(() => {
-    const render = () => void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first', reuseMapCapture: true });
+    if (!enabled) return;
+    // Returning to the image tab alone must not recapture the video camera or
+    // replace the composition that the user already designed.
+    const previous = lastAutomaticRenderRef.current;
+    if (previous?.generate === generatePreview && previous.photoVersion === photoVersion) return;
+    const render = () => {
+      lastAutomaticRenderRef.current = { generate: generatePreview, photoVersion };
+      void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first', reuseMapCapture: true });
+    };
     if (settings.template === 'photo-first' || mapGlobalRef.current) {
       render();
       return;
@@ -373,6 +386,7 @@ export function useSocialShareExport() {
     }, 150);
     return () => window.clearInterval(timer);
   }, [
+    enabled,
     settings.template,
     settings.aspectRatio,
     settings.selectedPictureId,
@@ -384,6 +398,7 @@ export function useSocialShareExport() {
     settings.logoPositionY,
     settings.locationLabel,
     settings.showLocation,
+    settings.showMapPlaces,
     settings.showStats,
     settings.showElevationMiniChart,
     settings.routeTransform.scale,
@@ -429,11 +444,7 @@ export function useSocialShareExport() {
       if (settings.template !== 'photo-first') {
         const map = mapGlobalRef.current;
         if (map) {
-          preCapuredMapCanvas = await captureSocialMap(map, {
-            routeGlow: settings.template === 'split' ? false : settings.routeGlow,
-            routeOpacity: settings.routeTransform.opacity,
-            highlightRoute: settings.template === 'map-first' && settings.layoutPreset === 'classic',
-          });
+          preCapuredMapCanvas = await captureSocialMap(map, { showPlaces: settings.showMapPlaces });
         }
       }
       const [, brandLogo, assets] = await Promise.all([
@@ -504,6 +515,7 @@ export function useSocialShareExport() {
   })();
 
   return {
+    resolvedTitle: resolveSocialShareTitle(settings, tracks, activeTrackId, journey),
     previewUrl,
     isRendering,
     selectedPicture,

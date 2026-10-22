@@ -6,7 +6,8 @@ function harness() {
   let features: Array<{ properties: Record<string, unknown> }> = [];
   const map = {
     getLayer: () => ({}),
-    queryRenderedFeatures: () => features,
+    querySourceFeatures: vi.fn(() => features),
+    queryRenderedFeatures: vi.fn(() => []),
     project: vi.fn(() => ({ x: 100.125, y: 200.875 })),
     on: (event: string, handler: () => void) => {
       if (!handlers.has(event)) handlers.set(event, new Set());
@@ -21,7 +22,7 @@ function harness() {
   return {
     map, element, container, marker, unbind,
     emit: (event: string) => { handlers.get(event)?.forEach((handler) => handler()); },
-    tip: (revision: number) => { features = [{ properties: { kind: 'playback-tip', revision, lon: 1.2, lat: 41.3 } }]; },
+    tip: (revision: number, position = [1.2, 41.3]) => { features = [{ properties: { kind: 'playback-tip', revision, lon: position[0], lat: position[1] } }]; },
     empty: () => { features = []; },
   };
 }
@@ -54,6 +55,22 @@ describe('render-only playback marker', () => {
     h.emit('render');
     expect(h.marker.minimumRevision).toBe(4);
     expect(h.map.project).toHaveBeenLastCalledWith([1.2, 41.3]);
+  });
+
+  it('advances with renderable trail tiles even when steep-terrain screen queries miss the endpoint', () => {
+    const h = harness();
+    h.tip(335, [1.2, 41.3]);
+    h.emit('render');
+    // The opening cinematic pan used to hold revision 335 while the rendered
+    // source advanced to 373, because the circle layer's hit test returned [].
+    h.tip(373, [1.3, 41.4]);
+    h.emit('render');
+    expect(h.marker.minimumRevision).toBe(373);
+    expect(h.map.project).toHaveBeenLastCalledWith([1.3, 41.4]);
+    expect(h.map.querySourceFeatures).toHaveBeenLastCalledWith('trail-completed', {
+      filter: ['==', ['get', 'kind'], 'playback-tip'],
+    });
+    expect(h.map.queryRenderedFeatures).not.toHaveBeenCalled();
   });
 
   it('waits for the first painted tip and removes its listener and element', () => {

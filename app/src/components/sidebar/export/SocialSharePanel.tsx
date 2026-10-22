@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, X } from 'lucide-react';
-import { useSocialShareExport } from './useSocialShareExport';
+import type { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal, type CoverEditorSection } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { REPLAY_CAMERA_MAX_PITCH } from '@/utils/cameraLimits';
 import { useI18n } from '@/i18n/useI18n';
 import { renderActivityIcon } from '@/utils/activityIcons';
 import { AnnotationSymbolPicker } from '@/components/sidebar/AnnotationSymbolPicker';
@@ -50,6 +51,7 @@ const DEFAULT_SOCIAL_STATS: SocialShareStat[] = [
 ];
 
 interface Props {
+  exportController: ReturnType<typeof useSocialShareExport>;
   coverMode?: boolean;
   aspectRatioOverride?: SocialShareAspectRatio;
   onAspectRatioChange?: (ratio: SocialShareAspectRatio) => void;
@@ -57,7 +59,7 @@ interface Props {
   onUseCover?: () => void;
 }
 
-export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAspectRatioChange, onPosterReady, onUseCover }: Props) {
+export function SocialSharePanel({ exportController, coverMode = false, aspectRatioOverride, onAspectRatioChange, onPosterReady, onUseCover }: Props) {
   const { t } = useI18n();
   const overlayFont = useAppStore((state) => state.settings.trailStyle.overlayFont);
   const setTrailStyle = useAppStore((state) => state.setTrailStyle);
@@ -70,7 +72,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
     transformMapViewport,
     titleBboxNorm,
     logoBboxNorm,
-  } = useSocialShareExport();
+    resolvedTitle,
+  } = exportController;
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
@@ -515,6 +518,13 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           </div>
         </div>
 
+        <button type="button"
+          aria-pressed={settings.showMapPlaces === true}
+          onClick={() => setSocialShareSettings({ showMapPlaces: !settings.showMapPlaces })}
+          className={`w-full rounded-lg px-3 py-2 text-xs font-medium ${settings.showMapPlaces ? 'bg-[var(--trail-orange)] text-white' : 'bg-black/5 hover:bg-black/10'}`}>
+          {t(settings.showMapPlaces ? 'imageExport.hideMapPlaces' : 'imageExport.showMapPlaces')}
+        </button>
+
       {/* Map camera controls */}
         <div>
           <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.mapCamera')}</div>
@@ -522,7 +532,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             <div className="flex items-center gap-3 text-xs">
               <span className="w-16 shrink-0 opacity-70">{t('imageExport.tilt3D')}</span>
               <input
-                type="range" min={0} max={60} step={1}
+                type="range" min={0} max={REPLAY_CAMERA_MAX_PITCH} step={1}
+                aria-label={t('imageExport.tilt3D')}
                 value={pitch}
                 onChange={(e) => handlePitch(Number(e.target.value))}
                 onPointerUp={finishCameraDrag}
@@ -587,7 +598,11 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           {(['journey-name', 'track-name', 'custom'] as const).map((mode) => (
             <button
               key={mode}
-              onClick={() => setSocialShareSettings({ titleMode: mode })}
+              onClick={() => setSocialShareSettings({
+                titleMode: mode,
+                ...(mode === 'custom' && settings.titleMode !== 'custom' && !settings.customTitle
+                  ? { customTitle: resolvedTitle } : {}),
+              })}
               className={`py-1.5 rounded text-xs font-medium transition-colors ${
                 settings.titleMode === mode
                   ? 'bg-[var(--trail-orange)] text-white'
@@ -602,15 +617,14 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             </button>
           ))}
         </div>
-        {settings.titleMode === 'custom' && (
-          <textarea
-            rows={3}
-            value={settings.customTitle}
-            onChange={(e) => setSocialShareSettings({ customTitle: e.target.value })}
-            placeholder={t('imageExport.titlePlaceholder')}
-            className="w-full resize-y bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
-          />
-        )}
+        <textarea
+          rows={3}
+          aria-label={t('imageExport.title')}
+          value={resolvedTitle}
+          onChange={(e) => setSocialShareSettings({ titleMode: 'custom', customTitle: e.target.value })}
+          placeholder={t('imageExport.titlePlaceholder')}
+          className="w-full resize-y bg-black/5 border border-black/10 rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--trail-orange)]"
+        />
         <div className="mt-2 flex items-center gap-2 rounded-lg border border-black/10 bg-black/[0.025] p-2">
           <label className="min-w-0 flex-1 text-[11px] font-medium">
             {t('imageExport.titleSize')}
@@ -843,7 +857,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           <Download className="h-4 w-4" />
           {t(coverMode ? 'imageExport.savePng' : 'imageExport.downloadPng')}
         </button>
-        {coverMode && <button type="button"
+        {onUseCover && <button type="button"
           onClick={() => { if (previewUrl) { onPosterReady?.(previewUrl); onUseCover?.(); } }}
           disabled={!previewUrl || isRendering || hasEmptyRequiredPhoto}
           title={hasEmptyRequiredPhoto ? t('imageExport.addPhoto') : undefined}
@@ -861,10 +875,10 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           isRendering={isRendering}
           onClose={() => undefined}
           onExport={() => {
-            if (coverMode) { onPosterReady?.(previewUrl); onUseCover?.(); }
+            if (onUseCover) { onPosterReady?.(previewUrl); onUseCover(); }
             else void exportPng();
           }}
-          onDownload={coverMode ? () => { onPosterReady?.(previewUrl); void exportPng(); } : undefined}
+          onDownload={onUseCover ? () => { onPosterReady?.(previewUrl); void exportPng(); } : undefined}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
           onMapRouteGesture={transformMapViewport}
@@ -879,7 +893,7 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}
           logoBboxNorm={logoBboxNorm}
-          coverMode={coverMode}
+          coverMode={!!onUseCover}
           inline
         /> : <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#101916] text-sm text-white/70">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('imageExport.rendering')}

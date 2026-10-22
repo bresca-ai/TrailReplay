@@ -1,3 +1,4 @@
+import { REPLAY_CAMERA_MAX_PITCH } from '@/utils/cameraLimits';
 import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import {
@@ -30,7 +31,8 @@ import {
 const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // Discovery only needs MapLibre to submit its tile requests. Waiting for idle
 // serializes the entire horizon behind slow imagery; the scheduler owns the
-// completion lifecycle, so each predicted pose gets a short render window.
+// completion lifecycle, so each predicted pose needs only one discovery frame.
+// Keep a timeout for background tabs where requestAnimationFrame is suspended.
 const DISCOVERY_RENDER_WINDOW_MS = 100;
 const RESCHEDULE_INTERVAL_MS = 1500;
 const NORMAL_HORIZON_MS = 20000;
@@ -111,7 +113,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       container,
       interactive: false,
       // Match authored shots; the default 60-degree cap missed their horizon.
-      maxPitch: 85,
+      maxPitch: REPLAY_CAMERA_MAX_PITCH,
       cancelPendingTileRequestsWhileZooming: false,
       // The primary map owns decoded replay tiles. Discovery only needs a
       // small working set; completed requests remain in the browser cache.
@@ -207,10 +209,13 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     let cancelled = false;
     let isWarming = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let finishActivePose: (() => void) | null = null;
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const warmPose = (map: maplibregl.Map, pose: ReplayCameraPose) => new Promise<void>((resolve) => {
       const finish = () => {
+        map.off('render', finish);
+        finishActivePose = null;
         if (timeoutId) {
           clearTimeout(timeoutId);
           timeoutId = null;
@@ -219,8 +224,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         resolve();
       };
       isWarmupPoseActiveRef.current = true;
-      map.jumpTo(pose);
+      finishActivePose = finish;
+      map.once('render', finish);
       timeoutId = setTimeout(finish, DISCOVERY_RENDER_WINDOW_MS);
+      map.jumpTo(pose);
     });
 
     const warmFuture = async () => {
@@ -309,6 +316,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
 
     return () => {
       cancelled = true;
+      finishActivePose?.();
       scheduler.clear();
       isWarmupPoseActiveRef.current = false;
       if (timeoutId) clearTimeout(timeoutId);
