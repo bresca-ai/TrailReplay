@@ -4,6 +4,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, Download, ImagePl
 import { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal, type CoverEditorSection } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { REPLAY_CAMERA_MAX_PITCH } from '@/utils/cameraLimits';
 import { useI18n } from '@/i18n/useI18n';
 import { renderActivityIcon } from '@/utils/activityIcons';
 import { AnnotationSymbolPicker } from '@/components/sidebar/AnnotationSymbolPicker';
@@ -522,7 +523,8 @@ export function SocialSharePanel({ coverMode = false, aspectRatioOverride, onAsp
             <div className="flex items-center gap-3 text-xs">
               <span className="w-16 shrink-0 opacity-70">{t('imageExport.tilt3D')}</span>
               <input
-                type="range" min={0} max={60} step={1}
+                type="range" min={0} max={REPLAY_CAMERA_MAX_PITCH} step={1}
+                aria-label={t('imageExport.tilt3D')}
                 value={pitch}
                 onChange={(e) => handlePitch(Number(e.target.value))}
                 onPointerUp={finishCameraDrag}

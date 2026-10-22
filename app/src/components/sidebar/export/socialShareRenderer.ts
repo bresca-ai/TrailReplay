@@ -495,7 +495,9 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
     titleScrim.addColorStop(0, 'rgba(3,18,13,0.58)');
     titleScrim.addColorStop(1, 'rgba(3,18,13,0)');
     ctx.fillStyle = titleScrim;
-    ctx.fillRect(0, h * 0.12, w, h * 0.72);
+    // Keep the title contrast continuous: a fixed-height rectangle leaves a
+    // horizontal edge above the empty stats area when statistics are hidden.
+    ctx.fillRect(0, 0, w, h);
   }
 
   // Route glow (3-D layered) — full poster, no clipping
