@@ -155,6 +155,31 @@ describe('MapElevationProfile dynamic sections', () => {
     const svg = document.getElementById('elevationProfileSvg');
     expect(svg).toHaveAttribute('data-export-elevation-start', '105 m');
     expect(svg).toHaveAttribute('data-export-elevation-end', '208 m');
+    expect(svg).toHaveAttribute('data-export-elevation-change', '+103 m');
+  });
+
+  it.each([false, true])('shows endpoint change instead of accumulated GPX fluctuations (reverse: %s)', (reverse) => {
+    const heights = [410, 1100, 415, 1191];
+    if (reverse) heights.reverse();
+    const noisyData = heights.map((elevation, index) => ({
+      distance: index * 1000, elevation, progress: index / 3,
+      segmentIndex: 0, segmentType: 'track' as const,
+    }));
+    mockedJourney.current = {
+      ...mockedJourney.current,
+      elevationData: noisyData,
+    };
+    useAppStore.setState((state) => {
+      state.settings.customElevationSections = [{ id: 'rolling', segmentIndex: 0, startProgress: 0, endProgress: 1 }];
+      state.playback = { ...state.playback, isPlaying: true, currentTime: 5000, progress: 0.5 };
+    });
+    render(<MapElevationProfile />);
+    const svg = document.getElementById('elevationProfileSvg');
+    expect(svg).toHaveAttribute('data-export-elevation-start', reverse ? '1191 m' : '410 m');
+    expect(svg).toHaveAttribute('data-export-elevation-end', reverse ? '410 m' : '1191 m');
+    expect(svg).toHaveAttribute('data-export-elevation-change', reverse ? '-781 m' : '+781 m');
+    expect(svg).toHaveAttribute('data-export-elevation-section-kind', reverse ? 'descent' : 'climb');
+    expect(screen.queryByText(/1466 m/)).not.toBeInTheDocument();
   });
 
   it('lets a paused user drag a section boundary and stores the adjustment', () => {
