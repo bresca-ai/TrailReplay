@@ -1,3 +1,4 @@
+import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useGPX } from '@/hooks/useGPX';
@@ -680,6 +681,10 @@ function App() {
               {/* Aspect ratio crop preview when in Export panel */}
               {activePanel === 'export' && (
                 <CropPreviewBars ratio={activeCropRatio} containerRef={mapContainerRef} />
+              )}
+
+              {hasTracks && activeExportCropMetrics && (
+                <VideoLogoPreview frame={activeExportCropMetrics} />
               )}
 
               {/* Stats Overlay */}
