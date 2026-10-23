@@ -613,7 +613,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           resolve();
         };
         image.onerror = () => resolve();
-        image.src = '/media/images/logohorizontal.svg';
+        image.src = '/media/images/logohorizontal-white.svg';
       });
 
       await updateOverlayAsync(width, height);
