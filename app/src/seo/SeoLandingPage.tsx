@@ -1,4 +1,5 @@
-import { ArrowRight, Check, Download, Film, Github, Play, Upload } from 'lucide-react';
+import { Github } from '@/components/icons/brandIcons';
+import { ArrowRight, Check, Download, Film, Play, Upload } from 'lucide-react';
 import { useEffect } from 'react';
 import { useI18n } from '@/i18n/useI18n';
 import { RouteImportWalkthrough } from '@/help/RouteImportWalkthrough';

@@ -1,3 +1,4 @@
+import { Instagram } from '@/components/icons/brandIcons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
@@ -8,7 +9,7 @@ import { useVideoExportRecorder } from './export/useVideoExportRecorder';
 import { isValidDeliveryEmail, localStudioDownload } from './export/studioDelivery';
 import { SocialSharePanel } from './export/SocialSharePanel';
 import { useSocialShareExport } from './export/useSocialShareExport';
-import { AlertTriangle, Check, Download, Film, ImageIcon, Instagram, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, Check, Download, Film, ImageIcon, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
 import type { SocialShareAspectRatio } from '@/types';
 
 export function ExportPanel() {
