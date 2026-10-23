@@ -184,9 +184,6 @@ export const ca = {
       orbitBall: 'Angle de càmera',
       orbitBallHint: 'Arrossega, o des de qualsevol lloc: A/D angle, W/S alçada, R/F zoom, Enter per desar',
       orbitBallValue: '{bearing}° d\'angle, {pitch}° d\'alçada',
-      zoom: 'Distància',
-      zoomIn: 'Apropar',
-      zoomOut: 'Allunyar',
       infoTitle: 'Com funciona',
       infoKeyboard: 'Tot el procés funciona sense ratolí: pausa on vulguis un pla (Espai), apunta\'l amb A/D per girar, W/S per pujar o baixar i R/F per apropar o allunyar, i prem Enter per desar-lo com a fotograma clau. Avança al següent moment i repeteix. Enter en un moment que ja té un fotograma clau l\'actualitza en lloc d\'afegir-ne un altre.',
       infoBall: 'La bola fixa l\'angle i l\'alçada de la càmera al voltant del marcador: arrossega-la, o prem A/D per girar i W/S per pujar-la o baixar-la, des de qualsevol lloc de la pàgina.',
@@ -205,6 +202,22 @@ export const ca = {
       easingLinear: 'Lineal',
       easingHold: 'Mantenir',
       delete: 'Eliminar',
+      slidersTitle: 'Mostra tots els lliscadors',
+      pitch: {
+        value: 'Inclinacío',
+        decrease: 'Baixar',
+        increase: 'Pujar'
+      },
+      bearing: {
+        value: 'Orientació',
+        decrease: 'A l\'esquerra',
+        increase: 'A la dreta',
+      },
+      zoom: {
+        value: 'Distància',
+        decrease: 'Apropar',
+        increase: 'Allunyar',
+      }
     },
     followPresets: {
       title: 'Preset de distància',

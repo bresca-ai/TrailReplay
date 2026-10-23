@@ -24,6 +24,12 @@ export type CinematicKeyframeEasing = 'smooth' | 'linear' | 'hold';
 export const CINEMATIC_ZOOM_MIN = 0;
 export const CINEMATIC_ZOOM_MAX = 20;
 
+export const CINEMATIC_BEARING_MIN = 0;
+export const CINEMATIC_BEARING_MAX = 360;
+
+export const CINEMATIC_PITCH_MIN = 0;
+export const CINEMATIC_PITCH_MAX = 85;
+
 /** Stable journey-segment anchor, so reordering segments moves the keyframe with its segment. Mirrors PictureAnnotation's anchor (see routeProjection.ts / usePictureRouteSync.ts) for the same reason: a raw progress value silently points at the wrong place once the journey is edited. */
 export interface KeyframeAnchor {
   routeSegmentId: string;
