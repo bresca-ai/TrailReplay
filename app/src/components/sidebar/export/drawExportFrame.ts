@@ -1,3 +1,4 @@
+import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { mapGlobalRef } from '@/utils/mapRef';
@@ -396,19 +397,10 @@ export function drawExportFrame({
     }
 
     if (cachedLogoRef.current) {
-      // Size relative to the long edge (fixed per quality level regardless
-      // of aspect ratio - see getResolution), not the frame width. Basing it
-      // on width alone made the watermark shrink drastically for portrait
-      // (9:16) and square exports, since their width is the *short* edge.
-      const longEdge = Math.max(recordW, recordH);
-      const logoWidth = Math.round(longEdge * 0.16);
-      const logoHeight = Math.round(logoWidth / 2.5);
-      const margin = Math.round(longEdge * 0.025);
-      const logoX = recordW - logoWidth - margin;
-      const logoY = margin;
+      const box = getVideoLogoBox(recordW, recordH);
       context.save();
-      context.globalAlpha = 0.85;
-      context.drawImage(cachedLogoRef.current, logoX, logoY, logoWidth, logoHeight);
+      context.globalAlpha = VIDEO_LOGO_OPACITY;
+      context.drawImage(cachedLogoRef.current, box.x, box.y, box.w, box.h);
       context.restore();
     }
 

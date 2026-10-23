@@ -4,7 +4,7 @@ const LOGO_WIDTH_FRACTION = 0.20;
 const LOGO_ASPECT_RATIO = 500 / 200;
 const DEFAULT_X = 0.76;
 const DEFAULT_Y = 0.04;
-const LOGO_URL = '/media/images/logohorizontalfondo.svg';
+const LOGO_URL = '/media/images/logohorizontal-white.svg';
 
 let logoPromise: Promise<HTMLImageElement> | null = null;
 
