@@ -184,9 +184,6 @@ export const en = {
       orbitBall: 'Camera angle',
       orbitBallHint: 'Drag, or from anywhere: A/D angle, W/S height, R/F zoom, Enter to save',
       orbitBallValue: '{bearing}° angle, {pitch}° height',
-      zoom: 'Distance',
-      zoomIn: 'Zoom in',
-      zoomOut: 'Zoom out',
       infoTitle: 'How this works',
       infoKeyboard: 'The whole loop works without the mouse: pause where you want a shot (Space), aim it with A/D to turn, W/S to raise or lower, R/F to move closer or further, then press Enter to save it as a keyframe. Scrub to the next moment and repeat. Enter on a moment that already has a keyframe updates it rather than adding a second.',
       infoBall: 'The ball sets the camera’s angle and height around the marker — drag it, or press A/D to rotate and W/S to raise or lower it, from anywhere on the page.',
@@ -205,6 +202,22 @@ export const en = {
       easingLinear: 'Linear',
       easingHold: 'Hold',
       delete: 'Delete',
+      slidersTitle: 'Show all sliders',
+      pitch: {
+        value: 'Pitch',
+        decrease: 'Lower',
+        increase: 'Higher'
+      },
+      bearing: {
+        value: 'Bearing',
+        decrease: 'Turn left',
+        increase: 'Turn right',
+      },
+      zoom: {
+        value: 'Distance',
+        decrease: 'Zoom in',
+        increase: 'Zoom out',
+      }
     },
     followPresets: {
       title: 'Distance Preset',

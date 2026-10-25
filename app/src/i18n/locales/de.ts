@@ -184,9 +184,6 @@ export const de = {
       orbitBall: 'Kamerawinkel',
       orbitBallHint: 'Ziehen, oder von überall: A/D Winkel, W/S Höhe, R/F Zoom, Enter zum Speichern',
       orbitBallValue: '{bearing}° Winkel, {pitch}° Höhe',
-      zoom: 'Abstand',
-      zoomIn: 'Vergrößern',
-      zoomOut: 'Verkleinern',
       infoTitle: 'So funktioniert es',
       infoKeyboard: 'Der ganze Ablauf geht ohne Maus: dort pausieren, wo Du eine Einstellung willst (Leertaste), sie mit A/D drehen, mit W/S heben oder senken und mit R/F näher oder weiter stellen, dann Enter drücken, um sie als Keyframe zu speichern. Zum nächsten Moment springen und wiederholen. Enter an einem Moment, der schon ein Keyframe hat, aktualisiert es, statt ein zweites anzulegen.',
       infoBall: 'Der Ball legt Winkel und Höhe der Kamera um die Markierung fest — ziehen, oder A/D zum Drehen und W/S zum Heben/Senken drücken, von überall auf der Seite.',
@@ -205,6 +202,22 @@ export const de = {
       easingLinear: 'Linear',
       easingHold: 'Halten',
       delete: 'Löschen',
+      slidersTitle: 'Alle Regler zeigen',
+      pitch: {
+        value: 'Neigung',
+        decrease: 'Tiefer',
+        increase: 'Höher'
+      },
+      bearing: {
+        value: 'Richtung',
+        decrease: 'Links drehen',
+        increase: 'Rechts drehen',
+      },
+      zoom: {
+        value: 'Abstand',
+        decrease: 'Vergrößern',
+        increase: 'Verkleinern',
+      }
     },
     followPresets: {
       title: 'Distanzvoreinstellung',

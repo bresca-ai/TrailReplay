@@ -184,9 +184,6 @@ export const es = {
       orbitBall: 'Ángulo de cámara',
       orbitBallHint: 'Arrastra, o desde cualquier parte: A/D ángulo, W/S altura, R/F zoom, Enter para guardar',
       orbitBallValue: '{bearing}° de ángulo, {pitch}° de altura',
-      zoom: 'Distancia',
-      zoomIn: 'Acercar',
-      zoomOut: 'Alejar',
       infoTitle: 'Cómo funciona',
       infoKeyboard: 'Todo el proceso funciona sin ratón: pausa donde quieras un plano (Espacio), apúntalo con A/D para girar, W/S para subir o bajar y R/F para acercar o alejar, y pulsa Enter para guardarlo como fotograma clave. Avanza al siguiente momento y repite. Enter en un momento que ya tiene un fotograma clave lo actualiza en vez de añadir otro.',
       infoBall: 'La bola fija el ángulo y la altura de la cámara alrededor del marcador: arrástrala, o pulsa A/D para girar y W/S para subirla o bajarla, desde cualquier parte de la página.',
@@ -205,6 +202,22 @@ export const es = {
       easingLinear: 'Lineal',
       easingHold: 'Mantener',
       delete: 'Eliminar',
+      slidersTitle: 'Mostrar todos los controles deslizantes',
+      pitch: {
+        value: 'Inclinación',
+        decrease: 'Bajar',
+        increase: 'Subir'
+      },
+      bearing: {
+        value: 'Orientación',
+        decrease: 'A la izquierda',
+        increase: 'A la derecha',
+      },
+      zoom: {
+        value: 'Distancia',
+        decrease: 'Acercar',
+        increase: 'Alejar',
+      }
     },
     followPresets: {
       title: 'Preset de distancia',
