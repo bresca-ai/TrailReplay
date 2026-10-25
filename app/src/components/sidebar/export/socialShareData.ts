@@ -22,6 +22,17 @@ export interface SocialShareSummaryData {
   unitSystem: UnitSystem;
 }
 
+export function resolveSocialShareTitle(
+  settings: Pick<SocialShareSettings, 'titleMode' | 'customTitle'>,
+  tracks: Pick<GPXTrack, 'id' | 'name'>[],
+  activeTrackId: string | null,
+  journey: Pick<Journey, 'name'> | null,
+): string {
+  if (settings.titleMode === 'custom') return settings.customTitle;
+  if (settings.titleMode === 'journey-name' && journey?.name) return journey.name;
+  return (tracks.find((track) => track.id === activeTrackId) ?? tracks[0])?.name ?? '';
+}
+
 export function buildSocialShareSummary(
   settings: SocialShareSettings,
   tracks: GPXTrack[],
@@ -30,12 +41,7 @@ export function buildSocialShareSummary(
   journeySegments: JourneySegment[],
   unitSystem: UnitSystem,
 ): SocialShareSummaryData {
-  let title = settings.customTitle;
-  if (settings.titleMode !== 'custom') {
-    title = (settings.titleMode === 'journey-name' && journey?.name)
-      ? journey.name
-      : (tracks.find((t) => t.id === activeTrackId) ?? tracks[0])?.name ?? '';
-  }
+  const title = resolveSocialShareTitle(settings, tracks, activeTrackId, journey);
 
   let distanceMeters = 0;
   let durationSeconds = 0;

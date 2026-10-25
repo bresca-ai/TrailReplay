@@ -71,6 +71,27 @@ describe('elevation section overrides', () => {
     expect(applyElevationSectionOverrides([detected], [stale], points)[0]).toBe(detected);
   });
 
+  it('reclassifies a climb resized onto a downhill stretch', () => {
+    expect(resizeElevationSection(detected, points, 0.2, 0.3)).toMatchObject({
+      kind: 'descent', elevationGain: 0, elevationLoss: 20,
+    });
+    expect(detected.kind).toBe('climb');
+  });
+
+  it('restores a saved descent moved onto a climb without losing its override identity', () => {
+    const original: ElevationFocusSection = { ...detected, kind: 'descent' };
+    const adjusted = resizeElevationSection(original, points, 0.1, 0.4);
+    const overrides = upsertElevationSectionOverride([], original, adjusted);
+
+    expect(overrides[0].kind).toBe('descent');
+    const restored = applyElevationSectionOverrides([original], overrides, points)[0];
+    expect(restored).toMatchObject({
+      id: original.id, kind: 'climb', startProgress: 0.1, endProgress: 0.4,
+      elevationGain: 70, elevationLoss: 20,
+    });
+    expect(original.kind).toBe('descent');
+  });
+
   it('creates a custom section around a selected profile point', () => {
     const custom = createCustomElevationSection(points, 0.2, 'custom-1');
 

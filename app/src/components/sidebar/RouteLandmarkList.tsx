@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Pencil, Plus, Trash2, Undo2, X } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useAllRouteLandmarks } from '@/hooks/useAllRouteLandmarks';
@@ -16,6 +16,7 @@ import { mapGlobalRef } from '@/utils/mapRef.ts';
 import { createUserLandmark } from '@/utils/createUserLandmark.ts';
 import { useFindNearestRoutePoint } from '@/components/map/hooks/useFindNearestRoutePoint.ts';
 import { useI18n } from '@/i18n/useI18n';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback.ts';
 
 function GlyphIcon({ glyph, color, size = 16 }: { glyph: string; color: string; size?: number }) {
   return (
@@ -131,6 +132,8 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
   );
 }
 
+type Coordinates = [number, number];
+
 export function RouteLandmarkList() {
   const { t } = useI18n();
   const landmarks = useAllRouteLandmarks();
@@ -144,7 +147,42 @@ export function RouteLandmarkList() {
   const addLandmark = useAppStore((state) => state.addLandmark);
   const findNearestRoutePoint = useFindNearestRoutePoint();
   const [landmarkCoordinates, setLandmarkCoordinates] = useState<string>('');
-  const [delayTimeout, setDelayTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const [addLandmarkDelayed, cancelCoordinatesDelayed, hasDelay] = useDebouncedCallback((props: {
+    coordinates: Coordinates
+  }): void => {
+    mapGlobalRef.current?.flyTo({
+      center: { lng: props.coordinates[1], lat: props.coordinates[0] }
+    });
+
+    const nearest = findNearestRoutePoint(props.coordinates[0], props.coordinates[1])
+
+    const landmark = createUserLandmark({
+      lat: props.coordinates[0],
+      lon: props.coordinates[1],
+      progress: nearest?.progress ?? null,
+    });
+
+    addLandmark(landmark);
+    setIsPlacingLandmark(false);
+    selectLandmark(landmark.id);
+
+    setLandmarkCoordinates('');
+  }, 1);
+
+  const setCoordinatesDelayed = (coordinates: Coordinates | undefined): void => {
+    if (coordinates) {
+      addLandmarkDelayed({ coordinates });
+    } else {
+      cancelCoordinatesDelayed();
+    }
+  }
+
+  useEffect(() => {
+    if (!isPlacingLandmark) {
+      cancelCoordinatesDelayed();
+    }
+  }, [isPlacingLandmark, cancelCoordinatesDelayed]);
 
   const ordered = useMemo(
     () => [...landmarks].sort((left, right) => (left.progress ?? 1) - (right.progress ?? 1)),
@@ -156,46 +194,6 @@ export function RouteLandmarkList() {
   const restorableCount = hiddenLandmarkIds.filter(
     (id) => !userLandmarks.some((entry) => entry.id === id),
   ).length;
-
-  const clearDelayTimeout = useCallback(() => {
-    if (delayTimeout) {
-      clearTimeout(delayTimeout);
-      setDelayTimeout(null);
-    }
-  }, [delayTimeout]);
-
-  const createLandmarkFromCoordinatesDelayed = (coordinates: [number, number] | undefined, delaySeconds: number) => {
-    if (!coordinates) {
-      return clearDelayTimeout();
-    }
-
-    setDelayTimeout(setTimeout(() => {
-      mapGlobalRef.current?.flyTo({
-        center: { lng: coordinates[1], lat: coordinates[0] }
-      });
-
-      const nearest = findNearestRoutePoint(coordinates[0], coordinates[1])
-
-      const landmark = createUserLandmark({
-        lat: coordinates[0],
-        lon: coordinates[1],
-        progress: nearest?.progress ?? null,
-      });
-
-      addLandmark(landmark);
-      setIsPlacingLandmark(false);
-      selectLandmark(landmark.id);
-
-      setLandmarkCoordinates('');
-      setDelayTimeout(null);
-    }, delaySeconds * 1000));
-  };
-
-  useEffect(() => () => {
-    if (delayTimeout) {
-      clearTimeout(delayTimeout);
-    }
-  }, [delayTimeout]);
 
   return (
     <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
@@ -214,6 +212,8 @@ export function RouteLandmarkList() {
               feature_state: 'enabled',
               feature_context: 'landmarks',
             });
+          } else {
+            setLandmarkCoordinates('');
           }
         }}
         className={`flex w-full items-center justify-center gap-1.5 rounded-lg border-2 px-2 py-1.5 text-xs font-medium transition-colors ${
@@ -229,9 +229,8 @@ export function RouteLandmarkList() {
       {isPlacingLandmark && <label className="block">
         <div className="block text-[11px] text-[var(--evergreen-60)] flex items-center justify-start gap-2">
           <span>{t('routeLandmarks.pasteCoordinates')}</span>
-          {delayTimeout && <div
-            className="mx-auto h-3 w-3 rounded-full border-1 border-[var(--trail-orange)] border-t-transparent animate-spin" />
-          }
+          {hasDelay && <div
+            className="mx-auto h-3 w-3 rounded-full border-1 border-[var(--trail-orange)] border-t-transparent animate-spin" />}
 
         </div>
         <input
@@ -239,7 +238,7 @@ export function RouteLandmarkList() {
           value={landmarkCoordinates}
           onChange={(event) => {
             setLandmarkCoordinates(event.target.value);
-            createLandmarkFromCoordinatesDelayed(sanitizeCoordinates(event.target.value), 1);
+            setCoordinatesDelayed(sanitizeCoordinates(event.target.value));
           }}
           className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/30 bg-[var(--canvas)] px-2 py-1.5 text-sm text-[var(--evergreen)] focus:border-[var(--trail-orange)] focus:outline-none"
         />

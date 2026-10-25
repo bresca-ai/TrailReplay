@@ -450,7 +450,7 @@ export const ca = {
     size: 'Mida',
     activityIcon: 'Icona d\'activitat',
     changeIcon: 'Canviar icona',
-    glowCircle: 'Cercle de brillantor',
+    glowCircle: 'Contorn de la icona',
     selectIcon: 'Selecciona una icona d\'activitat',
     routeAnnotationsTitle: 'Anotacions de ruta',
     routeAnnotationsHint: 'Afegeix una llegenda transparent o una nota de ruta a la posició actual. Les notes alenteixen el recorregut perquè es puguin llegir.',
@@ -756,6 +756,7 @@ export const ca = {
     pasteCoordinates: 'O enganxa les coordenades aquí',
   },
   imageExport: {
+    showMapPlaces: 'Mostra els llocs', hideMapPlaces: 'Amaga els llocs',
     editorSections: 'Seccions de l’editor de portada', designSection: 'Disseny', mapSection: 'Mapa', logoSection: 'Logotip',
     modeVideo: 'Vídeo',
     modeImage: 'Imatge',

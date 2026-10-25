@@ -450,7 +450,7 @@ export const de = {
     size: 'Größe',
     activityIcon: 'Aktivitätssymbol',
     changeIcon: 'Symbol ändern',
-    glowCircle: 'Glühkreis',
+    glowCircle: 'Symbolkontur',
     selectIcon: 'Wähle Aktivitätssymbol',
     routeAnnotationsTitle: 'Routenanmerkungen',
     routeAnnotationsHint: 'Füge an der aktuellen Position eine transparente Kartenbeschriftung oder Routennotiz hinzu. Notizen verlangsamen die Wiedergabe zum Lesen.',
@@ -756,6 +756,7 @@ export const de = {
     pasteCoordinates: 'Oder Koordinaten hier einfügen',
   },
   imageExport: {
+    showMapPlaces: 'Orte anzeigen', hideMapPlaces: 'Orte ausblenden',
     editorSections: 'Bereiche des Cover-Editors', designSection: 'Design', mapSection: 'Karte', logoSection: 'Logo',
     modeVideo: 'Video',
     modeImage: 'Bild',

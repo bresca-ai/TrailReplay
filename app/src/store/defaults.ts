@@ -117,6 +117,7 @@ export function createDefaultSocialShareSettings(): SocialShareSettings {
     logoPositionY: 0.04,
     locationLabel: '',
     showLocation: false,
+    showMapPlaces: false,
     showStats: true,
     stats: [
       { id: 'distance', metric: 'distance', label: '', value: '', visible: true },

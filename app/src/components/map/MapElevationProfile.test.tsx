@@ -1,8 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import type { SegmentTiming } from '@/utils/journeyUtils';
 import { MapElevationProfile } from './MapElevationProfile';
+import { detectElevationFocusSections } from './elevationSections';
+import { resizeElevationSection, upsertElevationSectionOverride } from './elevationSectionOverrides';
 
 const mockedJourney = vi.hoisted(() => ({ current: {} }));
 
@@ -48,6 +50,10 @@ const elevationData = Array.from({ length: 41 }, (_, index) => {
 });
 
 describe('MapElevationProfile dynamic sections', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
   beforeEach(() => {
     useAppStore.setState(initialState, true);
     useAppStore.setState((state) => {
@@ -116,6 +122,64 @@ describe('MapElevationProfile dynamic sections', () => {
 
     await waitFor(() => expect(svg).toHaveAttribute('viewBox', '0 0 800 60'));
     expect(screen.queryByText(/^\+\d+ m$/)).not.toBeInTheDocument();
+  });
+
+  it('renders the new direction and total when an automatic climb is moved downhill', () => {
+    const sections = detectElevationFocusSections(elevationData);
+    const original = sections.find((section) => section.kind === 'climb')!;
+    const adjusted = resizeElevationSection(original, elevationData, 0.7, 0.95);
+    useAppStore.setState((state) => {
+      state.settings.elevationSectionOverrides = upsertElevationSectionOverride([], original, adjusted);
+      state.settings.hiddenElevationSectionIds = sections.filter((s) => s.id !== original.id).map((s) => s.id);
+      state.playback = { ...state.playback, isPlaying: true, currentTime: 9000, progress: 0.9 };
+    });
+    render(<MapElevationProfile />);
+    const svg = document.getElementById('elevationProfileSvg');
+    expect(svg).toHaveAttribute('data-export-elevation-section-kind', 'descent');
+    expect(svg).toHaveAttribute('data-export-elevation-change', '-170 m');
+    expect(svg).toHaveAttribute('data-export-elevation-start', '310 m');
+    expect(svg).toHaveAttribute('data-export-elevation-end', '140 m');
+    expect(screen.getByText('-170 m')).toBeVisible();
+  });
+
+  it('labels edited section endpoints rather than extrema inside a rolling section', () => {
+    const sections = detectElevationFocusSections(elevationData);
+    const original = sections.find((section) => section.kind === 'climb')!;
+    const adjusted = resizeElevationSection(original, elevationData, 0.15, 0.85);
+    useAppStore.setState((state) => {
+      state.settings.elevationSectionOverrides = upsertElevationSectionOverride([], original, adjusted);
+      state.settings.hiddenElevationSectionIds = sections.filter((s) => s.id !== original.id).map((s) => s.id);
+      state.playback = { ...state.playback, isPlaying: true, currentTime: 5000, progress: 0.5 };
+    });
+    render(<MapElevationProfile />);
+    const svg = document.getElementById('elevationProfileSvg');
+    expect(svg).toHaveAttribute('data-export-elevation-start', '105 m');
+    expect(svg).toHaveAttribute('data-export-elevation-end', '208 m');
+    expect(svg).toHaveAttribute('data-export-elevation-change', '+103 m');
+  });
+
+  it.each([false, true])('shows endpoint change instead of accumulated GPX fluctuations (reverse: %s)', (reverse) => {
+    const heights = [410, 1100, 415, 1191];
+    if (reverse) heights.reverse();
+    const noisyData = heights.map((elevation, index) => ({
+      distance: index * 1000, elevation, progress: index / 3,
+      segmentIndex: 0, segmentType: 'track' as const,
+    }));
+    mockedJourney.current = {
+      ...mockedJourney.current,
+      elevationData: noisyData,
+    };
+    useAppStore.setState((state) => {
+      state.settings.customElevationSections = [{ id: 'rolling', segmentIndex: 0, startProgress: 0, endProgress: 1 }];
+      state.playback = { ...state.playback, isPlaying: true, currentTime: 5000, progress: 0.5 };
+    });
+    render(<MapElevationProfile />);
+    const svg = document.getElementById('elevationProfileSvg');
+    expect(svg).toHaveAttribute('data-export-elevation-start', reverse ? '1191 m' : '410 m');
+    expect(svg).toHaveAttribute('data-export-elevation-end', reverse ? '410 m' : '1191 m');
+    expect(svg).toHaveAttribute('data-export-elevation-change', reverse ? '-781 m' : '+781 m');
+    expect(svg).toHaveAttribute('data-export-elevation-section-kind', reverse ? 'descent' : 'climb');
+    expect(screen.queryByText(/1466 m/)).not.toBeInTheDocument();
   });
 
   it('lets a paused user drag a section boundary and stores the adjustment', () => {

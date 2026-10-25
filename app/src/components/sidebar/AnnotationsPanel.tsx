@@ -4,7 +4,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { ACTIVITY_ICONS, isSvgActivityIcon, renderActivityIcon } from '@/utils/activityIcons';
+import { ACTIVITY_ICONS, isSvgActivityIcon, markerIconContrastFilter, renderActivityIcon } from '@/utils/activityIcons';
 import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
@@ -793,10 +793,9 @@ export function AnnotationsPanel() {
                     <Label className="text-sm text-[var(--evergreen)]">{t('annotations.activityIcon')}</Label>
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-12 h-12 rounded-full border-2 border-[var(--evergreen)]/20 flex items-center justify-center"
+                        className="w-12 h-12 flex items-center justify-center"
                         style={{
-                          backgroundColor: trailStyle.showCircle ? `${trailStyle.markerColor}40` : 'transparent',
-                          borderColor: trailStyle.markerColor,
+                          filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none',
                         }}
                       >
                         {renderActivityIcon(displayedIcon, { size: 32, color: currentIconColor })}

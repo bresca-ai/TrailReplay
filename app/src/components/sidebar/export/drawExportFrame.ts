@@ -1,6 +1,8 @@
+import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { DEFAULT_SKY_COLOR } from '@/components/map/mapSky';
 import { getCropRegion } from '@/utils/crop';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
@@ -13,6 +15,7 @@ import {
   type SideAnnotationTextRole,
 } from '@/components/annotations/sideAnnotationCanvasLayout';
 import type { VideoExportSettings } from '@/types';
+import { markerIconContrastFilter } from '@/utils/activityIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 
@@ -30,6 +33,7 @@ function drawTintedSvgIcon(
     color: string;
     height: number;
     width: number;
+    backing?: HTMLImageElement;
   },
 ) {
   const offscreen = document.createElement('canvas');
@@ -39,10 +43,18 @@ function drawTintedSvgIcon(
   if (!offscreenContext) return;
 
   offscreenContext.clearRect(0, 0, offscreen.width, offscreen.height);
-  offscreenContext.drawImage(image, 0, 0, offscreen.width, offscreen.height);
+  const fit = Math.min(offscreen.width / image.naturalWidth, offscreen.height / image.naturalHeight);
+  const width = image.naturalWidth * fit;
+  const height = image.naturalHeight * fit;
+  offscreenContext.drawImage(image, (offscreen.width - width) / 2, (offscreen.height - height) / 2, width, height);
   offscreenContext.globalCompositeOperation = 'source-in';
   offscreenContext.fillStyle = options.color;
   offscreenContext.fillRect(0, 0, offscreen.width, offscreen.height);
+  if (options.backing) {
+    // Compose the opaque interior before applying the shared outline/shadow.
+    offscreenContext.globalCompositeOperation = 'destination-over';
+    offscreenContext.drawImage(options.backing, (offscreen.width - width) / 2, (offscreen.height - height) / 2, width, height);
+  }
 
   context.drawImage(
     offscreen,
@@ -111,11 +123,12 @@ export function drawExportFrame({
       ?? document.querySelector('.maplibregl-canvas')) as HTMLCanvasElement | null;
     const container = document.getElementById('map-capture-container');
 
-    if (!mapCanvas || !container) {
-      context.fillStyle = '#000';
-      context.fillRect(0, 0, recordW, recordH);
-      return;
-    }
+    // Transparent map pixels must never retain terrain, labels or a cover from
+    // a previous frame. This also supplies sky while the map is loading.
+    context.fillStyle = DEFAULT_SKY_COLOR;
+    context.fillRect(0, 0, recordW, recordH);
+
+    if (!mapCanvas || !container) return;
 
     const containerRect = container.getBoundingClientRect();
     const { cropX, cropY, cropW, cropH } = getCropRegion(containerRect, recordW, recordH);
@@ -301,13 +314,14 @@ export function drawExportFrame({
       context.stroke();
     });
 
-    const markerContainer = pictureHoldActive ? null : document.querySelector('.tr-marker') as HTMLElement | null;
+    const markerElement = document.querySelector('.tr-marker') as HTMLElement | null;
+    const markerContainer = pictureHoldActive || markerElement?.style.visibility === 'hidden' ? null : markerElement;
     if (markerContainer) {
       const markerRect = markerContainer.getBoundingClientRect();
       const markerX = (markerRect.left + markerRect.width / 2 - containerRect.left - cropX) * scaleX;
       const markerY = (markerRect.top + markerRect.height / 2 - containerRect.top - cropY) * scaleY;
 
-      const circleElement = markerContainer.querySelector('div') as HTMLElement | null;
+      const circleElement = markerContainer.querySelector('[data-marker-dot]') as HTMLElement | null;
       if (circleElement) {
         const circleSize = parseFloat(circleElement.style.width || '0');
         const scaledRadius = (circleSize / 2) * scaleX;
@@ -325,6 +339,11 @@ export function drawExportFrame({
 
       const markerIcon = markerContainer.querySelector('span') as HTMLElement | null;
       if (markerIcon) {
+        context.save();
+        const iconFrame = markerContainer.querySelector('[data-marker-icon]') as HTMLElement | null;
+        if (iconFrame && iconFrame.style.filter !== 'none') {
+          context.filter = markerIconContrastFilter(scaleX);
+        }
         const markerIconWidth = parseFloat(markerIcon.style.width || '24') * scaleX;
         const markerIconHeight = parseFloat(markerIcon.style.height || '24') * scaleY;
         const maskImage = markerIcon.style.maskImage || markerIcon.style.webkitMaskImage || '';
@@ -333,10 +352,14 @@ export function drawExportFrame({
         if (maskUrl) {
           const markerSvg = svgMarkerImageCacheRef.current.get(maskUrl);
           if (markerSvg) {
+            const backingUrl = markerIcon.dataset.iconBacking;
+            const backing = backingUrl ? svgMarkerImageCacheRef.current.get(backingUrl) : undefined;
+            if (backingUrl && !backing) preloadSvgMarkerIcon(backingUrl);
             drawTintedSvgIcon(context, markerSvg, {
               centerX: markerX,
               centerY: markerY,
               color: markerIcon.style.backgroundColor || '#000000',
+              backing,
               width: markerIconWidth,
               height: markerIconHeight,
             });
@@ -351,6 +374,7 @@ export function drawExportFrame({
           context.fillStyle = '#000000';
           context.fillText(markerIcon.textContent, markerX, markerY);
         }
+        context.restore();
       }
 
       const trackLabel = getTrackLabel(useAppStore.getState().playback.progress);
@@ -373,19 +397,10 @@ export function drawExportFrame({
     }
 
     if (cachedLogoRef.current) {
-      // Size relative to the long edge (fixed per quality level regardless
-      // of aspect ratio - see getResolution), not the frame width. Basing it
-      // on width alone made the watermark shrink drastically for portrait
-      // (9:16) and square exports, since their width is the *short* edge.
-      const longEdge = Math.max(recordW, recordH);
-      const logoWidth = Math.round(longEdge * 0.16);
-      const logoHeight = Math.round(logoWidth / 2.5);
-      const margin = Math.round(longEdge * 0.025);
-      const logoX = recordW - logoWidth - margin;
-      const logoY = margin;
+      const box = getVideoLogoBox(recordW, recordH);
       context.save();
-      context.globalAlpha = 0.85;
-      context.drawImage(cachedLogoRef.current, logoX, logoY, logoWidth, logoHeight);
+      context.globalAlpha = VIDEO_LOGO_OPACITY;
+      context.drawImage(cachedLogoRef.current, box.x, box.y, box.w, box.h);
       context.restore();
     }
 

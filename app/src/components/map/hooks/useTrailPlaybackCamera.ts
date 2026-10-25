@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
-import { getActivityIconMarkerHtml, isSvgActivityIcon } from '@/utils/activityIcons';
+import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
@@ -11,6 +11,8 @@ import type { OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { overlayFontFamily } from '@/utils/typography';
+import { withPaintedTrailTip, type CompletedTrailData } from '@/utils/paintedTrailTip';
+import { bindPaintedTrailMarker, PaintedTrailMarker } from '@/utils/paintedTrailMarker';
 import {
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
@@ -33,12 +35,14 @@ import {
   getPlaybackCameraPose,
   getRouteBearingAtProgress,
 } from '@/utils/replayCameraPlan';
+import { getCinematicCenterElevation } from '@/utils/cinematicCameraElevation';
 import { getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
 import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
 import {
   getSmoothedCameraAnchor,
   getSmoothedRouteHeadingDeg,
+  visibleWidthMetersAtZoom,
 } from '@/utils/cinematicCameraAnchor';
 
 interface UseTrailPlaybackCameraParams {
@@ -79,7 +83,7 @@ interface UseTrailPlaybackCameraParams {
   isInTransport: boolean;
   isMapLoaded: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
-  markerRef: React.MutableRefObject<maplibregl.Marker | null>;
+  markerRef: React.MutableRefObject<PaintedTrailMarker | null>;
   playbackProgress: number;
   segmentTimings: Array<{
     segmentIndex: number;
@@ -100,6 +104,7 @@ interface UseTrailPlaybackCameraParams {
   smoothBearingRef: React.MutableRefObject<number>;
   targetBearingRef: React.MutableRefObject<number>;
   isExporting: boolean;
+  isPlaying: boolean;
   trailStyle: {
     colorMode: 'fixed' | 'heartRate' | 'zones';
     colorZones: readonly TrailColorZone[];
@@ -153,11 +158,17 @@ export function shouldRenderPlaybackAdornment({
       || (animationPhase === 'idle' && playbackProgress > 0));
 }
 
+const markerAppearanceCache = new WeakMap<HTMLElement, { html: string; label: string }>();
+
 export function updatePlaybackMarkerElement(
   element: HTMLElement,
   markerHtml: string,
   label: { color: string; fontFamily: string; text: string } | null,
 ) {
+  const labelSignature = JSON.stringify(label);
+  const previous = markerAppearanceCache.get(element);
+  if (previous?.html === markerHtml && previous.label === labelSignature) return;
+  markerAppearanceCache.set(element, { html: markerHtml, label: labelSignature });
   element.innerHTML = markerHtml;
   if (!label) return;
 
@@ -202,6 +213,7 @@ export function useTrailPlaybackCamera({
   exportFrame,
   followBehindZoomLevel,
   isExporting,
+  isPlaying,
   isInTransport,
   isMapLoaded,
   mapRef,
@@ -218,6 +230,53 @@ export function useTrailPlaybackCamera({
   const smoothedCenterRef = useRef<[number, number] | null>(null);
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
+  const trailRevisionRef = useRef(0);
+
+  // The height filter samples this planned anchor path, not raw switchbacks.
+  // Prepare it only when authoring inputs change, never on the playback clock.
+  const cinematicElevationPath = useMemo(() => {
+    if (cameraMode !== 'cinematic') return [];
+    const halfWindow = cinematicAnchorSmoothingHalfWindow(cameraStability, totalDurationMs / 1000);
+    return cameraCoordinates.map((coordinate, index) => {
+      const progress = index / Math.max(1, cameraCoordinates.length - 1);
+      const pose = getCinematicCameraPose({
+        keyframes: cinematicKeyframes ?? [], coordinates: cameraCoordinates,
+        progress, routeHeadingDeg: null,
+      }) ?? getPlaybackCameraPose({
+        cameraMode: 'follow-behind', coordinates: cameraCoordinates, elevationData,
+        followBehindZoomLevel, progress,
+      });
+      const position: [number, number] = [coordinate[0], coordinate[1]];
+      return getSmoothedCameraAnchor({
+        coordinates: cameraCoordinates, progress, smoothingHalfWindow: halfWindow,
+        markerPosition: position, zoom: pose?.zoom ?? 14,
+      });
+    });
+  }, [cameraMode, cameraCoordinates, cameraStability, totalDurationMs, cinematicKeyframes, elevationData, followBehindZoomLevel]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded) return;
+    const unbind = bindPaintedTrailMarker(map, () => markerRef.current);
+    return () => {
+      unbind();
+      markerRef.current?.remove();
+      markerRef.current = null;
+    };
+  }, [isMapLoaded, mapRef, markerRef]);
+
+  const ownsCinematicElevation = cameraMode === 'cinematic'
+    && animationPhase === 'playing' && (isPlaying || isExporting);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded || !ownsCinematicElevation) return;
+    const wasClamped = map.getCenterClampedToGround();
+    // MapLibre's render loop otherwise replaces our explicit elevation with
+    // raw DEM height AFTER jumpTo, undoing the spatial filter every frame.
+    // This only disables look-at clamping; native camera collision stays on.
+    map.setCenterClampedToGround(false);
+    return () => { map.setCenterClampedToGround(wasClamped); };
+  }, [isMapLoaded, mapRef, ownsCinematicElevation]);
 
   // Explicit distance/mode changes should take effect immediately instead of
   // being mistaken for terrain noise by the cinematic target filter.
@@ -253,7 +312,7 @@ export function useTrailPlaybackCamera({
 
       if (trailStyle.showMarker && trailStyle.markerType === 'dot') {
         const dotSize = Math.round(14 * trailStyle.markerSize);
-        markerHtml = `<div style="
+        markerHtml = `<div data-marker-dot style="
           width: ${dotSize}px;
           height: ${dotSize}px;
           background: ${markerColor};
@@ -264,23 +323,11 @@ export function useTrailPlaybackCamera({
         "></div>`;
       } else if (trailStyle.showMarker) {
         const fontSize = Math.round(28 * trailStyle.markerSize);
-        const circleSize = Math.round(40 * trailStyle.markerSize);
         const iconColor = isSvgActivityIcon(icon) ? markerColor : currentColor;
         const iconHtml = getActivityIconMarkerHtml(icon, fontSize, iconColor);
-        const glowBackground = isSvgActivityIcon(icon) ? 'rgba(22, 32, 40, 0.72)' : `${markerColor}40`;
-        markerHtml = `
-          ${trailStyle.showCircle ? `<div style="
-            position: absolute;
-            width: ${circleSize}px;
-            height: ${circleSize}px;
-            background: ${glowBackground};
-            border: 2px solid ${markerColor};
-            border-radius: 50%;
-            animation: pulse 1.5s ease-in-out infinite;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
-          "></div>` : ''}
-          ${iconHtml}
-        `;
+        // Keep showCircle as the saved setting for recipe/project compatibility.
+        // Contrast follows the icon silhouette, without a disc or pulse animation.
+        markerHtml = `<div data-marker-icon style="filter:${trailStyle.showCircle ? markerIconContrastFilter() : 'none'};">${iconHtml}</div>`;
       }
 
       if (!markerRef.current) {
@@ -289,7 +336,6 @@ export function useTrailPlaybackCamera({
         element.style.alignItems = 'center';
         element.style.display = 'flex';
         element.style.justifyContent = 'center';
-        element.style.position = 'relative';
         element.style.zIndex = '100';
         updatePlaybackMarkerElement(
           element,
@@ -302,11 +348,10 @@ export function useTrailPlaybackCamera({
               }
             : null,
         );
-        markerRef.current = new maplibregl.Marker({ element, anchor: 'center' })
-          .setLngLat([currentPosition.lon, currentPosition.lat])
-          .addTo(mapRef.current);
+        markerRef.current = new PaintedTrailMarker(
+          element, mapRef.current.getCanvasContainer(), trailRevisionRef.current + 1,
+        );
       } else {
-        markerRef.current.setLngLat([currentPosition.lon, currentPosition.lat]);
         updatePlaybackMarkerElement(
           markerRef.current.getElement(),
           markerHtml,
@@ -321,7 +366,19 @@ export function useTrailPlaybackCamera({
       }
     }
 
-    if (completedCoordinates.length > 0 && mapRef.current.getSource('trail-completed')) {
+    const completedTrailSource = mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource | undefined;
+    if (completedCoordinates.length > 0 && completedTrailSource) {
+      const paintCompletedTrail = (data: CompletedTrailData) => {
+        // Native source updates coalesce worker work. The rendered tip, rather
+        // than completion of a worker promise or an unrelated render, tells us
+        // which frame's endpoint is actually visible.
+        const revision = ++trailRevisionRef.current;
+        const start = completedCoordinates.at(-1);
+        void completedTrailSource.setData(withPaintedTrailTip(
+          data, revision, start ? [start[0], start[1]] : null,
+        ));
+      };
+
       if (trailStyle.colorMode === 'heartRate') {
         const features: Array<Feature<LineString, { color: string }>> = [];
         const heartRatePoints = activeTrack && !computedJourney
@@ -340,7 +397,7 @@ export function useTrailPlaybackCamera({
           });
         }
 
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData({
+        paintCompletedTrail({
           type: 'FeatureCollection',
           features,
         });
@@ -365,7 +422,7 @@ export function useTrailPlaybackCamera({
           partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
         });
 
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData({
+        paintCompletedTrail({
           type: 'FeatureCollection',
           features: zoneFeatures,
         });
@@ -380,7 +437,7 @@ export function useTrailPlaybackCamera({
           partialSegmentIndex: currentSegment?.segment.segmentIndex ?? null,
         });
 
-        (mapRef.current.getSource('trail-completed') as maplibregl.GeoJSONSource).setData(
+        paintCompletedTrail(
           coloredFeatures.length > 0
             ? {
                 type: 'FeatureCollection',
@@ -554,13 +611,11 @@ export function useTrailPlaybackCamera({
       smoothedCenterRef.current = smoothedCenter;
 
       // With 3D terrain the marker is drawn on the terrain surface, while the
-      // camera aims at the centre point's elevation. MapLibre normally keeps
-      // that elevation clamped to the terrain for us, but `jumpTo` (used for
-      // every camera update here, live or exported) never updates it at all,
-      // so the centre stays pinned at whatever elevation it last had while
-      // the marker climbs away from it: on a summit the marker leaves the top
-      // of the frame, and the error grows with altitude. Pass the elevation
-      // explicitly with the rest of the pose. `queryTerrainElevation` already
+      // camera aims at the centre point's elevation. Apply the height together
+      // with the complete pose below. setCenterElevation itself calls jumpTo:
+      // using it first applies the new height at the OLD centre/zoom/pitch,
+      // invokes terrain collision correction, and publishes a second camera
+      // move every playback frame. `queryTerrainElevation` already
       // includes the terrain exaggeration and returns null when terrain is
       // off, in which case we leave the elevation alone.
       //
@@ -580,22 +635,25 @@ export function useTrailPlaybackCamera({
       let elevationSum = 0;
       let elevationSamples = 0;
 
-      // Cinematic keyframes can sit far closer and steeper than follow-behind
-      // ever allows itself (it widens/flattens on risky terrain; cinematic
-      // has no such guard yet — see CINEMATIC_CAMERA_PLAN.md section 6). At
-      // that distance a window built for follow-behind's typical framing
-      // spans enough real ground, on rough terrain, to average across a
-      // genuine climb and descend, not just mesh noise — and the rate cap
-      // below then throttles catching up to it. Both read as the look-at
-      // point moving at the wrong pace relative to the marker's real
-      // elevation. Read the single point under the marker instead: cinematic
-      // has no noisy procedural input driving this pose, so there is nothing
-      // here that needs smoothing in the first place.
-      if (usesRawPose) {
-        // Sampled at the point the camera actually looks at, which in
-        // cinematic mode is the smoothed anchor rather than the marker. A
-        // height read from somewhere the camera is not aiming is the same
-        // mismatch that made the ground appear to move at its own pace.
+      // Cinematic height follows a symmetric spatial average on the planned
+      // anchor path. Raw terrain under one point makes the view bob over mesh
+      // detail; a time chase instead lags behind genuine sustained climbs.
+      if (cameraMode === 'cinematic') {
+        const halfWindowSeconds = 0.15 + 0.75 * (1 - Math.max(0, Math.min(1, cameraStability)));
+        const sampled = getCinematicCenterElevation({
+          coordinates: cinematicElevationPath,
+          center: smoothedCenter,
+          progress: playbackProgress,
+          halfWindow: halfWindowSeconds / Math.max(1, totalDurationMs / 1000),
+          maxDeviationMeters: visibleWidthMetersAtZoom(targetPose.zoom, smoothedCenter[1]) * 0.08,
+          readElevation: (position) => mapRef.current!.queryTerrainElevation(position),
+        });
+        if (sampled !== null) {
+          elevationSum = sampled;
+          elevationSamples = 1;
+        }
+      } else if (usesRawPose) {
+        // Unfiltered follow mode aims directly at its current center.
         const sampled = mapRef.current.queryTerrainElevation([smoothedCenter[0], smoothedCenter[1]]);
         if (typeof sampled === 'number' && Number.isFinite(sampled)) {
           elevationSum = sampled;
@@ -619,13 +677,12 @@ export function useTrailPlaybackCamera({
       if (elevationSamples > 0) {
         const averaged = elevationSum / elevationSamples;
         const previousElevation = smoothedElevationRef.current;
-        const settled = usesRawPose || previousElevation === null || deltaMs === null
+        const settled = usesRawPose || cameraMode === 'cinematic' || previousElevation === null || deltaMs === null
           ? averaged
           : limitRateOfChange(previousElevation, averaged, deltaMs, MAX_CENTER_ELEVATION_RATE_M_PER_S);
 
         smoothedElevationRef.current = settled;
         centerElevation = { elevation: settled };
-        mapRef.current.setCenterElevation(settled);
       } else {
         smoothedElevationRef.current = null;
       }
@@ -670,6 +727,7 @@ export function useTrailPlaybackCamera({
     cameraStability,
     cameraCoordinates,
     cinematicKeyframes,
+    cinematicElevationPath,
     completedCoordinates,
     computedJourney,
     currentIcon,

@@ -45,6 +45,9 @@ export function resizeElevationSection(
   const elevations = points.map((point) => point.elevation);
   return {
     ...section,
+    // An edited range may cross onto the opposite slope. Keep its identity
+    // for saved overrides, but derive its direction from the new endpoints.
+    kind: end.elevation >= start.elevation ? 'climb' : 'descent',
     startProgress: start.progress,
     endProgress: end.progress,
     startDistance: start.distance,
@@ -104,10 +107,7 @@ export function createCustomElevationSection(
     elevationLoss: Math.max(0, start.elevation - end.elevation),
     segmentIndex: center.segmentIndex,
   };
-  const resized = resizeElevationSection(base, elevationData, start.progress, end.progress);
-  const first = closestPoint(segmentPoints, resized.startProgress);
-  const last = closestPoint(segmentPoints, resized.endProgress);
-  return { ...resized, kind: last.elevation >= first.elevation ? 'climb' : 'descent' };
+  return resizeElevationSection(base, elevationData, start.progress, end.progress);
 }
 
 export function applyElevationSectionOverrides(
@@ -143,17 +143,7 @@ export function applyElevationSectionOverrides(
       section.startProgress,
       section.endProgress,
     );
-    const segmentPoints = elevationData.filter((point) => (
-      point.segmentType === 'track'
-      && point.segmentIndex === resized.segmentIndex
-      && point.elevation > 0
-    ));
-    const start = closestPoint(segmentPoints, resized.startProgress);
-    const end = closestPoint(segmentPoints, resized.endProgress);
-    const kind: ElevationFocusSection['kind'] = end.elevation >= start.elevation
-      ? 'climb'
-      : 'descent';
-    return [{ ...resized, kind }];
+    return [resized];
   });
   return [...automatic, ...custom].sort((left, right) => left.startProgress - right.startProgress);
 }

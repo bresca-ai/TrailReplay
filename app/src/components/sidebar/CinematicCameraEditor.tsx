@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppState } from '@/store/storeTypes';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -266,7 +266,8 @@ export function CinematicCameraEditor() {
     captureRef.current = handleCapture;
   });
 
-  const rows = computedJourney
+  // Route anchors change with the journey/keyframes, not the playback clock.
+  const rows = useMemo(() => computedJourney
     ? keyframes
         .map((keyframe) => {
           const progress = deriveCinematicKeyframeProgress(
@@ -279,7 +280,7 @@ export function CinematicCameraEditor() {
         })
         .filter((entry): entry is { keyframe: (typeof keyframes)[number]; progress: number } => entry !== null)
         .sort((a, b) => a.progress - b.progress)
-    : [];
+    : [], [computedJourney, keyframes, playback.routeTimingMode]);
 
   const changeFrame = (keyframeId: string, progress: number, nextFrame: CinematicKeyframeFrame) => {
     const keyframe = keyframes.find((entry) => entry.id === keyframeId);

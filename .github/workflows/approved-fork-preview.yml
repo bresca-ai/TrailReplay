@@ -6,13 +6,139 @@ on:
     types: [completed]
   pull_request_target:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to preview
+        required: true
+        type: number
 
 permissions:
   actions: read
-  contents: write
+  contents: read
   pull-requests: read
 
 jobs:
+  resolve-manual-pr:
+    name: Validate manual preview request
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'alexalmansa'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+      head_repo: ${{ steps.pr.outputs.head_repo }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+    steps:
+      - name: Validate the current PR head
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          case "$PR_NUMBER" in
+            ''|*[!0-9]*)
+              echo "Enter a valid pull request number."
+              exit 1
+              ;;
+          esac
+
+          pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          state="$(jq -r '.state' <<<"$pr_json")"
+          head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+          head_repo="$(jq -r '.head.repo.full_name' <<<"$pr_json")"
+
+          test "$state" = open
+          test "$head_repo" != "$GITHUB_REPOSITORY"
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]]
+
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "head_repo=$head_repo" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+  build-manual-pr:
+    name: Build fork PR without deployment credentials
+    needs: resolve-manual-pr
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the exact fork commit
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ needs.resolve-manual-pr.outputs.head_repo }}
+          ref: ${{ needs.resolve-manual-pr.outputs.head_sha }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Build static site
+        run: |
+          npm ci --prefix app
+          npm run build --prefix app
+
+      - name: Upload static build
+        uses: actions/upload-artifact@v7
+        with:
+          name: fork-preview-${{ needs.resolve-manual-pr.outputs.pr_number }}
+          path: app/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy-manual-pr:
+    name: Deploy fork PR to Cloudflare Pages
+    needs: [resolve-manual-pr, build-manual-pr]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      deployments: write
+      pull-requests: read
+    steps:
+      - name: Download static build
+        uses: actions/download-artifact@v8
+        with:
+          name: fork-preview-${{ needs.resolve-manual-pr.outputs.pr_number }}
+          path: app/dist
+
+      - name: Confirm the PR head has not changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.resolve-manual-pr.outputs.pr_number }}
+          EXPECTED_SHA: ${{ needs.resolve-manual-pr.outputs.head_sha }}
+          EXPECTED_REPO: ${{ needs.resolve-manual-pr.outputs.head_repo }}
+        run: |
+          pr_json="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+          test "$(jq -r '.state' <<<"$pr_json")" = open
+          test "$(jq -r '.head.sha' <<<"$pr_json")" = "$EXPECTED_SHA"
+          test "$(jq -r '.head.repo.full_name' <<<"$pr_json")" = "$EXPECTED_REPO"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install pinned Wrangler
+        run: npm install --global wrangler@4.151.3
+
+      - name: Deploy the static artifact and report the GitHub deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d6661214b1568252ad7874c9849b6c93
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.resolve-manual-pr.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.resolve-manual-pr.outputs.head_sha }}
+        run: >-
+          wrangler pages deploy app/dist
+          --project-name=trailreplay-web
+          --branch=cloudflare-preview/pr-${PR_NUMBER}
+          --commit-hash=${HEAD_SHA}
+          --commit-message=Manual-preview-PR-${PR_NUMBER}
+
   mirror:
     name: Mirror approved fork commit
     if: >-
@@ -20,9 +146,13 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.actor.login == 'alexalmansa'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
     steps:
       - name: Download request metadata
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: approved-fork-preview-request
           path: fork-preview-request
@@ -77,6 +207,8 @@ jobs:
       github.event_name == 'pull_request_target' &&
       github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Delete the managed preview branch when present
         env:
@@ -84,6 +216,10 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           ref="repos/${GITHUB_REPOSITORY}/git/ref/heads/cloudflare-preview/pr-${PR_NUMBER}"
-          if gh api "$ref" >/dev/null 2>&1; then
-            gh api --method DELETE "$ref"
+          if ! gh api --method DELETE "$ref" >/dev/null 2>&1; then
+            # The branch may already be gone, including in a concurrent cleanup.
+            if gh api "$ref" >/dev/null 2>&1; then
+              echo "Could not delete ${ref}."
+              exit 1
+            fi
           fi

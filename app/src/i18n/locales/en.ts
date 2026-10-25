@@ -450,7 +450,7 @@ export const en = {
     size: 'Size',
     activityIcon: 'Activity Icon',
     changeIcon: 'Change Icon',
-    glowCircle: 'Glow Circle',
+    glowCircle: 'Icon outline',
     selectIcon: 'Select Activity Icon',
     routeAnnotationsTitle: 'Route Annotations',
     routeAnnotationsHint: 'Add a transparent map caption or field note at the current playback position. Field notes slow the replay so viewers can read them.',
@@ -756,6 +756,7 @@ export const en = {
     pasteCoordinates: 'Or paste coordinates here',
   },
   imageExport: {
+    showMapPlaces: 'Show places', hideMapPlaces: 'Hide places',
     editorSections: 'Cover editor sections', designSection: 'Design', mapSection: 'Map', logoSection: 'Logo',
     modeVideo: 'Video',
     modeImage: 'Image',

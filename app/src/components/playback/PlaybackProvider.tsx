@@ -82,11 +82,14 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       if (animationPhase === 'idle') {
         setAnimationPhase('preloading');
       }
-    } else if (playback.isPlaying && cinematicPlayed && animationPhase === 'idle') {
-      // Warm resume mid-track: skip preload and intro entirely.
+    } else if (playback.isPlaying && animationPhase === 'idle'
+      && (cinematicPlayed || playback.progress >= 0.01)) {
+      // A first play after scrubbing/capturing a shot is a mid-route start too.
+      // Requiring an already-played intro left isPlaying=true in idle forever.
+      if (!cinematicPlayed) setCinematicPlayed(true);
       setAnimationPhase('playing');
     }
-  }, [playback.isPlaying, cinematicPlayed, playback.progress, animationPhase, setAnimationPhase]);
+  }, [playback.isPlaying, cinematicPlayed, playback.progress, animationPhase, setAnimationPhase, setCinematicPlayed]);
 
   // Once preloading completes and we enter the intro phase, run the cinematic
   // intro timer. This fires after the warm-up rather than before it, so the intro

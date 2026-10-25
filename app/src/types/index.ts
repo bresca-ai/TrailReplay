@@ -324,6 +324,8 @@ export interface SocialShareSettings {
   logoPositionY: number;
   locationLabel: string;
   showLocation: boolean;
+  /** Include map landmarks and place labels on covers. Disabled by default. */
+  showMapPlaces?: boolean;
   showStats: boolean;
   stats: SocialShareStat[];
   statsLayout: 1 | 2 | 3 | 4;

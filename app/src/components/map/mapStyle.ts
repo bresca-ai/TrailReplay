@@ -1,3 +1,5 @@
+import { DEFAULT_MAP_SKY } from './mapSky';
+
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 export const BASEMAP_FALLBACK_MAX_ZOOM = 12;
@@ -60,6 +62,7 @@ const MAPBOX_ATTRIBUTION = '© <a href="https://www.mapbox.com/about/maps/">Mapb
 
 export const MAP_STYLE = {
   version: 8,
+  sky: DEFAULT_MAP_SKY,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
   sources: {
     osm: {

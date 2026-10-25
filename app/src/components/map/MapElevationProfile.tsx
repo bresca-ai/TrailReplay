@@ -206,22 +206,28 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       ),
     }];
   });
+  const focusedPoints = focusedSection
+    ? profileData.pointsBySegment.get(focusedSection.segmentIndex) ?? []
+    : [];
+  const sectionStartElevation = focusedSection
+    ? getElevationAtProgress(focusedPoints, focusedSection.startProgress)
+    : 0;
+  const sectionEndElevation = focusedSection
+    ? getElevationAtProgress(focusedPoints, focusedSection.endProgress)
+    : 0;
+  // This label describes the change between the two displayed endpoints.
+  // Summing every upward GPX fluctuation can inflate it with noise and rolls.
+  const sectionElevationChange = sectionEndElevation - sectionStartElevation;
   const sectionMetrics = focusedSection && dynamicViewport && dynamicViewport.focusAmount > 0.5
     ? {
-        kind: focusedSection.kind,
-        change: focusedSection.kind === 'climb'
-          ? `+${formatElevation(focusedSection.elevationGain, settings.unitSystem)}`
-          : `-${formatElevation(focusedSection.elevationLoss, settings.unitSystem)}`,
+        kind: sectionElevationChange >= 0 ? 'climb' as const : 'descent' as const,
+        change: `${sectionElevationChange >= 0 ? '+' : '-'}${formatElevation(Math.abs(sectionElevationChange), settings.unitSystem)}`,
         start: formatElevation(
-          focusedSection.kind === 'climb'
-            ? focusedSection.minElevation
-            : focusedSection.maxElevation,
+          sectionStartElevation,
           settings.unitSystem,
         ),
         end: formatElevation(
-          focusedSection.kind === 'climb'
-            ? focusedSection.maxElevation
-            : focusedSection.minElevation,
+          sectionEndElevation,
           settings.unitSystem,
         ),
         distance: formatDistance(focusedSection.distance, settings.unitSystem),

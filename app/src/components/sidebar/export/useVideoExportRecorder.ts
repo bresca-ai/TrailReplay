@@ -1,3 +1,4 @@
+import { VIDEO_LOGO_URL } from './videoExportBrand';
 import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { useAppStore } from '@/store/useAppStore';
 import {
@@ -613,7 +614,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           resolve();
         };
         image.onerror = () => resolve();
-        image.src = '/media/images/logohorizontal.svg';
+        image.src = VIDEO_LOGO_URL;
       });
 
       await updateOverlayAsync(width, height);
