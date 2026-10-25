@@ -35,6 +35,7 @@ type SettingsSlice = Pick<
   | 'setExportProgress'
   | 'setExportStage'
   | 'setCameraPosition'
+  | 'setInactiveAnnotationsOpacity'
 >;
 
 export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
@@ -139,5 +140,10 @@ export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
         return;
       }
       state.cameraPosition = position;
+    }),
+
+  setInactiveAnnotationsOpacity: (opacity) =>
+    set((state) => {
+      state.settings.inactiveAnnotationsOpacity = opacity;
     }),
 });

@@ -448,6 +448,7 @@ export interface AppSettings {
   landmarkScale: number;
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
+  inactiveAnnotationsOpacity: number;
 }
 
 export interface ElevationSectionOverride {

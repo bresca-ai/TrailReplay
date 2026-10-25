@@ -216,4 +216,5 @@ export interface AppState {
   sourceRecipe: Recipe | null;
   setSourceRecipe: (recipe: Recipe | null) => void;
   hydrateState: (partial: Partial<AppState>) => void;
+  setInactiveAnnotationsOpacity: (opacity: number) => void;
 }

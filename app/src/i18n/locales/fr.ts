@@ -201,9 +201,6 @@ export const fr = {
       orbitBall: 'Angle de caméra',
       orbitBallHint: 'Glissez, ou depuis n’importe où : A/D angle, W/S hauteur, R/F zoom, Entrée pour enregistrer',
       orbitBallValue: '{bearing}° d’angle, {pitch}° de hauteur',
-      zoom: 'Distance',
-      zoomIn: 'Zoomer',
-      zoomOut: 'Dézoomer',
       infoTitle: 'Comment ça marche',
       infoKeyboard: 'Tout se fait sans la souris : mettez en pause où vous voulez un plan (Espace), visez-le avec A/D pour tourner, W/S pour monter ou descendre et R/F pour approcher ou éloigner, puis appuyez sur Entrée pour l’enregistrer comme image clé. Avancez au moment suivant et recommencez. Entrée sur un moment qui a déjà une image clé la met à jour au lieu d’en ajouter une seconde.',
       infoBall: 'La boule fixe l’angle et la hauteur de la caméra autour du repère — faites-la glisser, ou appuyez sur A/D pour tourner et W/S pour la monter ou la descendre, depuis n’importe où sur la page.',
@@ -222,6 +219,22 @@ export const fr = {
       easingLinear: 'Linéaire',
       easingHold: 'Maintien',
       delete: 'Supprimer',
+      slidersTitle: 'Afficher tous les curseurs',
+      pitch: {
+        value: 'Inclinaison',
+        decrease: 'Descendre',
+        increase: 'Monter'
+      },
+      bearing: {
+        value: 'Orientation',
+        decrease: 'À droite',
+        increase: 'À gauche',
+      },
+      zoom: {
+        value: 'Distance',
+        decrease: 'Zoomer',
+        increase: 'Dézoomer',
+      }
     },
     followPresets: {
       title: 'Distance prédéfinie',
@@ -509,6 +522,9 @@ export const fr = {
     annotationLeadTime: 'Afficher avant l\'arrivée (secondes)',
     annotationLeadTimeShort: 'Avant',
     removeRouteAnnotation: 'Supprimer l\'annotation',
+    inactiveAnnotationsOpacityLabel: 'Marqueur',
+    inactiveAnnotationsOpacity: 'Opacité à l\'état inactif',
+    inactiveAnnotationsOpacityHint: 'S\'applique lorsque l\'annotation n\'est pas visible.',
   },
   journey: {
     videoTimingTitle: 'Définir le rythme de la vidéo',

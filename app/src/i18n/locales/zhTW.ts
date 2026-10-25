@@ -76,7 +76,7 @@ export const zhTW = {
     cinematicCamera: {
       title: '鏡頭關鍵影格', hint: '拖曳時間軸定位，轉動控制球調整視角，再儲存鏡頭。', orbitBall: '鏡頭角度',
       orbitBallHint: '拖曳調整，或在頁面任意位置使用：A／D 轉向、W／S 調整高度、R／F 縮放、Enter 儲存', orbitBallValue: '角度 {bearing}°、高度 {pitch}°',
-      zoom: '距離', zoomIn: '放大', zoomOut: '縮小', infoTitle: '操作說明',
+      infoTitle: '操作說明',
       infoKeyboard: '全程可使用鍵盤：在想設定鏡頭的位置按空白鍵暫停，以 A／D 轉向、W／S 升降、R／F 拉近或拉遠，再按 Enter 儲存為關鍵影格。移到下一個時間點後重複操作。若該位置已有關鍵影格，Enter 會更新它。',
       infoBall: '控制球可調整鏡頭相對於標記的角度與高度。拖曳控制球，或在頁面任意位置按 A／D 轉向、W／S 升降。',
       infoZoom: '距離可調整鏡頭與標記的遠近。拖曳滑桿、點選 ＋／−，或按 R／F。',
@@ -85,6 +85,10 @@ export const zhTW = {
       infoStability: '鏡頭穩定度決定鏡頭如何跟隨路線轉折。偏向「平穩運鏡」時會平滑通過之字形彎道，讓標記在畫面內移動；偏向「即時跟隨」則更緊密地跟著標記。',
       capture: '設定鏡頭關鍵影格', empty: '尚未設定關鍵影格，鏡頭會先使用後方跟隨模式。', keyframeAt: '時間 {time}',
       frame: '參考方向', frameWorld: '固定方位', frameRoute: '跟隨路線', easing: '轉場方式', easingSmooth: '平滑', easingLinear: '線性', easingHold: '停留', delete: '刪除',
+      slidersTitle: '顯示所有滑桿',
+      pitch: { value: '俯仰角', decrease: '降低', increase: '提高' },
+      bearing: { value: '方位角', decrease: '向左轉', increase: '向右轉' },
+      zoom: { value: '距離', decrease: '拉近', increase: '拉遠' },
     },
     followPresets: { title: '距離預設', veryClose: '非常近', close: '近', medium: '中', far: '遠' }, cameraStability: { title: '鏡頭穩定度', stable: '平穩運鏡', reactive: '即時跟隨' },
     units: '單位', unitMetric: '公制（km）', unitImperial: '英制（mi）', language: '語言',
@@ -144,6 +148,7 @@ export const zhTW = {
     slowdownSeconds: '減速時間（秒）', textLanguage: '標註文字語言', translationFallback: '標註文字會依介面語言顯示；尚未翻譯的語言會顯示原文。', moveToPlayhead: '移至此處', moveToPlayheadHint: '拖曳時間軸至新位置，再將這則標註移到該處。',
     routeAnnotationsMovedHint: '路線標註已移至「媒體」分頁，方便與照片、影片及地圖文字一起管理。', routeAnnotationTitlePlaceholder: '標題', routeAnnotationSubtitlePlaceholder: '副標題', routeAnnotationColor: '標註顏色', routeAnnotationReady: '將新增至旅程的 {percent}% 位置。', routeAnnotationNoPosition: '請播放或拖曳時間軸，選擇標註位置。', routeAnnotationElevation: '{elevation} {unit}',
     addRouteAnnotation: '新增標註', routeAnnotationsEmpty: '尚未新增路線標註。', routeAnnotationProgress: '旅程的 {percent}%', goToAnnotation: '前往', annotationDuration: '顯示時間（秒）', annotationDurationShort: '秒數', annotationLeadTime: '抵達前提早顯示（秒）', annotationLeadTimeShort: '提前', removeRouteAnnotation: '移除標註',
+    inactiveAnnotationsOpacityLabel: '標記', inactiveAnnotationsOpacity: '未啟用時的不透明度', inactiveAnnotationsOpacityHint: '標註未啟用時，會套用此不透明度。',
   },
   journey: {
     videoTimingTitle: '設定影片時間', videoTimingHint: '選擇成品影片的長度，再決定標記沿路線移動的方式。', durationPreset: '{seconds} 秒', durationPresetHint: '影片長度', customDurationHint: '需要自訂長度嗎？請點選下方各旅程路段的編輯按鈕，個別設定播放時間。',
