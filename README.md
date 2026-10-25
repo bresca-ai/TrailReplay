@@ -10,15 +10,15 @@
   </a>
 </p>
 
-[![CI](https://github.com/joy3352763/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/joy3352763/TrailReplay/actions/workflows/ci.yml)
+[![CI](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml)
 [![License: attribution required](https://img.shields.io/badge/License-attribution%20required-yellow.svg)](./LICENSE)
 [![Live app](https://img.shields.io/badge/live-trailreplay.com-0B7285)](https://trailreplay.com)
 
 TrailReplay is a browser-based GPX storytelling studio for runners, cyclists, hikers, and outdoor creators. It turns raw route files into polished, shareable replays with map animation, live stats, elevation, media, and export-ready video, all directly in the browser.
 
-This repository is a fork of [bresca-ai/TrailReplay](https://github.com/bresca-ai/TrailReplay). It adds GPX head-and-tail trimming and a Traditional Chinese (Taiwan) interface. The frontend lives in [`app/`](./app). The live app and demo links below belong to the upstream project; run or deploy this fork to use its additions.
+The frontend lives in [`app/`](./app).
 
-> **繁體中文說明：** 這個 fork 新增拖曳時間軸裁切 GPX，以及使用台灣用語的「正體中文（台灣）」介面與說明頁。請參閱 [繁體中文 README](./README.zh-TW.md)，了解功能、操作限制、本機啟動與測試方式。
+> **繁體中文說明：** 請參閱 [繁體中文 README](./README.zh-TW.md)，了解功能、操作限制、本機啟動與測試方式。
 
 ## Why It Exists
 
@@ -105,7 +105,7 @@ TrailReplay's source is public under its [attribution license](./LICENSE). Pleas
 [contribution guide](./CONTRIBUTING.md) before opening an issue or pull request,
 and report security-sensitive issues through the [security policy](./SECURITY.md).
 
-The upstream project deploys its `main` branch to trailreplay.com through Cloudflare Pages. Hosting for this fork can be configured separately. See the upstream [release runbook](./docs/operations/release-runbook.md) for its release and deployment workflow.
+TrailReplay deploys its `main` branch to trailreplay.com through Cloudflare Pages. See the [release runbook](./docs/operations/release-runbook.md) for the release and deployment workflow.
 
 ## Stack
 

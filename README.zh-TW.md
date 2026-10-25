@@ -4,16 +4,16 @@
 
 [English](./README.md) | **繁體中文（台灣）**
 
-[![CI](https://github.com/joy3352763/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/joy3352763/TrailReplay/actions/workflows/ci.yml)
+[![CI](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml)
 [![授權：需標示來源](https://img.shields.io/badge/License-attribution%20required-yellow.svg)](./LICENSE)
 
 # TrailReplay
 
 TrailReplay 是在瀏覽器中使用的軌跡影片製作工具，適合跑步、騎自行車、健行與戶外活動。匯入 GPX、KML 或 FIT 後，即可在互動式 3D 地圖上重播路線，加入統計資訊、照片、影片片段與標註，再匯出影片或圖片。
 
-這個儲存庫由 [bresca-ai/TrailReplay](https://github.com/bresca-ai/TrailReplay) fork 而來，新增 **GPX 頭尾裁切**及 **正體中文（台灣）語系**。主要程式位於 [`app/`](./app)。
+主要程式位於 [`app/`](./app)，支援 **GPX 頭尾裁切**及 **正體中文（台灣）語系**。
 
-[trailreplay.com](https://trailreplay.com) 與下方教學、示範影片由原專案提供。若要使用這個 fork 的新增功能，請在本機執行，或自行部署這個儲存庫。
+線上應用程式：[trailreplay.com](https://trailreplay.com)。也可依下方說明在本機執行，或自行部署。
 
 ## 主要功能
 
@@ -28,7 +28,7 @@ TrailReplay 是在瀏覽器中使用的軌跡影片製作工具，適合跑步�
 - 儲存 `.replay` 專案，日後重新開啟並接續編輯。
 - 使用英文、西班牙文、加泰隆尼亞文、德文、法文或正體中文（台灣）介面。
 
-## 這個 fork 新增的功能
+## 功能使用說明
 
 ### GPX 頭尾裁切
 
@@ -72,10 +72,10 @@ TrailReplay 是在瀏覽器中使用的軌跡影片製作工具，適合跑步�
 
 ## 本機開發
 
-原專案建議使用 **Node.js 22**。在終端機執行：
+建議使用 **Node.js 22**，與 CI 環境一致。在終端機執行：
 
 ```bash
-git clone https://github.com/joy3352763/TrailReplay.git
+git clone https://github.com/bresca-ai/TrailReplay.git
 cd TrailReplay
 npm --prefix app ci
 npm run dev
@@ -97,7 +97,7 @@ npm run check:pages-assets
 
 若在 Windows PowerShell 遇到 `npm.ps1` 執行原則限制，可將上述指令中的 `npm` 改為 `npm.cmd`。
 
-## 原專案教學與示範
+## 教學與示範
 
 - [操作教學](https://trailreplay.com/tutorial.html)
 - [GPX 下載指南](https://trailreplay.com/gpx-download-guide.html)
@@ -112,16 +112,16 @@ npm run check:pages-assets
 | `functions/` | Cloudflare Pages Functions |
 | `functions-lib/` | 伺服器端共用邏輯與測試 |
 | `docs/internal/` | 功能實作與語系維護文件 |
-| `docs/operations/` | 原專案的發布與維運說明 |
-| `docs/branding-assets/` | 原專案標誌與品牌素材 |
+| `docs/operations/` | 發布與維運說明 |
+| `docs/branding-assets/` | 專案標誌與品牌素材 |
 | `media/` | 文件與示範使用的媒體 |
 
 地圖使用 MapLibre GL，狀態管理使用 Zustand，測試使用 Vitest 與 Testing Library。
 
-## 原作者與授權
+## 作者與授權
 
-原專案為 [TrailReplay／bresca-ai](https://github.com/bresca-ai/TrailReplay)，由 Bresca 製作。本 fork 保留原作者資訊、標誌與授權聲明。
+[TrailReplay](https://github.com/bresca-ai/TrailReplay) 由 Bresca 製作。
 
 本專案採用 [附來源標示要求的 MIT 授權](./LICENSE)。使用或修改時，請保留授權與著作權聲明，並依授權要求向終端使用者標示 TrailReplay 來源。
 
-參與開發前請閱讀 [貢獻指南](./CONTRIBUTING.md)；安全性問題請依 [安全性政策](./SECURITY.md) 回報。部署與發布流程可參閱 [原專案發布手冊](./docs/operations/release-runbook.md)。
+參與開發前請閱讀 [貢獻指南](./CONTRIBUTING.md)；安全性問題請依 [安全性政策](./SECURITY.md) 回報。部署與發布流程可參閱 [發布手冊](./docs/operations/release-runbook.md)。
