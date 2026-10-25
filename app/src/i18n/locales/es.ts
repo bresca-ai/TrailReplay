@@ -492,6 +492,9 @@ export const es = {
     annotationLeadTime: 'Mostrar antes de llegar (segundos)',
     annotationLeadTimeShort: 'Antes',
     removeRouteAnnotation: 'Eliminar anotación',
+    inactiveAnnotationsOpacityLabel: 'Marcador',
+    inactiveAnnotationsOpacity: 'Opacidad cuando no activo',
+    inactiveAnnotationsOpacityHint: 'Se aplica cuando la anotación no es visible.',
   },
   journey: {
     videoTimingTitle: 'Define el tiempo del vídeo',

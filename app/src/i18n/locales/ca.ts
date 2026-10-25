@@ -492,6 +492,9 @@ export const ca = {
     annotationLeadTime: 'Mostra abans d\'arribar-hi (segons)',
     annotationLeadTimeShort: 'Abans',
     removeRouteAnnotation: 'Elimina anotació',
+    inactiveAnnotationsOpacityLabel: 'Marcador',
+    inactiveAnnotationsOpacity: 'Opacitat quan inactiu',
+    inactiveAnnotationsOpacityHint: 'S\'aplica quan l\'anotació no és visible.',
   },
   journey: {
     videoTimingTitle: 'Defineix el temps del vídeo',

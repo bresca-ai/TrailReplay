@@ -55,22 +55,27 @@ function emptyFeatureCollection(): FeatureCollection<Point> {
 function buildAnnotationsFeatureCollection(
   annotations: TextAnnotation[],
   activeAnnotationId: string | null,
+  inactiveAnnotationsOpacity: number,
 ): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
-    features: annotations.map((annotation) => ({
-      type: 'Feature',
-      properties: {
-        id: annotation.id,
-        isActive: annotation.id === activeAnnotationId,
-        color: annotation.color,
-        haloColor: withAlpha(annotation.color, annotation.id === activeAnnotationId ? 0.24 : 0.16),
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [annotation.lon, annotation.lat],
-      },
-    })),
+    features: annotations.map((annotation) => {
+      const isActive = annotation.id === activeAnnotationId;
+      return {
+        type: 'Feature',
+        properties: {
+          id: annotation.id,
+          isActive,
+          color: withAlpha(annotation.color, isActive ? 1 : inactiveAnnotationsOpacity),
+          circleColor: withAlpha('#101417', isActive ? 1 : inactiveAnnotationsOpacity),
+          haloColor: withAlpha(annotation.color, isActive ? 0.24 : 0.16 * inactiveAnnotationsOpacity),
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [annotation.lon, annotation.lat],
+        },
+      };
+    }),
   };
 }
 
@@ -249,6 +254,7 @@ interface UseTextAnnotationsLayerParams {
   unitSystem: UnitSystem;
   language: LanguageCode;
   overlayFont: OverlayFont;
+  inactiveAnnotationsOpacity: number;
 }
 
 export function useTextAnnotationsLayer({
@@ -259,6 +265,7 @@ export function useTextAnnotationsLayer({
   unitSystem,
   language,
   overlayFont,
+  inactiveAnnotationsOpacity,
 }: UseTextAnnotationsLayerParams) {
   // The card is sized for the map it sits on, so a resize has to redraw it.
   const [mapWidth, setMapWidth] = useState(0);
@@ -318,7 +325,7 @@ export function useTextAnnotationsLayer({
         source: SOURCE_ID,
         paint: {
           'circle-radius': ['case', ['boolean', ['get', 'isActive'], false], 7, 5],
-          'circle-color': '#101417',
+          'circle-color': ['get', 'circleColor'],
           'circle-stroke-width': ['case', ['boolean', ['get', 'isActive'], false], 3, 2],
           'circle-stroke-color': ['get', 'color'],
           'circle-pitch-alignment': 'map',
@@ -363,7 +370,7 @@ export function useTextAnnotationsLayer({
     });
 
     const markerSource = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-    markerSource?.setData(buildAnnotationsFeatureCollection(annotations, activeAnnotationId));
+    markerSource?.setData(buildAnnotationsFeatureCollection(annotations, activeAnnotationId, inactiveAnnotationsOpacity));
 
     const activeAnnotation = activeAnnotationId
       ? annotations.find((annotation) => annotation.id === activeAnnotationId) ?? null
@@ -412,5 +419,6 @@ export function useTextAnnotationsLayer({
     pinheadIcons,
     unitSystem,
     language,
+    inactiveAnnotationsOpacity,
   ]);
 }
