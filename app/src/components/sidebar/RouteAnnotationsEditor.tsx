@@ -8,6 +8,8 @@ import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
 import { mapAnnotationSymbol, pinheadAnnotationSymbol } from '@/components/annotations/annotationSymbol';
 import { AnnotationSymbolPicker } from './AnnotationSymbolPicker';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import { MapPinned, Play, Plus, Trash2 } from 'lucide-react';
 import type { TextAnnotation } from '@/types';
 
@@ -24,6 +26,8 @@ export function RouteAnnotationsEditor() {
   const updateTextAnnotation = useAppStore((state) => state.updateTextAnnotation);
   const removeTextAnnotation = useAppStore((state) => state.removeTextAnnotation);
   const seekToProgress = useAppStore((state) => state.seekToProgress);
+  const inactiveAnnotationsOpacity = useAppStore((state) => state.settings.inactiveAnnotationsOpacity)
+  const setInactiveAnnotationsOpacity = useAppStore((state) => state.setInactiveAnnotationsOpacity);
 
   const [draftAnnotationTitle, setDraftAnnotationTitle] = useState('');
   const [draftAnnotationSubtitle, setDraftAnnotationSubtitle] = useState('');
@@ -102,6 +106,32 @@ export function RouteAnnotationsEditor() {
   return (
     <div className="space-y-4">
       <p className="text-[11px] text-[var(--evergreen-60)]">{t('annotations.translationFallback')}</p>
+      <div className="space-y-3 rounded-lg border border-[var(--evergreen)]/15 p-3 bg-[var(--evergreen)]/3">
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide">
+            {t('annotations.inactiveAnnotationsOpacity')}
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm text-[var(--evergreen)]">{t('annotations.inactiveAnnotationsOpacityLabel')}</Label>
+              <span className="text-xs text-[var(--evergreen-60)]">
+                {Math.round(inactiveAnnotationsOpacity * 100)}%
+             </span>
+            </div>
+            <Slider
+             value={[inactiveAnnotationsOpacity]}
+             onValueChange={([value]) => setInactiveAnnotationsOpacity(value)}
+             min={0}
+             max={1}
+             step={0.05}
+             className="w-full"
+            />
+            <p className="text-xs text-[var(--evergreen-60)]">
+              {t('annotations.inactiveAnnotationsOpacityHint')}
+            </p>
+          </div>
+        </div>
+      </div>
       <div className="space-y-3 rounded-lg border border-[var(--evergreen)]/15 p-3 bg-[var(--evergreen)]/3">
         <p className="text-xs text-[var(--evergreen-60)]">
           {t('annotations.routeAnnotationsHint')}

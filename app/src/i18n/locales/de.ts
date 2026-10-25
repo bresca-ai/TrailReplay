@@ -505,6 +505,9 @@ export const de = {
     annotationLeadTime: 'Vor Ankunft anzeigen (Sekunden)',
     annotationLeadTimeShort: 'Vor',
     removeRouteAnnotation: 'Anmerkung entfernen',
+    inactiveAnnotationsOpacityLabel: 'Marker',
+    inactiveAnnotationsOpacity: 'Opazität wenn inaktiv',
+    inactiveAnnotationsOpacityHint: 'Wird angewendet, wenn die Anmerkung nicht sichtbar ist.',
   },
   journey: {
     videoTimingTitle: 'Videolänge festlegen',

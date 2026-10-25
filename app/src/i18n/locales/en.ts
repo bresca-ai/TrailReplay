@@ -505,6 +505,9 @@ export const en = {
     annotationLeadTime: 'Show before arrival (seconds)',
     annotationLeadTimeShort: 'Before',
     removeRouteAnnotation: 'Remove annotation',
+    inactiveAnnotationsOpacityLabel: 'Marker',
+    inactiveAnnotationsOpacity: 'Opacity when inactive',
+    inactiveAnnotationsOpacityHint: 'Will be applied when the annotation is not active.',
   },
   journey: {
     videoTimingTitle: 'Set video timing',

@@ -505,6 +505,9 @@ export const fr = {
     annotationLeadTime: 'Afficher avant l\'arrivée (secondes)',
     annotationLeadTimeShort: 'Avant',
     removeRouteAnnotation: 'Supprimer l\'annotation',
+    inactiveAnnotationsOpacityLabel: 'Marqueur',
+    inactiveAnnotationsOpacity: 'Opacité à l\'état inactif',
+    inactiveAnnotationsOpacityHint: 'S\'applique lorsque l\'annotation n\'est pas visible.',
   },
   journey: {
     videoTimingTitle: 'Définir le rythme de la vidéo',
