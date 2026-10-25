@@ -38,6 +38,7 @@ export const createPlaybackSlice: AppSliceCreator<PlaybackSlice> = (set) => ({
 
   play: () =>
     set((state) => {
+      state.trackTrimPreview = null;
       state.playback.isPlaying = true;
     }),
 

@@ -66,6 +66,7 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
         return;
       }
       state.activePanel = panel;
+      if (panel !== 'tracks') state.trackTrimPreview = null;
     }),
 
   setLoading: (isLoading) =>

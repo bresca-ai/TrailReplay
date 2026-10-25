@@ -16,6 +16,12 @@ export const fr = {
     support: 'Soutenir',
     supportTitle: 'Soutenir TrailReplay',
   },
+  interface: {
+    hideTrack: 'Masquer la trace', showTrack: 'Afficher la trace', changeTrackColor: 'Changer la couleur de la trace', useTrack: 'Utiliser cette trace', removeTrack: 'Supprimer la trace',
+    openSource: 'Récits de parcours en code source ouvert', exportCrop: 'Recadrage de l’export :', osmContributors: 'Contributeurs OpenStreetMap',
+    placeSection: 'Placer une section de zoom', placeSectionHint: 'Cliquez sur le profil pour placer une section de zoom', adjustSection: 'Ajuster la section {index} {edge}', adjustSectionHint: 'Faites glisser pour ajuster {edge} de la section', removeSection: 'Supprimer la section {index}', removeSectionHint: 'Supprimer la section de zoom', addSection: 'Ajouter une section de zoom', cancelSection: 'Annuler l’ajout de la section de zoom',
+    mapCanvas: 'Carte', resetBearing: 'Orienter la carte vers le nord',
+  },
   sidebar: {
     tabs: {
       tracks: 'Parcours',
@@ -104,6 +110,17 @@ export const fr = {
     loss: 'D-',
     max: 'max',
     points: 'points',
+  },
+  trackTrim: {
+    title: 'Rogner le parcours', start: 'Début', end: 'Fin',
+    timeHint: 'Faites glisser les deux poignées pour conserver un intervalle continu. Les heures utilisent votre fuseau horaire.',
+    distanceHint: 'Les heures sont absentes ou incohérentes. Sélectionnez un intervalle par distance.',
+    pointsHint: 'Aucun axe de temps ou de distance valide. Sélectionnez selon l’ordre des points.',
+    point: 'Point {count}', selection: '{distance} · {count} points conservés',
+    snapHint: 'Les poignées suivent les points d’origine. La partie orange est conservée, les parties grises sont supprimées.',
+    apply: 'Appliquer au parcours', download: 'Télécharger le GPX', cancel: 'Annuler', restore: 'Restaurer l’original',
+    restoreHint: 'L’original peut être restauré pendant cette session. Les projets enregistrés et GPX téléchargés contiennent uniquement le parcours actuel.',
+    dependencies: 'Cette animation contient des médias, annotations, parcours comparatifs, images clés de caméra ou transports. Vous pouvez prévisualiser et télécharger le GPX rogné. Pour l’appliquer ici, rognez avant d’ajouter ce contenu.',
   },
   settings: {
     mapCameraTitle: 'Choisir la carte et la caméra',

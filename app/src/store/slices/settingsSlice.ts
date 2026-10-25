@@ -105,6 +105,7 @@ export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
     set((state) => {
       state.isExporting = isExporting;
       if (isExporting) {
+        state.trackTrimPreview = null;
         state.activePanel = 'export';
       }
       if (!isExporting) {

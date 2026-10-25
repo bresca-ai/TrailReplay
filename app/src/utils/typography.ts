@@ -1,5 +1,7 @@
 import type { OverlayFont } from '@/types';
 
+export const TRADITIONAL_CHINESE_FONT_FAMILY = "'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif";
+
 export const OVERLAY_FONT_OPTIONS: ReadonlyArray<{
   id: OverlayFont;
   labelKey: string;
@@ -24,7 +26,10 @@ const FONT_FAMILIES: Record<OverlayFont, string> = {
 };
 
 export function overlayFontFamily(font: OverlayFont | null | undefined): string {
-  return FONT_FAMILIES[font ?? 'technical'] ?? FONT_FAMILIES.technical;
+  const family = FONT_FAMILIES[font ?? 'technical'] ?? FONT_FAMILIES.technical;
+  // Use installed Traditional Chinese glyphs consistently in DOM, map cards
+  // and canvas exports without downloading a large CJK font for every visitor.
+  return family.replace(/, (sans-serif|serif|monospace)$/, ", 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', $1");
 }
 
 export function overlayCanvasFontFamily(font: OverlayFont | null | undefined): string {

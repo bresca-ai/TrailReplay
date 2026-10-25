@@ -9,7 +9,7 @@ import {
   pinheadAnnotationSymbol,
 } from '@/components/annotations/annotationSymbol';
 import { loadPinheadIcons, searchPinheadIcons, usePinheadIcons, usePinheadTerms } from '@/components/annotations/pinheadIcons';
-import { LANDMARK_GLYPH_KEYS, LANDMARK_GLYPH_LABELS, PINHEAD_PATHS } from '@/components/map/landmarkGlyphs';
+import { LANDMARK_GLYPH_KEYS, PINHEAD_PATHS } from '@/components/map/landmarkGlyphs';
 
 // Enough to scan at a glance without rendering thousands of buttons for "a".
 const RESULT_LIMIT = 96;
@@ -75,7 +75,7 @@ export function AnnotationSymbolPicker({ value, onChange, label, allowEmoji = tr
       {LANDMARK_GLYPH_KEYS.map((glyph) => <IconButton
         key={glyph}
         path={PINHEAD_PATHS[glyph]}
-        label={LANDMARK_GLYPH_LABELS[glyph]}
+        label={t(`routeLandmarks.glyphs.${glyph}`)}
         selected={selectedGlyph === glyph}
         onClick={() => onChange(mapAnnotationSymbol(glyph))}
       />)}

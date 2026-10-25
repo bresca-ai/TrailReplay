@@ -16,6 +16,12 @@ export const en = {
     support: 'Support',
     supportTitle: 'Support TrailReplay',
   },
+  interface: {
+    hideTrack: 'Hide track', showTrack: 'Show track', changeTrackColor: 'Change track color', useTrack: 'Use this track', removeTrack: 'Remove track',
+    openSource: 'Open Source Trail Storytelling', exportCrop: 'Export crop:', osmContributors: 'OpenStreetMap contributors',
+    placeSection: 'Place new zoom section', placeSectionHint: 'Click the profile to place a new zoom section', adjustSection: 'Adjust section {index} {edge}', adjustSectionHint: 'Drag to adjust section {edge}', removeSection: 'Remove section {index}', removeSectionHint: 'Remove zoom section', addSection: 'Add zoom section', cancelSection: 'Cancel adding zoom section',
+    mapCanvas: 'Map', resetBearing: 'Reset bearing to north',
+  },
   sidebar: {
     tabs: {
       tracks: 'Routes',
@@ -104,6 +110,23 @@ export const en = {
     loss: 'loss',
     max: 'max',
     points: 'points',
+  },
+  trackTrim: {
+    title: 'Trim route',
+    start: 'Start',
+    end: 'End',
+    timeHint: 'Drag both handles to keep one continuous interval of the recording. Times use your local timezone.',
+    distanceHint: 'Recording times are missing or inconsistent. Select a continuous interval by distance instead.',
+    pointsHint: 'This route has no usable time or distance axis. Select an interval by recorded point order.',
+    point: 'Point {count}',
+    selection: '{distance} · {count} points retained',
+    snapHint: 'Handles snap to original recorded points. The orange route is kept; gray portions are removed.',
+    apply: 'Apply to route',
+    download: 'Download GPX',
+    cancel: 'Cancel',
+    restore: 'Restore original',
+    restoreHint: 'The original can be restored in this session. Saved projects and downloaded GPX files contain the current route only.',
+    dependencies: 'This replay has media, annotations, comparison routes, camera keyframes or transport segments. You can preview and download a trimmed GPX. To apply it here, trim before adding that content.',
   },
   settings: {
     mapCameraTitle: 'Choose the world and camera',

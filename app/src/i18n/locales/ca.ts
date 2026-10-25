@@ -16,6 +16,12 @@ export const ca = {
     support: 'Donar suport',
     supportTitle: 'Dona suport a TrailReplay',
   },
+  interface: {
+    hideTrack: 'Amaga el track', showTrack: 'Mostra el track', changeTrackColor: 'Canvia el color del track', useTrack: 'Utilitza aquest track', removeTrack: 'Elimina el track',
+    openSource: 'Històries de rutes de codi obert', exportCrop: 'Retall d’exportació:', osmContributors: 'Col·laboradors d’OpenStreetMap',
+    placeSection: 'Col·loca una secció de zoom', placeSectionHint: 'Clica el perfil per col·locar una secció de zoom', adjustSection: 'Ajusta la secció {index} {edge}', adjustSectionHint: 'Arrossega per ajustar {edge} de la secció', removeSection: 'Elimina la secció {index}', removeSectionHint: 'Elimina la secció de zoom', addSection: 'Afegeix una secció de zoom', cancelSection: 'Cancel·la la nova secció de zoom',
+    mapCanvas: 'Mapa', resetBearing: 'Orienta el mapa al nord',
+  },
   sidebar: {
     tabs: {
       tracks: 'Rutes',
@@ -104,6 +110,17 @@ export const ca = {
     loss: 'pèrdua',
     max: 'màx',
     points: 'punts',
+  },
+  trackTrim: {
+    title: 'Retalla la ruta', start: 'Inici', end: 'Final',
+    timeHint: 'Arrossega els dos controls per conservar un interval continu. Les hores es mostren en la teva zona horària.',
+    distanceHint: 'Falten hores de registre o són inconsistents. Selecciona un interval per distància.',
+    pointsHint: 'No hi ha un eix de temps o distància vàlid. Selecciona per ordre de punts.',
+    point: 'Punt {count}', selection: '{distance} · {count} punts conservats',
+    snapHint: 'Els controls s’ajusten als punts originals. Es conserva el tram taronja i s’eliminen els grisos.',
+    apply: 'Aplica a la ruta', download: 'Descarrega GPX', cancel: 'Cancel·la', restore: 'Restaura l’original',
+    restoreHint: 'Pots restaurar l’original durant aquesta sessió. Els projectes desats i GPX descarregats només contenen la ruta actual.',
+    dependencies: 'Aquesta repetició té contingut multimèdia, anotacions, rutes de comparació, fotogrames de càmera o transports. Pots previsualitzar i descarregar el GPX retallat. Per aplicar-lo aquí, retalla abans d’afegir aquest contingut.',
   },
   settings: {
     mapCameraTitle: 'Tria el mapa i la càmera',

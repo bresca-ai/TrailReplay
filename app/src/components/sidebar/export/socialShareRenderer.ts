@@ -8,6 +8,7 @@ import type { CanvasPoint, FitBox } from './socialShareRouteFit';
 import { downsampleRoute, fitRouteToBox } from './socialShareRouteFit';
 import { getSocialShareLogoBox } from './socialShareBrand';
 import { getSplitMapBox } from './socialShareSplit';
+import { wrapText } from '@/components/map/annotationCardText';
 
 const DARK_BG = 'rgba(10,10,10,0.97)';
 const POSTER_W = 1080;
@@ -382,6 +383,11 @@ function drawTitle(
   ctx.shadowBlur = shadow ? Math.round(fontSize * 0.25) : 0;
   const lines: string[] = [];
   for (const paragraph of title.split('\n')) {
+    if (/\p{Script=Han}/u.test(paragraph)) {
+      lines.push(...wrapText(ctx, paragraph, maxW, 5 - lines.length));
+      if (lines.length >= 5) break;
+      continue;
+    }
     let current = '';
     for (const word of paragraph.split(/\s+/)) {
       const candidate = current ? `${current} ${word}` : word;

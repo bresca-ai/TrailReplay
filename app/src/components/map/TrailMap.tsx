@@ -30,6 +30,8 @@ import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
 import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
 import { useTilePreloadDiagnostics } from './hooks/useTilePreloadDiagnostics';
+import { useTrackTrimPreview } from './hooks/useTrackTrimPreview';
+import { useMapControlLabels } from './hooks/useMapControlLabels';
 import type { CropPreviewMetrics } from '@/utils/crop';
 
 interface TrailMapProps {
@@ -80,6 +82,8 @@ export function TrailMap(_props: TrailMapProps) {
   const setActivePanel = useAppStore((state) => state.setActivePanel);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  useTrackTrimPreview(map, isMapLoaded);
+  useMapControlLabels(map, isMapLoaded);
   const [showZoomButtonsHint, setShowZoomButtonsHint] = useState(false);
   const [hasSeenZoomButtonsHint, setHasSeenZoomButtonsHint] = useState(() => {
     if (typeof window === 'undefined') return true;

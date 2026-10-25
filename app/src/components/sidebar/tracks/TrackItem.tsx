@@ -15,6 +15,8 @@ import type { AppSettings, GPXTrack } from '@/types';
 import { useI18n } from '@/i18n/useI18n';
 import { formatDistance, formatDuration, formatElevation, formatSpeedFromKmh } from '@/utils/units';
 import { TRACK_COLORS } from './constants';
+import { TrackTrimControls } from './TrackTrimControls';
+import { useAppStore } from '@/store/useAppStore';
 
 interface TrackItemProps {
   track: GPXTrack;
@@ -42,6 +44,7 @@ export function TrackItem({
   settings,
 }: TrackItemProps) {
   const { t } = useI18n();
+  const isTrimming = useAppStore((state) => state.trackTrimPreview?.trackId === track.id);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -69,7 +72,7 @@ export function TrackItem({
 
   return (
     <div
-      draggable
+      draggable={!isTrimming}
       onDragStart={handleDragStart}
       onDragEnd={() => setIsDragging(false)}
       onDragOver={(event) => {
@@ -94,8 +97,8 @@ export function TrackItem({
             <button
               onClick={onToggleVisibility}
               className="shrink-0 rounded-md p-1 text-[var(--evergreen-60)] transition-colors hover:bg-[var(--evergreen)]/8 hover:text-[var(--evergreen)]"
-              aria-label={track.visible ? 'Hide track' : 'Show track'}
-              title={track.visible ? 'Hide track' : 'Show track'}
+              aria-label={t(track.visible ? 'interface.hideTrack' : 'interface.showTrack')}
+              title={t(track.visible ? 'interface.hideTrack' : 'interface.showTrack')}
             >
               {track.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             </button>
@@ -139,8 +142,8 @@ export function TrackItem({
               <button
                 onClick={() => setShowColorPicker(!showColorPicker)}
                 className="rounded-md p-1 transition-colors hover:bg-[var(--evergreen)]/10"
-                aria-label="Change track color"
-                title="Change track color"
+                aria-label={t('interface.changeTrackColor')}
+                title={t('interface.changeTrackColor')}
               >
                 <Palette className="h-4 w-4 text-[var(--evergreen-60)]" />
               </button>
@@ -153,8 +156,8 @@ export function TrackItem({
                     ? 'bg-[var(--trail-orange)] text-[var(--canvas)]'
                     : 'hover:bg-[var(--evergreen)]/10'}
                 `}
-                aria-label="Use this track"
-                title="Use this track"
+                aria-label={t('interface.useTrack')}
+                title={t('interface.useTrack')}
               >
                 <Play className="h-4 w-4" />
               </button>
@@ -162,8 +165,8 @@ export function TrackItem({
               <button
                 onClick={onRemove}
                 className="rounded-md p-1 text-red-500 transition-colors hover:bg-red-100"
-                aria-label="Remove track"
-                title="Remove track"
+                aria-label={t('interface.removeTrack')}
+                title={t('interface.removeTrack')}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -183,6 +186,8 @@ export function TrackItem({
           </div>
         </div>
       </div>
+
+      <TrackTrimControls track={track} unitSystem={settings.unitSystem} />
 
       {showColorPicker && (
         <div className="flex flex-wrap gap-1.5 border-t border-[var(--evergreen)]/10 bg-[var(--evergreen)]/[0.025] px-3 py-2.5 pl-10">

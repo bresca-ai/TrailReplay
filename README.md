@@ -2,19 +2,23 @@
   <img src="./docs/branding-assets/SVG/logohorizontalfondo.svg" alt="TrailReplay" width="520">
 </p>
 
+[English](./README.md) | [繁體中文（台灣）](./README.zh-TW.md)
+
 <p align="center">
   <a href="https://trailreplay.com">
     <img src="./media/trailreplay-overview.gif" alt="TrailReplay app overview: turn a GPX route into an animated, shareable story" width="520">
   </a>
 </p>
 
-[![CI](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/bresca-ai/TrailReplay/actions/workflows/ci.yml)
+[![CI](https://github.com/joy3352763/TrailReplay/actions/workflows/ci.yml/badge.svg)](https://github.com/joy3352763/TrailReplay/actions/workflows/ci.yml)
 [![License: attribution required](https://img.shields.io/badge/License-attribution%20required-yellow.svg)](./LICENSE)
 [![Live app](https://img.shields.io/badge/live-trailreplay.com-0B7285)](https://trailreplay.com)
 
 TrailReplay is a browser-based GPX storytelling studio for runners, cyclists, hikers, and outdoor creators. It turns raw route files into polished, shareable replays with map animation, live stats, elevation, media, and export-ready video, all directly in the browser.
 
-The active product lives in [`app/`](./app) and powers [trailreplay.com](https://trailreplay.com).
+This repository is a fork of [bresca-ai/TrailReplay](https://github.com/bresca-ai/TrailReplay). It adds GPX head-and-tail trimming and a Traditional Chinese (Taiwan) interface. The frontend lives in [`app/`](./app). The live app and demo links below belong to the upstream project; run or deploy this fork to use its additions.
+
+> **繁體中文說明：** 這個 fork 新增拖曳時間軸裁切 GPX，以及使用台灣用語的「正體中文（台灣）」介面與說明頁。請參閱 [繁體中文 README](./README.zh-TW.md)，了解功能、操作限制、本機啟動與測試方式。
 
 ## Why It Exists
 
@@ -23,6 +27,7 @@ Most GPX tools stop at route inspection. TrailReplay is built for presentation: 
 ## What You Can Do
 
 - Import one or many GPX files and replay them on an interactive 3D map.
+- Trim the start and end of a route with a draggable recording timeline, preview it on the map, and download the retained interval as GPX.
 - Build a full journey by combining tracks, reordering them, and adding transport segments.
 - Display live stats, elevation, pace, and route progress during playback.
 - Attach photos to the route from metadata when available or place them manually.
@@ -30,6 +35,7 @@ Most GPX tools stop at route inspection. TrailReplay is built for presentation: 
 - Compare tracks from the same time window and inspect timing differences.
 - Export polished videos with map motion, stats overlays, elevation profile, and branded output.
 - Keep the core GPX workflow local in the browser by default.
+- Use English, Spanish, Catalan, German, French, or Traditional Chinese (Taiwan) across the editor and help pages.
 
 ## Demo Videos
 
@@ -56,6 +62,8 @@ https://github.com/user-attachments/assets/c42e5efd-6c08-4591-ab66-92cc16484f24
 3. Add photos, annotations, and visual context.
 4. Replay the route on the map.
 5. Export a ready-to-share video.
+
+To trim a route, open **Routes → Trim route** and drag the two handles. The orange interval is retained; green and red markers show its new start and finish. Boundaries snap to recorded points and preserve their timestamps and sensor values. Routes without reliable timestamps use a distance axis. Choose **Download GPX** to export the selection or **Apply to route** to update the route and its statistics. **Restore original** remains available during the current session; saved projects contain only the current route. In this first version, projects containing media, annotations, comparison tracks, camera keyframes or transport segments support preview and GPX download; apply trims before adding those items.
 
 ## Live Links
 
@@ -97,10 +105,7 @@ TrailReplay's source is public under its [attribution license](./LICENSE). Pleas
 [contribution guide](./CONTRIBUTING.md) before opening an issue or pull request,
 and report security-sensitive issues through the [security policy](./SECURITY.md).
 
-`main` is continuously deployed to trailreplay.com by Cloudflare Pages. GitHub
-Releases mark intentional public milestones and are tagged from the deployed
-`main` commit. The repository is preparing its first **v1.0.0** release;
-maintainers should follow the [release runbook](./docs/operations/release-runbook.md).
+The upstream project deploys its `main` branch to trailreplay.com through Cloudflare Pages. Hosting for this fork can be configured separately. See the upstream [release runbook](./docs/operations/release-runbook.md) for its release and deployment workflow.
 
 ## Stack
 

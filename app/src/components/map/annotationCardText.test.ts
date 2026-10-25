@@ -9,6 +9,19 @@ function measurer(pixelsPerChar = 16): TextMeasurer {
 describe('wrapText', () => {
   const m = measurer();
 
+  it('wraps Chinese titles without inserting spaces or losing characters', () => {
+    expect(wrapText(m, '合歡山主峰登山口', 80, 2)).toEqual(['合歡山主峰', '登山口']);
+  });
+
+  it('keeps Chinese closing punctuation off the start of a line and respects the line budget', () => {
+    const title = '第一補給站，請靠右進入並在此補水休息';
+    const lines = wrapText(m, title, 80, 2);
+    expect(lines).toHaveLength(2);
+    expect(lines.every((line) => !/^[，。！？、：；）】」』]/.test(line))).toBe(true);
+    expect(lines.every((line) => m.measureText(line).width <= 80)).toBe(true);
+    expect(title.startsWith(lines.join('').replace('…', ''))).toBe(true);
+  });
+
   it('leaves a short title on one line', () => {
     expect(wrapText(m, 'Water stop', 284, 2)).toEqual(['Water stop']);
   });
