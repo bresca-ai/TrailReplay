@@ -105,6 +105,7 @@ interface UseTrailPlaybackCameraParams {
   targetBearingRef: React.MutableRefObject<number>;
   isExporting: boolean;
   isPlaying: boolean;
+  sharedComparisonColors?: string[];
   trailStyle: {
     colorMode: 'fixed' | 'heartRate' | 'zones';
     colorZones: readonly TrailColorZone[];
@@ -214,6 +215,7 @@ export function useTrailPlaybackCamera({
   followBehindZoomLevel,
   isExporting,
   isPlaying,
+  sharedComparisonColors,
   isInTransport,
   isMapLoaded,
   mapRef,
@@ -312,10 +314,13 @@ export function useTrailPlaybackCamera({
 
       if (trailStyle.showMarker && trailStyle.markerType === 'dot') {
         const dotSize = Math.round(14 * trailStyle.markerSize);
-        markerHtml = `<div data-marker-dot style="
+        const dotColors = [markerColor, ...(sharedComparisonColors ?? [])];
+        const dotFill = dotColors.length === 1 ? markerColor : `conic-gradient(${dotColors.map((color, index) =>
+          `${color} ${index * 100 / dotColors.length}% ${(index + 1) * 100 / dotColors.length}%`).join(', ')})`;
+        markerHtml = `<div data-marker-dot data-marker-colors="${encodeURIComponent(JSON.stringify(dotColors))}" style="
           width: ${dotSize}px;
           height: ${dotSize}px;
-          background: ${markerColor};
+          background: ${dotFill};
           border-radius: 50%;
           border: 2.5px solid white;
           box-shadow: 0 2px 8px rgba(0,0,0,0.35);
@@ -745,6 +750,7 @@ export function useTrailPlaybackCamera({
     playbackProgress,
     segmentTimings,
     setCameraPosition,
+    sharedComparisonColors,
     smoothBearingRef,
     targetBearingRef,
     totalDurationMs,

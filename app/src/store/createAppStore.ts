@@ -34,6 +34,8 @@ export function createAppStore() {
           state.recipeReport = null;
           state.sourceRecipe = null;
           state.comparisonTracks = [];
+          state.comparisonMode = 'time';
+          state.comparisonSlowdown = 0.25;
           state.journey = null;
           state.journeySegments = [];
           state.cinematicCameraKeyframes = [];

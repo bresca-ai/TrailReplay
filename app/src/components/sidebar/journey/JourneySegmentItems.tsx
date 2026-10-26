@@ -3,10 +3,9 @@ import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import type { JourneySegment } from '@/types';
 import { formatDistance, formatDuration } from '@/utils/units';
-import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { ACTIVITY_ICONS, isSvgActivityIcon, renderActivityIcon } from '@/utils/activityIcons';
 import { Clock, Edit3, GripVertical, Play, Trash2 } from 'lucide-react';
-import { TRANSPORT_MODES } from './journeyTransport';
+import { TRANSPORT_MODES, renderJourneyTransportIcon } from './journeyTransport';
 
 interface SegmentItemProps {
   segment: JourneySegment;
@@ -37,10 +36,10 @@ export function TrackSegmentItem({
   const durationSeconds = (segment.duration || 0) / 1000;
 
   return (
-    <div className="tr-journey-segment active flex items-center gap-2 group cursor-move p-2">
-      <GripVertical className="w-4 h-4 text-[var(--evergreen-40)]" />
+    <div className="group flex cursor-move items-center gap-1.5 rounded-xl border border-[var(--evergreen)]/15 bg-white/30 p-2.5">
+      <GripVertical className="h-3 w-3 shrink-0 text-[var(--evergreen-40)]" />
 
-      <div className="w-6 h-6 rounded-full bg-[var(--trail-orange)] text-[var(--canvas)] flex items-center justify-center text-xs font-bold flex-shrink-0">
+      <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)] text-[9px] font-bold text-[var(--canvas)]">
         {index + 1}
       </div>
 
@@ -58,11 +57,11 @@ export function TrackSegmentItem({
       </button>
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm text-[var(--evergreen)] truncate">{track.name}</p>
+        <p className="line-clamp-2 text-[11px] font-semibold leading-relaxed text-[var(--evergreen)]" title={track.name}>{track.name}</p>
 
         <button
           onClick={onEditDuration}
-          className="flex items-center gap-1 text-xs bg-[var(--trail-orange-15)] text-[var(--trail-orange)] px-2 py-0.5 rounded-full hover:bg-[var(--trail-orange)]/20 transition-colors mt-1"
+          className="mt-1 flex items-center gap-1 rounded-md border border-[var(--evergreen)]/10 bg-[var(--canvas)] px-1.5 py-0.5 text-[10px] text-[var(--evergreen)] transition-colors hover:border-[var(--trail-orange)]"
         >
           <Clock className="w-3 h-3" />
           <span className="font-semibold">{formatDuration(durationSeconds)}</span>
@@ -83,7 +82,7 @@ export function TrackSegmentItem({
         >
           <Play className="w-4 h-4 text-[var(--evergreen-60)]" />
         </button>
-        <button onClick={onRemove} className="p-1.5 hover:bg-red-100 text-red-500 rounded">
+        <button onClick={onRemove} aria-label={`${t('common.remove')}: ${track.name}`} className="p-1.5 hover:bg-red-100 text-red-500 rounded">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
@@ -159,7 +158,7 @@ export function TransportSegmentItem({
         className="w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
         style={{ backgroundColor: modeInfo ? `${modeInfo.color}30` : '#888' }}
       >
-        {TRANSPORT_ICONS[segment.mode]}
+        {renderJourneyTransportIcon(segment.mode, 24, modeInfo?.color)}
       </div>
 
       <div className="flex-1">
@@ -185,7 +184,7 @@ export function TransportSegmentItem({
         >
           <Play className="w-4 h-4 text-[var(--evergreen-60)]" />
         </button>
-        <button onClick={onRemove} className="p-1.5 hover:bg-red-100 text-red-500 rounded">
+        <button onClick={onRemove} aria-label={`${t('common.remove')}: ${modeLabel}`} className="p-1.5 hover:bg-red-100 text-red-500 rounded">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>

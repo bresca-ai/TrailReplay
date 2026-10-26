@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   CameraSettings,
+  ComparisonTrack,
   IconChange,
   Journey,
   JourneySegment,
@@ -53,6 +54,9 @@ export interface ReplayComparisonTrackMeta {
   color?: string;
   visible?: boolean;
   offset?: number;
+  activityIcon?: string;
+  groupId?: string;
+  sequenceRestore?: ComparisonTrack['sequenceRestore'];
   routeFile: string;
 }
 
@@ -111,6 +115,8 @@ export interface ReplayProjectFile {
   /** Defaults to the first track, which is what a plain GPX upload does. */
   activeTrackId?: string | null;
   comparisonTracks?: ReplayComparisonTrackMeta[];
+  comparisonMode?: 'time' | 'route';
+  comparisonSlowdown?: number;
   journey?: Journey | null;
   journeySegments?: JourneySegment[];
   pictures?: SerializedPicture[];

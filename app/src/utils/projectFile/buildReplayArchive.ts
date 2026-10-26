@@ -99,6 +99,9 @@ export async function buildReplayArchive(state: AppState): Promise<Blob> {
     color: state.comparisonTracks[index].color,
     visible: state.comparisonTracks[index].visible,
     offset: state.comparisonTracks[index].offset,
+    activityIcon: state.comparisonTracks[index].track.activityIcon,
+    groupId: state.comparisonTracks[index].groupId,
+    sequenceRestore: state.comparisonTracks[index].sequenceRestore,
     routeFile: meta.routeFile,
   }));
 
@@ -107,6 +110,8 @@ export async function buildReplayArchive(state: AppState): Promise<Blob> {
     tracks: trackMetas,
     activeTrackId: state.activeTrackId,
     comparisonTracks: comparisonTrackMetas,
+    comparisonMode: state.comparisonMode,
+    comparisonSlowdown: state.comparisonSlowdown,
     journey: state.journey,
     journeySegments: state.journeySegments,
     pictures: state.pictures.map(serializePicture),

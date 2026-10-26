@@ -234,7 +234,14 @@ export interface CameraSettings {
   zoom: number;
   pitch: number;
   bearing: number;
-  followBehindPreset: 'very-close' | 'close' | 'medium' | 'far';
+  followBehindPreset:
+    | 'maximum-close'
+    | 'extreme-close'
+    | 'ultra-close'
+    | 'very-close'
+    | 'close'
+    | 'medium'
+    | 'far';
   followBehindZoomLevel: number;
   /** 0 = maximally stable/smooth camera, 1 = maximally reactive/tight tracking. */
   cameraStability: number;
@@ -360,6 +367,11 @@ export interface ComparisonTrack {
   offset: number;
   /** Set when this track was auto-grouped with an overlapping-time upload; names the primary track's id. */
   groupId?: string;
+  /** Original sequence entries retained when an already loaded route is compared. */
+  sequenceRestore?: {
+    trackIndex: number;
+    segments: Array<{ index: number; segment: JourneySegment }>;
+  };
 }
 
 export type UnitSystem = 'metric' | 'imperial';

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDropzone, type DropEvent } from 'react-dropzone';
 import { useAppStore } from '@/store/useAppStore';
 import { useGPX } from '@/hooks/useGPX';
@@ -13,6 +13,7 @@ import { TrackItem } from '@/components/sidebar/tracks/TrackItem';
 import { RecipeReportCard } from '@/components/sidebar/tracks/RecipeReportCard';
 import { COMPARISON_COLORS } from '@/components/sidebar/tracks/constants';
 import { trackEvent } from '@/utils/analytics';
+import { getComparisonAvailability } from '@/utils/comparisonAvailability';
 
 export function TracksPanel() {
   const { t } = useI18n();
@@ -29,9 +30,14 @@ export function TracksPanel() {
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
   const setExploreMode = useAppStore((state) => state.setExploreMode);
   const setError = useAppStore((state) => state.setError);
+  const comparisonMode = useAppStore((state) => state.comparisonMode);
+  const setComparisonMode = useAppStore((state) => state.setComparisonMode);
 
   // Comparison track state
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
+  const hasVisibleComparison = comparisonTracks.some((track) => track.visible);
+  const primary = tracks.find((track) => track.id === activeTrackId) ?? tracks[0];
+  const availability = useMemo(() => getComparisonAvailability(primary, comparisonTracks.filter((track) => track.visible).map((track) => track.track)), [primary, comparisonTracks]);
   const addComparisonTrack = useAppStore((state) => state.addComparisonTrack);
   const removeComparisonTrack = useAppStore((state) => state.removeComparisonTrack);
   const ungroupComparisonTrack = useAppStore((state) => state.ungroupComparisonTrack);
@@ -215,6 +221,20 @@ export function TracksPanel() {
               <p className="text-xs text-[var(--evergreen-60)]">
                 {t('tracks.comparisonHint')}
               </p>
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-[var(--evergreen)]/5 p-1">
+                {(['time', 'route'] as const).map((mode) => (
+                  <button key={mode} type="button" onClick={() => setComparisonMode(mode)} aria-pressed={comparisonMode === mode}
+                    aria-disabled={hasVisibleComparison && !availability[mode]}
+                    className={`rounded-md px-2 py-2 text-xs font-semibold ${comparisonMode === mode ? 'bg-[var(--evergreen)] text-white shadow-sm' : 'text-[var(--evergreen-70)] hover:bg-white'} ${hasVisibleComparison && !availability[mode] ? 'opacity-45' : ''}`}>
+                    {t(mode === 'time' ? 'tracks.compareByTime' : 'tracks.compareByRoute')}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] leading-relaxed text-[var(--evergreen-60)]">
+                {t(comparisonMode === 'time' ? 'tracks.compareTimeHint' : 'tracks.compareRouteHint')}
+              </p>
+              {availability.timeIssue && <p role="alert" className="rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[11px] text-[var(--evergreen-80)]">{t('journey.editor.missingTiming')}</p>}
+              {availability.routeIssue && <p role="alert" className="rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[11px] text-[var(--evergreen-80)]">{t('journey.editor.noSharedRoute')}</p>}
 
               {/* Comparison track list */}
               {comparisonTracks.map((ct) => (

@@ -24,6 +24,7 @@ import {
 import { DEFAULT_ACTIVITY_ICON } from '@/utils/activityIcons';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
 import type { GPXTrack, JourneySegment, RouteTimingMode } from '@/types';
+import { getRouteComparisonPlan, mergeProgressWindows, routeProgressWithSlowdown } from '@/utils/routeComparisonPlayback';
 
 const computedJourneyCache = new WeakMap<
   JourneySegment[],
@@ -195,8 +196,12 @@ export function useComputedJourney() {
   const tracks = useAppStore((state) => state.tracks);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const activeTrackId = useAppStore((state) => state.activeTrackId);
-  const playback = useAppStore((state) => state.playback);
-  const routeTimingMode = playback.routeTimingMode;
+  const storedPlayback = useAppStore((state) => state.playback);
+  const comparisonMode = useAppStore((state) => state.comparisonMode);
+  const comparisonTracks = useAppStore((state) => state.comparisonTracks);
+  const comparisonSlowdown = useAppStore((state) => state.comparisonSlowdown);
+  const routeComparisonActive = comparisonMode === 'route' && comparisonTracks.some((track) => track.visible);
+  const routeTimingMode = routeComparisonActive ? 'uniform' : storedPlayback.routeTimingMode;
 
   // Build the computed journey whenever segments or tracks change
   const computedJourney = useMemo<ComputedJourney | null>(() => {
@@ -212,6 +217,32 @@ export function useComputedJourney() {
     if (!computedJourney) return null;
     return getCachedDistanceProfile(computedJourney);
   }, [computedJourney]);
+
+  const comparisonWindows = useMemo(() => {
+    if (!routeComparisonActive) return [];
+    const total = journeyDistanceProfile?.totalDistance ?? activeTrack?.totalDistance ?? 0;
+    if (total <= 0) return [];
+    const windows = [];
+    for (const comparison of comparisonTracks.filter((track) => track.visible)) {
+      const primary = tracks.find((track) => track.id === (comparison.groupId ?? activeTrackId));
+      if (!primary) continue;
+      const plan = getRouteComparisonPlan(primary, comparison.track);
+      if (!computedJourney) { windows.push(...plan.differences); continue; }
+      for (const segment of computedJourney.segmentTimings) {
+        if (segment.type !== 'track' || segment.trackId !== primary.id) continue;
+        const distance = segment.endDistance - segment.startDistance;
+        windows.push(...plan.differences.map((window) => ({
+          start: (segment.startDistance + window.start * distance) / total,
+          end: (segment.startDistance + window.end * distance) / total,
+        })));
+      }
+    }
+    return mergeProgressWindows(windows);
+  }, [routeComparisonActive, journeyDistanceProfile, activeTrack, comparisonTracks, tracks, activeTrackId, computedJourney]);
+  const playback = {
+    ...storedPlayback,
+    progress: routeComparisonActive ? routeProgressWithSlowdown(storedPlayback.progress, comparisonWindows, comparisonSlowdown) : storedPlayback.progress,
+  };
 
   const routeDistance = useMemo(() => {
     if (computedJourney && journeyDistanceProfile) {

@@ -56,6 +56,9 @@ const CAMERA_MODES: { id: CameraMode; nameKey: string; descriptionKey: string }[
 
 /** Label shown for the distance the slider currently sits nearest to. */
 const FOLLOW_PRESET_NAME_KEYS: Record<CameraSettings['followBehindPreset'], string> = {
+  'maximum-close': 'maximumClose',
+  'extreme-close': 'extremeClose',
+  'ultra-close': 'ultraClose',
   'very-close': 'veryClose',
   close: 'close',
   medium: 'medium',

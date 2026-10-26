@@ -97,6 +97,7 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     if (meta.id) track.id = meta.id;
     if (meta.name) track.name = meta.name;
     if (meta.color) track.color = meta.color;
+    if (meta.activityIcon) track.activityIcon = meta.activityIcon;
     track.visible = meta.visible ?? true;
 
     const comparisonTrack: ComparisonTrack = {
@@ -106,6 +107,8 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
       track,
       visible: track.visible,
       offset: meta.offset ?? 0,
+      groupId: meta.groupId,
+      sequenceRestore: meta.sequenceRestore,
     };
     store.addComparisonTrack(comparisonTrack);
   }
@@ -116,6 +119,8 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     // An absent activeTrackId means "whatever a plain GPX upload would pick",
     // which is the first track.
     activeTrackId: project.activeTrackId ?? trackIds[0] ?? null,
+    comparisonMode: project.comparisonMode ?? 'time',
+    comparisonSlowdown: Number.isFinite(project.comparisonSlowdown) ? Math.max(0.1, Math.min(1, project.comparisonSlowdown!)) : 0.25,
     // addTrack already built a journey and one segment per track, which is
     // exactly what dropping those GPX files on the page produces. Only
     // overwrite that when the project actually says otherwise — an omitted

@@ -18,6 +18,29 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves comparison mode, existing activity icons, and the original sequence through a saved project', async () => {
+    const source = createAppStore();
+    const first = parseGPX(sampleGpx, 'first.gpx');
+    const second = { ...parseGPX(sampleGpx, 'second.gpx'), activityIcon: 'svg-biking' };
+    source.getState().addTrack(first);
+    source.getState().addTrack(second);
+    source.getState().updateJourneySegmentDuration(source.getState().journeySegments[1].id, 27_000);
+    const originalSegments = source.getState().journeySegments;
+    source.getState().moveTrackToComparison(second.id, first.id);
+    source.getState().setComparisonMode('route');
+    source.getState().setComparisonSlowdown(0.1);
+    const blob = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'comparison.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().comparisonMode).toBe('route');
+    expect(target.getState().comparisonSlowdown).toBe(0.1);
+    expect(target.getState().comparisonTracks[0].track.activityIcon).toBe('svg-biking');
+    target.getState().ungroupComparisonTrack(second.id);
+    expect(target.getState().journeySegments).toEqual(originalSegments);
+    expect(target.getState().tracks[1].activityIcon).toBe('svg-biking');
+  });
+
   it('restores tracks, journey, pictures (as placeholders), and settings from a saved archive', async () => {
     const sourceStore = createAppStore();
     const track = parseGPX(sampleGpx, 'ridge-loop.gpx');

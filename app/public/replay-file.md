@@ -467,10 +467,12 @@ website's distance control exactly:
 | `far` | `0` | Widest Follow Behind view |
 | `medium` | `33` | Default balanced view |
 | `close` | `66` | Closer to the moving marker |
-| `very-close` | `100` | Tightest Follow Behind view |
+| `very-close` | `100` | Tight Follow Behind view |
+| `ultra-close` | `120` | Closer Follow Behind view |
+| `extreme-close` | `140` | Extreme close Follow Behind view |
 
 The exact slider stops are `0`, `11`, `22`, `33`, `49.5`, `66`, `83`, and
-`100`, ordered from farthest to closest. If a recipe provides a value between
+`100`, `120`, `140`, `145`, `150`, and `160`, ordered from farthest to closest. If a recipe provides a value between
 stops, TrailReplay snaps it to the nearest website stop. If it provides both a
 preset and a level, the more precise level wins and the preset label is updated
 to match.
@@ -624,6 +626,15 @@ stats at the bottom:
 - `enabledLandmarkGroups` — landmark types to enable.
 
 ### 5.10 `journey` and `journeySegments`
+
+For two tracks that should play together, add the second track to the first
+track's comparison group. `comparisonMode` chooses how they advance: `time`
+uses recorded timestamps and shows who leads; `route` compares distance along
+their paths and highlights a whole split when it exceeds 30 m anywhere.
+`comparisonSlowdown` applies to route comparison split sections: `1` leaves
+their playback speed unchanged, `0.5` gives them twice as much screen time,
+`0.25` gives them four times as much (the default), and `0.1` gives them ten
+times as much. The total video duration stays the same.
 
 `journey` is `{ id, name, segments: [], totalDuration: 0, totalDistance: 0 }` —
 only `name` matters to you.

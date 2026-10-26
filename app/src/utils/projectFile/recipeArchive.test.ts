@@ -99,4 +99,38 @@ describe('round trip', () => {
     const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
     expect(Object.keys(entries)).not.toContain('recipe.json');
   });
+
+  it('keeps recipe camera distance on the same discrete ladder as the UI', () => {
+    const authored: Recipe = {
+      ...recipe,
+      cameraSettings: {
+        mode: 'follow-behind',
+        followBehindPreset: 'very-close',
+      },
+    };
+    const tracks = [parseGPX(gpx, 'ridge.gpx')];
+    const resolved = resolveRecipe(authored, tracks, ['ridge.gpx']);
+    const store = createAppStore();
+
+    applyRecipe(authored, resolved, store.getState());
+
+    expect(store.getState().cameraSettings.followBehindZoomLevel).toBe(100);
+  });
+
+  it('snaps an arbitrary recipe distance to a real UI stop', () => {
+    const authored: Recipe = {
+      ...recipe,
+      cameraSettings: {
+        mode: 'follow-behind',
+        followBehindZoomLevel: 125,
+      },
+    };
+    const tracks = [parseGPX(gpx, 'ridge.gpx')];
+    const resolved = resolveRecipe(authored, tracks, ['ridge.gpx']);
+    const store = createAppStore();
+
+    applyRecipe(authored, resolved, store.getState());
+
+    expect(store.getState().cameraSettings.followBehindZoomLevel).toBe(120);
+  });
 });

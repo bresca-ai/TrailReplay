@@ -1,6 +1,8 @@
 import { createDefaultPlayback } from '@/store/defaults';
+import { translate } from '@/i18n/translations';
 import type { AppState } from '@/store/storeTypes';
 import type { AppSliceCreator } from './types';
+import { comparisonIssueForMode, getComparisonAvailability } from '@/utils/comparisonAvailability';
 
 type PlaybackSlice = Pick<
   AppState,
@@ -38,6 +40,15 @@ export const createPlaybackSlice: AppSliceCreator<PlaybackSlice> = (set) => ({
 
   play: () =>
     set((state) => {
+      if (state.comparisonTracks.some((track) => track.visible)) {
+        const primary = state.tracks.find((track) => track.id === state.activeTrackId) ?? state.tracks[0];
+        const availability = getComparisonAvailability(primary, state.comparisonTracks.filter((track) => track.visible).map((track) => track.track));
+        const issue = comparisonIssueForMode(availability, state.comparisonMode);
+        if (issue) {
+          state.error = translate(state.settings.language, `journey.editor.${issue}`);
+          return;
+        }
+      }
       state.playback.isPlaying = true;
     }),
 

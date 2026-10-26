@@ -5,13 +5,17 @@ import { formatDistance, formatDuration } from '@/utils/units';
 import { useI18n } from '@/i18n/useI18n';
 import { createId } from '@/utils/id';
 import { TrackSegmentItem, TransportSegmentItem } from './journey/JourneySegmentItems';
-import { TRANSPORT_MODES } from './journey/journeyTransport';
+import { TRANSPORT_MODES, renderJourneyTransportIcon } from './journey/journeyTransport';
 import { createTransportSegment } from './journey/createTransportSegment';
 import { trackEvent } from '@/utils/analytics';
+import { JourneyComparisonEditor } from './journey/JourneyComparisonEditor';
+import { renderActivityIcon } from '@/utils/activityIcons';
 import {
   Plus,
   Clock,
-  Edit3,
+  ChevronDown,
+  ArrowRight,
+  Library,
   Route,
   GitCompareArrows,
 } from 'lucide-react';
@@ -35,6 +39,8 @@ export function JourneyPanel() {
   const setRouteTimingMode = useAppStore((state) => state.setRouteTimingMode);
   const seekToProgress = useAppStore((state) => state.seekToProgress);
   
+  const setActivePanel = useAppStore((state) => state.setActivePanel);
+  const [editorMode, setEditorMode] = useState<'sequence' | 'compare'>(comparisonTracks.length > 0 ? 'compare' : 'sequence');
   const [showTransportMenu, setShowTransportMenu] = useState(false);
   const [selectedTransportIndex, setSelectedTransportIndex] = useState<number | null>(null);
   const [editingSegment, setEditingSegment] = useState<string | null>(null);
@@ -173,299 +179,119 @@ export function JourneyPanel() {
   };
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-xl border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-3">
-        <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('journey.videoTimingTitle')}</h3>
-        <p className="mt-1 text-xs leading-4 text-[var(--evergreen-80)]">{t('journey.videoTimingHint')}</p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {VIDEO_DURATION_OPTIONS.map((seconds) => {
-            const isActive = Math.round(totalDuration / 1000) === seconds;
-            return (
-              <button
-                key={seconds}
-                type="button"
-                onClick={() => setVideoDuration(seconds)}
-                className={`rounded-lg border px-3 py-2 text-left transition-colors ${
-                  isActive
-                    ? 'border-[var(--evergreen)] bg-[var(--evergreen)] text-[var(--canvas)]'
-                    : 'border-[var(--evergreen)]/20 bg-[var(--canvas)] text-[var(--evergreen)] hover:border-[var(--trail-orange)]/60'
-                }`}
-              >
-                <span className="block text-sm font-bold">{t('journey.durationPreset', { seconds })}</span>
-                <span className={`block text-[10px] ${isActive ? 'text-[var(--canvas)]/75' : 'text-[var(--evergreen-60)]'}`}>
-                  {t('journey.durationPresetHint')}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-2 flex items-start gap-2 rounded-lg border border-[var(--evergreen)]/15 bg-[var(--canvas)]/60 px-3 py-2 text-xs text-[var(--evergreen-80)]">
-          <Edit3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--trail-orange)]" aria-hidden="true" />
-          <p>{t('journey.customDurationHint')}</p>
-        </div>
-        <div className="mt-4 border-t border-[var(--evergreen)]/15 pt-3">
-          <h4 className="text-xs font-bold uppercase tracking-wide text-[var(--evergreen)]">{t('journey.routeTiming')}</h4>
-          <p className="mt-1 text-[11px] leading-4 text-[var(--evergreen-60)]">{t('journey.routeTimingHint')}</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {(['recorded', 'uniform'] as const).map((mode) => {
-              const active = routeTimingMode === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setRouteTimingMode(mode)}
-                  aria-pressed={active}
-                  className={`min-w-0 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors ${
-                    active
-                      ? 'border-[var(--evergreen)] bg-[var(--evergreen)] text-[var(--canvas)]'
-                      : 'border-[var(--evergreen)]/20 bg-[var(--canvas)] text-[var(--evergreen)] hover:border-[var(--trail-orange)]/60'
-                  }`}
-                >
-                  {mode === 'recorded' ? t('journey.routeTimingRecorded') : t('journey.routeTimingUniform')}
-                </button>
-              );
-            })}
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/5 p-1" aria-label={t('journey.editor.replayMode')}>
+        {(['sequence', 'compare'] as const).map((mode) => {
+          const Icon = mode === 'sequence' ? Route : GitCompareArrows;
+          return <button key={mode} type="button" onClick={() => setEditorMode(mode)} aria-pressed={editorMode === mode}
+            className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-semibold transition-colors ${editorMode === mode ? 'bg-[var(--trail-orange)] text-white shadow-sm' : 'text-[var(--evergreen-70)] hover:bg-white/40'}`}>
+            <Icon className="h-3.5 w-3.5" />{t(mode === 'sequence' ? 'journey.editor.sequence' : 'journey.editor.compare')}
+            {mode === 'compare' && comparisonTracks.length > 0 && <span className="text-[10px] opacity-70">{comparisonTracks.length + 1}</span>}
+          </button>;
+        })}
+      </div>
+
+      <section className="border-b border-[var(--evergreen)]/15 pb-4">
+        <div className="mb-2.5 flex items-center justify-between gap-2">
+          <label htmlFor="journey-total-duration" className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--evergreen)]"><Clock className="h-3.5 w-3.5" />{t('journey.editor.videoDuration')}</label>
+          <div className="flex items-center gap-1.5 rounded-md border border-[var(--evergreen)]/15 bg-white/40 px-2 py-1">
+            <input id="journey-total-duration" key={totalDuration} type="number" min={Math.max(1, journeySegments.length)} max="86400" defaultValue={Math.round(totalDuration / 1000)} disabled={journeySegments.length === 0}
+              onBlur={(event) => { const seconds = Number(event.target.value); if (Number.isFinite(seconds) && seconds > 0) { if (seconds !== Math.round(totalDuration / 1000)) setVideoDuration(Math.max(journeySegments.length, seconds)); } else event.target.value = String(Math.round(totalDuration / 1000)); }}
+              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+              className="w-12 bg-transparent text-right text-xs font-bold tabular-nums text-[var(--evergreen)] outline-none" />
+            <span className="text-[10px] text-[var(--evergreen-60)]">{t('common.secondsShort')}</span>
           </div>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {VIDEO_DURATION_OPTIONS.map((seconds) => <button key={seconds} type="button" disabled={journeySegments.length === 0} onClick={() => setVideoDuration(seconds)} aria-pressed={Math.round(totalDuration / 1000) === seconds}
+            className={`rounded-md border px-2 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-40 ${Math.round(totalDuration / 1000) === seconds ? 'border-[var(--trail-orange)] bg-[var(--trail-orange)] text-white' : 'border-[var(--evergreen)]/10 bg-[var(--evergreen)]/5 text-[var(--evergreen-70)] hover:border-[var(--trail-orange)]'}`}>
+            {seconds} {t('common.secondsShort')}
+          </button>)}
         </div>
       </section>
 
-      {/* Journey Stats */}
-      {journeySegments.length > 0 && (
-        <div className="bg-[var(--evergreen)] text-[var(--canvas)] p-3 rounded-lg">
-          <div className="flex justify-between text-sm">
-            <span>{t('journey.totalDistance')}</span>
-            <span className="font-bold">{formatDistance(totalDistance, settings.unitSystem)}</span>
+      {editorMode === 'compare' ? <JourneyComparisonEditor onReturnToSequence={() => setEditorMode('sequence')} /> : (
+        <section>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-xs font-bold text-[var(--evergreen)]">{t('journey.editor.sequenceRoutes')}</h3>
+            <span className="text-[9px] text-[var(--evergreen-60)]">{t('journey.dragToReorder')}</span>
           </div>
-          <div className="flex justify-between text-sm mt-1">
-            <span>{t('journey.totalDuration')}</span>
-            <span className="font-bold">{formatDuration(totalDuration / 1000)}</span>
-          </div>
-          <div className="flex justify-between text-sm mt-1">
-            <span>{t('journey.totalSegments')}</span>
-            <span className="font-bold">{journeySegments.length}</span>
-          </div>
-        </div>
-      )}
-
-      {journeySegments.filter((segment) => segment.type === 'track').length > 1 && (
-        <section className="rounded-xl border border-[var(--evergreen)]/20 bg-[var(--evergreen)]/5 p-3">
-          <div className="flex items-start gap-2">
-            <GitCompareArrows className="mt-0.5 h-4 w-4 shrink-0 text-[var(--trail-orange)]" />
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wide text-[var(--evergreen)]">
-                {t('journey.statsMode')}
-              </h3>
-              <p className="mt-1 text-[11px] leading-4 text-[var(--evergreen-60)]">
-                {t('journey.statsModeHint')}
-              </p>
+          {journeySegments.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--evergreen)]/20 px-4 py-6 text-center text-[var(--evergreen-60)]">
+              <Route className="mx-auto mb-2 h-6 w-6 opacity-50" />
+              <p className="text-xs font-semibold">{t('journey.emptyTitle')}</p>
+              <p className="mt-1 text-[10px]">{t('journey.emptySubtitle')}</p>
             </div>
+          ) : <div className="space-y-2">
+            {journeySegments.map((segment, index) => (
+              <div key={segment.id} className={draggedIndex === index ? 'opacity-50' : ''} draggable
+                onDragStart={() => handleDragStart(index)} onDragOver={(event) => handleDragOver(event, index)} onDragEnd={handleDragEnd}>
+                {segment.type === 'track' ? <TrackSegmentItem segment={segment} index={index}
+                  onRemove={() => removeJourneySegment(segment.id)}
+                  onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 30000) / 1000); }}
+                  onSeek={() => seekToProgress(getSegmentProgress(index))} /> :
+                  <TransportSegmentItem segment={segment} index={index}
+                    onRemove={() => removeJourneySegment(segment.id)}
+                    onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 5000) / 1000); }}
+                    onSeek={() => seekToProgress(getSegmentProgress(index))} />}
+                {index < journeySegments.length - 1 && segment.type === 'track' && journeySegments[index + 1].type === 'track' && (
+                  <div className="ml-6 border-l border-[var(--evergreen)]/20 py-2 pl-4">
+                    <button type="button" onClick={() => { setSelectedTransportIndex(index); setShowTransportMenu(true); }}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
+                      <Plus className="h-3.5 w-3.5 rounded-full border border-current p-0.5" />{t('journey.addTransport')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>}
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <button type="button" onClick={addAllTracksToJourney} className="flex items-center gap-1.5 rounded-lg border border-[var(--evergreen)]/20 px-2.5 py-2 text-[10px] font-semibold text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5"><Plus className="h-3 w-3" />{t('journey.addAllTracks')}</button>
+            {journeySegments.length > 0 && <button type="button" onClick={clearJourney} className="px-2 py-2 text-[10px] text-red-600 hover:underline">{t('journey.clearJourney')}</button>}
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {(['cumulative', 'per-track'] as const).map((mode) => {
-              const active = settings.journeyStatsMode === mode;
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setSettings({ journeyStatsMode: mode })}
-                  aria-pressed={active}
-                  className={`min-w-0 rounded-lg border px-2 py-2 text-xs font-semibold transition-colors ${
-                    active
-                      ? 'border-[var(--evergreen)] bg-[var(--evergreen)] text-[var(--canvas)]'
-                      : 'border-[var(--evergreen)]/20 bg-[var(--canvas)] text-[var(--evergreen)] hover:border-[var(--trail-orange)]/60 hover:bg-[var(--trail-orange-15)]'
-                  }`}
-                >
-                  {t(mode === 'cumulative' ? 'journey.statsModeCumulative' : 'journey.statsModePerTrack')}
-                </button>
-              );
-            })}
-          </div>
+          {comparisonTracks.length > 0 && <button type="button" onClick={() => setEditorMode('compare')} className="mt-3 flex w-full items-center gap-2 rounded-lg bg-[var(--evergreen)]/5 px-3 py-2 text-left text-[10px] text-[var(--evergreen-70)]"><GitCompareArrows className="h-3.5 w-3.5 shrink-0" /><span className="flex-1">{t('journey.runsSimultaneously')} · {comparisonTracks.length}</span><ArrowRight className="h-3 w-3" /></button>}
         </section>
       )}
 
-      {/* Quick Start */}
-      {tracks.length > 1 && (
-        <div className="bg-[var(--trail-orange-15)] border border-[var(--trail-orange)]/30 rounded-lg p-3">
-          <h3 className="text-xs font-bold text-[var(--trail-orange)] uppercase tracking-wide mb-2">
-            {t('journey.quickStart')}
-          </h3>
-          <p className="text-xs text-[var(--evergreen)]">
-            {t('journey.quickStartHint')}
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={addAllTracksToJourney}
-              className="flex-1 tr-btn tr-btn-primary"
-            >
-              {t('journey.addAllTracks')}
-            </button>
-            {journeySegments.length > 0 && (
-              <button
-                onClick={() => clearJourney()}
-                className="flex-1 tr-btn tr-btn-secondary"
-              >
-                {t('journey.clearJourney')}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Add Tracks */}
-      {tracks.length > 1 && (
-        <div>
-          <h3 className="text-sm font-bold text-[var(--evergreen)] mb-2 uppercase tracking-wide">
-            {t('journey.addTracksTitle')}
-          </h3>
-          <p className="text-xs text-[var(--evergreen-60)] mb-2">
-            {t('journey.addTracksHint')}
-          </p>
-          <div className="space-y-1">
-            {tracks.map((track) => {
-              const isInJourney = journeySegments.some(s => s.type === 'track' && s.trackId === track.id);
-              return (
-                <button
-                  key={track.id}
-                  onClick={() => addTrackToJourney(track.id)}
-                  disabled={isInJourney}
-                  className={`
-                    w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm
-                    transition-colors
-                    ${isInJourney 
-                      ? 'bg-[var(--evergreen)]/10 text-[var(--evergreen-60)] cursor-not-allowed' 
-                      : 'bg-[var(--evergreen)]/5 text-[var(--evergreen)] hover:bg-[var(--evergreen)]/10'
-                    }
-                  `}
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="flex-1 truncate">{track.name}</span>
-                  {isInJourney && <span className="text-xs">({t('journey.added')})</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      
-      {/* Journey Timeline */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide flex items-center gap-2">
-            <Route className="w-4 h-4" />
-            {t('journey.timelineTitle')}
-          </h3>
-          {journeySegments.length > 0 && (
-            <span className="text-xs text-[var(--evergreen-60)]">
-              {t('journey.dragToReorder')}
-            </span>
-          )}
-        </div>
+      {journeySegments.length > 0 && <div className="grid grid-cols-3 divide-x divide-[var(--evergreen)]/15 border-y border-[var(--evergreen)]/15 py-3 text-center">
+        <div><span className="block text-xs font-bold text-[var(--evergreen)]">{formatDistance(totalDistance, settings.unitSystem)}</span><span className="mt-1 block text-[9px] text-[var(--evergreen-60)]">{t('journey.totalDistance').replace(':', '')}</span></div>
+        <div><span className="block text-xs font-bold text-[var(--evergreen)]">{formatDuration(totalDuration / 1000)}</span><span className="mt-1 block text-[9px] text-[var(--evergreen-60)]">{t('journey.editor.videoDuration')}</span></div>
+        <div><span className="block text-xs font-bold text-[var(--evergreen)]">{journeySegments.length}</span><span className="mt-1 block text-[9px] text-[var(--evergreen-60)]">{t('journey.totalSegments').replace(':', '')}</span></div>
+      </div>}
 
-        {journeySegments.length === 0 ? (
-          <div className="text-center py-8 text-[var(--evergreen-60)] border-2 border-dashed border-[var(--evergreen)]/20 rounded-lg">
-            <p className="text-sm">{t('journey.emptyTitle')}</p>
-            <p className="text-xs mt-1">{t('journey.emptySubtitle')}</p>
+      <details className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)]"><Clock className="h-3.5 w-3.5" /><span className="flex-1">{t('journey.editor.paceAndStats')}</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" /></summary>
+        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-3">
+          <div><h4 className="text-[10px] font-semibold uppercase tracking-wide text-[var(--evergreen-60)]">{t('journey.routeTiming')}</h4>
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-[var(--evergreen)]/15 p-1">{(['recorded', 'uniform'] as const).map((mode) => <button key={mode} type="button" onClick={() => setRouteTimingMode(mode)} aria-pressed={routeTimingMode === mode}
+              className={`rounded-md px-1 py-2 text-[10px] font-semibold ${routeTimingMode === mode ? 'bg-[var(--evergreen)] text-[var(--canvas)]' : 'text-[var(--evergreen-60)]'}`}>{t(mode === 'recorded' ? 'journey.routeTimingRecorded' : 'journey.routeTimingUniform')}</button>)}</div>
+            <p className="mt-2 text-[10px] leading-relaxed text-[var(--evergreen-60)]">{t('journey.routeTimingHint')}</p>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {journeySegments.map((segment, index) => (
-              <div 
-                key={segment.id} 
-                className={`
-                  ${draggedIndex === index ? 'opacity-50' : ''}
-                `}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-              >
-                {segment.type === 'track' ? (
-                  <TrackSegmentItem 
-                    segment={segment} 
-                    index={index}
-                    onRemove={() => removeJourneySegment(segment.id)}
-                    onEditDuration={() => {
-                      setEditingSegment(segment.id);
-                      setCustomDuration((segment.duration || 30000) / 1000);
-                    }}
-                    onSeek={() => seekToProgress(getSegmentProgress(index))}
-                  />
-                ) : (
-                  <TransportSegmentItem 
-                    segment={segment} 
-                    index={index}
-                    onRemove={() => removeJourneySegment(segment.id)}
-                    onEditDuration={() => {
-                      setEditingSegment(segment.id);
-                      setCustomDuration((segment.duration || 5000) / 1000);
-                    }}
-                    onSeek={() => seekToProgress(getSegmentProgress(index))}
-                  />
-                )}
-                
-                {/* Add Transport Button */}
-                {index < journeySegments.length - 1 && 
-                 journeySegments[index].type === 'track' && 
-                 journeySegments[index + 1].type === 'track' && (
-                  <button
-                    onClick={() => {
-                      setSelectedTransportIndex(index);
-                      setShowTransportMenu(true);
-                    }}
-                    className="ml-8 mt-1 text-xs text-[var(--trail-orange)] hover:underline flex items-center gap-1 bg-[var(--trail-orange-15)] px-2 py-1 rounded"
-                  >
-                    <Plus className="w-3 h-3" />
-                    {t('journey.addTransport')}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      
-      {/* Comparison Tracks running simultaneously */}
-      {comparisonTracks.length > 0 && journeySegments.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <GitCompareArrows className="w-4 h-4 text-[var(--evergreen-60)]" />
-            <h3 className="text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide">
-              {t('journey.runsSimultaneously')}
-            </h3>
-          </div>
-          <div className="rounded-lg border-2 border-dashed border-[var(--evergreen)]/30 p-3 space-y-2 bg-[var(--evergreen)]/3">
-            <p className="text-xs text-[var(--evergreen-60)] mb-2">
-              {t('journey.runsSimultaneouslyHint')}
-            </p>
-            {comparisonTracks.map((ct) => (
-              <div
-                key={ct.id}
-                className="flex items-center gap-3 bg-[var(--canvas)] rounded-lg p-2 border border-[var(--evergreen)]/10"
-              >
-                <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: ct.color + '25' }}>
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: ct.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--evergreen)] truncate">{ct.name}</p>
-                  <div className="flex gap-3 text-[10px] text-[var(--evergreen-60)] mt-0.5">
-                    <span>{formatDistance(ct.track.totalDistance, settings.unitSystem)}</span>
-                    {ct.track.totalTime > 0 && <span>{formatDuration(ct.track.totalTime)}</span>}
-                  </div>
-                </div>
-                {/* Visual indicator showing it runs across full journey */}
-                <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-1">
-                    <div className="w-16 h-1.5 rounded-full" style={{ backgroundColor: ct.color + '40' }}>
-                      <div className="h-full w-full rounded-full" style={{ backgroundColor: ct.color, opacity: 0.7 }} />
-                    </div>
-                  </div>
-                  <span className="text-[9px] text-[var(--evergreen-60)]">{t('journey.fullJourney')}</span>
-                </div>
-              </div>
-            ))}
+          <div><h4 className="text-[10px] font-semibold uppercase tracking-wide text-[var(--evergreen-60)]">{t('journey.statsMode')}</h4>
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-[var(--evergreen)]/15 p-1">{(['cumulative', 'per-track'] as const).map((mode) => <button key={mode} type="button" onClick={() => setSettings({ journeyStatsMode: mode })} aria-pressed={settings.journeyStatsMode === mode}
+              className={`rounded-md px-1 py-2 text-[10px] font-semibold ${settings.journeyStatsMode === mode ? 'bg-[var(--evergreen)] text-[var(--canvas)]' : 'text-[var(--evergreen-60)]'}`}>{t(mode === 'cumulative' ? 'journey.statsModeCumulative' : 'journey.statsModePerTrack')}</button>)}</div>
+            <p className="mt-2 text-[10px] leading-relaxed text-[var(--evergreen-60)]">{t('journey.statsModeHint')}</p>
           </div>
         </div>
-      )}
+      </details>
+
+      <details className="group rounded-xl border border-[var(--evergreen)]/15" open={journeySegments.length === 0 ? true : undefined}>
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)]"><Library className="h-3.5 w-3.5" /><span className="flex-1">{t('journey.editor.loadedRoutes')} ({tracks.length})</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" /></summary>
+        <div className="space-y-1 border-t border-[var(--evergreen)]/10 p-2">
+          {tracks.map((track) => {
+            const isInJourney = journeySegments.some((segment) => segment.type === 'track' && segment.trackId === track.id);
+            return <button key={track.id} type="button" onClick={() => addTrackToJourney(track.id)} disabled={isInJourney}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-55">
+              {renderActivityIcon(track.activityIcon, { size: 23, color: track.color })}
+              <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-semibold" title={track.name}>{track.name}</span><span className="text-[9px] text-[var(--evergreen-60)]">{formatDistance(track.totalDistance, settings.unitSystem)}</span></span>
+              {isInJourney ? <span className="text-[9px]">{t('journey.added')}</span> : <Plus className="h-3.5 w-3.5" />}
+            </button>;
+          })}
+        </div>
+      </details>
+
+      <details className="text-[var(--evergreen-60)]"><summary className="cursor-pointer text-[10px]">{t('journey.quickStart')}</summary><p className="mt-2 text-[10px] leading-relaxed">{t('journey.quickStartHint')}</p><p className="mt-2 text-[10px] leading-relaxed">{t('journey.customDurationHint')}</p></details>
+      <button type="button" onClick={() => setActivePanel('annotations')} className="tr-btn tr-btn-primary flex w-full items-center justify-center gap-2 text-xs">{t('workflow.next', { step: t('sidebar.tabs.annotations') })}<ArrowRight className="h-3.5 w-3.5" /></button>
 
       {/* Transport Mode Selector */}
       {showTransportMenu && (
@@ -478,13 +304,13 @@ export function JourneyPanel() {
               {t('journey.selectTransportHint')}
             </p>
             <div className="grid grid-cols-3 gap-3">
-              {TRANSPORT_MODES.map(({ mode, icon: Icon, labelKey, color }) => (
+              {TRANSPORT_MODES.map(({ mode, labelKey, color }) => (
                 <button
                   key={mode}
                   onClick={() => addTransport(mode)}
                   className="flex flex-col items-center gap-2 p-3 border-2 border-[var(--evergreen)]/20 rounded-lg hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)] transition-colors"
                 >
-                  <Icon className="w-6 h-6" style={{ color }} />
+                  {renderJourneyTransportIcon(mode, 24, color)}
                   <span className="text-xs text-[var(--evergreen)]">{t(labelKey)}</span>
                 </button>
               ))}
@@ -512,11 +338,12 @@ export function JourneyPanel() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-[var(--evergreen-60)] mb-1 block">
+                <label htmlFor="journey-segment-duration" className="text-sm text-[var(--evergreen-60)] mb-1 block">
                   {t('journey.durationSeconds')}
                 </label>
                 <div className="flex items-center gap-2">
                   <input
+                    id="journey-segment-duration"
                     type="number"
                     value={customDuration}
                     onChange={(e) => {

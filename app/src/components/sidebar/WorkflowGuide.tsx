@@ -16,11 +16,21 @@ export function WorkflowGuide() {
   const { t } = useI18n();
   const activePanel = useAppStore((state) => state.activePanel);
   const setActivePanel = useAppStore((state) => state.setActivePanel);
-  const journeySegments = useAppStore((state) => state.journeySegments);
   const activeIndex = Math.max(0, steps.findIndex((step) => step.id === activePanel));
   const activeStep = steps[activeIndex];
   const nextStep = steps[activeIndex + 1];
-  const durationSeconds = Math.round(journeySegments.reduce((total, segment) => total + (segment.duration || 0), 0) / 1000);
+
+  if (activePanel === 'journey') return (
+    <section className="mb-4">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--trail-orange)]">{t('workflow.step', { current: activeIndex + 1, total: steps.length })}</p>
+      <h2 className="mt-1 text-lg font-bold tracking-tight text-[var(--evergreen)]">{t(activeStep.labelKey)}</h2>
+      <p className="mt-1 text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t('journey.editor.description')}</p>
+      <div className="mt-3 grid grid-cols-6 gap-1" aria-label={t('workflow.progressLabel')}>
+        {steps.map((step, index) => <button key={step.id} type="button" onClick={() => setActivePanel(step.id)} aria-label={t(step.labelKey)}
+          className={`h-1 rounded-full ${index <= activeIndex ? 'bg-[var(--trail-orange)]' : 'bg-[var(--evergreen)]/10'}`} />)}
+      </div>
+    </section>
+  );
 
   return (
     <section className="mb-4 rounded-xl border border-[var(--trail-orange)]/35 bg-[var(--trail-orange-15)] p-3">
@@ -28,11 +38,6 @@ export function WorkflowGuide() {
         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--trail-orange)]">
           {t('workflow.step', { current: activeIndex + 1, total: steps.length })}
         </p>
-        {activePanel === 'journey' && durationSeconds > 0 && (
-          <span className="rounded-full bg-[var(--evergreen)] px-2 py-1 text-[10px] font-bold text-[var(--canvas)]">
-            {t('workflow.videoDurationStatus', { seconds: durationSeconds })}
-          </span>
-        )}
       </div>
       <h2 className="mt-1 text-sm font-bold text-[var(--evergreen)]">{t(activeStep.labelKey)}</h2>
       <p className="mt-1 text-xs leading-4 text-[var(--evergreen-80)]">{t(activeStep.descriptionKey)}</p>

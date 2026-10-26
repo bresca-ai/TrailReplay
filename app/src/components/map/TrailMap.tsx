@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PaintedTrailMarker } from '@/utils/paintedTrailMarker';
@@ -8,7 +8,9 @@ import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
 import { useSuggestedFollowBehindDistance } from '@/components/map/hooks/useSuggestedFollowBehindDistance';
 import { MapElevationProfile } from './MapElevationProfile';
+import { ComparisonLeaderboard } from './ComparisonLeaderboard';
 import { useI18n } from '@/i18n/useI18n';
+import { areFollowingSamePath } from '@/utils/routeComparisonSharedPath';
 import { MAP_LAYERS } from './mapStyle';
 import {
   getFollowBehindLevelForStopIndex,
@@ -22,6 +24,7 @@ import { shouldShowRouteLandmarks, useRouteLandmarksLayer } from './hooks/useRou
 import { useLandmarkPlacement } from './hooks/useLandmarkPlacement';
 import { useRouteLandmarks } from '@/hooks/useRouteLandmarks';
 import { useComparisonTrackLayers } from './hooks/useComparisonTrackLayers';
+import { useRouteComparisonCamera } from './hooks/useRouteComparisonCamera';
 import { useBaseMapPresentation } from './hooks/useBaseMapPresentation';
 import { useMapInitialization } from './hooks/useMapInitialization';
 import { useTrailLayerData } from './hooks/useTrailLayerData';
@@ -59,12 +62,14 @@ export function TrailMap(_props: TrailMapProps) {
   const settings = useAppStore((state) => state.settings);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
   const cameraSettings = useAppStore((state) => state.cameraSettings);
+  const sourceRecipe = useAppStore((state) => state.sourceRecipe);
   const pictures = useAppStore((state) => state.pictures);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
   const pendingPicturePlacements = useAppStore((state) => state.pendingPicturePlacements);
   const playback = useAppStore((state) => state.playback);
   const animationPhase = useAppStore((state) => state.animationPhase);
   const isExporting = useAppStore((state) => state.isExporting);
+  const isDeterministicExport = useAppStore((state) => state.isDeterministicExport);
   const setAnimationPhase = useAppStore((state) => state.setAnimationPhase);
   const setCameraPosition = useAppStore((state) => state.setCameraPosition);
   const setCameraSettings = useAppStore((state) => state.setCameraSettings);
@@ -73,6 +78,7 @@ export function TrailMap(_props: TrailMapProps) {
   const addVideo = useAppStore((state) => state.addVideo);
   const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
+  const comparisonMode = useAppStore((state) => state.comparisonMode);
   const landmarks = useRouteLandmarks();
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const isPlacingLandmark = useAppStore((state) => state.isPlacingLandmark);
@@ -106,6 +112,7 @@ export function TrailMap(_props: TrailMapProps) {
     activeTrack,
     computedJourney,
     totalDistance,
+    routeProgress,
   } = useComputedJourney();
 
   // Derive the current track name for the label
@@ -115,10 +122,21 @@ export function TrailMap(_props: TrailMapProps) {
   const cameraMode = cameraSettings.mode;
   const followBehindZoomLevel = cameraSettings.followBehindZoomLevel;
   const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
+  const routeComparisonActive = comparisonMode === 'route' && comparisonTracks.some((track) => track.visible);
+  const primaryComparisonTrack = tracks.find((track) => track.id === currentPosition?.trackId) ?? activeTrack ?? null;
+  const activeRouteComparisons = useMemo(() => comparisonMode === 'route' && primaryComparisonTrack
+    ? comparisonTracks.filter((track) => track.visible && (!track.groupId || track.groupId === primaryComparisonTrack.id))
+    : [], [comparisonMode, comparisonTracks, primaryComparisonTrack]);
+  const sharedRouteComparisons = useMemo(() => currentPosition && primaryComparisonTrack
+    ? activeRouteComparisons.filter((track) => areFollowingSamePath(primaryComparisonTrack, track.track, currentPosition.distance))
+    : [], [activeRouteComparisons, currentPosition, primaryComparisonTrack]);
+  const sharedTrackIds = useMemo(() => sharedRouteComparisons.map((track) => track.id), [sharedRouteComparisons]);
 
   useSuggestedFollowBehindDistance({
     allCoordinates,
     followBehindZoomLevel,
+    preserveAuthoredDistance: sourceRecipe?.cameraSettings?.followBehindPreset !== undefined
+      || sourceRecipe?.cameraSettings?.followBehindZoomLevel !== undefined,
     setCameraSettings,
     totalDistanceMeters: totalDistance,
     totalDurationMs: playback.totalDuration,
@@ -189,6 +207,10 @@ export function TrailMap(_props: TrailMapProps) {
     isMapLoaded,
     mapRef: map,
     currentTime: currentPosition?.time ?? null,
+    comparisonMode,
+    primaryTrack: primaryComparisonTrack,
+    primaryDistance: currentPosition?.distance ?? 0,
+    sharedTrackIds,
   });
 
   useBaseMapPresentation({
@@ -291,11 +313,12 @@ export function TrailMap(_props: TrailMapProps) {
     followBehindZoomLevel,
     isExporting,
     isPlaying: playback.isPlaying,
+    sharedComparisonColors: sharedRouteComparisons.map((track) => track.color),
     isInTransport,
     isMapLoaded,
     mapRef: map,
     markerRef,
-    playbackProgress: playback.progress,
+    playbackProgress: routeComparisonActive ? routeProgress : playback.progress,
     segmentTimings,
     setCameraPosition,
     smoothBearingRef,
@@ -306,14 +329,28 @@ export function TrailMap(_props: TrailMapProps) {
       colorZones: trailStyle.colorZones,
       currentIcon: trailStyle.currentIcon,
       markerColor: trailStyle.markerColor,
-      markerSize: trailStyle.markerSize,
-      markerType: trailStyle.markerType,
+      markerSize: routeComparisonActive ? 1.5 : trailStyle.markerSize,
+      markerType: routeComparisonActive ? 'dot' : trailStyle.markerType,
       overlayFont: trailStyle.overlayFont,
       showCircle: trailStyle.showCircle,
-      showMarker: trailStyle.showMarker,
+      showMarker: trailStyle.showMarker || routeComparisonActive,
       showTrackLabels: trailStyle.showTrackLabels,
       trailColor: trailStyle.trailColor,
     },
+  });
+
+  useRouteComparisonCamera({
+    enabled: comparisonMode === 'route' && playback.progress > 0 && (animationPhase === 'playing' || animationPhase === 'idle'),
+    isPlaying: playback.isPlaying,
+    isExporting,
+    isDeterministicExport,
+    currentTimeMs: playback.currentTime,
+    isMapLoaded,
+    mapRef: map,
+    primaryTrack: primaryComparisonTrack,
+    primaryDistance: currentPosition?.distance ?? 0,
+    comparisons: comparisonTracks,
+    exportFrame: _props.exportFrame,
   });
 
   // Applies in every camera mode, and to manual navigation as much as to the
@@ -485,6 +522,20 @@ export function TrailMap(_props: TrailMapProps) {
             <div className="w-6 h-6 border-2 border-[var(--trail-orange)] border-t-transparent rounded-full animate-spin" />
             <span className="text-[var(--evergreen)]">{t('map.loading')}</span>
           </div>
+        </div>
+      )}
+
+      {comparisonMode === 'time' && comparisonTracks.length > 0 && !isExporting && (
+        <ComparisonLeaderboard primaryTrack={activeTrack} comparisonTracks={comparisonTracks} currentTime={currentPosition?.time ?? null} />
+      )}
+
+      {routeComparisonActive && activeRouteComparisons.length > 0 && playback.progress > 0 && (animationPhase === 'playing' || animationPhase === 'idle') && (
+        <div role="status" aria-live="polite" className="absolute bottom-20 right-4 z-20 flex items-center gap-2 rounded-full border border-white/20 bg-[rgba(9,14,19,0.88)] px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-sm">
+          <span className="flex items-center -space-x-1" aria-hidden="true">
+            <span className="h-3.5 w-3.5 rounded-full border border-white" style={{ backgroundColor: primaryComparisonTrack?.color }} />
+            {activeRouteComparisons.map((track) => <span key={track.id} className="h-3.5 w-3.5 rounded-full border border-white" style={{ backgroundColor: track.color }} />)}
+          </span>
+          {sharedRouteComparisons.length === activeRouteComparisons.length ? t('tracks.routeShared') : t('tracks.routeSplit')}
         </div>
       )}
 

@@ -45,6 +45,7 @@ export function mergeRecipeCameraSettings(recipe: Recipe): CameraSettings {
   const authored = recipe.cameraSettings ?? {};
   const merged = { ...defaults, ...authored };
 
+  // Authored distances must use the same discrete ladder as the UI.
   if (authored.followBehindZoomLevel !== undefined) {
     const stopIndex = getFollowBehindStopIndexForLevel(authored.followBehindZoomLevel);
     const level = getFollowBehindLevelForStopIndex(stopIndex);

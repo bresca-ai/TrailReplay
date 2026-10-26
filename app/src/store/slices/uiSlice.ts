@@ -1,12 +1,16 @@
 import { defaultSidebarOpen } from '@/store/defaults';
+import { translate } from '@/i18n/translations';
 import type { AppState } from '@/store/storeTypes';
 import type { AppSliceCreator } from './types';
+import { comparisonIssueForMode, getComparisonAvailability } from '@/utils/comparisonAvailability';
 
 type UiSlice = Pick<
   AppState,
   | 'isSidebarOpen'
   | 'exploreMode'
   | 'activePanel'
+  | 'comparisonMode'
+  | 'comparisonSlowdown'
   | 'isLoading'
   | 'fileImportStatus'
   | 'error'
@@ -16,6 +20,8 @@ type UiSlice = Pick<
   | 'setSidebarOpen'
   | 'setExploreMode'
   | 'setActivePanel'
+  | 'setComparisonMode'
+  | 'setComparisonSlowdown'
   | 'setLoading'
   | 'setFileImportStatus'
   | 'setError'
@@ -28,6 +34,8 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   isSidebarOpen: defaultSidebarOpen,
   exploreMode: false,
   activePanel: 'tracks',
+  comparisonMode: 'time',
+  comparisonSlowdown: 0.25,
   isLoading: false,
   fileImportStatus: null,
   error: null,
@@ -67,6 +75,26 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
       }
       state.activePanel = panel;
     }),
+
+  setComparisonMode: (mode) => set((state) => {
+    if (state.comparisonTracks.some((track) => track.visible)) {
+      const primary = state.tracks.find((track) => track.id === state.activeTrackId) ?? state.tracks[0];
+      const availability = getComparisonAvailability(primary, state.comparisonTracks.filter((track) => track.visible).map((track) => track.track));
+      const issue = comparisonIssueForMode(availability, mode);
+      if (issue) {
+        state.error = translate(state.settings.language, `journey.editor.${issue}`);
+        return;
+      }
+    }
+    // The whole live comparison starts at a watchable pace. The player shows
+    // 0.5× and can still be adjusted; authored video duration stays intact.
+    if (mode === 'route' && state.comparisonMode !== 'route'
+      && state.comparisonTracks.length > 0 && state.playback.speed === 1) state.playback.speed = 0.5;
+    state.comparisonMode = mode;
+  }),
+  setComparisonSlowdown: (speed) => set((state) => {
+    if (Number.isFinite(speed)) state.comparisonSlowdown = Math.max(0.1, Math.min(1, speed));
+  }),
 
   setLoading: (isLoading) =>
     set((state) => {
