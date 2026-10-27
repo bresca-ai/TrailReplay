@@ -18,6 +18,24 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves the Taiwan locale and authored Chinese annotations through save and reopen', async () => {
+    const source = createAppStore();
+    source.getState().setSettings({ language: 'zh-TW' });
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
+    source.getState().addTextAnnotation({
+      id: 'aid-station', lat: 42.1, lon: 1.2, progress: 0.5, title: 'Aid station',
+      color: '#C1652F', displayDuration: 3000,
+      translations: { 'zh-TW': { title: '第一補給站', subtitle: '飲水與點心' } },
+    });
+    const blob = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([blob], '中文旅程.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.language).toBe('zh-TW');
+    expect(target.getState().journey?.name).toBe('我的旅程');
+    expect(target.getState().textAnnotations[0].translations?.['zh-TW']).toEqual({ title: '第一補給站', subtitle: '飲水與點心' });
+  });
+
   it('restores tracks, journey, pictures (as placeholders), and settings from a saved archive', async () => {
     const sourceStore = createAppStore();
     const track = parseGPX(sampleGpx, 'ridge-loop.gpx');

@@ -16,6 +16,12 @@ export const es = {
     support: 'Apoyar',
     supportTitle: 'Apoya TrailReplay',
   },
+  interface: {
+    hideTrack: 'Ocultar track', showTrack: 'Mostrar track', changeTrackColor: 'Cambiar color del track', useTrack: 'Usar este track', removeTrack: 'Eliminar track',
+    openSource: 'Historias de rutas de código abierto', exportCrop: 'Recorte de exportación:', osmContributors: 'Colaboradores de OpenStreetMap',
+    placeSection: 'Colocar una sección de zoom', placeSectionHint: 'Haz clic en el perfil para colocar una sección de zoom', adjustSection: 'Ajustar sección {index} {edge}', adjustSectionHint: 'Arrastra para ajustar {edge} de la sección', removeSection: 'Eliminar sección {index}', removeSectionHint: 'Eliminar sección de zoom', addSection: 'Añadir sección de zoom', cancelSection: 'Cancelar nueva sección de zoom',
+    mapCanvas: 'Mapa', resetBearing: 'Orientar el mapa al norte',
+  },
   sidebar: {
     tabs: {
       tracks: 'Rutas',
@@ -104,6 +110,17 @@ export const es = {
     loss: 'bajada',
     max: 'máx',
     points: 'puntos',
+  },
+  trackTrim: {
+    title: 'Recortar ruta', start: 'Inicio', end: 'Final',
+    timeHint: 'Arrastra ambos controles para conservar un intervalo continuo. Las horas se muestran en tu zona horaria.',
+    distanceHint: 'Faltan horas de registro o son inconsistentes. Selecciona un intervalo por distancia.',
+    pointsHint: 'No hay un eje de tiempo o distancia válido. Selecciona por orden de puntos.',
+    point: 'Punto {count}', selection: '{distance} · {count} puntos conservados',
+    snapHint: 'Los controles se ajustan a los puntos originales. Se conserva el tramo naranja y se eliminan los grises.',
+    apply: 'Aplicar a la ruta', download: 'Descargar GPX', cancel: 'Cancelar', restore: 'Restaurar original',
+    restoreHint: 'Puedes restaurar el original durante esta sesión. Los proyectos guardados y GPX descargados solo contienen la ruta actual.',
+    dependencies: 'Esta repetición contiene medios, anotaciones, rutas de comparación, fotogramas de cámara, transportes, secciones de elevación editadas o zonas de color. Puedes previsualizar y descargar el GPX recortado. Para aplicarlo aquí, recorta antes de añadir ese contenido.',
   },
   settings: {
     mapCameraTitle: 'Elige el mapa y la cámara',

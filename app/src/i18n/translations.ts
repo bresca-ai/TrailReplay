@@ -3,6 +3,9 @@ import { de } from './locales/de';
 import { en } from './locales/en';
 import { es } from './locales/es';
 import { fr } from './locales/fr';
+import { zhTW } from './locales/zhTW';
+import { LANGUAGE_CODES, type LanguageCode } from './languages';
+export type { LanguageCode } from './languages';
 
 export const translations = {
   en,
@@ -10,9 +13,9 @@ export const translations = {
   ca,
   de,
   fr,
+  'zh-TW': zhTW,
 } as const;
 
-export type LanguageCode = keyof typeof translations;
 export type TranslationTree = (typeof translations)[LanguageCode];
 
 export const languageLabels: Record<LanguageCode, string> = {
@@ -21,22 +24,35 @@ export const languageLabels: Record<LanguageCode, string> = {
   ca: 'Català',
   de: 'Deutsch',
   fr: 'Français',
+  'zh-TW': '正體中文（台灣）',
 };
+
+function supportedLanguage(value: string): LanguageCode | undefined {
+  const tag = value.toLowerCase().replace(/_/g, '-');
+  // Explicit script takes precedence over region: zh-Hans-TW is not Traditional Chinese.
+  if (/^zh-hant(?:-|$)/.test(tag) || tag === 'zh-tw') return 'zh-TW';
+  if (tag.startsWith('zh')) return undefined;
+  return LANGUAGE_CODES.find((language) => language === tag.split('-')[0]);
+}
 
 export function getInitialLanguage(): LanguageCode {
   if (typeof window === 'undefined') return 'en';
 
   try {
     const saved = localStorage.getItem('trailReplayLang');
-    if (saved && saved in translations) {
+    if (saved && LANGUAGE_CODES.includes(saved as LanguageCode)) {
       return saved as LanguageCode;
     }
   } catch {
     // Ignore storage access failures and fall back to browser/default language.
   }
 
-  const browser = navigator.language?.slice(0, 2) as LanguageCode | undefined;
-  return browser && browser in translations ? browser : 'en';
+  for (const preference of [navigator.language, ...(navigator.languages ?? [])]) {
+    if (!preference) continue;
+    const language = supportedLanguage(preference);
+    if (language) return language;
+  }
+  return 'en';
 }
 
 function resolveTranslationValue(source: TranslationTree, key: string): string | undefined {
@@ -60,5 +76,5 @@ export function translate(
 
   if (typeof raw !== 'string') return key;
 
-  return raw.replace(/\{(\w+)\}/g, (_match, token) => String(params[token] ?? `{${token}}`));
+  return raw.replace(/\{\{?(\w+)\}?\}/g, (_match, token) => String(params[token] ?? `{${token}}`));
 }
