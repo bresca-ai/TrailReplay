@@ -29,6 +29,8 @@ describe('shared route comparison path', () => {
     expect(areFollowingSamePath(primary, comparison, 150)).toBe(true);
     expect(areFollowingSamePath(primary, comparison, 350)).toBe(false);
     expect(areFollowingSamePath(primary, comparison, 450)).toBe(false);
+    expect(areFollowingSamePath(primary, comparison, 350, 50)).toBe(true);
+    expect(areFollowingSamePath(primary, comparison, 350, 20)).toBe(false);
     expect(areFollowingSamePath(primary, comparison, 650)).toBe(true);
   });
 

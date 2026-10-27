@@ -3,6 +3,7 @@ import { translate } from '@/i18n/translations';
 import type { AppState } from '@/store/storeTypes';
 import type { AppSliceCreator } from './types';
 import { comparisonIssueForMode, getComparisonAvailability } from '@/utils/comparisonAvailability';
+import { normalizeRouteDivergenceThreshold, ROUTE_DIVERGENCE_THRESHOLD_METERS } from '@/utils/routeDivergence';
 
 type UiSlice = Pick<
   AppState,
@@ -11,6 +12,7 @@ type UiSlice = Pick<
   | 'activePanel'
   | 'comparisonMode'
   | 'comparisonSlowdown'
+  | 'comparisonThresholdMeters'
   | 'isLoading'
   | 'fileImportStatus'
   | 'error'
@@ -22,6 +24,7 @@ type UiSlice = Pick<
   | 'setActivePanel'
   | 'setComparisonMode'
   | 'setComparisonSlowdown'
+  | 'setComparisonThresholdMeters'
   | 'setLoading'
   | 'setFileImportStatus'
   | 'setError'
@@ -36,6 +39,7 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   activePanel: 'tracks',
   comparisonMode: 'time',
   comparisonSlowdown: 0.25,
+  comparisonThresholdMeters: ROUTE_DIVERGENCE_THRESHOLD_METERS,
   isLoading: false,
   fileImportStatus: null,
   error: null,
@@ -94,6 +98,9 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   }),
   setComparisonSlowdown: (speed) => set((state) => {
     if (Number.isFinite(speed)) state.comparisonSlowdown = Math.max(0.1, Math.min(1, speed));
+  }),
+  setComparisonThresholdMeters: (meters) => set((state) => {
+    if (Number.isFinite(meters)) state.comparisonThresholdMeters = normalizeRouteDivergenceThreshold(meters);
   }),
 
   setLoading: (isLoading) =>

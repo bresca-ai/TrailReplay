@@ -29,12 +29,18 @@ describe('hydrateProject', () => {
     source.getState().moveTrackToComparison(second.id, first.id);
     source.getState().setComparisonMode('route');
     source.getState().setComparisonSlowdown(0.1);
+    source.getState().setComparisonThresholdMeters(65);
     const blob = await buildReplayArchive(source.getState());
     const parsed = await parseReplayArchive(new File([blob], 'comparison.replay'));
     const target = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
     expect(target.getState().comparisonMode).toBe('route');
     expect(target.getState().comparisonSlowdown).toBe(0.1);
+    expect(target.getState().comparisonThresholdMeters).toBe(65);
+    delete parsed.project!.comparisonThresholdMeters;
+    const legacy = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, legacy.getState());
+    expect(legacy.getState().comparisonThresholdMeters).toBe(30);
     expect(target.getState().comparisonTracks[0].track.activityIcon).toBe('svg-biking');
     target.getState().ungroupComparisonTrack(second.id);
     expect(target.getState().journeySegments).toEqual(originalSegments);

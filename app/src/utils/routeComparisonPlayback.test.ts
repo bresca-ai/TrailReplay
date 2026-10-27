@@ -32,6 +32,19 @@ describe('route comparison playback', () => {
     expect(plan.differences[0].start).toBeLessThanOrEqual(plan.splits[0].start);
   });
 
+  it('recomputes whole splits and slowdown windows when the threshold changes', () => {
+    const primary = track([[0, 0, 0], [700, 0, 700]]);
+    const comparison = track([[0, 0, 0], [200, 0, 200], [300, 10, 300], [400, 40, 400], [500, 10, 500], [600, 0, 600], [700, 0, 700]]);
+    const defaultPlan = getRouteComparisonPlan(primary, comparison);
+    const widerThreshold = getRouteComparisonPlan(primary, comparison, 50);
+    expect(defaultPlan.splits).toHaveLength(1);
+    expect(defaultPlan.differences).toHaveLength(1);
+    expect(widerThreshold.splits).toEqual([]);
+    expect(widerThreshold.differences).toEqual([]);
+    expect(getRouteComparisonPlan(primary, comparison, 30)).toBe(defaultPlan);
+    expect(getRouteComparisonPlan(primary, comparison, 50)).toBe(widerThreshold);
+  });
+
   it('allocates more frames to differences while preserving start, finish and monotonic seeking', () => {
     const differences = [{ start: 0.4, end: 0.6 }];
     expect(routeProgressWithSlowdown(0, differences, 0.25)).toBe(0);

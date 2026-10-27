@@ -29,6 +29,7 @@ interface UseComparisonTrackLayersParams {
    */
   currentTime: Date | null;
   comparisonMode: 'time' | 'route';
+  comparisonThresholdMeters: number;
   primaryTrack?: GPXTrack | null;
   primaryDistance: number;
   sharedTrackIds: readonly string[];
@@ -69,6 +70,7 @@ export function useComparisonTrackLayers({
   mapRef,
   currentTime,
   comparisonMode,
+  comparisonThresholdMeters,
   primaryTrack,
   primaryDistance,
   sharedTrackIds,
@@ -86,10 +88,10 @@ export function useComparisonTrackLayers({
     const result = new Map<string, GeoJSON.FeatureCollection>();
     if (comparisonMode !== 'route' || !primaryTrack?.points.length) return result;
     for (const track of comparisonTracks) {
-      result.set(track.id, buildRouteDivergences(primaryTrack.points, track.track.points));
+      result.set(track.id, buildRouteDivergences(primaryTrack.points, track.track.points, comparisonThresholdMeters));
     }
     return result;
-  }, [comparisonMode, comparisonTracks, primaryTrack]);
+  }, [comparisonMode, comparisonTracks, primaryTrack, comparisonThresholdMeters]);
 
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded) return;
@@ -241,7 +243,7 @@ export function useComparisonTrackLayers({
       let position;
       if (comparisonMode === 'route' && primaryTrack) {
         if (comparisonTrack.groupId && comparisonTrack.groupId !== primaryTrack.id) return;
-        const plan = getRouteComparisonPlan(primaryTrack, comparisonTrack.track);
+        const plan = getRouteComparisonPlan(primaryTrack, comparisonTrack.track, comparisonThresholdMeters);
         const point = interpolateTrackPoint(comparisonTrack.track, comparisonDistanceAtPrimary(plan, primaryDistance));
         if (!point) return;
         position = { ...point, state: 'during' };
@@ -288,5 +290,5 @@ export function useComparisonTrackLayers({
         });
       }
     });
-  }, [comparisonTracks, currentTime, isMapLoaded, mapRef, timeIndexes, comparisonMode, primaryTrack, primaryDistance, sharedTrackIds]);
+  }, [comparisonTracks, currentTime, isMapLoaded, mapRef, timeIndexes, comparisonMode, primaryTrack, primaryDistance, sharedTrackIds, comparisonThresholdMeters]);
 }

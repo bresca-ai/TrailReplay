@@ -117,6 +117,7 @@ export interface ReplayProjectFile {
   comparisonTracks?: ReplayComparisonTrackMeta[];
   comparisonMode?: 'time' | 'route';
   comparisonSlowdown?: number;
+  comparisonThresholdMeters?: number;
   journey?: Journey | null;
   journeySegments?: JourneySegment[];
   pictures?: SerializedPicture[];

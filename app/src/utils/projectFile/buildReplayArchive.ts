@@ -112,6 +112,7 @@ export async function buildReplayArchive(state: AppState): Promise<Blob> {
     comparisonTracks: comparisonTrackMetas,
     comparisonMode: state.comparisonMode,
     comparisonSlowdown: state.comparisonSlowdown,
+    comparisonThresholdMeters: state.comparisonThresholdMeters,
     journey: state.journey,
     journeySegments: state.journeySegments,
     pictures: state.pictures.map(serializePicture),

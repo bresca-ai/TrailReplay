@@ -1,5 +1,5 @@
 import type { GPXTrack } from '@/types';
-import { buildRouteDivergences, createRouteMatcher } from './routeDivergence';
+import { buildRouteDivergences, createRouteMatcher, normalizeRouteDivergenceThreshold } from './routeDivergence';
 
 export interface ProgressWindow { start: number; end: number }
 export interface RouteComparisonPlan {
@@ -11,7 +11,7 @@ export interface RouteComparisonPlan {
   differences: ProgressWindow[];
 }
 
-const planCache = new WeakMap<GPXTrack, WeakMap<GPXTrack, RouteComparisonPlan>>();
+const planCache = new WeakMap<GPXTrack, WeakMap<GPXTrack, Map<number, RouteComparisonPlan>>>();
 
 function interpolateAnchors(anchors: RouteComparisonPlan['anchors'], distance: number, from: 'primary' | 'comparison') {
   const to = from === 'primary' ? 'comparison' : 'primary';
@@ -49,10 +49,13 @@ export function mergeProgressWindows(windows: ProgressWindow[]): ProgressWindow[
   return result;
 }
 
-export function getRouteComparisonPlan(primary: GPXTrack, comparison: GPXTrack): RouteComparisonPlan {
+export function getRouteComparisonPlan(primary: GPXTrack, comparison: GPXTrack, threshold?: number): RouteComparisonPlan {
+  const thresholdMeters = normalizeRouteDivergenceThreshold(threshold);
   let cache = planCache.get(primary);
   if (!cache) { cache = new WeakMap(); planCache.set(primary, cache); }
-  const cached = cache.get(comparison);
+  let plans = cache.get(comparison);
+  if (!plans) { plans = new Map(); cache.set(comparison, plans); }
+  const cached = plans.get(thresholdMeters);
   if (cached) return cached;
   const anchors: RouteComparisonPlan['anchors'] = [{ primary: 0, comparison: 0 }];
   const match = createRouteMatcher(primary.points);
@@ -71,7 +74,7 @@ export function getRouteComparisonPlan(primary: GPXTrack, comparison: GPXTrack):
     // Highlight and slow down both detours and shortcuts, including parts
     // present only in the primary GPX.
     for (const reverse of [false, true]) {
-      const differences = reverse ? buildRouteDivergences(comparison.points, primary.points) : buildRouteDivergences(primary.points, comparison.points);
+      const differences = reverse ? buildRouteDivergences(comparison.points, primary.points, thresholdMeters) : buildRouteDivergences(primary.points, comparison.points, thresholdMeters);
       for (const feature of differences.features) {
         if (feature.geometry.type !== 'LineString') continue;
         const start = Number(feature.properties?.startDistance ?? 0);
@@ -85,7 +88,8 @@ export function getRouteComparisonPlan(primary: GPXTrack, comparison: GPXTrack):
     }
   }
   const plan = { anchors, splits: mergeProgressWindows(splitWindows), differences: mergeProgressWindows(windows) };
-  cache.set(comparison, plan);
+  if (plans.size >= 8) plans.delete(plans.keys().next().value!);
+  plans.set(thresholdMeters, plan);
   return plan;
 }
 

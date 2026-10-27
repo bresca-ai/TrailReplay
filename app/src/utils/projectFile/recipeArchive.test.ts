@@ -64,6 +64,13 @@ describe('a .replay holding only a recipe', () => {
 });
 
 describe('round trip', () => {
+  it('applies the authored comparison distance from a recipe', () => {
+    const authored = { ...recipe, comparisonThresholdMeters: 80 };
+    const resolved = resolveRecipe(authored, [parseGPX(gpx, 'ridge.gpx')], ['ridge.gpx']);
+    const store = createAppStore();
+    applyRecipe(authored, resolved, store.getState());
+    expect(store.getState().comparisonThresholdMeters).toBe(80);
+  });
   it('keeps the recipe through a save, so the source is not lost', async () => {
     const parsed = await parseReplayArchive(packRecipeArchive());
     const tracks = parsed.routes.map((route) => parseGPX(route.gpxText, route.fileName));

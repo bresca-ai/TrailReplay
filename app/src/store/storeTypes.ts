@@ -35,6 +35,7 @@ export interface AppState {
   comparisonTracks: ComparisonTrack[];
   comparisonMode: 'time' | 'route';
   comparisonSlowdown: number;
+  comparisonThresholdMeters: number;
   journey: Journey | null;
   journeySegments: JourneySegment[];
   cinematicCameraKeyframes: CinematicCameraKeyframe[];
@@ -112,6 +113,7 @@ export interface AppState {
   updateComparisonColor: (trackId: string, color: string) => void;
   setComparisonMode: (mode: AppState['comparisonMode']) => void;
   setComparisonSlowdown: (speed: number) => void;
+  setComparisonThresholdMeters: (meters: number) => void;
   createJourney: (name: string) => void;
   updateJourneyName: (name: string) => void;
   addJourneySegment: (segment: JourneySegment) => void;

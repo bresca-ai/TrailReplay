@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { buildRouteDivergences } from './routeDivergence';
+import { buildRouteDivergences, normalizeRouteDivergenceThreshold } from './routeDivergence';
 
 const point = (x: number, y: number, distance: number) => ({ lat: y / 111320, lon: x / 111320, distance });
 
 describe('route divergence geometry', () => {
+  it('validates saved and entered thresholds against the supported range', () => {
+    expect(normalizeRouteDivergenceThreshold(undefined)).toBe(30);
+    expect(normalizeRouteDivergenceThreshold(Number.NaN)).toBe(30);
+    expect(normalizeRouteDivergenceThreshold(2)).toBe(5);
+    expect(normalizeRouteDivergenceThreshold(2000)).toBe(1000);
+    expect(normalizeRouteDivergenceThreshold(45.6)).toBe(46);
+  });
   it('matches a densely sampled route to the same sparsely sampled line', () => {
     const primary = [point(0, 0, 0), point(1000, 0, 1000)];
     const comparison = Array.from({ length: 101 }, (_, index) => point(index * 10, 0, index * 10));

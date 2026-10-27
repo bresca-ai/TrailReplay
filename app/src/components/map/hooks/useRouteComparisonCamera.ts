@@ -7,7 +7,7 @@ import { getExportFrameFitPadding, type CropPreviewMetrics } from '@/utils/crop'
 import { advanceRouteComparisonCamera, markersFitInViewport, routeSplitCameraTarget, type RouteComparisonCameraPose } from '@/utils/routeComparisonCameraMotion';
 
 /** During a split, frame both moving markers rather than following only the primary. */
-export function useRouteComparisonCamera({ enabled, isPlaying, isExporting, isDeterministicExport, currentTimeMs, isMapLoaded, mapRef, primaryTrack, primaryDistance, comparisons, exportFrame }: {
+export function useRouteComparisonCamera({ enabled, isPlaying, isExporting, isDeterministicExport, currentTimeMs, isMapLoaded, mapRef, primaryTrack, primaryDistance, comparisons, comparisonThresholdMeters, exportFrame }: {
   enabled: boolean;
   isPlaying: boolean;
   isExporting: boolean;
@@ -18,6 +18,7 @@ export function useRouteComparisonCamera({ enabled, isPlaying, isExporting, isDe
   primaryTrack: GPXTrack | null | undefined;
   primaryDistance: number;
   comparisons: ComparisonTrack[];
+  comparisonThresholdMeters: number;
   exportFrame?: CropPreviewMetrics | null;
 }) {
   const poseRef = useRef<RouteComparisonCameraPose | null>(null);
@@ -46,7 +47,7 @@ export function useRouteComparisonCamera({ enabled, isPlaying, isExporting, isDe
     let separated = false;
     for (const comparison of comparisons) {
       if (!comparison.visible || (comparison.groupId && comparison.groupId !== primaryTrack.id)) continue;
-      const plan = getRouteComparisonPlan(primaryTrack, comparison.track);
+      const plan = getRouteComparisonPlan(primaryTrack, comparison.track, comparisonThresholdMeters);
       const point = interpolateTrackPoint(comparison.track, comparisonDistanceAtPrimary(plan, primaryDistance));
       if (!point) continue;
       coordinates.push([point.lon, point.lat]);
@@ -112,5 +113,5 @@ export function useRouteComparisonCamera({ enabled, isPlaying, isExporting, isDe
     map.jumpTo(next);
     poseRef.current = next;
     timeRef.current = currentTimeMs;
-  }, [enabled, isPlaying, isExporting, isDeterministicExport, currentTimeMs, isMapLoaded, mapRef, primaryTrack, primaryDistance, comparisons, exportFrame]);
+  }, [enabled, isPlaying, isExporting, isDeterministicExport, currentTimeMs, isMapLoaded, mapRef, primaryTrack, primaryDistance, comparisons, comparisonThresholdMeters, exportFrame]);
 }

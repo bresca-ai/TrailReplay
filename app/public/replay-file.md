@@ -631,7 +631,10 @@ stats at the bottom:
 For two tracks that should play together, add the second track to the first
 track's comparison group. `comparisonMode` chooses how they advance: `time`
 uses recorded timestamps and shows who leads; `route` compares distance along
-their paths and highlights a whole split when it exceeds 30 m anywhere.
+their paths and highlights a whole split when it exceeds the configured
+`comparisonThresholdMeters` anywhere. This distance defaults to 30 m and may
+be set from 5 to 1,000 m; it is saved with the project and can also be supplied
+at the top level of a recipe.
 `comparisonSlowdown` applies to route comparison split sections: `1` leaves
 their playback speed unchanged, `0.5` gives them twice as much screen time,
 `0.25` gives them four times as much (the default), and `0.1` gives them ten

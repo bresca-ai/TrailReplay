@@ -9,6 +9,7 @@ import {
 } from '@/store/defaults';
 import type { Recipe } from './types';
 import type { ResolvedRecipe } from './resolveRecipe';
+import { normalizeRouteDivergenceThreshold } from '@/utils/routeDivergence';
 import { createPhotoSlot, presetSettings } from '@/components/sidebar/export/socialSharePresets';
 import {
   getFollowBehindLevelForStopIndex,
@@ -105,6 +106,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
   store.hydrateState({
     // Kept so saving preserves where this came from, not only what it became.
     sourceRecipe: recipe,
+    comparisonThresholdMeters: normalizeRouteDivergenceThreshold(recipe.comparisonThresholdMeters),
     activeTrackId: resolved.activeTrackId,
     journey: {
       id: 'recipe-journey',

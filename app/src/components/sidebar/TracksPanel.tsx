@@ -31,6 +31,7 @@ export function TracksPanel() {
   const setExploreMode = useAppStore((state) => state.setExploreMode);
   const setError = useAppStore((state) => state.setError);
   const comparisonMode = useAppStore((state) => state.comparisonMode);
+  const comparisonThresholdMeters = useAppStore((state) => state.comparisonThresholdMeters);
   const setComparisonMode = useAppStore((state) => state.setComparisonMode);
 
   // Comparison track state
@@ -231,7 +232,7 @@ export function TracksPanel() {
                 ))}
               </div>
               <p className="text-[11px] leading-relaxed text-[var(--evergreen-60)]">
-                {t(comparisonMode === 'time' ? 'tracks.compareTimeHint' : 'tracks.compareRouteHint')}
+                {t(comparisonMode === 'time' ? 'tracks.compareTimeHint' : 'tracks.compareRouteHint', { threshold: comparisonThresholdMeters })}
               </p>
               {availability.timeIssue && <p role="alert" className="rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[11px] text-[var(--evergreen-80)]">{t('journey.editor.missingTiming')}</p>}
               {availability.routeIssue && <p role="alert" className="rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[11px] text-[var(--evergreen-80)]">{t('journey.editor.noSharedRoute')}</p>}

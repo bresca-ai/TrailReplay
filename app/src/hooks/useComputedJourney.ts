@@ -200,6 +200,7 @@ export function useComputedJourney() {
   const comparisonMode = useAppStore((state) => state.comparisonMode);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
   const comparisonSlowdown = useAppStore((state) => state.comparisonSlowdown);
+  const comparisonThresholdMeters = useAppStore((state) => state.comparisonThresholdMeters);
   const routeComparisonActive = comparisonMode === 'route' && comparisonTracks.some((track) => track.visible);
   const routeTimingMode = routeComparisonActive ? 'uniform' : storedPlayback.routeTimingMode;
 
@@ -226,7 +227,7 @@ export function useComputedJourney() {
     for (const comparison of comparisonTracks.filter((track) => track.visible)) {
       const primary = tracks.find((track) => track.id === (comparison.groupId ?? activeTrackId));
       if (!primary) continue;
-      const plan = getRouteComparisonPlan(primary, comparison.track);
+      const plan = getRouteComparisonPlan(primary, comparison.track, comparisonThresholdMeters);
       if (!computedJourney) { windows.push(...plan.differences); continue; }
       for (const segment of computedJourney.segmentTimings) {
         if (segment.type !== 'track' || segment.trackId !== primary.id) continue;
@@ -238,7 +239,7 @@ export function useComputedJourney() {
       }
     }
     return mergeProgressWindows(windows);
-  }, [routeComparisonActive, journeyDistanceProfile, activeTrack, comparisonTracks, tracks, activeTrackId, computedJourney]);
+  }, [routeComparisonActive, journeyDistanceProfile, activeTrack, comparisonTracks, tracks, activeTrackId, computedJourney, comparisonThresholdMeters]);
   const playback = {
     ...storedPlayback,
     progress: routeComparisonActive ? routeProgressWithSlowdown(storedPlayback.progress, comparisonWindows, comparisonSlowdown) : storedPlayback.progress,

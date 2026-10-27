@@ -24,6 +24,14 @@ describe('Timeline editor', () => {
     expect(useAppStore.getState().comparisonTracks).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Route' }));
     expect(useAppStore.getState().comparisonMode).toBe('route');
+    const threshold = screen.getByRole('spinbutton', { name: 'Difference threshold (m)' });
+    expect(threshold).toHaveValue(30);
+    fireEvent.change(threshold, { target: { value: '75' } });
+    expect(useAppStore.getState().comparisonThresholdMeters).toBe(75);
+    expect(screen.getByText(/Whole differences exceeding 75 m/)).toBeInTheDocument();
+    fireEvent.change(threshold, { target: { value: '3' } });
+    fireEvent.blur(threshold);
+    expect(threshold).toHaveValue(5);
     fireEvent.change(screen.getByLabelText('Slow down at differences'), { target: { value: '0.1' } });
     expect(useAppStore.getState().comparisonSlowdown).toBe(0.1);
     fireEvent.click(screen.getByRole('button', { name: 'Return all to sequence' }));

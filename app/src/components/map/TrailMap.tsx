@@ -80,6 +80,7 @@ export function TrailMap(_props: TrailMapProps) {
   const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
   const comparisonMode = useAppStore((state) => state.comparisonMode);
+  const comparisonThresholdMeters = useAppStore((state) => state.comparisonThresholdMeters);
   const landmarks = useRouteLandmarks();
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const isPlacingLandmark = useAppStore((state) => state.isPlacingLandmark);
@@ -130,8 +131,8 @@ export function TrailMap(_props: TrailMapProps) {
     ? comparisonTracks.filter((track) => track.visible && (!track.groupId || track.groupId === primaryComparisonTrack.id))
     : [], [comparisonMode, comparisonTracks, primaryComparisonTrack]);
   const sharedRouteComparisons = useMemo(() => currentPosition && primaryComparisonTrack
-    ? activeRouteComparisons.filter((track) => areFollowingSamePath(primaryComparisonTrack, track.track, currentPosition.distance))
-    : [], [activeRouteComparisons, currentPosition, primaryComparisonTrack]);
+    ? activeRouteComparisons.filter((track) => areFollowingSamePath(primaryComparisonTrack, track.track, currentPosition.distance, comparisonThresholdMeters))
+    : [], [activeRouteComparisons, currentPosition, primaryComparisonTrack, comparisonThresholdMeters]);
   const sharedTrackIds = useMemo(() => sharedRouteComparisons.map((track) => track.id), [sharedRouteComparisons]);
 
   useSuggestedFollowBehindDistance({
@@ -210,6 +211,7 @@ export function TrailMap(_props: TrailMapProps) {
     mapRef: map,
     currentTime: currentPosition?.time ?? null,
     comparisonMode,
+    comparisonThresholdMeters,
     primaryTrack: primaryComparisonTrack,
     primaryDistance: currentPosition?.distance ?? 0,
     sharedTrackIds,
@@ -352,6 +354,7 @@ export function TrailMap(_props: TrailMapProps) {
     primaryTrack: primaryComparisonTrack,
     primaryDistance: currentPosition?.distance ?? 0,
     comparisons: comparisonTracks,
+    comparisonThresholdMeters,
     exportFrame: _props.exportFrame,
   });
 

@@ -1,10 +1,41 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowLeft, GitCompareArrows, Plus, Ungroup } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { renderActivityIcon } from '@/utils/activityIcons';
 import { formatDistance } from '@/utils/units';
 import { getComparisonAvailability } from '@/utils/comparisonAvailability';
+import { MAX_ROUTE_DIVERGENCE_THRESHOLD_METERS, MIN_ROUTE_DIVERGENCE_THRESHOLD_METERS, normalizeRouteDivergenceThreshold } from '@/utils/routeDivergence';
+
+function ComparisonThresholdControl() {
+  const { t } = useI18n();
+  const threshold = useAppStore((state) => state.comparisonThresholdMeters);
+  const setThreshold = useAppStore((state) => state.setComparisonThresholdMeters);
+  const [draft, setDraft] = useState<string | null>(null);
+
+  return <div className="mt-3 rounded-xl border border-[var(--evergreen)]/15 p-3">
+    <label htmlFor="comparison-threshold" className="text-[11px] font-semibold text-[var(--evergreen)]">{t('journey.editor.differenceThreshold')}</label>
+    <div className="mt-2 flex items-center gap-2">
+      <input id="comparison-threshold" type="number" min={MIN_ROUTE_DIVERGENCE_THRESHOLD_METERS} max={MAX_ROUTE_DIVERGENCE_THRESHOLD_METERS} step="1" value={draft ?? String(threshold)}
+        onChange={(event) => {
+          const value = event.target.value;
+          const meters = Number(value);
+          if (value !== '' && Number.isInteger(meters) && meters >= MIN_ROUTE_DIVERGENCE_THRESHOLD_METERS && meters <= MAX_ROUTE_DIVERGENCE_THRESHOLD_METERS) {
+            setThreshold(meters);
+            setDraft(null);
+          } else setDraft(value);
+        }}
+        onBlur={() => {
+          const meters = draft === null || draft.trim() === '' ? threshold : normalizeRouteDivergenceThreshold(Number(draft));
+          setThreshold(meters);
+          setDraft(null);
+        }}
+        className="w-24 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-2 text-xs text-[var(--evergreen)]" />
+      <span className="text-xs text-[var(--evergreen-60)]">m</span>
+    </div>
+    <p className="mt-2 text-[10px] leading-relaxed text-[var(--evergreen-60)]">{t('journey.editor.differenceThresholdHint', { min: MIN_ROUTE_DIVERGENCE_THRESHOLD_METERS, max: MAX_ROUTE_DIVERGENCE_THRESHOLD_METERS })}</p>
+  </div>;
+}
 
 export function JourneyComparisonEditor({ onReturnToSequence }: { onReturnToSequence: () => void }) {
   const { t } = useI18n();
@@ -14,6 +45,7 @@ export function JourneyComparisonEditor({ onReturnToSequence }: { onReturnToSequ
   const mode = useAppStore((state) => state.comparisonMode);
   const setMode = useAppStore((state) => state.setComparisonMode);
   const slowdown = useAppStore((state) => state.comparisonSlowdown);
+  const threshold = useAppStore((state) => state.comparisonThresholdMeters);
   const setSlowdown = useAppStore((state) => state.setComparisonSlowdown);
   const setActiveTrack = useAppStore((state) => state.setActiveTrack);
   const compare = useAppStore((state) => state.moveTrackToComparison);
@@ -93,10 +125,11 @@ export function JourneyComparisonEditor({ onReturnToSequence }: { onReturnToSequ
             {t(value === 'time' ? 'journey.editor.time' : 'journey.editor.route')}
           </button>)}
         </div>
-        <p className="mt-2 text-[10px] leading-relaxed text-[var(--evergreen-60)]">{t(mode === 'time' ? 'tracks.compareTimeHint' : 'tracks.compareRouteHint')}</p>
+        <p className="mt-2 text-[10px] leading-relaxed text-[var(--evergreen-60)]">{t(mode === 'time' ? 'tracks.compareTimeHint' : 'tracks.compareRouteHint', { threshold })}</p>
         {availability.timeIssue && <p role="alert" className="mt-2 rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[10px] leading-relaxed text-[var(--evergreen-80)]">{t('journey.editor.missingTiming')}</p>}
         {availability.routeIssue && <p role="alert" className="mt-2 rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[10px] leading-relaxed text-[var(--evergreen-80)]">{t('journey.editor.noSharedRoute')}</p>}
-        {mode === 'route' && availability.route && <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-500/5 px-3 py-2 text-[10px] text-[var(--evergreen-70)]"><span className="h-2 w-5 rounded-full bg-red-500" />{t('journey.editor.divergenceLegend')}</div>}
+        {mode === 'route' && availability.route && <ComparisonThresholdControl />}
+        {mode === 'route' && availability.route && <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-500/5 px-3 py-2 text-[10px] text-[var(--evergreen-70)]"><span className="h-2 w-5 rounded-full bg-red-500" />{t('journey.editor.divergenceLegend', { threshold })}</div>}
         {mode === 'route' && availability.route && <div className="mt-4 rounded-xl border border-[var(--evergreen)]/15 p-3">
           <label htmlFor="comparison-slowdown" className="text-[11px] font-semibold text-[var(--evergreen)]">{t('journey.editor.slowdown')}</label>
           <select id="comparison-slowdown" value={slowdown} onChange={(event) => setSlowdown(Number(event.target.value))}

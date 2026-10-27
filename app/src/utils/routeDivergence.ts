@@ -5,7 +5,15 @@ type XY = [number, number];
 type Segment = [XY, XY, number, number];
 
 export const ROUTE_DIVERGENCE_THRESHOLD_METERS = 30;
+export const MIN_ROUTE_DIVERGENCE_THRESHOLD_METERS = 5;
+export const MAX_ROUTE_DIVERGENCE_THRESHOLD_METERS = 1000;
 const ROUTE_REJOIN_TOLERANCE_METERS = 5;
+
+export function normalizeRouteDivergenceThreshold(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(MIN_ROUTE_DIVERGENCE_THRESHOLD_METERS, Math.min(MAX_ROUTE_DIVERGENCE_THRESHOLD_METERS, Math.round(value)))
+    : ROUTE_DIVERGENCE_THRESHOLD_METERS;
+}
 
 function projectToSegment(point: XY, [from, to]: Segment) {
   const dx = to[0] - from[0];
@@ -24,7 +32,9 @@ export function createRouteMatcher(primary: readonly RoutePoint[], threshold = 3
     (((point.lon - origin.lon + 540) % 360) - 180) * longitudeScale,
     (point.lat - origin.lat) * 111320,
   ];
-  const cellSize = 128;
+  // Grow cells for larger tolerances so ordinary segments do not all fall
+  // back to the expensive long-segment scan at high threshold values.
+  const cellSize = Math.max(128, threshold * 2);
   const cells = new Map<string, Segment[]>();
   const longSegments: Segment[] = [];
   for (let index = 1; index < primary.length; index++) {
@@ -64,7 +74,7 @@ export function buildRouteDivergences(primary: readonly RoutePoint[], comparison
   const features: Array<Feature<LineString | Point>> = [];
   if (primary.length < 2 || comparison.length < 2) return { type: 'FeatureCollection', features };
   // Find the whole split-to-rejoin section, then decide whether it deserves a
-  // highlight. A 30 m tolerance here would clip the start and end of detours.
+  // highlight. Using the selected threshold here would clip the ends of detours.
   const matchSharedLine = createRouteMatcher(primary, ROUTE_REJOIN_TOLERANCE_METERS);
   const matchWithinThreshold = createRouteMatcher(primary, threshold);
   const outside = comparison.map((point) => !matchSharedLine(point));

@@ -15,6 +15,7 @@ import { createSettingsSlice } from '@/store/slices/settingsSlice';
 import { createTracksSlice } from '@/store/slices/tracksSlice';
 import { createUiSlice } from '@/store/slices/uiSlice';
 import { createLandmarksSlice } from '@/store/slices/landmarksSlice';
+import { ROUTE_DIVERGENCE_THRESHOLD_METERS } from '@/utils/routeDivergence';
 
 export function createAppStore() {
   return create<AppState>()(
@@ -36,6 +37,7 @@ export function createAppStore() {
           state.comparisonTracks = [];
           state.comparisonMode = 'time';
           state.comparisonSlowdown = 0.25;
+          state.comparisonThresholdMeters = ROUTE_DIVERGENCE_THRESHOLD_METERS;
           state.journey = null;
           state.journeySegments = [];
           state.cinematicCameraKeyframes = [];
