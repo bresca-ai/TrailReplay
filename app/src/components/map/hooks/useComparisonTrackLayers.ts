@@ -6,6 +6,7 @@ import { buildRouteDivergences } from '@/utils/routeDivergence';
 import { comparisonDistanceAtPrimary, getRouteComparisonPlan } from '@/utils/routeComparisonPlayback';
 import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
 import { ANNOTATION_LAYER_IDS } from '@/components/map/hooks/useTextAnnotationsLayer';
+import { COMPARISON_MARKER_BORDER, COMPARISON_MARKER_RADIUS } from '@/utils/comparisonMarker';
 import {
   LANDMARK_ICON_LAYER_ID,
   LANDMARK_LABEL_LAYER_ID,
@@ -153,12 +154,14 @@ export function useComparisonTrackLayers({
         type: 'circle',
         source: sources.position,
         paint: {
-          'circle-radius': 10,
+          'circle-radius': COMPARISON_MARKER_RADIUS,
+          'circle-pitch-scale': 'viewport',
+          'circle-pitch-alignment': 'viewport',
           'circle-color': comparisonTrack.color,
           // Dimmed while parked at the start or finish, so a marker waiting
           // for its own start time doesn't read as a stuck marker.
           'circle-opacity': ['case', ['get', 'shared'], 0, ['get', 'active'], 0.95, 0.2],
-          'circle-stroke-width': 3,
+          'circle-stroke-width': COMPARISON_MARKER_BORDER,
           'circle-stroke-color': '#FFFFFF',
           'circle-stroke-opacity': ['case', ['get', 'shared'], 0, ['get', 'active'], 1, 0.35],
         },

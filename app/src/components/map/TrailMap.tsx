@@ -9,6 +9,7 @@ import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraK
 import { useSuggestedFollowBehindDistance } from '@/components/map/hooks/useSuggestedFollowBehindDistance';
 import { MapElevationProfile } from './MapElevationProfile';
 import { ComparisonLeaderboard } from './ComparisonLeaderboard';
+import { COMPARISON_MARKER_SIZE } from '@/utils/comparisonMarker';
 import { useI18n } from '@/i18n/useI18n';
 import { areFollowingSamePath } from '@/utils/routeComparisonSharedPath';
 import { MAP_LAYERS } from './mapStyle';
@@ -124,6 +125,7 @@ export function TrailMap(_props: TrailMapProps) {
   const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
   const routeComparisonActive = comparisonMode === 'route' && comparisonTracks.some((track) => track.visible);
   const primaryComparisonTrack = tracks.find((track) => track.id === currentPosition?.trackId) ?? activeTrack ?? null;
+  const comparisonActive = comparisonTracks.some((track) => track.visible && (!track.groupId || track.groupId === primaryComparisonTrack?.id));
   const activeRouteComparisons = useMemo(() => comparisonMode === 'route' && primaryComparisonTrack
     ? comparisonTracks.filter((track) => track.visible && (!track.groupId || track.groupId === primaryComparisonTrack.id))
     : [], [comparisonMode, comparisonTracks, primaryComparisonTrack]);
@@ -329,11 +331,11 @@ export function TrailMap(_props: TrailMapProps) {
       colorZones: trailStyle.colorZones,
       currentIcon: trailStyle.currentIcon,
       markerColor: trailStyle.markerColor,
-      markerSize: routeComparisonActive ? 1.5 : trailStyle.markerSize,
-      markerType: routeComparisonActive ? 'dot' : trailStyle.markerType,
+      markerSize: comparisonActive ? COMPARISON_MARKER_SIZE : trailStyle.markerSize,
+      markerType: comparisonActive ? 'dot' : trailStyle.markerType,
       overlayFont: trailStyle.overlayFont,
       showCircle: trailStyle.showCircle,
-      showMarker: trailStyle.showMarker || routeComparisonActive,
+      showMarker: trailStyle.showMarker || comparisonActive,
       showTrackLabels: trailStyle.showTrackLabels,
       trailColor: trailStyle.trailColor,
     },
@@ -525,8 +527,8 @@ export function TrailMap(_props: TrailMapProps) {
         </div>
       )}
 
-      {comparisonMode === 'time' && comparisonTracks.length > 0 && !isExporting && (
-        <ComparisonLeaderboard primaryTrack={activeTrack} comparisonTracks={comparisonTracks} currentTime={currentPosition?.time ?? null} />
+      {comparisonMode === 'time' && comparisonTracks.length > 0 && (
+        <ComparisonLeaderboard primaryTrack={primaryComparisonTrack} comparisonTracks={comparisonTracks} currentTime={currentPosition?.time ?? null} interactive={!isExporting} frame={_props.exportFrame} />
       )}
 
       {routeComparisonActive && activeRouteComparisons.length > 0 && playback.progress > 0 && (animationPhase === 'playing' || animationPhase === 'idle') && (

@@ -1,0 +1,27 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { drawComparisonLeaderboard } from './drawComparisonLeaderboard';
+afterEach(() => document.body.replaceChildren());
+it('exports saved placement, scale and font, updates gaps each frame and removes the background', () => {
+  const board = document.createElement('div');
+  board.style.fontFamily = 'Inter';
+  board.getBoundingClientRect = () => new DOMRect(200, 100, 480, 200);
+  Object.defineProperty(board, 'offsetWidth', { value: 240 });
+  const text = document.createElement('span');
+  text.dataset.leaderboardText = '';
+  text.style.fontSize = '10px'; text.style.fontWeight = '600'; text.textContent = '+30s';
+  text.getBoundingClientRect = () => new DOMRect(220, 120, 100, 20);
+  board.append(text); document.body.append(board);
+  const context = { save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(), measureText: () => ({ width: 30 }), font: '' };
+  const frame = { containerRect: new DOMRect(100, 50, 1000, 600), cropX: 10, cropY: 10, scaleX: 2, scaleY: 2 };
+  drawComparisonLeaderboard(context as unknown as CanvasRenderingContext2D, board, frame);
+  expect(context.roundRect).toHaveBeenCalledWith(180, 80, 960, 400, 48);
+  expect(context.fillText).toHaveBeenLastCalledWith('+30s', 220, 140);
+  expect(context.font).toBe('600 40px Inter');
+  board.dataset.leaderboardBackground = 'transparent'; text.textContent = '+45s';
+  drawComparisonLeaderboard(context as unknown as CanvasRenderingContext2D, board, frame);
+  expect(context.fill).toHaveBeenCalledTimes(1);
+  expect(context.fillText).toHaveBeenLastCalledWith('+45s', 220, 140);
+  text.style.textTransform = 'uppercase'; text.textContent = 'Live';
+  drawComparisonLeaderboard(context as unknown as CanvasRenderingContext2D, board, frame);
+  expect(context.fillText).toHaveBeenLastCalledWith('LIVE', 220, 140);
+});

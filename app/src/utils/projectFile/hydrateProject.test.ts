@@ -206,6 +206,21 @@ describe('hydrateProject', () => {
     expect(legacyStore.getState().settings.statsColumns).toBeNull();
   });
 
+  it('round trips leaderboard styling and defaults older projects', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
+    const presentation = { leaderboardPosition: { x: 0.25, y: 0.6 }, leaderboardScale: 1.4, leaderboardBackground: 'transparent' as const, showLeaderboard: false };
+    source.getState().setSettings(presentation);
+    const blob = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
+    const restored = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().settings).toMatchObject(presentation);
+    for (const key of Object.keys(presentation)) delete (parsed.project!.settings as Record<string, unknown>)[key];
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().settings).toMatchObject({ leaderboardPosition: null, leaderboardScale: 1, leaderboardBackground: 'panel', showLeaderboard: true });
+  });
+
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));

@@ -18,6 +18,7 @@ import type { VideoExportSettings } from '@/types';
 import { markerIconContrastFilter } from '@/utils/activityIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
+import { drawComparisonLeaderboard } from './drawComparisonLeaderboard';
 
 function extractCssUrl(value: string): string | null {
   const match = value.match(/url\((['"]?)(.*?)\1\)/);
@@ -417,6 +418,8 @@ export function drawExportFrame({
         context.restore();
       }
     }
+
+    drawComparisonLeaderboard(context, document.querySelector('.tr-comparison-leaderboard'), { containerRect, cropX, cropY, scaleX, scaleY });
 
     if (cachedLogoRef.current) {
       const box = getVideoLogoBox(recordW, recordH);

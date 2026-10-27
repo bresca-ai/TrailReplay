@@ -444,6 +444,11 @@ export interface AppSettings {
   /** `panel` is the dark rounded card; `transparent` leaves only the text over the map. */
   statsBackground: 'panel' | 'transparent';
   statsColumns: number | null;
+  /** Position within the available space around the scaled leaderboard (0–1). */
+  leaderboardPosition: { x: number; y: number } | null;
+  leaderboardScale: number;
+  leaderboardBackground: 'panel' | 'transparent';
+  showLeaderboard: boolean;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
   /** Automatically focus the elevation chart on significant climbs and descents. */
