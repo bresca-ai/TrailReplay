@@ -120,7 +120,7 @@ export const fr = {
     snapHint: 'Les poignées suivent les points d’origine. La partie orange est conservée, les parties grises sont supprimées.',
     apply: 'Appliquer au parcours', download: 'Télécharger le GPX', cancel: 'Annuler', restore: 'Restaurer l’original',
     restoreHint: 'L’original peut être restauré pendant cette session. Les projets enregistrés et GPX téléchargés contiennent uniquement le parcours actuel.',
-    dependencies: 'Cette animation contient des médias, annotations, parcours comparatifs, images clés de caméra ou transports. Vous pouvez prévisualiser et télécharger le GPX rogné. Pour l’appliquer ici, rognez avant d’ajouter ce contenu.',
+    dependencies: 'Cette animation contient des médias, annotations, parcours comparatifs, images clés de caméra, transports, sections d’altitude modifiées ou zones de couleur. Vous pouvez prévisualiser et télécharger le GPX rogné. Pour l’appliquer ici, rognez avant d’ajouter ce contenu.',
   },
   settings: {
     mapCameraTitle: 'Choisir la carte et la caméra',

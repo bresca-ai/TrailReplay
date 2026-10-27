@@ -120,7 +120,7 @@ export const ca = {
     snapHint: 'Els controls s’ajusten als punts originals. Es conserva el tram taronja i s’eliminen els grisos.',
     apply: 'Aplica a la ruta', download: 'Descarrega GPX', cancel: 'Cancel·la', restore: 'Restaura l’original',
     restoreHint: 'Pots restaurar l’original durant aquesta sessió. Els projectes desats i GPX descarregats només contenen la ruta actual.',
-    dependencies: 'Aquesta repetició té contingut multimèdia, anotacions, rutes de comparació, fotogrames de càmera o transports. Pots previsualitzar i descarregar el GPX retallat. Per aplicar-lo aquí, retalla abans d’afegir aquest contingut.',
+    dependencies: 'Aquesta repetició té contingut multimèdia, anotacions, rutes de comparació, fotogrames de càmera, transports, seccions d’elevació editades o zones de color. Pots previsualitzar i descarregar el GPX retallat. Per aplicar-lo aquí, retalla abans d’afegir aquest contingut.',
   },
   settings: {
     mapCameraTitle: 'Tria el mapa i la càmera',

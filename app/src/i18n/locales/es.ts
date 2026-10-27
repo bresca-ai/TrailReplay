@@ -120,7 +120,7 @@ export const es = {
     snapHint: 'Los controles se ajustan a los puntos originales. Se conserva el tramo naranja y se eliminan los grises.',
     apply: 'Aplicar a la ruta', download: 'Descargar GPX', cancel: 'Cancelar', restore: 'Restaurar original',
     restoreHint: 'Puedes restaurar el original durante esta sesión. Los proyectos guardados y GPX descargados solo contienen la ruta actual.',
-    dependencies: 'Esta repetición contiene medios, anotaciones, rutas de comparación, fotogramas de cámara o transportes. Puedes previsualizar y descargar el GPX recortado. Para aplicarlo aquí, recorta antes de añadir ese contenido.',
+    dependencies: 'Esta repetición contiene medios, anotaciones, rutas de comparación, fotogramas de cámara, transportes, secciones de elevación editadas o zonas de color. Puedes previsualizar y descargar el GPX recortado. Para aplicarlo aquí, recorta antes de añadir ese contenido.',
   },
   settings: {
     mapCameraTitle: 'Elige el mapa y la cámara',

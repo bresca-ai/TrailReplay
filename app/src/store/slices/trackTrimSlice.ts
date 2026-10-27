@@ -2,12 +2,24 @@ import type { AppState } from '@/store/storeTypes';
 import type { AppSliceCreator } from './types';
 import { isValidTrackTrimRange, trimTrack } from '@/utils/gpx/trimTrack';
 
+/**
+ * Route-anchored settings are stored as progress along the current geometry,
+ * so trimming or restoring would silently retarget them without remapping.
+ */
+function hasRouteAnchoredSettings({ settings }: AppState): boolean {
+  return settings.customElevationSections.length > 0
+    || settings.elevationSectionOverrides.length > 0
+    || settings.hiddenElevationSectionIds.length > 0
+    || settings.trailStyle.colorZones.length > 0;
+}
+
 /** V1 edits route geometry only. Authored replay content needs a separate retiming workflow. */
 export function hasTrackTrimDependencies(state: AppState): boolean {
   return state.pictures.length > 0 || state.videos.length > 0 || state.textAnnotations.length > 0
     || state.iconChanges.length > 0 || state.cinematicCameraKeyframes.length > 0
     || state.userLandmarks.length > 0 || state.comparisonTracks.length > 0
-    || state.journeySegments.some((segment) => segment.type === 'transport');
+    || state.journeySegments.some((segment) => segment.type === 'transport')
+    || hasRouteAnchoredSettings(state);
 }
 
 type TrackTrimSlice = Pick<AppState,

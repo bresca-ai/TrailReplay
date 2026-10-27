@@ -120,7 +120,7 @@ export const de = {
     snapHint: 'Die Griffe rasten an Originalpunkten ein. Orange Abschnitte bleiben erhalten, graue werden entfernt.',
     apply: 'Auf Route anwenden', download: 'GPX herunterladen', cancel: 'Abbrechen', restore: 'Original wiederherstellen',
     restoreHint: 'Das Original kann in dieser Sitzung wiederhergestellt werden. Gespeicherte Projekte und heruntergeladene GPX-Dateien enthalten nur die aktuelle Route.',
-    dependencies: 'Diese Wiedergabe enthält Medien, Anmerkungen, Vergleichsrouten, Kamera-Keyframes oder Transportabschnitte. Vorschau und GPX-Download sind möglich. Kürze die Route vor dem Hinzufügen dieser Inhalte, um sie hier anzuwenden.',
+    dependencies: 'Diese Wiedergabe enthält Medien, Anmerkungen, Vergleichsrouten, Kamera-Keyframes, Transportabschnitte, bearbeitete Höhenabschnitte oder Farbzonen. Vorschau und GPX-Download sind möglich. Kürze die Route vor dem Hinzufügen dieser Inhalte, um sie hier anzuwenden.',
   },
   settings: {
     mapCameraTitle: 'Karte und Kamera wählen',

@@ -71,6 +71,32 @@ describe('track trimming in the app store', () => {
     expect(store.getState().applyTrackTrim(track.id, 1, 4)).toBe(false);
   });
 
+  it.each<[string, (store: ReturnType<typeof createAppStore>) => void]>([
+    ['custom elevation sections', (store) => store.getState().setSettings({
+      customElevationSections: [{ id: 'custom', segmentIndex: 0, startProgress: 0.4, endProgress: 0.6 }],
+    })],
+    ['elevation section overrides', (store) => store.getState().setSettings({
+      elevationSectionOverrides: [{
+        sectionId: 'elevation-0-climb-0', segmentIndex: 0, kind: 'climb',
+        detectedStartProgress: 0.2, detectedEndProgress: 0.5, startProgress: 0.3, endProgress: 0.5,
+      }],
+    })],
+    ['hidden elevation sections', (store) => store.getState().setSettings({ hiddenElevationSectionIds: ['elevation-0-climb-0'] })],
+    ['trail color zones', (store) => store.getState().setTrailStyle({
+      colorZones: [{ id: 'zone', fromProgress: 0.4, toProgress: 0.6, color: '#ff0000' }],
+    })],
+  ])('guards apply and restore when route-anchored %s exist', (_, author) => {
+    const { store, track } = setup();
+    expect(store.getState().applyTrackTrim(track.id, 1, 4)).toBe(true);
+    author(store);
+    expect(hasTrackTrimDependencies(store.getState())).toBe(true);
+    const trimmed = store.getState().tracks[0];
+    expect(store.getState().applyTrackTrim(track.id, 1, 2)).toBe(false);
+    expect(store.getState().restoreTrackTrim(track.id)).toBe(false);
+    expect(store.getState().tracks[0]).toBe(trimmed);
+    expect(store.getState().trackTrimOriginals[track.id].points).toEqual(track.points);
+  });
+
   it('clears overlays on playback/panel changes and releases original data on remove/reset', () => {
     const { store, track } = setup();
     const range = { trackId: track.id, startIndex: 1, endIndex: 4 };

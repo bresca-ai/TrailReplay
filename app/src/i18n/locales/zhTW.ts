@@ -59,7 +59,7 @@ export const zhTW = {
     point: '第 {count} 個軌跡點', selection: '{distance} · 保留 {count} 個軌跡點',
     snapHint: '把手會吸附至原始記錄點。橘色路段會保留，灰色路段會移除。', apply: '套用至軌跡', download: '下載 GPX', cancel: '取消', restore: '還原原始軌跡',
     restoreHint: '本次工作階段內可還原原始軌跡。儲存的專案與下載的 GPX 僅包含目前的軌跡。',
-    dependencies: '這份重播已有媒體、標註、比較軌跡、鏡頭關鍵影格或交通路段。你可以預覽並下載裁切後的 GPX；若要直接套用，請在加入上述內容前先裁切軌跡。',
+    dependencies: '這份重播已有媒體、標註、比較軌跡、鏡頭關鍵影格、交通路段、已編輯的爬升／下降區段或分段顏色。你可以預覽並下載裁切後的 GPX；若要直接套用，請在加入上述內容前先裁切軌跡。',
   },
   settings: {
     mapCameraTitle: '設定地圖與鏡頭', mapCameraHint: '地圖是影片的背景，請選擇地圖樣式、地形，以及跟隨路線的觀看角度。',

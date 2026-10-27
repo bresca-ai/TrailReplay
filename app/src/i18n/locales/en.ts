@@ -126,7 +126,7 @@ export const en = {
     cancel: 'Cancel',
     restore: 'Restore original',
     restoreHint: 'The original can be restored in this session. Saved projects and downloaded GPX files contain the current route only.',
-    dependencies: 'This replay has media, annotations, comparison routes, camera keyframes or transport segments. You can preview and download a trimmed GPX. To apply it here, trim before adding that content.',
+    dependencies: 'This replay has media, annotations, comparison routes, camera keyframes, transport segments, edited elevation sections or color zones. You can preview and download a trimmed GPX. To apply it here, trim before adding that content.',
   },
   settings: {
     mapCameraTitle: 'Choose the world and camera',
