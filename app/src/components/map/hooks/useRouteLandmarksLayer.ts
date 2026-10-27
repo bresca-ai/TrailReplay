@@ -10,11 +10,13 @@ import {
 } from '@/components/map/landmarkSymbolStyle';
 import {
   LANDMARK_ICON_LAYER_ID,
+  LANDMARK_EMOJI_LAYER_ID,
   LANDMARK_IMAGE_PREFIX,
   LANDMARK_LABEL_IMAGE_PREFIX,
   LANDMARK_LABEL_LAYER_ID,
   LANDMARK_SOURCE_ID,
   landmarkIconLayer,
+  landmarkEmojiLayer,
   landmarkLabelLayer,
 } from '@/components/map/landmarkLayers';
 import {
@@ -25,6 +27,9 @@ import {
 } from '@/components/map/landmarkGlyphs';
 import { ANNOTATION_LAYER_IDS } from '@/components/map/hooks/useTextAnnotationsLayer';
 import { overlayCanvasFontFamily } from '@/utils/typography';
+import { landmarkSymbol } from '@/components/map/landmarkSymbols';
+import { annotationMapGlyph, annotationPinheadId, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { pinheadIconPath, usePinheadIcons } from '@/components/annotations/pinheadIcons';
 
 const SOURCE = LANDMARK_SOURCE_ID;
 const ICON = LANDMARK_ICON_LAYER_ID;
@@ -93,7 +98,8 @@ function data(landmarks: RouteLandmark[], selectedId: string | null, overlayFont
       title: landmarkLabel(landmark),
       labelImageId: labelImageId(landmark, overlayFont),
       importance: landmark.importance,
-      icon: glyphForLandmark(landmark),
+      icon: landmarkImageKey(landmark),
+      emoji: isEmojiLandmark(landmark),
       color: landmark.color ?? colorForLandmark(landmark),
       opacity: landmark.source === 'automatic' ? 0.92 : 1,
       selected: landmark.id === selectedId,
@@ -101,12 +107,36 @@ function data(landmarks: RouteLandmark[], selectedId: string | null, overlayFont
   })) };
 }
 
-function glyphImage(kind: string) {
+function isEmojiLandmark(landmark: RouteLandmark) {
+  const symbol = landmarkSymbol(landmark);
+  return !annotationMapGlyph(symbol) && !annotationPinheadId(symbol);
+}
+
+/** Use the old type glyph while a saved library icon is loading. */
+function landmarkImageKey(landmark: RouteLandmark) {
+  const symbol = landmarkSymbol(landmark);
+  const glyph = annotationMapGlyph(symbol);
+  if (glyph) return glyph;
+  const pinheadId = annotationPinheadId(symbol);
+  if (pinheadId) return pinheadIconPath(pinheadId) ? symbol : glyphForLandmark(landmark);
+  return `emoji:${symbol}`;
+}
+
+function glyphImage(path: string) {
   const canvas = document.createElement('canvas'); canvas.width = 36; canvas.height = 36;
   const context = canvas.getContext('2d')!;
   context.clearRect(0, 0, 36, 36); context.fillStyle = '#ffffff';
   context.scale(2.4, 2.4);
-  context.fill(new Path2D(PINHEAD_PATHS[kind] ?? PINHEAD_PATHS.pin));
+  context.fill(new Path2D(path));
+  return context.getImageData(0, 0, 36, 36);
+}
+
+function emojiImage(symbol: string) {
+  const canvas = document.createElement('canvas'); canvas.width = 36; canvas.height = 36;
+  const context = canvas.getContext('2d')!;
+  context.font = '30px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+  context.textAlign = 'center'; context.textBaseline = 'middle';
+  context.fillText(symbol, 18, 18, 36);
   return context.getImageData(0, 0, 36, 36);
 }
 
@@ -142,18 +172,30 @@ export function useRouteLandmarksLayer({
   selectedLandmarkId = null,
   visible = true,
 }: UseRouteLandmarksLayerParams) {
+  const pinheadIcons = usePinheadIcons(needsPinheadIcons(landmarks.map((landmark) => landmark.icon)));
   useEffect(() => {
     const map = mapRef.current; if (!map || !isMapLoaded) return;
     let cancelled = false;
     LANDMARK_GLYPH_KEYS.forEach((kind) => {
       const imageId = `${IMAGE_PREFIX}${kind}`;
-      if (!map.hasImage(imageId)) map.addImage(imageId, glyphImage(kind), { sdf: true });
+      if (!map.hasImage(imageId)) map.addImage(imageId, glyphImage(PINHEAD_PATHS[kind]), { sdf: true });
     });
+    for (const landmark of landmarks) {
+      const symbol = landmarkSymbol(landmark);
+      const pinheadId = annotationPinheadId(symbol);
+      const path = pinheadId ? pinheadIconPath(pinheadId) : null;
+      const key = landmarkImageKey(landmark);
+      const imageId = `${IMAGE_PREFIX}${key}`;
+      if (map.hasImage(imageId)) continue;
+      if (path) map.addImage(imageId, glyphImage(path), { sdf: true });
+      else if (isEmojiLandmark(landmark)) map.addImage(imageId, emojiImage(symbol));
+    }
     if (!map.getSource(SOURCE)) map.addSource(SOURCE, { type: 'geojson', data: data([], null, overlayFont) });
     // Pins go under the annotation card: a town name drawn over an annotation
     // hides the one label the viewer was meant to read.
     const beforeAnnotations = ANNOTATION_LAYER_IDS.find((layerId) => map.getLayer(layerId));
     if (!map.getLayer(ICON)) map.addLayer(landmarkIconLayer(scale), beforeAnnotations);
+    if (!map.getLayer(LANDMARK_EMOJI_LAYER_ID)) map.addLayer(landmarkEmojiLayer(scale), beforeAnnotations);
     if (!map.getLayer(LABEL)) map.addLayer(landmarkLabelLayer(scale, labelFade), beforeAnnotations);
     const updateLabels = async () => {
       try { await document.fonts.load(`700 12px ${overlayCanvasFontFamily(overlayFont)}`); } catch { /* Use the CSS fallback font. */ }
@@ -170,7 +212,7 @@ export function useRouteLandmarksLayer({
     };
     void updateLabels();
     return () => { cancelled = true; };
-  }, [isMapLoaded, labelFade, landmarks, mapRef, overlayFont, scale, selectedLandmarkId, visible]);
+  }, [isMapLoaded, labelFade, landmarks, mapRef, overlayFont, pinheadIcons, scale, selectedLandmarkId, visible]);
 
   // The layers are only added once, so size and fade changes have to be pushed
   // onto the existing layers rather than waiting for a re-add.
@@ -178,6 +220,9 @@ export function useRouteLandmarksLayer({
     const map = mapRef.current; if (!map || !isMapLoaded) return;
     if (map.getLayer(ICON)) {
       map.setLayoutProperty(ICON, 'icon-size', landmarkIconSizeExpression(scale));
+    }
+    if (map.getLayer(LANDMARK_EMOJI_LAYER_ID)) {
+      map.setLayoutProperty(LANDMARK_EMOJI_LAYER_ID, 'icon-size', landmarkIconSizeExpression(scale));
     }
     if (map.getLayer(LABEL)) {
       map.setLayoutProperty(LABEL, 'icon-size', landmarkLabelIconSizeExpression(scale));
@@ -197,14 +242,14 @@ export function useRouteLandmarksLayer({
     const showPointer = () => { map.getCanvas().style.cursor = 'pointer'; };
     const clearPointer = () => { map.getCanvas().style.cursor = ''; };
 
-    for (const layerId of [ICON, LABEL]) {
+    for (const layerId of [ICON, LANDMARK_EMOJI_LAYER_ID, LABEL]) {
       map.on('click', layerId, handleClick);
       map.on('mouseenter', layerId, showPointer);
       map.on('mouseleave', layerId, clearPointer);
     }
 
     return () => {
-      for (const layerId of [ICON, LABEL]) {
+      for (const layerId of [ICON, LANDMARK_EMOJI_LAYER_ID, LABEL]) {
         map.off('click', layerId, handleClick);
         map.off('mouseenter', layerId, showPointer);
         map.off('mouseleave', layerId, clearPointer);

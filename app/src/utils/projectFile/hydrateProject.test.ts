@@ -221,6 +221,19 @@ describe('hydrateProject', () => {
     expect(restored.getState().settings).toMatchObject({ leaderboardPosition: null, leaderboardScale: 1, leaderboardBackground: 'panel', showLeaderboard: true });
   });
 
+  it('preserves selected library and emoji landmark icons in saved projects', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    for (const [id, icon] of [['bike', 'pinhead:bicycle'], ['tent', 'emoji:🏕️'], ['legacy', 'camp']]) {
+      source.getState().addLandmark({ id, icon, type: 'custom', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: id, importance: 3 });
+    }
+    const blob = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
+    const restored = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
+  });
+
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));

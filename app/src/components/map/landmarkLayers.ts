@@ -7,6 +7,7 @@ import {
 
 export const LANDMARK_SOURCE_ID = 'route-landmarks';
 export const LANDMARK_ICON_LAYER_ID = 'route-landmarks-icon';
+export const LANDMARK_EMOJI_LAYER_ID = 'route-landmarks-emoji';
 export const LANDMARK_LABEL_LAYER_ID = 'route-landmarks-label';
 export const LANDMARK_IMAGE_PREFIX = 'route-landmark-glyph-';
 export const LANDMARK_LABEL_IMAGE_PREFIX = 'route-landmark-label-';
@@ -20,6 +21,7 @@ export function landmarkIconLayer(scale: number): LayerSpecification {
     id: LANDMARK_ICON_LAYER_ID,
     type: 'symbol',
     source: LANDMARK_SOURCE_ID,
+    filter: ['!=', ['get', 'emoji'], true],
     layout: {
       'icon-image': ['concat', LANDMARK_IMAGE_PREFIX, ['get', 'icon']],
       'icon-size': landmarkIconSizeExpression(scale),
@@ -33,6 +35,17 @@ export function landmarkIconLayer(scale: number): LayerSpecification {
       'icon-color': ['get', 'color'],
       'icon-opacity': ['get', 'opacity'],
     },
+  } as LayerSpecification;
+}
+
+/** Emoji sprites retain their native colours instead of using SDF tinting. */
+export function landmarkEmojiLayer(scale: number): LayerSpecification {
+  const icon = landmarkIconLayer(scale);
+  return {
+    ...icon,
+    id: LANDMARK_EMOJI_LAYER_ID,
+    filter: ['==', ['get', 'emoji'], true],
+    paint: { 'icon-opacity': ['get', 'opacity'] },
   } as LayerSpecification;
 }
 

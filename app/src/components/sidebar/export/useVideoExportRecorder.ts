@@ -599,11 +599,14 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
       await document.fonts.ready;
-      // Field-note symbols from the Pinhead library are drawn into every frame;
-      // without the library they would export as the fallback pin.
-      const fieldNoteSymbols = useAppStore.getState().textAnnotations
-        .map((annotation) => (annotation.presentation === 'side-panel' ? annotation.logo : undefined));
-      if (needsPinheadIcons(fieldNoteSymbols)) await loadPinheadIcons().catch(() => undefined);
+      // Load saved symbols before rendering the first video frame.
+      const exportState = useAppStore.getState();
+      const symbols = [
+        ...exportState.textAnnotations.map((annotation) => annotation.presentation === 'side-panel' ? annotation.logo : undefined),
+        ...exportState.userLandmarks.map((landmark) => landmark.icon),
+        ...exportState.enrichedLandmarks.map((landmark) => landmark.icon),
+      ];
+      if (needsPinheadIcons(symbols)) await loadPinheadIcons().catch(() => undefined);
 
       cachedLogoRef.current = null;
       await new Promise<void>((resolve) => {

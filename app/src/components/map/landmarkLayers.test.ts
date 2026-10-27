@@ -3,6 +3,7 @@ import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec';
 import {
   LANDMARK_SOURCE_ID,
   landmarkIconLayer,
+  landmarkEmojiLayer,
   landmarkLabelLayer,
 } from './landmarkLayers';
 
@@ -25,6 +26,7 @@ describe('landmark layers', () => {
     expect(validate([landmarkIconLayer(1)])).toEqual([]);
     expect(validate([landmarkIconLayer(1.8)])).toEqual([]);
     expect(validate([landmarkIconLayer(0.7)])).toEqual([]);
+    expect(validate([landmarkEmojiLayer(1)])).toEqual([]);
   });
 
   it('produces a valid label layer at every label size and fade setting', () => {

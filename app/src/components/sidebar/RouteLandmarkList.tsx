@@ -4,11 +4,12 @@ import { useAppStore } from '@/store/useAppStore';
 import { useAllRouteLandmarks } from '@/hooks/useAllRouteLandmarks';
 import {
   colorForLandmark,
-  glyphForLandmark,
   LANDMARK_COLORS,
-  LANDMARK_GLYPH_KEYS,
-  PINHEAD_PATHS,
 } from '@/components/map/landmarkGlyphs';
+import { landmarkIconFromSymbol, landmarkSymbol } from '@/components/map/landmarkSymbols';
+import { annotationSymbolPath, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
+import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
+import { AnnotationSymbolPicker } from './AnnotationSymbolPicker';
 import { trackEvent } from '@/utils/analytics';
 import type { RouteLandmark } from '@/types/landmarks';
 import { sanitizeCoordinates } from '@/components/sidebar/landmarks/coordinates.ts';
@@ -18,10 +19,12 @@ import { useFindNearestRoutePoint } from '@/components/map/hooks/useFindNearestR
 import { useI18n } from '@/i18n/useI18n';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback.ts';
 
-function GlyphIcon({ glyph, color, size = 16 }: { glyph: string; color: string; size?: number }) {
+function GlyphIcon({ symbol, color, size = 16 }: { symbol: string; color: string; size?: number }) {
+  const path = annotationSymbolPath(symbol);
+  if (!path) return <span aria-hidden="true" className="flex-shrink-0" style={{ fontSize: size, lineHeight: 1 }}>{symbol}</span>;
   return (
-    <svg viewBox="0 0 16 16" width={size} height={size} aria-hidden="true" className="flex-shrink-0">
-      <path d={PINHEAD_PATHS[glyph] ?? PINHEAD_PATHS.pin} fill={color} />
+    <svg viewBox="0 0 15 15" width={size} height={size} aria-hidden="true" className="flex-shrink-0">
+      <path d={path} fill={color} />
     </svg>
   );
 }
@@ -41,7 +44,7 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
   const selectLandmark = useAppStore((state) => state.selectLandmark);
 
   const isOwned = userLandmarks.some((entry) => entry.id === landmark.id);
-  const glyph = glyphForLandmark(landmark);
+  const symbol = landmarkSymbol(landmark);
   const color = landmark.color ?? colorForLandmark(landmark);
 
   const edit = (updates: Partial<RouteLandmark>) => {
@@ -72,27 +75,7 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
         />
       </label>
 
-      <div>
-        <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.icon')}</span>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          {LANDMARK_GLYPH_KEYS.map((key) => (
-            <button
-              key={key}
-              onClick={() => edit({ icon: key })}
-              title={t(`routeLandmarks.glyphs.${key}`)}
-              aria-label={t(`routeLandmarks.glyphs.${key}`)}
-              aria-pressed={glyph === key}
-              className={`flex h-8 w-8 items-center justify-center rounded-lg border-2 transition-colors ${
-                glyph === key
-                  ? 'border-[var(--trail-orange)] bg-[var(--canvas)]'
-                  : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'
-              }`}
-            >
-              <GlyphIcon glyph={key} color={color} />
-            </button>
-          ))}
-        </div>
-      </div>
+      <AnnotationSymbolPicker value={symbol} label={t('routeLandmarks.icon')} onChange={(value) => edit({ icon: landmarkIconFromSymbol(value) })} />
 
       <div>
         <span className="block text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.color')}</span>
@@ -137,6 +120,7 @@ type Coordinates = [number, number];
 export function RouteLandmarkList() {
   const { t } = useI18n();
   const landmarks = useAllRouteLandmarks();
+  usePinheadIcons(needsPinheadIcons(landmarks.map((landmark) => landmark.icon)));
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const selectLandmark = useAppStore((state) => state.selectLandmark);
   const isPlacingLandmark = useAppStore((state) => state.isPlacingLandmark);
@@ -263,7 +247,7 @@ export function RouteLandmarkList() {
                   }`}
                 >
                   <GlyphIcon
-                    glyph={glyphForLandmark(landmark)}
+                    symbol={landmarkSymbol(landmark)}
                     color={landmark.color ?? colorForLandmark(landmark)}
                   />
                   <span className="flex-1 truncate text-xs text-[var(--evergreen)]">{landmark.title}</span>

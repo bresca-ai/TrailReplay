@@ -11,6 +11,7 @@ function harness(fail = false) {
     { id: 'comparison-trail-completed-yellow', type: 'line', paint: { 'line-color': '#f1de09', 'line-width': 6 } },
     { id: 'places', type: 'symbol', paint: {} },
     { id: 'route-landmarks-icon', type: 'symbol', paint: {} },
+    { id: 'route-landmarks-emoji', type: 'symbol', paint: {} },
     { id: 'route-landmarks-label', type: 'symbol', paint: {} },
     { id: 'carto-labels', type: 'raster', paint: {} },
   ];
@@ -83,7 +84,7 @@ describe('finished replay map capture', () => {
   it.each([undefined, true])('shows cover places only when explicitly enabled (%s), then restores live visibility', async (showPlaces) => {
     const h = harness();
     await captureSocialMap(h.map, { showPlaces });
-    for (const id of ['route-landmarks-icon', 'route-landmarks-label', 'carto-labels']) {
+    for (const id of ['route-landmarks-icon', 'route-landmarks-emoji', 'route-landmarks-label', 'carto-labels']) {
       expect(h.captured()!.layouts.get(id)).toBe(showPlaces ? 'visible' : 'none');
     }
     expect(JSON.stringify([...h.layouts])).toBe(h.initialLayout);

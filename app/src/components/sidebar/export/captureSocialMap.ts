@@ -13,7 +13,7 @@ export function captureSocialMap(
 
     try {
       for (const layer of map.getStyle().layers ?? []) {
-        if (['route-landmarks-icon', 'route-landmarks-label', 'carto-labels'].includes(layer.id)) {
+        if (['route-landmarks-icon', 'route-landmarks-emoji', 'route-landmarks-label', 'carto-labels'].includes(layer.id)) {
           visibility.push({ id: layer.id, value: map.getLayoutProperty(layer.id, 'visibility') as 'visible' | 'none' | undefined });
           map.setLayoutProperty(layer.id, 'visibility', options.showPlaces ? 'visible' : 'none');
         }
