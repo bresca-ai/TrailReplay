@@ -16,6 +16,7 @@ import { createTracksSlice } from '@/store/slices/tracksSlice';
 import { createUiSlice } from '@/store/slices/uiSlice';
 import { createLandmarksSlice } from '@/store/slices/landmarksSlice';
 import { ROUTE_DIVERGENCE_THRESHOLD_METERS } from '@/utils/routeDivergence';
+import { createTrackTrimSlice } from '@/store/slices/trackTrimSlice';
 
 export function createAppStore() {
   return create<AppState>()(
@@ -27,10 +28,13 @@ export function createAppStore() {
       ...createSettingsSlice(set, get, store),
       ...createUiSlice(set, get, store),
       ...createLandmarksSlice(set, get, store),
+      ...createTrackTrimSlice(set, get, store),
 
       reset: () =>
         set((state) => {
           state.tracks = [];
+          state.trackTrimPreview = null;
+          state.trackTrimOriginals = {};
           state.activeTrackId = null;
           state.recipeReport = null;
           state.sourceRecipe = null;

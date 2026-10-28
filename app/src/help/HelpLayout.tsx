@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { ArrowLeft, ExternalLink, Sparkles } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
+import { languageLabels, type LanguageCode } from '@/i18n/translations';
 
 interface HelpHeaderAction {
   href: string;
@@ -19,7 +20,8 @@ interface HelpLayoutProps {
 }
 
 export function HelpLayout({ eyebrow, title, description, headerActions = [], children }: HelpLayoutProps) {
-  const { t } = useI18n();
+  const { t, language, setLanguage } = useI18n();
+  useEffect(() => { document.documentElement.lang = language; }, [language]);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(193,101,47,0.16),transparent_32%),linear-gradient(180deg,#f8f4ee_0%,#fcfaf6_42%,#f3ede2_100%)] text-[var(--evergreen)]">
@@ -40,8 +42,16 @@ export function HelpLayout({ eyebrow, title, description, headerActions = [], ch
             </div>
           )}
           <div className="flex items-center gap-3">
+            <select
+              aria-label={t('settings.language')}
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as LanguageCode)}
+              className="max-w-36 rounded-lg border border-white/20 bg-[var(--evergreen)] px-2 py-1.5 text-xs text-[var(--canvas)]"
+            >
+              {Object.entries(languageLabels).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+            </select>
             <img src="/media/images/simplelogo.png" alt="TrailReplay" className="h-9 w-9 rounded-md bg-white p-1 shadow-sm ring-1 ring-white/10" />
-            <div className="text-right">
+            <div className="hidden text-right sm:block">
               <div className="text-[11px] uppercase tracking-[0.18em] text-white/60">{eyebrow}</div>
               <div className="text-sm font-bold text-[var(--canvas)]">TrailReplay</div>
             </div>

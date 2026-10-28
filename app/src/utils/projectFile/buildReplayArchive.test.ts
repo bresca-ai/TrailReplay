@@ -18,6 +18,25 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('buildReplayArchive', () => {
+  it('saves the applied trim, without serializing the preview or session original', async () => {
+    const store = createAppStore();
+    const track = parseGPX(sampleGpx, 'ridge-loop.gpx');
+    store.getState().addTrack(track);
+    store.getState().applyTrackTrim(track.id, 1, 2);
+    const blob = await buildReplayArchive(store.getState());
+    const files = unzipSync(new Uint8Array(await blob.arrayBuffer()));
+    const project = JSON.parse(strFromU8(files['project.json'])) as ReplayProjectFile;
+    expect(project).not.toHaveProperty('trackTrimOriginals');
+    expect(project).not.toHaveProperty('trackTrimPreview');
+    const routeFiles = Object.keys(files).filter((name) => name.endsWith('.gpx'));
+    expect(routeFiles).toHaveLength(1);
+    const saved = parseGPX(strFromU8(files[project.tracks[0].routeFile]), 'trimmed.gpx');
+    expect(saved.points).toHaveLength(2);
+    expect(saved.points[0].time).toEqual(track.points[1].time);
+    expect(saved.points[1].time).toEqual(track.points[2].time);
+    expect(store.getState().trackTrimOriginals[track.id].points).toHaveLength(3);
+  });
+
   it('produces a zip with a manifest, project.json, and one gpx per track', async () => {
     const store = createAppStore();
     const track = parseGPX(sampleGpx, 'ridge-loop.gpx');

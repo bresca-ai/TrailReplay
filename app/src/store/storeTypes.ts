@@ -22,6 +22,7 @@ import type {
 import type { LandmarkType, NearbyPlacesCoverage, RouteLandmark } from '@/types/landmarks';
 import type { CinematicCameraKeyframe } from '@/utils/cinematicCameraPlan';
 import type { Recipe, RecipeReport } from '@/utils/recipe/types';
+import type { TrackTrimRange } from '@/utils/gpx/trimTrack';
 
 export interface FileImportStatus {
   kind: 'routes' | 'recipe' | 'project';
@@ -31,6 +32,12 @@ export interface FileImportStatus {
 
 export interface AppState {
   tracks: GPXTrack[];
+  /** Runtime-only crop preview and originals, cleared on project replacement. */
+  trackTrimPreview: TrackTrimRange | null;
+  trackTrimOriginals: Record<string, GPXTrack>;
+  setTrackTrimPreview: (range: TrackTrimRange | null) => void;
+  applyTrackTrim: (trackId: string, startIndex: number, endIndex: number) => boolean;
+  restoreTrackTrim: (trackId: string) => boolean;
   activeTrackId: string | null;
   comparisonTracks: ComparisonTrack[];
   comparisonMode: 'time' | 'route';

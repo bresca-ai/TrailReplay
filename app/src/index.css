@@ -15,7 +15,7 @@
   --trail-orange-60: rgba(193, 101, 47, 0.6);
   
   /* Typography */
-  --font-family-primary: 'JetBrains Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  --font-family-primary: 'JetBrains Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', monospace;
   --font-family-overlay: var(--font-family-primary);
   
   /* Shadcn overrides */

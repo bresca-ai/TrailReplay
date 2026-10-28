@@ -1,5 +1,6 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { getCropPreviewMetrics, type CropRatio } from '@/utils/crop';
+import { useI18n } from '@/i18n/useI18n';
 
 export function CropPreviewBars({
   ratio,
@@ -8,6 +9,7 @@ export function CropPreviewBars({
   ratio: CropRatio;
   containerRef: RefObject<HTMLDivElement | null>;
 }) {
+  const { t } = useI18n();
   const [cropPreview, setCropPreview] = useState<{
     left: number;
     right: number;
@@ -55,7 +57,7 @@ export function CropPreviewBars({
         }}
       />
       <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none bg-black/70 text-white text-xs px-2 py-0.5 rounded">
-        Export crop: {ratio}
+        {t('interface.exportCrop')} {ratio}
       </div>
     </>
   );

@@ -6,6 +6,7 @@ import { mapGlobalRef } from '@/utils/mapRef';
 import { registerAspectProtocol, registerSlopeProtocol } from '@/components/map/terrainProtocols';
 import { MAP_STYLE } from '@/components/map/mapStyle';
 import { setupTrackSources } from '@/components/map/mapSetup';
+import { TRADITIONAL_CHINESE_FONT_FAMILY } from '@/utils/typography';
 
 interface UseMapInitializationParams {
   mapContainer: React.RefObject<HTMLDivElement | null>;
@@ -36,6 +37,7 @@ export function useMapInitialization({
       zoom: 2,
       pitch: 0,
       bearing: 0,
+      localIdeographFontFamily: TRADITIONAL_CHINESE_FONT_FAMILY,
       maxPitch: REPLAY_CAMERA_MAX_PITCH,
       // MapLibre 5+ ignores the top-level `preserveDrawingBuffer`
       // option; it must be passed as a WebGL context attribute. Without it the

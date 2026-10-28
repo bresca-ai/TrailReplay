@@ -6,6 +6,7 @@ import ca from './pinheadTerms/ca.json';
 import de from './pinheadTerms/de.json';
 import es from './pinheadTerms/es.json';
 import fr from './pinheadTerms/fr.json';
+import zhTW from './pinheadTerms/zh-TW.json';
 
 function readPinnedIndex() {
   const require = createRequire(import.meta.url);
@@ -101,6 +102,12 @@ describe('searching in the app language', () => {
 
   it('does not match local words when no word list is given', () => {
     expect(searchPinheadIcons(icons, 'muntanya', 10).total).toBe(0);
+  });
+
+  it('finds common outdoor symbols using Taiwanese Chinese while keeping English search', () => {
+    expect(searchPinheadIcons(icons, '山', 10, zhTW).results.map((icon) => icon.id)).toContain('mountain');
+    expect(searchPinheadIcons(icons, '帳篷', 10, zhTW).results.map((icon) => icon.id)).toContain('wall_tent');
+    expect(searchPinheadIcons(icons, 'mountain', 10, zhTW).results.map((icon) => icon.id)).toContain('mountain');
   });
 });
 

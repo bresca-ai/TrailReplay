@@ -280,7 +280,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
               <p className="text-sm font-semibold">{t('imageExport.videoCover')}</p>
               <p className="mt-0.5 text-xs opacity-70">{t('imageExport.videoCoverHint')}</p>
             </div>
-            <span className="shrink-0 rounded-full bg-[var(--evergreen)] px-2.5 py-1 text-[11px] font-semibold text-[var(--canvas)]">1 sec</span>
+            <span className="shrink-0 rounded-full bg-[var(--evergreen)] px-2.5 py-1 text-[11px] font-semibold text-[var(--canvas)]">{t('journey.durationPreset', { seconds: 1 })}</span>
           </div>
         </div>
       )}

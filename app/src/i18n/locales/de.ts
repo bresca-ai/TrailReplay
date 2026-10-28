@@ -16,6 +16,12 @@ export const de = {
     support: 'Unterstützung',
     supportTitle: 'Unterstütze TrailReplay',
   },
+  interface: {
+    hideTrack: 'Track ausblenden', showTrack: 'Track anzeigen', changeTrackColor: 'Trackfarbe ändern', useTrack: 'Diesen Track verwenden', removeTrack: 'Track entfernen',
+    openSource: 'Routengeschichten mit offenem Quellcode', exportCrop: 'Exportausschnitt:', osmContributors: 'OpenStreetMap-Mitwirkende',
+    placeSection: 'Neuen Zoomabschnitt platzieren', placeSectionHint: 'Klicke auf das Profil, um einen Zoomabschnitt zu platzieren', adjustSection: 'Abschnitt {index} {edge} anpassen', adjustSectionHint: 'Ziehen, um {edge} des Abschnitts anzupassen', removeSection: 'Abschnitt {index} entfernen', removeSectionHint: 'Zoomabschnitt entfernen', addSection: 'Zoomabschnitt hinzufügen', cancelSection: 'Neuen Zoomabschnitt abbrechen',
+    mapCanvas: 'Karte', resetBearing: 'Karte nach Norden ausrichten',
+  },
   sidebar: {
     tabs: {
       tracks: 'Routen',
@@ -118,6 +124,17 @@ export const de = {
     loss: 'Verlust',
     max: 'max',
     points: 'Punkte',
+  },
+  trackTrim: {
+    title: 'Route kürzen', start: 'Start', end: 'Ende',
+    timeHint: 'Ziehe beide Griffe, um einen zusammenhängenden Abschnitt zu behalten. Zeiten werden in deiner Zeitzone angezeigt.',
+    distanceHint: 'Aufnahmezeiten fehlen oder sind widersprüchlich. Wähle einen Abschnitt nach Entfernung.',
+    pointsHint: 'Keine gültige Zeit- oder Entfernungsachse. Wähle nach der Reihenfolge der Punkte.',
+    point: 'Punkt {count}', selection: '{distance} · {count} Punkte behalten',
+    snapHint: 'Die Griffe rasten an Originalpunkten ein. Orange Abschnitte bleiben erhalten, graue werden entfernt.',
+    apply: 'Auf Route anwenden', download: 'GPX herunterladen', cancel: 'Abbrechen', restore: 'Original wiederherstellen',
+    restoreHint: 'Das Original kann in dieser Sitzung wiederhergestellt werden. Gespeicherte Projekte und heruntergeladene GPX-Dateien enthalten nur die aktuelle Route.',
+    dependencies: 'Diese Wiedergabe enthält Medien, Anmerkungen, Vergleichsrouten, Kamera-Keyframes, Transportabschnitte, bearbeitete Höhenabschnitte oder Farbzonen. Vorschau und GPX-Download sind möglich. Kürze die Route vor dem Hinzufügen dieser Inhalte, um sie hier anzuwenden.',
   },
   settings: {
     mapCameraTitle: 'Karte und Kamera wählen',

@@ -49,6 +49,7 @@ export const createPlaybackSlice: AppSliceCreator<PlaybackSlice> = (set) => ({
           return;
         }
       }
+      state.trackTrimPreview = null;
       state.playback.isPlaying = true;
     }),
 

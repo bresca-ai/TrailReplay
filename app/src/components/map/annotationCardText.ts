@@ -44,12 +44,18 @@ export function wrapText(
   if (maxLines <= 1) return [fitText(measurer, text, maxWidth)];
   if (measurer.measureText(text).width <= maxWidth) return [text];
 
-  const words = text.split(/\s+/).filter(Boolean);
+  // Chinese does not delimit words with spaces. Keep closing punctuation with
+  // its character and preserve Latin words/spacing in mixed-language titles.
+  const isCjk = /\p{Script=Han}/u.test(text);
+  const words = isCjk
+    ? text.match(/[\p{Script=Han}][，。！？、：；）】」』]*|[^\s\p{Script=Han}]+|\s+/gu) ?? [text]
+    : text.split(/\s+/).filter(Boolean);
+  const separator = isCjk ? '' : ' ';
   const lines: string[] = [];
   let line = '';
 
   for (let index = 0; index < words.length; index += 1) {
-    const candidate = line ? `${line} ${words[index]}` : words[index];
+    const candidate = line ? `${line}${separator}${words[index]}` : words[index];
 
     if (measurer.measureText(candidate).width <= maxWidth || !line) {
       line = candidate;
@@ -62,7 +68,7 @@ export function wrapText(
     // On the last line the remaining words go in together and are trimmed as a
     // unit, so the ellipsis lands at the end of the text rather than mid-title.
     if (lines.length === maxLines - 1) {
-      line = words.slice(index).join(' ');
+      line = words.slice(index).join(separator);
       break;
     }
   }

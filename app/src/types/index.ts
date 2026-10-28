@@ -1,3 +1,6 @@
+import type { LanguageCode } from '@/i18n/languages';
+export type { LanguageCode } from '@/i18n/languages';
+
 export interface GPXPoint {
   lat: number;
   lon: number;
@@ -209,7 +212,6 @@ export type MapStyle = 'satellite' | 'topo' | 'street' | 'outdoor' | 'esri-clari
  * black-and-white map (issue #99).
  */
 export type MapFilter = 'none' | 'muted' | 'mono' | 'noir';
-export type LanguageCode = 'en' | 'es' | 'ca' | 'de' | 'fr';
 export type RouteTimingMode = 'recorded' | 'uniform';
 export type JourneyStatsMode = 'cumulative' | 'per-track';
 

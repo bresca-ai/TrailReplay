@@ -68,7 +68,7 @@ function insertTrackIntoJourney(state: AppState, track: GPXTrack, insertIndex?: 
   if (!state.journey) {
     state.journey = {
       id: createId('journey'),
-      name: 'My Journey',
+      name: translate(state.settings.language, 'export.projectNamePlaceholder'),
       segments: [],
       totalDuration: 0,
       totalDistance: 0,
@@ -130,6 +130,8 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
 
   removeTrack: (trackId) =>
     set((state) => {
+      delete state.trackTrimOriginals[trackId];
+      if (state.trackTrimPreview?.trackId === trackId) state.trackTrimPreview = null;
       state.tracks = state.tracks.filter((track) => track.id !== trackId);
       state.journeySegments = state.journeySegments.filter((segment) =>
         segment.type !== 'track' || segment.trackId !== trackId

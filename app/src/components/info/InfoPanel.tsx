@@ -33,7 +33,7 @@ export function InfoPanel({ onClose }: InfoPanelProps) {
           />
           <p className="text-[var(--evergreen)] font-bold">Trail Replay</p>
           <p className="text-xs text-[var(--evergreen-60)]">
-            Open Source Trail Storytelling
+            {t('interface.openSource')}
           </p>
         </div>
 
