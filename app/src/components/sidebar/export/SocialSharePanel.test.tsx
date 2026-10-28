@@ -36,6 +36,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); useAppStore.setState(initial, true); });
 
 describe('cover title and places controls', () => {
+  it('keeps the design open initially and lets users switch or collapse sections', () => {
+    render(<TestPanel />);
+    const design = screen.getByRole('button', { name: 'Design' });
+    const map = screen.getByRole('button', { name: 'Map' });
+    expect(design).toHaveAttribute('aria-expanded', 'true');
+    expect(map).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(map);
+    expect(design).toHaveAttribute('aria-expanded', 'false');
+    expect(map).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: 'Show places' })).toBeVisible();
+    fireEvent.click(map);
+    expect(map).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it.each([false, true])('shows Back to video from the image tab (cover enabled: %s)', (coverMode) => {
     render(<TestPanel coverMode={coverMode} onUseCover={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Back to video export' })).toBeInTheDocument();
@@ -44,6 +58,7 @@ describe('cover title and places controls', () => {
   it.each(['journey-name', 'track-name'] as const)('always exposes the resolved %s title for editing', (titleMode) => {
     useAppStore.getState().setSocialShareSettings({ titleMode });
     render(<TestPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Title' }));
     const title = titleMode === 'journey-name' ? names.journey.name : names.tracks[0].name;
     const input = screen.getByRole('textbox', { name: 'Title' });
     expect(input).toHaveValue(title);
@@ -56,6 +71,7 @@ describe('cover title and places controls', () => {
 
   it('lets a user intentionally clear the title', () => {
     render(<TestPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Title' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: '' } });
     expect(useAppStore.getState().socialShareSettings.customTitle).toBe('');
     expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('');
@@ -63,6 +79,7 @@ describe('cover title and places controls', () => {
 
   it('defaults cover places off and exposes one action to show or hide them', () => {
     render(<TestPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
     const show = screen.getByRole('button', { name: 'Show places' });
     expect(show).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(show);

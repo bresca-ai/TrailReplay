@@ -10,7 +10,9 @@ import {
   Image,
   Palette,
   Video,
-  Eye
+  Eye,
+  Globe2,
+  ChevronDown
 } from 'lucide-react';
 
 function SidebarPreferences() {
@@ -19,57 +21,36 @@ function SidebarPreferences() {
   const setUnitSystem = useAppStore((state) => state.setUnitSystem);
 
   return (
-    <div className="mb-4 rounded-[1.2rem] border border-[var(--evergreen)]/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(243,237,226,0.82))] p-4 shadow-sm">
-      <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--evergreen)]">
+    <section className="mb-4 space-y-3" aria-labelledby="sidebar-preferences-title">
+      <h3 id="sidebar-preferences-title" className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--evergreen)] after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
         {t('sidebar.preferencesTitle')}
       </h3>
 
-      <div className="mt-3 space-y-3">
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
-            {t('settings.language')}
-          </label>
-          <select
-            value={language}
+      <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
+        <label htmlFor="sidebar-language" className="text-xs font-medium text-[var(--evergreen)]">{t('settings.language')}</label>
+        <div className="relative flex min-w-0 items-center">
+          <Globe2 className="pointer-events-none absolute left-3 h-4 w-4 text-[var(--evergreen-60)]" aria-hidden="true" />
+          <select id="sidebar-language" value={language}
             onChange={(event) => setLanguage(event.target.value as keyof typeof languageLabels)}
-            className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-white/90 px-3 py-2 text-sm text-[var(--evergreen)] focus:outline-none focus:border-[var(--trail-orange)]"
-          >
-            {Object.entries(languageLabels).map(([code, label]) => (
-              <option key={code} value={code}>
-                {label}
-              </option>
-            ))}
+            className="min-h-10 w-full min-w-0 appearance-none rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] py-2 pl-9 pr-8 text-sm font-medium text-[var(--evergreen)] transition-colors hover:border-[var(--trail-orange)]/60 focus-visible:border-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+            {Object.entries(languageLabels).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
           </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
-            {t('settings.units')}
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {(['metric', 'imperial'] as UnitSystem[]).map((unit) => {
-              const isActive = unitSystem === unit;
-
-              return (
-                <button
-                  key={unit}
-                  type="button"
-                  onClick={() => setUnitSystem(unit)}
-                  className={`
-                    rounded-lg px-3 py-2 text-sm font-medium transition-colors
-                    ${isActive
-                      ? 'bg-[var(--trail-orange)] text-[var(--canvas)]'
-                      : 'bg-white/90 text-[var(--evergreen)] border border-[var(--evergreen)]/12 hover:border-[var(--trail-orange)]/35'}
-                  `}
-                >
-                  {unit === 'metric' ? t('settings.unitMetric') : t('settings.unitImperial')}
-                </button>
-              );
-            })}
-          </div>
+          <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-[var(--evergreen-60)]" aria-hidden="true" />
         </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
+        <span className="text-xs font-medium text-[var(--evergreen)]">{t('settings.units')}</span>
+        <div className="flex overflow-hidden rounded-lg border border-[var(--evergreen)]/20" role="group" aria-label={t('settings.units')}>
+          {(['metric', 'imperial'] as UnitSystem[]).map((unit) => (
+            <button key={unit} type="button" onClick={() => setUnitSystem(unit)} aria-pressed={unitSystem === unit}
+              className={`min-h-10 min-w-0 flex-1 px-1 py-2 text-xs font-medium transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)] ${unitSystem === unit ? 'bg-[var(--evergreen)] text-[var(--canvas)]' : 'text-[var(--evergreen-60)] hover:bg-[var(--evergreen)]/5 hover:text-[var(--evergreen)]'}`}>
+              {unit === 'metric' ? t('settings.unitMetric') : t('settings.unitImperial')}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

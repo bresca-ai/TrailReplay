@@ -65,7 +65,7 @@ export const zhTW = {
   },
   settings: {
     mapCameraTitle: '設定地圖與鏡頭', mapCameraHint: '地圖是影片的背景，請選擇地圖樣式、地形，以及跟隨路線的觀看角度。',
-    title: '地圖設定', overlaysTitle: '疊加圖層', cameraTitle: '鏡頭控制', terrainTitle: '地形', displayOptions: '顯示選項',
+    title: '地圖設定', overlaysTitle: '疊加圖層', noOverlays: '無啟用圖層', moreMapStyles: '更多地圖樣式', mapControlsHelp: '地圖操作', cameraTitle: '鏡頭控制', terrainTitle: '地形', displayOptions: '顯示選項',
     routeElevationMode: '路線高度', followTerrainElevation: '跟隨地形', followRouteElevation: '跟隨路線高度', routeElevationHint: '使用檔案中記錄的高度。缺少高度的點可能顯示在海平面。',
     show3dTerrain: '3D 地形', showHeartRate: '心率分色', showPictures: '顯示照片', heartRateZones: '心率區間', heartRateZone: '區間 {index}',
     mapFilterTitle: '地圖濾鏡', mapFilterHint: '僅調整底圖影像，保留路線原有的顏色。',
@@ -132,6 +132,13 @@ export const zhTW = {
   colors: { trailOrange: '山徑橘', stravaOrange: 'Strava 橘', stravaGreen: 'Strava 綠', green: '綠色', teal: '藍綠色', blue: '藍色', red: '紅色', purple: '紫色' },
   activities: { running: '跑步', runner: '跑者', cycling: '騎自行車', cyclist: '自行車騎士', hiking: '健行', walking: '步行', walker: '行人', skiing: '滑雪', swimming: '游泳', climbing: '攀登', horse: '騎馬', kayak: '獨木舟', skate: '溜冰', ski: '雙板滑雪', snowboard: '單板滑雪', car: '汽車', motorcycle: '機車', plane: '飛機', train: '火車' },
   annotations: {
+    annotationEmptyPlacementHint: "選擇路線上的位置，新增第一個註記。", noRoutePositionHint: "載入路線後即可選擇註記位置。",
+    mapCaptionExplanation: "顯示在地圖上的簡短文字。", fieldNoteExplanation: "較大的側欄，並放慢播放方便閱讀。", positionOnRoute: "路線上的位置", usePlayhead: "使用播放位置", positionTotal: "共 {distance}", positionReady: "準備新增於 {distance}。",
+    newAnnotation: '新增註記', additionalDetails: '其他詳細資訊',
+    colorZonesMeasure: "測量方式", colorZonesDistanceHint: "路線長度：{distance} 公里", colorZonesInvalid: "終點必須在起點之後。",
+    noRouteSelected: '尚未載入路線',
+    routeName: '路線名稱', trailOpacity: '軌跡透明度', markerType: '標記類型',
+    advancedRouteColors: '進階路線顏色', labelsAndText: '標籤與文字',
     sidePanelEyebrow: '旅途片刻', eyebrowLabel: '小標題（選填）', styleYourRouteTitle: '設定路線樣式', styleYourRouteHint: '選擇成品影片中路線、標記、統計資訊與地圖標註的呈現方式。',
     tracksTitle: '軌跡', trailTitle: '路線', noTracks: '請先載入 GPX 軌跡，再設定顏色與名稱。', trackLabel: '軌跡 {index}', mainTrack: '主軌跡', comparisonNumbered: '比較軌跡 {index}', comparisonSingle: '比較軌跡',
     labelsTitle: '名稱標籤', showOnMap: '在地圖上顯示', labelsHint: '各條軌跡的名稱會顯示在地圖標記旁。',
@@ -187,6 +194,8 @@ export const zhTW = {
     manualPlacementQueuedSingleVideo: '1 段影片無法自動定位，請點選地圖以放置。', manualPlacementQueuedMultipleVideo: '{count} 段影片無法自動定位，請依序點選地圖以放置。', manualPlacementCountVideo: '第 {current}／{total} 段影片', manualPlacementSkipVideo: '略過影片', manualPlacementNoRouteVideo: '尚無可用來定位這段影片的路線。', videoPlacedManuallyBadge: '已手動定位',
   },
   export: {
+    studioNeedsMp4: '工作室轉譯需要 MP4。',
+    resolution: '解析度', estimatedSize: '預估大小',
     saveProjectTitle: '儲存專案', saveProjectBody: '下載包含路線、旅程與設定的 .replay 檔案，日後可接續編輯。', projectNameLabel: '專案名稱', projectNamePlaceholder: '我的旅程', generateVideo: '製作影片',
     addVideoCover: '為影片加入封面', addVideoCoverHint: '為 Instagram 製作精美的開場畫面，在動畫開始前顯示 1 秒。', editVideoCover: '編輯封面', designVideoCover: '設計封面', designCoverBeforeExport: '請先設計封面，再匯出影片。', videoCoverMissing: '找不到影片封面圖片。', videoCoverLoadFailed: '無法載入影片封面圖片。',
     title: '匯出設定', format: '格式', ratio: '比例', quality: '畫質', duration: '時間', fallbackWebm: '(WebM)', howItWorksTitle: '運作方式：', howItWorksBody: '錄製會完整擷取地圖畫面，包括統計資訊、海拔剖面圖與軌跡動畫，呈現效果與畫面所見一致。開始錄製前，動畫會回到起點。',

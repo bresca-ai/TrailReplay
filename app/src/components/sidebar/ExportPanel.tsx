@@ -5,11 +5,12 @@ import { useI18n } from '@/i18n/useI18n';
 import { useProjectFile } from '@/hooks/useProjectFile';
 import { ExportSettingsModal } from './export/ExportSettingsModal';
 import { getResolution, QUALITY_OPTIONS } from './export/exportConfig';
+import { VideoSettingsInline } from './export/VideoSettingsInline';
 import { useVideoExportRecorder } from './export/useVideoExportRecorder';
 import { isValidDeliveryEmail, localStudioDownload } from './export/studioDelivery';
 import { SocialSharePanel } from './export/SocialSharePanel';
 import { useSocialShareExport } from './export/useSocialShareExport';
-import { AlertTriangle, Check, Download, Film, ImageIcon, Loader2, Save, Settings, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, Check, Download, ChevronDown, Film, ImageIcon, Loader2, Save, Settings, X } from 'lucide-react';
 import type { SocialShareAspectRatio } from '@/types';
 
 export function ExportPanel() {
@@ -59,7 +60,6 @@ export function ExportPanel() {
   }, []);
 
   const {
-    actualFormat,
     estimatedSize,
     exportProgress,
     exportStage,
@@ -82,6 +82,10 @@ export function ExportPanel() {
   });
   const studioEmailValid = localStudioDownload || isValidDeliveryEmail(studioDeliveryEmail);
   const coverMode = videoExportSettings.includeCover;
+  const effectiveQuality = QUALITY_OPTIONS.find((option) => {
+    const size = getResolution(option.value, videoExportSettings.aspectRatio);
+    return size.width === videoExportSettings.resolution.width && size.height === videoExportSettings.resolution.height;
+  })?.value;
   // One renderer owns the preview across both tabs, including in-flight edits.
   const socialExport = useSocialShareExport(exportMode === 'image' || (coverMode && !coverPreviewUrl));
   const coverAspectRatio = videoExportSettings.aspectRatio;
@@ -123,14 +127,15 @@ export function ExportPanel() {
 
   return (
     <div className="space-y-4">
-      {/* Save Project */}
-      <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/3 p-3">
-        <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('export.saveProjectTitle')}</h3>
+      <details className="group rounded-lg border border-[var(--evergreen)]/15">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-[var(--evergreen)] hover:text-[var(--trail-orange)]"><Save className="h-4 w-4" aria-hidden="true" /><span className="flex-1">{t('export.saveProjectTitle')}</span><ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
+        <div className="space-y-2 border-t border-[var(--evergreen)]/10 px-3 pb-3 pt-2">
         <p className="mt-0.5 text-xs text-[var(--evergreen-60)]">{t('export.saveProjectBody')}</p>
-        <label className="mt-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
+        <label htmlFor="export-project-name" className="mt-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
           {t('export.projectNameLabel')}
         </label>
         <input
+          id="export-project-name"
           type="text"
           value={journeyName ?? ''}
           onChange={(event) => updateJourneyName(event.target.value)}
@@ -147,12 +152,13 @@ export function ExportPanel() {
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {t('sidebar.saveProject')}
         </button>
-      </div>
+        </div>
+      </details>
 
       {/* Mode switch */}
       <div className="grid grid-cols-2 gap-1">
         <button
-          onClick={returnToVideo}
+          type="button" onClick={returnToVideo} disabled={isAppExporting} aria-pressed={exportMode === 'video'}
           className={`py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5 border transition-colors ${
             exportMode === 'video'
               ? 'bg-[var(--evergreen)] text-[var(--canvas)] border-[var(--evergreen)]'
@@ -162,7 +168,7 @@ export function ExportPanel() {
           <Film className="w-3.5 h-3.5" /> {t('imageExport.modeVideo')}
         </button>
         <button
-          onClick={() => setExportMode('image')}
+          type="button" onClick={() => setExportMode('image')} disabled={isAppExporting} aria-pressed={exportMode === 'image'}
           className={`py-2 rounded text-sm font-medium flex items-center justify-center gap-1.5 border transition-colors ${
             exportMode === 'image'
               ? 'bg-[var(--evergreen)] text-[var(--canvas)] border-[var(--evergreen)]'
@@ -184,69 +190,13 @@ export function ExportPanel() {
         />
       ) : (
         <>
-          <div className="bg-[var(--evergreen)] text-[var(--canvas)] p-4 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-sm uppercase tracking-wide">{t('export.title')}</h3>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded border border-white/20 px-2 py-1.5 text-[11px] font-semibold hover:bg-white/10"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                {t('export.openSettings')}
-              </button>
-            </div>
-
-            {videoExportSettings.qualityMode === 'studio' && (
-              <div className="mb-3 flex items-start gap-2 rounded-lg border border-[var(--trail-orange)] bg-white/10 p-2.5">
-                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[var(--trail-orange)]" aria-hidden="true" />
-                <div>
-                  <p className="text-xs font-bold text-[var(--canvas)]">
-                    {t('export.qualityModeStudio')}
-                  </p>
-                  <p className="mt-0.5 text-[11px] leading-4 text-[var(--canvas)]/70">
-                    {t(localStudioDownload ? 'export.studioLocalSummary' : 'export.studioSidebarSummary')}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="opacity-70">{t('export.format')}:</span>
-                <span className="ml-2 font-bold uppercase">
-                  {actualFormat.toUpperCase()}
-                  {videoExportSettings.format === 'mp4' && !mp4Supported && (
-                    <span className="ml-1 text-yellow-400 text-xs">{t('export.fallbackWebm')}</span>
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className="opacity-70">{t('export.ratio')}:</span>
-                <span className="ml-2 font-bold">{videoExportSettings.aspectRatio}</span>
-              </div>
-              <div>
-                <span className="opacity-70">{t('export.quality')}:</span>
-                <span className="ml-2 font-bold">
-                  {QUALITY_OPTIONS.find((option) => option.value === videoExportSettings.quality)?.label} · {videoExportSettings.fps}fps
-                  {videoExportSettings.qualityMode === 'studio' && (
-                    <span className="ml-1.5 rounded bg-[var(--trail-orange)] px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
-                      {t('export.qualityModeStudio')}
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className="opacity-70">{t('export.duration')}:</span>
-                <span className="ml-2 font-bold">{Math.round(playback.totalDuration / 1000)}s</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-[var(--trail-orange-15)] border border-[var(--trail-orange)] rounded-lg p-3">
-            <p className="text-xs text-[var(--evergreen)]">
-              <strong>{t('export.howItWorksTitle')}</strong> {t('export.howItWorksBody')}
-            </p>
-          </div>
+          <VideoSettingsInline
+            settings={videoExportSettings} onChange={setVideoExportSettings} disabled={isExporting}
+            mp4Supported={mp4Supported} studioSupported={studioSupported} estimatedSize={estimatedSize}
+            durationSeconds={Math.round(playback.totalDuration / 1000)} studioDeliveryEmail={studioDeliveryEmail}
+            onStudioDeliveryEmailChange={setStudioDeliveryEmail} marketingConsent={marketingConsent} consentDefaultsLoaded={consentDefaultsLoaded}
+            onMarketingConsentChange={(checked) => { consentTouchedRef.current = true; setMarketingConsent(checked); }} t={t}
+          />
 
           {(!exportedBlob || videoExportSettings.includeCover) && (
             <div className="rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/[0.03] p-3 text-[var(--evergreen)]">
@@ -302,7 +252,7 @@ export function ExportPanel() {
           )}
 
           {!isExporting && !exportedBlob && videoExportSettings.includeCover && !coverPreviewUrl ? (
-            <p className="text-center text-xs text-[var(--canvas)]/70">{t('export.designCoverBeforeExport')}</p>
+            <p className="text-center text-xs text-[var(--evergreen-60)]">{t('export.designCoverBeforeExport')}</p>
           ) : null}
 
           {playback.totalDuration === 0 && !isExporting && (
@@ -394,6 +344,11 @@ export function ExportPanel() {
             </div>
           )}
 
+          {!isExporting && !exportedBlob && <>
+            <button type="button" onClick={() => setShowSettings(true)} className="flex min-h-10 w-full items-center gap-2 border-t border-[var(--evergreen)]/15 py-2 text-left text-xs font-semibold text-[var(--evergreen)] hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]"><Settings className="h-4 w-4" aria-hidden="true" /><span className="flex-1">{t('export.openSettings')}</span><ChevronDown className="h-4 w-4" aria-hidden="true" /></button>
+            <details className="text-xs text-[var(--evergreen-60)]"><summary className="cursor-pointer font-semibold text-[var(--evergreen)]">{t('export.howItWorksTitle')}</summary><p className="mt-2 leading-relaxed">{t('export.howItWorksBody')}</p></details>
+          </>}
+
           <ExportSettingsModal
             estimatedSize={estimatedSize}
             isOpen={showSettings}
@@ -410,7 +365,7 @@ export function ExportPanel() {
             setVideoExportSettings={setVideoExportSettings}
             studioDeliveryEmail={studioDeliveryEmail}
             t={t}
-            videoExportSettings={videoExportSettings}
+            videoExportSettings={effectiveQuality ? { ...videoExportSettings, quality: effectiveQuality } : videoExportSettings}
           />
 
           {showShareModal && (
@@ -469,6 +424,7 @@ export function ExportPanel() {
           )}
         </>
       )}
+
     </div>
   );
 }

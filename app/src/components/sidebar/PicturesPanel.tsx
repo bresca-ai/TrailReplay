@@ -132,12 +132,8 @@ export function PicturesPanel() {
         onChange={handleRelinkFileChange}
         className="hidden"
       />
-      <div className="rounded-xl border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-3">
-        <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('media.videoMomentsTitle')}</h3>
-        <p className="mt-1 text-xs leading-4 text-[var(--evergreen-80)]">{t('media.videoMomentsHint')}</p>
-      </div>
       {/* Tabs */}
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/4 p-1.5">
+      <div className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--evergreen)]/15 p-1">
         {mediaTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -148,25 +144,16 @@ export function PicturesPanel() {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`
-                relative flex min-h-[70px] flex-col items-center justify-center rounded-xl px-2 py-2 text-center transition-colors
+                relative flex min-h-11 items-center justify-center gap-1.5 rounded-md px-1 py-2 text-center transition-colors
                 ${isActive
-                  ? 'bg-[var(--trail-orange)] text-[var(--canvas)] shadow-[0_10px_18px_rgba(193,101,47,0.22)]'
+                  ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
                   : 'bg-transparent text-[var(--evergreen)] hover:bg-[var(--evergreen)]/10'
                 }
               `}
             >
-              <span
-                className={`
-                  absolute right-1.5 top-1.5 min-w-[1.2rem] rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none
-                  ${isActive
-                    ? 'bg-[rgba(255,255,255,0.2)] text-[var(--canvas)]'
-                    : 'bg-[var(--evergreen)]/12 text-[var(--evergreen-60)]'}
-                `}
-              >
-                {tab.count}
-              </span>
-              <Icon className="h-4 w-4" />
-              <span className="mt-1 text-[11px] font-semibold leading-[1.15]">{tab.label}</span>
+              <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 text-[10px] font-semibold leading-tight">{tab.label}</span>
+              {tab.count > 0 && <span className={`text-[10px] tabular-nums ${isActive ? 'text-[var(--canvas)]/70' : 'text-[var(--evergreen-60)]'}`}>{tab.count}</span>}
             </button>
           );
         })}

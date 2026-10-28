@@ -39,12 +39,11 @@ const panelRegistry: Record<
 
 export function SidebarPanelContent() {
   const activePanel = useAppStore((state) => state.activePanel);
-  const hasTracks = useAppStore((state) => state.tracks.length > 0);
   const renderPanel = panelRegistry[activePanel];
 
   return (
     <>
-      {hasTracks && <WorkflowGuide />}
+      <WorkflowGuide />
       <Suspense fallback={<PanelFallback />}>{renderPanel()}</Suspense>
     </>
   );
