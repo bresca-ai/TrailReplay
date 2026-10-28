@@ -695,7 +695,8 @@ export function useTrailPlaybackCamera({
       }
 
       if (recordedElevationEnabled && currentPosition && Number.isFinite(currentPosition.elevation)) {
-        centerElevation = { elevation: currentPosition.elevation };
+        const terrain = mapRef.current.queryTerrainElevation([currentPosition.lon, currentPosition.lat]);
+        centerElevation = { elevation: terrain == null ? currentPosition.elevation : Math.max(currentPosition.elevation, terrain + 1) };
       }
 
       // Apply the already-smoothed pose with `jumpTo` rather than `easeTo` in

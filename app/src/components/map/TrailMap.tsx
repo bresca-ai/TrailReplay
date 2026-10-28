@@ -302,7 +302,8 @@ export function TrailMap(_props: TrailMapProps) {
 
   const recordedPoints = useMemo(() => computedJourney?.coordinates ?? activeTrack?.points ?? [], [computedJourney, activeTrack]);
   const recordedElevationEnabled = settings.recordedElevationPrototype && recordedPoints.length >= 2;
-  useRecordedElevationLayer(map, isMapLoaded, recordedElevationEnabled, recordedPoints, currentPosition, completedCoordinates.length, markerRef);
+  const recordedStyle = useMemo(() => ({ colorMode: trailStyle.colorMode, trailColor: trailStyle.trailColor, colorZones: trailStyle.colorZones, segmentTimings: computedJourney?.segmentTimings ?? [] }), [trailStyle.colorMode, trailStyle.trailColor, trailStyle.colorZones, computedJourney]);
+  useRecordedElevationLayer(map, isMapLoaded, recordedElevationEnabled, recordedPoints, currentPosition, completedCoordinates, markerRef, recordedStyle, trailStyle.ghostTrailOpacity);
 
   useTrailPlaybackCamera({
     activeTrack,
