@@ -433,6 +433,13 @@ export const de = {
     train: 'Zug',
   },
   annotations: {
+    annotationEmptyPlacementHint: "Wähle eine Position auf der Route für deine erste Annotation.", noRoutePositionHint: "Lade eine Route, um eine Position auszuwählen.",
+    mapCaptionExplanation: "Kurzer Text auf der Karte.", fieldNoteExplanation: "Größeres Feld; verlangsamt die Wiedergabe zum Lesen.", positionOnRoute: "Position auf der Route", usePlayhead: "Abspielposition nutzen", positionTotal: "von {distance}", positionReady: "Bereit bei {distance}.",
+    newAnnotation: 'Neue Annotation', additionalDetails: 'Weitere Details',
+    colorZonesMeasure: "Maßeinheit", colorZonesDistanceHint: "Routenlänge: {distance} km", colorZonesInvalid: "Das Ende muss nach dem Anfang liegen.",
+    noRouteSelected: 'Keine Route geladen',
+    routeName: 'Routenname', trailOpacity: 'Spurdeckkraft', markerType: 'Markertyp',
+    advancedRouteColors: 'Erweiterte Routenfarben', labelsAndText: 'Beschriftungen und Text',
     sidePanelEyebrow: 'Routenmoment',
     eyebrowLabel: 'Kleine Überschrift (optional)',
     styleYourRouteTitle: 'Route gestalten',

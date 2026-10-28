@@ -3,7 +3,6 @@ import {
   Clock,
   Eye,
   EyeOff,
-  GripVertical,
   Mountain,
   Navigation,
   Palette,
@@ -16,53 +15,32 @@ import { useI18n } from '@/i18n/useI18n';
 import { formatDistance, formatDuration, formatElevation, formatSpeedFromKmh } from '@/utils/units';
 import { TRACK_COLORS } from './constants';
 import { TrackTrimControls } from './TrackTrimControls';
-import { useAppStore } from '@/store/useAppStore';
 
 interface TrackItemProps {
   track: GPXTrack;
-  index: number;
   isActive: boolean;
   onActivate: () => void;
   onRemove: () => void;
   onToggleVisibility: () => void;
   onColorChange: (color: string) => void;
   onNameChange: (name: string) => void;
-  onReorder: (fromIndex: number, toIndex: number) => void;
   settings: AppSettings;
 }
 
 export function TrackItem({
   track,
-  index,
   isActive,
   onActivate,
   onRemove,
   onToggleVisibility,
   onColorChange,
   onNameChange,
-  onReorder,
   settings,
 }: TrackItemProps) {
   const { t } = useI18n();
-  const isTrimming = useAppStore((state) => state.trackTrimPreview?.trackId === track.id);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(track.name);
-
-  const handleDragStart = (event: React.DragEvent) => {
-    setIsDragging(true);
-    event.dataTransfer.setData('trackIndex', index.toString());
-    event.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDrop = (event: React.DragEvent) => {
-    event.preventDefault();
-    const fromIndex = Number.parseInt(event.dataTransfer.getData('trackIndex'), 10);
-    if (fromIndex !== index) {
-      onReorder(fromIndex, index);
-    }
-  };
 
   const pace = track.avgMovingSpeed > 0
     ? settings.unitSystem === 'metric'
@@ -72,25 +50,13 @@ export function TrackItem({
 
   return (
     <div
-      draggable={!isTrimming}
-      onDragStart={handleDragStart}
-      onDragEnd={() => setIsDragging(false)}
-      onDragOver={(event) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-      }}
-      onDrop={handleDrop}
       className={`
-        cursor-move overflow-hidden rounded-xl border bg-white/70 shadow-[0_8px_20px_rgba(27,42,32,0.06)] transition-colors
+        overflow-hidden rounded-xl border bg-white/70 shadow-[0_8px_20px_rgba(27,42,32,0.06)] transition-colors
         ${isActive ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] shadow-[0_10px_24px_rgba(193,101,47,0.13)]' : 'border-[var(--evergreen)]/16 hover:border-[var(--evergreen)]/30'}
-        ${isDragging ? 'opacity-50' : ''}
       `}
     >
       <div className="flex items-stretch gap-3 p-3">
-        <div className="flex w-4 shrink-0 flex-col items-center gap-2 pt-0.5">
-          <GripVertical className="h-4 w-4 text-[var(--evergreen-40)]" />
-          <span className="min-h-8 w-1 flex-1 rounded-full" style={{ backgroundColor: track.color }} />
-        </div>
+        <span className="w-1 shrink-0 rounded-full" style={{ backgroundColor: track.color }} aria-hidden="true" />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

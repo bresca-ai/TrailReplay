@@ -31,11 +31,11 @@ export function TrackTrimControls({ track, unitSystem }: Props) {
   }, [track.id, setPreview]);
 
   return (
-    <div className="border-t border-[var(--evergreen)]/10 bg-[var(--evergreen)]/[0.025] p-3 cursor-default">
-      <div className="flex flex-wrap gap-2">
+    <div className="border-t border-[var(--evergreen)]/10 px-3 py-2 cursor-default">
+      <div className={`grid gap-2 ${hasOriginal ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <button
           type="button"
-          className="tr-btn tr-btn-secondary text-xs gap-1.5 disabled:opacity-50"
+          className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[var(--evergreen)]/20 px-2 py-1.5 text-xs font-semibold text-[var(--evergreen)] transition-colors hover:border-[var(--trail-orange)]/60 hover:bg-[var(--trail-orange-15)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={isExporting || track.points.length < 2}
           aria-expanded={isOpen}
           onClick={() => {
@@ -46,17 +46,17 @@ export function TrackTrimControls({ track, unitSystem }: Props) {
             }
           }}
         >
-          <Scissors className="h-3.5 w-3.5" />{t('trackTrim.title')}
+          <Scissors className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('trackTrim.title')}
         </button>
         {hasOriginal && (
           <button
             type="button"
-            className="tr-btn tr-btn-secondary text-xs gap-1.5 disabled:opacity-50"
+            className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[var(--evergreen)]/20 px-2 py-1.5 text-xs font-semibold text-[var(--evergreen)] transition-colors hover:border-[var(--trail-orange)]/60 hover:bg-[var(--trail-orange-15)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isExporting || hasDependencies}
             title={t(hasDependencies ? 'trackTrim.dependencies' : 'trackTrim.restoreHint')}
             onClick={() => restore(track.id)}
           >
-            <RotateCcw className="h-3.5 w-3.5" />{t('trackTrim.restore')}
+            <RotateCcw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('trackTrim.restore')}
           </button>
         )}
       </div>

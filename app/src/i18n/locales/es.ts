@@ -433,6 +433,13 @@ export const es = {
     train: 'Tren',
   },
   annotations: {
+    annotationEmptyPlacementHint: "Elige una posición de la ruta para añadir tu primera anotación.", noRoutePositionHint: "Carga una ruta para elegir la posición de la anotación.",
+    mapCaptionExplanation: "Texto breve sobre el mapa.", fieldNoteExplanation: "Un panel más grande que ralentiza la reproducción para leer.", positionOnRoute: "Posición en la ruta", usePlayhead: "Usar el cursor", positionTotal: "de {distance}", positionReady: "Listo para añadir en {distance}.",
+    newAnnotation: 'Nueva anotación', additionalDetails: 'Detalles adicionales',
+    colorZonesMeasure: "Medir por", colorZonesDistanceHint: "Longitud de la ruta: {distance} km", colorZonesInvalid: "El final debe ser posterior al inicio.",
+    noRouteSelected: 'Ninguna ruta cargada',
+    routeName: 'Nombre de ruta', trailOpacity: 'Opacidad del rastro', markerType: 'Tipo de marcador',
+    advancedRouteColors: 'Colores avanzados de la ruta', labelsAndText: 'Etiquetas y texto',
     sidePanelEyebrow: 'Momento de ruta',
     eyebrowLabel: 'Encabezado pequeño (opcional)',
     styleYourRouteTitle: 'Da estilo a tu ruta',

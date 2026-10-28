@@ -433,6 +433,13 @@ export const ca = {
     train: 'Tren',
   },
   annotations: {
+    annotationEmptyPlacementHint: "Tria una posició de la ruta per afegir la primera anotació.", noRoutePositionHint: "Carrega una ruta per triar la posició de l’anotació.",
+    mapCaptionExplanation: "Text breu sobre el mapa.", fieldNoteExplanation: "Un panell més gran que alenteix la reproducció per llegir.", positionOnRoute: "Posició a la ruta", usePlayhead: "Usa el cursor", positionTotal: "de {distance}", positionReady: "A punt per afegir a {distance}.",
+    newAnnotation: 'Nova anotació', additionalDetails: 'Detalls addicionals',
+    colorZonesMeasure: "Mesura per", colorZonesDistanceHint: "Longitud de la ruta: {distance} km", colorZonesInvalid: "El final ha de ser posterior a l’inici.",
+    noRouteSelected: 'Cap ruta carregada',
+    routeName: 'Nom de la ruta', trailOpacity: 'Opacitat del rastre', markerType: 'Tipus de marcador',
+    advancedRouteColors: 'Colors avançats de la ruta', labelsAndText: 'Etiquetes i text',
     sidePanelEyebrow: 'Moment de ruta',
     eyebrowLabel: 'Encapçalament petit (opcional)',
     styleYourRouteTitle: 'Dona estil a la ruta',

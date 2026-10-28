@@ -433,6 +433,13 @@ export const fr = {
     train: 'Train',
   },
   annotations: {
+    annotationEmptyPlacementHint: "Choisissez une position sur le parcours pour ajouter votre première annotation.", noRoutePositionHint: "Chargez un parcours pour choisir une position.",
+    mapCaptionExplanation: "Texte court affiché sur la carte.", fieldNoteExplanation: "Un panneau plus grand qui ralentit la lecture.", positionOnRoute: "Position sur le parcours", usePlayhead: "Utiliser le curseur", positionTotal: "sur {distance}", positionReady: "Prêt à ajouter à {distance}.",
+    newAnnotation: 'Nouvelle annotation', additionalDetails: 'Détails supplémentaires',
+    colorZonesMeasure: "Mesurer en", colorZonesDistanceHint: "Longueur du parcours : {distance} km", colorZonesInvalid: "La fin doit être après le début.",
+    noRouteSelected: 'Aucun parcours chargé',
+    routeName: 'Nom du parcours', trailOpacity: 'Opacité du tracé', markerType: 'Type de marqueur',
+    advancedRouteColors: 'Couleurs avancées du parcours', labelsAndText: 'Étiquettes et texte',
     sidePanelEyebrow: 'Moment du parcours',
     eyebrowLabel: 'Petit en-tête (facultatif)',
     styleYourRouteTitle: 'Styliser votre itinéraire',

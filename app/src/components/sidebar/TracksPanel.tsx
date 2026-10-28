@@ -1,19 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { useDropzone, type DropEvent } from 'react-dropzone';
 import { useAppStore } from '@/store/useAppStore';
 import { useGPX } from '@/hooks/useGPX';
-import { getSupportedRouteFileExtension, parseFIT, parseGPX, parseKML } from '@/utils/gpxParser';
 import { useI18n } from '@/i18n/useI18n';
-import {
-  Upload,
-  GitCompareArrows,
-} from 'lucide-react';
-import { ComparisonTrackItem } from '@/components/sidebar/tracks/ComparisonTrackItem';
+import { Upload } from 'lucide-react';
 import { TrackItem } from '@/components/sidebar/tracks/TrackItem';
 import { RecipeReportCard } from '@/components/sidebar/tracks/RecipeReportCard';
-import { COMPARISON_COLORS } from '@/components/sidebar/tracks/constants';
 import { trackEvent } from '@/utils/analytics';
-import { getComparisonAvailability } from '@/utils/comparisonAvailability';
 
 export function TracksPanel() {
   const { t } = useI18n();
@@ -25,76 +18,9 @@ export function TracksPanel() {
   const updateTrackColor = useAppStore((state) => state.updateTrackColor);
   const updateTrackName = useAppStore((state) => state.updateTrackName);
   const toggleTrackVisibility = useAppStore((state) => state.toggleTrackVisibility);
-  const reorderTracks = useAppStore((state) => state.reorderTracks);
   const settings = useAppStore((state) => state.settings);
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
   const setExploreMode = useAppStore((state) => state.setExploreMode);
-  const setError = useAppStore((state) => state.setError);
-  const comparisonMode = useAppStore((state) => state.comparisonMode);
-  const comparisonThresholdMeters = useAppStore((state) => state.comparisonThresholdMeters);
-  const setComparisonMode = useAppStore((state) => state.setComparisonMode);
-
-  // Comparison track state
-  const comparisonTracks = useAppStore((state) => state.comparisonTracks);
-  const hasVisibleComparison = comparisonTracks.some((track) => track.visible);
-  const primary = tracks.find((track) => track.id === activeTrackId) ?? tracks[0];
-  const availability = useMemo(() => getComparisonAvailability(primary, comparisonTracks.filter((track) => track.visible).map((track) => track.track)), [primary, comparisonTracks]);
-  const addComparisonTrack = useAppStore((state) => state.addComparisonTrack);
-  const removeComparisonTrack = useAppStore((state) => state.removeComparisonTrack);
-  const ungroupComparisonTrack = useAppStore((state) => state.ungroupComparisonTrack);
-  const updateComparisonTrackName = useAppStore((state) => state.updateComparisonTrackName);
-  const [showComparison, setShowComparison] = useState(comparisonTracks.length > 0);
-  const [isParsingComparison, setIsParsingComparison] = useState(false);
-  const comparisonFileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (comparisonTracks.length > 0) setShowComparison(true);
-    // Only auto-open when a group first appears; the user can still collapse it afterwards.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [comparisonTracks.length > 0]);
-
-  const handleComparisonFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const extension = getSupportedRouteFileExtension(file.name);
-    if (!extension) {
-      setError(t('errors.noValidGpx'));
-      e.target.value = '';
-      return;
-    }
-
-    setIsParsingComparison(true);
-    try {
-      let track;
-      if (extension === 'fit') {
-        track = parseFIT(await file.arrayBuffer(), file.name);
-      } else if (extension === 'gpx') {
-        track = parseGPX(await file.text(), file.name);
-      } else {
-        track = parseKML(await file.text(), file.name);
-      }
-      const colorIndex = comparisonTracks.length % COMPARISON_COLORS.length;
-      addComparisonTrack({
-        id: `comparison-${Date.now()}`,
-        name: track.name,
-        color: COMPARISON_COLORS[colorIndex],
-        track,
-        visible: true,
-        offset: 0,
-      });
-      trackEvent('comparison_track_added', {
-        comparison_track_count: comparisonTracks.length + 1,
-      });
-    } catch (err) {
-      console.error('Failed to parse comparison GPX:', err);
-      setError(t('errors.parseGpxFailed'));
-    } finally {
-      setIsParsingComparison(false);
-      if (comparisonFileRef.current) comparisonFileRef.current.value = '';
-    }
-  }, [addComparisonTrack, comparisonTracks.length, setError, t]);
-  
   const onDrop = useCallback(async (
     acceptedFiles: File[],
     _fileRejections: unknown[],
@@ -142,10 +68,6 @@ export function TracksPanel() {
     disabled: isParsing,
   });
 
-  const handleReorder = (fromIndex: number, toIndex: number) => {
-    reorderTracks(fromIndex, toIndex);
-  };
-
   return (
     <div className="space-y-4">
       {/* Upload Area */}
@@ -177,23 +99,18 @@ export function TracksPanel() {
             <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--evergreen)]">
               {t('tracks.loadedTracks', { count: tracks.length })}
             </h3>
-            <span className="whitespace-nowrap text-[11px] text-[var(--evergreen-60)]">
-              {t('tracks.dragReorder')}
-            </span>
           </div>
           <div className="space-y-3">
-            {tracks.map((track, index) => (
+            {tracks.map((track) => (
               <TrackItem
                 key={track.id}
                 track={track}
-                index={index}
                 isActive={activeTrackId === track.id}
                 onActivate={() => setActiveTrack(track.id)}
                 onRemove={() => removeTrack(track.id)}
                 onToggleVisibility={() => toggleTrackVisibility(track.id)}
                 onColorChange={(color) => updateTrackColor(track.id, color)}
                 onNameChange={(name) => updateTrackName(track.id, name)}
-                onReorder={handleReorder}
                 settings={settings}
               />
             ))}
@@ -201,76 +118,6 @@ export function TracksPanel() {
         </section>
       )}
       
-      {/* Comparison Mode */}
-      {tracks.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowComparison(!showComparison)}
-            className="flex items-center gap-2 w-full text-left mb-3"
-          >
-            <GitCompareArrows className="w-4 h-4 text-[var(--evergreen-60)]" />
-            <h3 className="text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide">
-              {t('tracks.comparisonTitle')}
-            </h3>
-            <span className="text-xs text-[var(--evergreen-60)] ml-auto">
-              {showComparison ? t('tracks.comparisonToggleOpen') : t('tracks.comparisonToggleClosed')}
-            </span>
-          </button>
-
-          {showComparison && (
-            <div className="space-y-3">
-              <p className="text-xs text-[var(--evergreen-60)]">
-                {t('tracks.comparisonHint')}
-              </p>
-              <div className="grid grid-cols-2 gap-1 rounded-lg bg-[var(--evergreen)]/5 p-1">
-                {(['time', 'route'] as const).map((mode) => (
-                  <button key={mode} type="button" onClick={() => setComparisonMode(mode)} aria-pressed={comparisonMode === mode}
-                    aria-disabled={hasVisibleComparison && !availability[mode]}
-                    className={`rounded-md px-2 py-2 text-xs font-semibold ${comparisonMode === mode ? 'bg-[var(--evergreen)] text-white shadow-sm' : 'text-[var(--evergreen-70)] hover:bg-white'} ${hasVisibleComparison && !availability[mode] ? 'opacity-45' : ''}`}>
-                    {t(mode === 'time' ? 'tracks.compareByTime' : 'tracks.compareByRoute')}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[11px] leading-relaxed text-[var(--evergreen-60)]">
-                {t(comparisonMode === 'time' ? 'tracks.compareTimeHint' : 'tracks.compareRouteHint', { threshold: comparisonThresholdMeters })}
-              </p>
-              {availability.timeIssue && <p role="alert" className="rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[11px] text-[var(--evergreen-80)]">{t('journey.editor.missingTiming')}</p>}
-              {availability.routeIssue && <p role="alert" className="rounded-lg bg-[var(--trail-orange-15)] px-3 py-2 text-[11px] text-[var(--evergreen-80)]">{t('journey.editor.noSharedRoute')}</p>}
-
-              {/* Comparison track list */}
-              {comparisonTracks.map((ct) => (
-                <ComparisonTrackItem
-                  key={ct.id}
-                  track={ct}
-                  settings={settings}
-                  onNameChange={(name) => updateComparisonTrackName(ct.id, name)}
-                  onRemove={() => removeComparisonTrack(ct.id)}
-                  onUngroup={() => ungroupComparisonTrack(ct.id)}
-                />
-              ))}
-
-              {/* Add comparison file */}
-              <div>
-                <input
-                  ref={comparisonFileRef}
-                  type="file"
-                  accept=".gpx,.kml,.fit"
-                  onChange={handleComparisonFile}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => comparisonFileRef.current?.click()}
-                  disabled={isParsingComparison}
-                  className="tr-btn tr-btn-secondary w-full text-sm"
-                >
-                  {isParsingComparison ? t('tracks.parsingComparison') : t('tracks.addComparison')}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Empty State */}
       {tracks.length === 0 && !isParsing && (
         <div className="text-center py-8 text-[var(--evergreen-60)]">

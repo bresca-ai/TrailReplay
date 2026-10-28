@@ -131,6 +131,13 @@ export const zhTW = {
   colors: { trailOrange: '山徑橘', stravaOrange: 'Strava 橘', stravaGreen: 'Strava 綠', green: '綠色', teal: '藍綠色', blue: '藍色', red: '紅色', purple: '紫色' },
   activities: { running: '跑步', runner: '跑者', cycling: '騎自行車', cyclist: '自行車騎士', hiking: '健行', walking: '步行', walker: '行人', skiing: '滑雪', swimming: '游泳', climbing: '攀登', horse: '騎馬', kayak: '獨木舟', skate: '溜冰', ski: '雙板滑雪', snowboard: '單板滑雪', car: '汽車', motorcycle: '機車', plane: '飛機', train: '火車' },
   annotations: {
+    annotationEmptyPlacementHint: "選擇路線上的位置，新增第一個註記。", noRoutePositionHint: "載入路線後即可選擇註記位置。",
+    mapCaptionExplanation: "顯示在地圖上的簡短文字。", fieldNoteExplanation: "較大的側欄，並放慢播放方便閱讀。", positionOnRoute: "路線上的位置", usePlayhead: "使用播放位置", positionTotal: "共 {distance}", positionReady: "準備新增於 {distance}。",
+    newAnnotation: '新增註記', additionalDetails: '其他詳細資訊',
+    colorZonesMeasure: "測量方式", colorZonesDistanceHint: "路線長度：{distance} 公里", colorZonesInvalid: "終點必須在起點之後。",
+    noRouteSelected: '尚未載入路線',
+    routeName: '路線名稱', trailOpacity: '軌跡透明度', markerType: '標記類型',
+    advancedRouteColors: '進階路線顏色', labelsAndText: '標籤與文字',
     sidePanelEyebrow: '旅途片刻', eyebrowLabel: '小標題（選填）', styleYourRouteTitle: '設定路線樣式', styleYourRouteHint: '選擇成品影片中路線、標記、統計資訊與地圖標註的呈現方式。',
     tracksTitle: '軌跡', trailTitle: '路線', noTracks: '請先載入 GPX 軌跡，再設定顏色與名稱。', trackLabel: '軌跡 {index}', mainTrack: '主軌跡', comparisonNumbered: '比較軌跡 {index}', comparisonSingle: '比較軌跡',
     labelsTitle: '名稱標籤', showOnMap: '在地圖上顯示', labelsHint: '各條軌跡的名稱會顯示在地圖標記旁。',
