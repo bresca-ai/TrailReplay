@@ -690,6 +690,8 @@ export const fr = {
     videoPlacedManuallyBadge: 'Placé à la main',
   },
   export: {
+    studioNeedsMp4: 'Le rendu Studio nécessite le format MP4.',
+    resolution: 'Résolution', estimatedSize: 'Taille estimée',
     saveProjectTitle: 'Enregistrez votre projet',
     saveProjectBody: 'Téléchargez un fichier .replay avec vos itinéraires, votre parcours et vos réglages pour reprendre plus tard là où vous en étiez.',
     projectNameLabel: 'Nom du projet',

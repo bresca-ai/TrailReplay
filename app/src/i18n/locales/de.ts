@@ -690,6 +690,8 @@ export const de = {
     videoPlacedManuallyBadge: 'Von Hand platziert',
   },
   export: {
+    studioNeedsMp4: 'Studio-Rendering erfordert MP4.',
+    resolution: 'Auflösung', estimatedSize: 'Geschätzte Größe',
     saveProjectTitle: 'Projekt speichern',
     saveProjectBody: 'Lade eine .replay-Datei mit Deinen Routen, Deinem Reiseverlauf und Deinen Einstellungen herunter, um später dort weiterzumachen, wo Du aufgehört hast.',
     projectNameLabel: 'Projektname',
