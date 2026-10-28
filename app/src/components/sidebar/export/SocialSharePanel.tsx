@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, X } from 'lucide-react';
 import type { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal, type CoverEditorSection } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
@@ -87,16 +87,15 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
   const [activePhotoSlotId, setActivePhotoSlotId] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [editingStatIconId, setEditingStatIconId] = useState<string | null>(null);
-  const [selectedSection, setSelectedSection] = useState<CoverEditorSection>('layout');
+  const [selectedSection, setSelectedSection] = useState<CoverEditorSection | null>('layout');
   const sectionRefs = useRef<Partial<Record<CoverEditorSection, HTMLElement | null>>>({});
-  const sectionNavRef = useRef<HTMLElement | null>(null);
   const selectSection = (section: CoverEditorSection) => {
     setSelectedSection(section);
     window.requestAnimationFrame(() => {
       const target = sectionRefs.current[section];
       const scroller = target?.closest<HTMLElement>('[data-sidebar-scroll]');
       if (!target || !scroller) return;
-      const top = scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - (sectionNavRef.current?.offsetHeight ?? 0) - 12;
+      const top = scroller.scrollTop + target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12;
       scroller.scrollTo({ top, behavior: 'smooth' });
     });
   };
@@ -261,15 +260,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     { value: 'photo-first', label: t('imageExport.templatePhotoFirst') },
     { value: 'split', label: t('imageExport.templateSplit') },
   ];
-  const sections: { id: CoverEditorSection; label: string }[] = [
-    { id: 'layout', label: t('imageExport.designSection') },
-    ...(settings.template === 'map-first' ? [] : [{ id: 'photos' as const, label: t('imageExport.photoFrames') }]),
-    ...(settings.template === 'photo-first' ? [] : [{ id: 'map' as const, label: t('imageExport.mapSection') }]),
-    { id: 'title', label: t('imageExport.title') },
-    { id: 'stats', label: t('imageExport.stats') },
-    ...(settings.template === 'photo-first' ? [{ id: 'route' as const, label: t('imageExport.routeOverlay') }] : []),
-    { id: 'logo', label: t('imageExport.logoSection') },
-  ];
+
 
   return (
     <div className="space-y-4 text-[var(--evergreen)]">
@@ -292,17 +283,13 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
         event.target.value = '';
       }} />
 
-      <nav ref={sectionNavRef} aria-label={t('imageExport.editorSections')} className="sticky top-0 z-30 grid grid-cols-3 gap-1.5 rounded-xl border border-[var(--evergreen)]/12 bg-[var(--canvas)]/95 p-2 shadow-sm backdrop-blur">
-        {sections.map(({ id, label }) => <button key={id} type="button" onClick={() => selectSection(id)}
-          aria-current={selectedSection === id ? 'true' : undefined}
-          className={`rounded-lg px-2 py-2 text-[11px] font-semibold transition-colors ${selectedSection === id ? 'bg-[var(--evergreen)] text-white' : 'bg-[var(--evergreen)]/5 hover:bg-[var(--evergreen)]/10'}`}>
-          {label}
-        </button>)}
-      </nav>
+      <section ref={(node) => { sectionRefs.current.layout = node; }} className="overflow-hidden rounded-lg border border-[var(--evergreen)]/15 bg-white/30">
+        <button type="button" aria-expanded={selectedSection === 'layout'} onClick={() => setSelectedSection((current) => current === 'layout' ? null : 'layout')}
+          className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-[var(--evergreen)] transition-colors hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex-1">{t('imageExport.designSection')}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${selectedSection === 'layout' ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <div hidden={selectedSection !== 'layout'} className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
 
-      <section ref={(node) => { sectionRefs.current.layout = node; }} onFocusCapture={() => setSelectedSection('layout')} onPointerDownCapture={() => setSelectedSection('layout')}
-        className="space-y-4 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
-      <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.designSection')}</h2>
       <div>
         <div className="mb-2 text-xs uppercase tracking-wide opacity-60">{t('imageExport.layoutPresets')}</div>
         <div className="grid grid-cols-2 gap-2">
@@ -310,9 +297,18 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
             <button key={preset} type="button" onClick={() => applyPreset(preset)}
               aria-pressed={settings.layoutPreset === preset}
               className={`min-h-20 overflow-hidden rounded-xl border text-left shadow-sm transition hover:-translate-y-0.5 ${settings.layoutPreset === preset ? 'border-[var(--trail-orange)] ring-2 ring-[var(--trail-orange)]/25' : 'border-black/10 hover:border-[var(--trail-orange)]/50'}`}>
-              <span className={`flex h-12 items-center justify-center px-3 text-center ${preset === 'long-way' ? 'bg-[#12281d] text-[#fff7e4] font-black text-xl leading-none' : preset === 'classic' ? 'bg-[#24382d] text-white font-semibold' : 'bg-[linear-gradient(115deg,#476a5d_55%,#f6f3e9_55%)] text-[#21372c] font-black'}`}
-                style={{ fontFamily: preset === 'long-way' ? "'Anton', Impact, sans-serif" : undefined }}>
-                {preset === 'long-way' ? 'THE LONG WAY' : preset === 'ridge-photo' ? 'PHOTO + MAP' : preset === 'photo-grid' ? 'TWO PHOTOS' : 'TRAILREPLAY'}
+              <span aria-hidden="true" className="relative flex h-16 items-end overflow-hidden bg-[#24382d] p-2 text-white"
+                style={{
+                  backgroundImage: preset === 'classic' || preset === 'long-way'
+                    ? "linear-gradient(0deg, rgba(14, 31, 22, .85), rgba(14, 31, 22, .05)), url('/media/images/map-previews/satellite.jpg')"
+                    : "linear-gradient(0deg, rgba(14, 31, 22, .85), rgba(14, 31, 22, .05)), url('/media/images/seo/outdoor-route-stories.webp')",
+                  backgroundSize: 'cover',
+                  backgroundPosition: preset === 'photo-grid' ? 'right center' : 'left center',
+                }}>
+                <span className={`relative text-[10px] font-bold leading-tight tracking-wide ${preset === 'long-way' ? 'text-sm' : ''}`}>
+                  {preset === 'long-way' ? 'THE LONG WAY' : preset === 'ridge-photo' ? 'PHOTO + MAP' : preset === 'photo-grid' ? 'TWO PHOTOS' : 'TRAILREPLAY'}
+                </span>
+                {(preset === 'classic' || preset === 'long-way') && <span className="absolute right-1 top-1 text-[7px] leading-none text-white/80">© Esri</span>}
               </span>
               <span className="block px-2.5 py-1.5 text-xs font-semibold">{t(`imageExport.preset${preset === 'long-way' ? 'LongWay' : preset === 'ridge-photo' ? 'RidgePhoto' : preset === 'photo-grid' ? 'PhotoGrid' : 'Classic'}`)}</span>
             </button>
@@ -361,10 +357,15 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           ))}
         </div>
       </div>
+      </div>
       </section>
 
-      {settings.template !== 'map-first' && <section ref={(node) => { sectionRefs.current.photos = node; }} onFocusCapture={() => setSelectedSection('photos')} onPointerDownCapture={() => setSelectedSection('photos')}
-        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
+      {settings.template !== 'map-first' && <section ref={(node) => { sectionRefs.current.photos = node; }} className="overflow-hidden rounded-lg border border-[var(--evergreen)]/15 bg-white/30">
+        <button type="button" aria-expanded={selectedSection === 'photos'} onClick={() => setSelectedSection((current) => current === 'photos' ? null : 'photos')}
+          className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-[var(--evergreen)] transition-colors hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex-1">{t('imageExport.photoFrames')}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${selectedSection === 'photos' ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <div hidden={selectedSection !== 'photos'} className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
       {settings.template === 'split' && (
         <div className="space-y-2 rounded-xl bg-black/[0.025] p-3">
           <div className="flex items-center justify-between">
@@ -472,11 +473,16 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           </div>
         {photoError && <p className="text-xs text-red-600" role="alert">{photoError}</p>}
       </div>}
+      </div>
       </section>}
 
-      {settings.template !== 'photo-first' && <section ref={(node) => { sectionRefs.current.map = node; }} onFocusCapture={() => setSelectedSection('map')} onPointerDownCapture={() => setSelectedSection('map')}
-        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
-      <h2 className="text-xs font-bold uppercase tracking-wide text-[var(--evergreen)]">{t('imageExport.mapSection')}</h2>
+      {settings.template !== 'photo-first' && <section ref={(node) => { sectionRefs.current.map = node; }} className="overflow-hidden rounded-lg border border-[var(--evergreen)]/15 bg-white/30">
+        <button type="button" aria-expanded={selectedSection === 'map'} onClick={() => setSelectedSection((current) => current === 'map' ? null : 'map')}
+          className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-[var(--evergreen)] transition-colors hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex-1">{t('imageExport.mapSection')}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${selectedSection === 'map' ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <div hidden={selectedSection !== 'map'} className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
+
       {settings.template === 'split' && <div className="space-y-3 rounded-xl bg-black/[0.025] p-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.mapFrame')}</div>
@@ -581,12 +587,17 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
             </div>
           </div>
         </div>
+      </div>
       </section>}
 
       {/* Title */}
-      <section ref={(node) => { sectionRefs.current.title = node; }} onFocusCapture={() => setSelectedSection('title')} onPointerDownCapture={() => setSelectedSection('title')}
-        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
-      <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.title')}</h2>
+      <section ref={(node) => { sectionRefs.current.title = node; }} className="overflow-hidden rounded-lg border border-[var(--evergreen)]/15 bg-white/30">
+        <button type="button" aria-expanded={selectedSection === 'title'} onClick={() => setSelectedSection((current) => current === 'title' ? null : 'title')}
+          className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-[var(--evergreen)] transition-colors hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex-1">{t('imageExport.title')}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${selectedSection === 'title' ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <div hidden={selectedSection !== 'title'} className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
+
       <div>
         <label className="mb-2 block text-xs uppercase tracking-wide opacity-60" htmlFor="cover-font">{t('imageExport.coverTypography')}</label>
         <OverlayFontPicker id="cover-font" value={overlayFont} onChange={(font) => setTrailStyle({ overlayFont: font })} />
@@ -675,12 +686,17 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           />
         )}
       </div>}
+      </div>
       </section>
 
       {/* Overlays toggles */}
-      <section ref={(node) => { sectionRefs.current.stats = node; }} onFocusCapture={() => setSelectedSection('stats')} onPointerDownCapture={() => setSelectedSection('stats')}
-        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
-      <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.stats')}</h2>
+      <section ref={(node) => { sectionRefs.current.stats = node; }} className="overflow-hidden rounded-lg border border-[var(--evergreen)]/15 bg-white/30">
+        <button type="button" aria-expanded={selectedSection === 'stats'} onClick={() => setSelectedSection((current) => current === 'stats' ? null : 'stats')}
+          className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-[var(--evergreen)] transition-colors hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex-1">{t('imageExport.stats')}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${selectedSection === 'stats' ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <div hidden={selectedSection !== 'stats'} className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
+
       <div className="flex flex-wrap gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
@@ -789,11 +805,16 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           </button>
         </div>
       )}
+      </div>
       </section>
 
       {/* Photo-first route controls */}
-      {settings.template === 'photo-first' && <section ref={(node) => { sectionRefs.current.route = node; }} onFocusCapture={() => setSelectedSection('route')} onPointerDownCapture={() => setSelectedSection('route')}
-        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
+      {settings.template === 'photo-first' && <section ref={(node) => { sectionRefs.current.route = node; }} className="overflow-hidden rounded-lg border border-[var(--evergreen)]/15 bg-white/30">
+        <button type="button" aria-expanded={selectedSection === 'route'} onClick={() => setSelectedSection((current) => current === 'route' ? null : 'route')}
+          className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-[var(--evergreen)] transition-colors hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex-1">{t('imageExport.routeOverlay')}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${selectedSection === 'route' ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <div hidden={selectedSection !== 'route'} className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
         <div>
           <div className="text-xs uppercase tracking-wide opacity-60 mb-2">{t('imageExport.routeOverlay')}</div>
           <div className="space-y-2">
@@ -820,11 +841,16 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
             ))}
           </div>
         </div>
+      </div>
       </section>}
 
-      <section ref={(node) => { sectionRefs.current.logo = node; }} onFocusCapture={() => setSelectedSection('logo')} onPointerDownCapture={() => setSelectedSection('logo')}
-        className="space-y-3 rounded-xl border border-[var(--evergreen)]/10 bg-white/70 p-3">
-        <h2 className="text-xs font-bold uppercase tracking-wide">{t('imageExport.logoSection')}</h2>
+      <section ref={(node) => { sectionRefs.current.logo = node; }} className="overflow-hidden rounded-lg border border-[var(--evergreen)]/15 bg-white/30">
+        <button type="button" aria-expanded={selectedSection === 'logo'} onClick={() => setSelectedSection((current) => current === 'logo' ? null : 'logo')}
+          className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-[var(--evergreen)] transition-colors hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex-1">{t('imageExport.logoSection')}</span><ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${selectedSection === 'logo' ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        <div hidden={selectedSection !== 'logo'} className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
+
         <p className="text-[11px] leading-4 opacity-60">{t('imageExport.dragLogo')}</p>
         <label className="block text-xs">{t('imageExport.horizontal')}
           <input type="range" min={0} max={Math.max(0, 1 - logoBboxNorm.w)} step={0.01} value={settings.logoPositionX}
@@ -836,6 +862,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
             onChange={(event) => setSocialShareSettings({ logoPositionY: Number(event.target.value) })}
             className="mt-1 block w-full accent-[var(--trail-orange)]" />
         </label>
+      </div>
       </section>
 
       {!hasTracks && (
@@ -851,7 +878,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           }}
           disabled={!previewUrl || isRendering || hasEmptyRequiredPhoto}
           title={hasEmptyRequiredPhoto ? t('imageExport.addPhoto') : undefined}
-          className="w-full tr-btn tr-btn-secondary flex items-center justify-center gap-2 py-3 disabled:opacity-50"
+          className={`w-full tr-btn ${onUseCover ? 'tr-btn-secondary' : 'tr-btn-primary'} flex items-center justify-center gap-2 py-3 disabled:opacity-50`}
         >
           <Download className="h-4 w-4" />
           {t(coverMode ? 'imageExport.savePng' : 'imageExport.downloadPng')}

@@ -52,6 +52,12 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); mapGlobalRef.current = null; useAppStore.setState(initial, true); });
 
 describe('cover previews across export tabs', () => {
+  it('keeps project saving available above both output modes', () => {
+    render(createElement(ExportPanel));
+    expect(screen.getByText('Save your project').closest('details')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Image' }));
+    expect(screen.getByText('Save your project').closest('details')).toBeInTheDocument();
+  });
   it('keeps Back to video visible through Image-tab clicks and retains edits in the video cover', async () => {
     useAppStore.getState().setVideoExportSettings({ includeCover: true });
     render(createElement(ExportPanel));
@@ -59,11 +65,13 @@ describe('cover previews across export tabs', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Image' }));
     fireEvent.click(screen.getByRole('button', { name: 'Image' }));
     expect(screen.getByRole('button', { name: 'Back to video export' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Title' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'La meva portada' } });
     fireEvent.click(screen.getByRole('button', { name: 'Video' }));
     await waitFor(() => expect(useAppStore.getState().videoCoverImageUrl).toBe('data:image/png,La meva portada'));
     expect(screen.getByRole('img', { name: 'Video cover' })).toHaveAttribute('src', 'data:image/png,La meva portada');
     fireEvent.click(screen.getByRole('button', { name: 'Image' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Title' }));
     expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('La meva portada');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Back to video export' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Back to video export' }));

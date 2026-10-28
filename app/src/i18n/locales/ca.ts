@@ -697,6 +697,8 @@ export const ca = {
     videoPlacedManuallyBadge: 'Col·locat a mà',
   },
   export: {
+    studioNeedsMp4: 'La renderització Estudi requereix MP4.',
+    resolution: 'Resolució', estimatedSize: 'Mida aprox.',
     saveProjectTitle: 'Desa el teu projecte',
     saveProjectBody: 'Descarrega un fitxer .replay amb les teves rutes, itinerari i ajustos per poder continuar més tard on ho vas deixar.',
     projectNameLabel: 'Nom del projecte',
