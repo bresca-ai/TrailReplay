@@ -431,6 +431,7 @@ export interface AppSettings {
   mapFilter: MapFilter;
   mapOverlays: MapOverlays;
   show3DTerrain: boolean;
+  recordedElevationPrototype: boolean;
   showHeartRate: boolean;
   showPictures: boolean;
   cameraMode: CameraMode;

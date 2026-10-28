@@ -28,6 +28,7 @@ import { useComparisonTrackLayers } from './hooks/useComparisonTrackLayers';
 import { useRouteComparisonCamera } from './hooks/useRouteComparisonCamera';
 import { useBaseMapPresentation } from './hooks/useBaseMapPresentation';
 import { useMapInitialization } from './hooks/useMapInitialization';
+import { useRecordedElevationLayer } from './hooks/useRecordedElevationLayer';
 import { useTrailLayerData } from './hooks/useTrailLayerData';
 import { useTrailPlaybackCamera } from './hooks/useTrailPlaybackCamera';
 import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
@@ -299,6 +300,11 @@ export function TrailMap(_props: TrailMapProps) {
     trailColor: trailStyle.trailColor,
   });
 
+  const recordedPoints = useMemo(() => computedJourney?.coordinates ?? activeTrack?.points ?? [], [computedJourney, activeTrack]);
+  const recordedElevationEnabled = settings.recordedElevationPrototype && recordedPoints.length >= 2;
+  const recordedStyle = useMemo(() => ({ colorMode: trailStyle.colorMode, trailColor: trailStyle.trailColor, colorZones: trailStyle.colorZones, segmentTimings: computedJourney?.segmentTimings ?? [] }), [trailStyle.colorMode, trailStyle.trailColor, trailStyle.colorZones, computedJourney]);
+  useRecordedElevationLayer(map, isMapLoaded, recordedElevationEnabled, recordedPoints, currentPosition, completedCoordinates, markerRef, recordedStyle, trailStyle.ghostTrailOpacity);
+
   useTrailPlaybackCamera({
     activeTrack,
     activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
@@ -313,6 +319,7 @@ export function TrailMap(_props: TrailMapProps) {
     currentIcon,
     currentTimeMs: playback.currentTime,
     currentPosition,
+    recordedElevationEnabled,
     currentSegment,
     currentTrackColor: currentTrackColor ?? null,
     currentTrackName: currentTrackName ?? null,

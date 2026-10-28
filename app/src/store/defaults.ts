@@ -26,6 +26,7 @@ export function createDefaultSettings(): AppSettings {
     mapStyle: 'satellite',
     mapFilter: 'none',
     show3DTerrain: true,
+    recordedElevationPrototype: false,
     showHeartRate: false,
     showPictures: true,
     cameraMode: 'follow-behind',

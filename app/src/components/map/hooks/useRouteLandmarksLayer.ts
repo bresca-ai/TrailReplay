@@ -176,42 +176,66 @@ export function useRouteLandmarksLayer({
   useEffect(() => {
     const map = mapRef.current; if (!map || !isMapLoaded) return;
     let cancelled = false;
-    LANDMARK_GLYPH_KEYS.forEach((kind) => {
-      const imageId = `${IMAGE_PREFIX}${kind}`;
-      if (!map.hasImage(imageId)) map.addImage(imageId, glyphImage(PINHEAD_PATHS[kind]), { sdf: true });
-    });
-    for (const landmark of landmarks) {
-      const symbol = landmarkSymbol(landmark);
-      const pinheadId = annotationPinheadId(symbol);
-      const path = pinheadId ? pinheadIconPath(pinheadId) : null;
-      const key = landmarkImageKey(landmark);
-      const imageId = `${IMAGE_PREFIX}${key}`;
-      if (map.hasImage(imageId)) continue;
-      if (path) map.addImage(imageId, glyphImage(path), { sdf: true });
-      else if (isEmojiLandmark(landmark)) map.addImage(imageId, emojiImage(symbol));
-    }
-    if (!map.getSource(SOURCE)) map.addSource(SOURCE, { type: 'geojson', data: data([], null, overlayFont) });
-    // Pins go under the annotation card: a town name drawn over an annotation
-    // hides the one label the viewer was meant to read.
-    const beforeAnnotations = ANNOTATION_LAYER_IDS.find((layerId) => map.getLayer(layerId));
-    if (!map.getLayer(ICON)) map.addLayer(landmarkIconLayer(scale), beforeAnnotations);
-    if (!map.getLayer(LANDMARK_EMOJI_LAYER_ID)) map.addLayer(landmarkEmojiLayer(scale), beforeAnnotations);
-    if (!map.getLayer(LABEL)) map.addLayer(landmarkLabelLayer(scale, labelFade), beforeAnnotations);
-    const updateLabels = async () => {
-      try { await document.fonts.load(`700 12px ${overlayCanvasFontFamily(overlayFont)}`); } catch { /* Use the CSS fallback font. */ }
-      if (cancelled || !map.getLayer(LABEL)) return;
+    let pending = true;
+    const install = () => {
+      if (cancelled || !pending || !map.isStyleLoaded()) return;
+      pending = false;
+      LANDMARK_GLYPH_KEYS.forEach((kind) => {
+        const imageId = `${IMAGE_PREFIX}${kind}`;
+        if (!map.hasImage(imageId)) map.addImage(imageId, glyphImage(PINHEAD_PATHS[kind]), { sdf: true });
+      });
       for (const landmark of landmarks) {
-        const imageId = labelImageId(landmark, overlayFont);
+        const symbol = landmarkSymbol(landmark);
+        const pinheadId = annotationPinheadId(symbol);
+        const path = pinheadId ? pinheadIconPath(pinheadId) : null;
+        const key = landmarkImageKey(landmark);
+        const imageId = `${IMAGE_PREFIX}${key}`;
         if (map.hasImage(imageId)) continue;
-        const image = labelImage(landmarkLabel(landmark), overlayFont);
-        if (image) map.addImage(imageId, image, { pixelRatio: 2 });
+        if (path) map.addImage(imageId, glyphImage(path), { sdf: true });
+        else if (isEmojiLandmark(landmark)) map.addImage(imageId, emojiImage(symbol));
       }
-      (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
-        data(visible ? landmarks : [], selectedLandmarkId, overlayFont),
-      );
+      if (!map.getSource(SOURCE)) map.addSource(SOURCE, { type: 'geojson', data: data([], null, overlayFont) });
+      // Pins go under the annotation card: a town name drawn over an annotation
+      // hides the one label the viewer was meant to read.
+      const beforeAnnotations = ANNOTATION_LAYER_IDS.find((layerId) => map.getLayer(layerId));
+      if (!map.getLayer(ICON)) map.addLayer(landmarkIconLayer(scale), beforeAnnotations);
+      if (!map.getLayer(LANDMARK_EMOJI_LAYER_ID)) map.addLayer(landmarkEmojiLayer(scale), beforeAnnotations);
+      if (!map.getLayer(LABEL)) map.addLayer(landmarkLabelLayer(scale, labelFade), beforeAnnotations);
+      const updateLabels = async () => {
+        try { await document.fonts.load(`700 12px ${overlayCanvasFontFamily(overlayFont)}`); } catch { /* Use the CSS fallback font. */ }
+        if (cancelled) return;
+        if (!map.isStyleLoaded() || !map.getLayer(LABEL)) {
+          pending = true;
+          return;
+        }
+        for (const landmark of landmarks) {
+          const imageId = labelImageId(landmark, overlayFont);
+          if (map.hasImage(imageId)) continue;
+          const image = labelImage(landmarkLabel(landmark), overlayFont);
+          if (image) map.addImage(imageId, image, { pixelRatio: 2 });
+        }
+        (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
+          data(visible ? landmarks : [], selectedLandmarkId, overlayFont),
+        );
+      };
+      void updateLabels();
     };
-    void updateLabels();
-    return () => { cancelled = true; };
+    // A map can be recreated or its style can still be loading after the first
+    // map load. Retry with the latest landmark data when the style is ready.
+    const retry = () => {
+      if (!map.getSource(SOURCE) || !map.getLayer(LABEL)) pending = true;
+      install();
+    };
+    map.on('styledata', retry);
+    map.on('sourcedata', retry);
+    map.on('idle', retry);
+    install();
+    return () => {
+      cancelled = true;
+      map.off('styledata', retry);
+      map.off('sourcedata', retry);
+      map.off('idle', retry);
+    };
   }, [isMapLoaded, labelFade, landmarks, mapRef, overlayFont, pinheadIcons, scale, selectedLandmarkId, visible]);
 
   // The layers are only added once, so size and fade changes have to be pushed

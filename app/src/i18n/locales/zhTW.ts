@@ -66,6 +66,7 @@ export const zhTW = {
   settings: {
     mapCameraTitle: '設定地圖與鏡頭', mapCameraHint: '地圖是影片的背景，請選擇地圖樣式、地形，以及跟隨路線的觀看角度。',
     title: '地圖設定', overlaysTitle: '疊加圖層', cameraTitle: '鏡頭控制', terrainTitle: '地形', displayOptions: '顯示選項',
+    routeElevationMode: '路線高度', followTerrainElevation: '跟隨地形', followRouteElevation: '跟隨路線高度', routeElevationHint: '使用檔案中記錄的高度。缺少高度的點可能顯示在海平面。',
     show3dTerrain: '3D 地形', showHeartRate: '心率分色', showPictures: '顯示照片', heartRateZones: '心率區間', heartRateZone: '區間 {index}',
     mapFilterTitle: '地圖濾鏡', mapFilterHint: '僅調整底圖影像，保留路線原有的顏色。',
     mapFilters: { none: '原始', muted: '柔和', mono: '黑白', noir: '高對比黑白' },

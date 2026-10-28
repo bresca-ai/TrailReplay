@@ -182,12 +182,12 @@ export function useBaseMapPresentation({
       if (map.getSource('terrain-dem')) {
         map.setTerrain({
           source: 'terrain-dem',
-          exaggeration: 1.5
+          exaggeration: settings.recordedElevationPrototype ? 1 : 1.5
         });
       }
       return;
     }
 
     map.setTerrain(null);
-  }, [isMapLoaded, mapRef, settings.show3DTerrain]);
+  }, [isMapLoaded, mapRef, settings.show3DTerrain, settings.recordedElevationPrototype]);
 }
