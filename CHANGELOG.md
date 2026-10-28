@@ -2,6 +2,31 @@
 
 All notable user-facing changes are recorded here. TrailReplay follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-10-28
+
+### Added
+
+- Compare routes by recorded time or route geometry in the timeline, with a live leaderboard, configurable separation threshold and split-camera playback.
+- Trim imported GPX routes, search a larger library of landmark icons, and use Traditional Chinese (Taiwan) throughout the editor.
+- Place map captions and field notes at a selected distance along a route, or at the playhead. Set annotation opacity and colour route sections by distance in kilometres or percentage.
+- Try an experimental recorded-elevation mode for routes above the terrain. Terrain clearance depends on loaded map tiles, missing elevations may appear at sea level, and comparison tracks retain their existing behaviour; further flight and export validation is needed.
+
+### Improved
+
+- Redesign the Routes, Style, Map & Camera, Media and Generate panels, with more prominent camera controls, visual map and export presets, compact expandable controls and easier navigation between steps.
+- Configure video format, visual aspect ratio, quality and frame rate directly in Generate. Image and cover editing use compact sections, while project saving remains accessible in both modes.
+- Estimate video file size using the configured resolution, frame rate and rendering quality.
+- Customize the comparison leaderboard and preserve its styling and position in saved projects and video exports.
+- Improve cinematic camera and elevation sections, cover editing, and the export sky. Reduce noisy elevation gain and keep replay totals consistent.
+- Keep the replay marker aligned with the painted route and preserve route styling in recorded-elevation mode. Preview the watermark while arranging export overlays and use a transparent white logo in exports.
+- Add camera pitch and bearing sliders, refine German translations, and update application dependencies.
+
+### Fixed
+
+- Keep route trimming safe around route-anchored elevation sections and colour zones.
+- Improve landmark coordinate editing and prevent landmark-layer errors when the map style changes.
+- Update the Zod dependency to address a known vulnerability.
+
 ## [1.3.0] - 2026-10-19
 
 ### Added
@@ -97,6 +122,7 @@ Version 1.0.1 was prepared but never published as a release; its changes ship he
 
 - TrailReplay remains available under its existing attribution license. Apps using the software must display the attribution described in `LICENSE`.
 
+[1.4.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.4.0
 [1.3.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.3.0
 [1.2.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.2.0
 [1.1.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.1.0

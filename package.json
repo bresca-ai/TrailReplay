@@ -1,6 +1,6 @@
 {
   "name": "trail-replay",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Browser-based GPX storytelling studio for animated route replays and export-ready video",
   "type": "module",
   "scripts": {
