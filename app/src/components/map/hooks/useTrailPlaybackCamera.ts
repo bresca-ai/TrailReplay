@@ -65,7 +65,8 @@ interface UseTrailPlaybackCameraParams {
   completedCoordinates: number[][];
   computedJourney: { coordinates: Array<{ heartRate: number | null }> } | null;
   currentIcon: string;
-  currentPosition: { lat: number; lon: number } | null;
+  currentPosition: { lat: number; lon: number; elevation: number } | null;
+  recordedElevationEnabled?: boolean;
   currentSegment?: {
     segment: {
       segmentIndex?: number;
@@ -207,6 +208,7 @@ export function useTrailPlaybackCamera({
   currentIcon,
   currentTimeMs,
   currentPosition,
+  recordedElevationEnabled,
   currentSegment,
   currentTrackColor,
   currentTrackName,
@@ -259,15 +261,15 @@ export function useTrailPlaybackCamera({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;
-    const unbind = bindPaintedTrailMarker(map, () => markerRef.current);
+    const unbind = recordedElevationEnabled ? () => {} : bindPaintedTrailMarker(map, () => markerRef.current);
     return () => {
       unbind();
       markerRef.current?.remove();
       markerRef.current = null;
     };
-  }, [isMapLoaded, mapRef, markerRef]);
+  }, [isMapLoaded, mapRef, markerRef, recordedElevationEnabled]);
 
-  const ownsCinematicElevation = cameraMode === 'cinematic'
+  const ownsCinematicElevation = (cameraMode === 'cinematic' || recordedElevationEnabled)
     && animationPhase === 'playing' && (isPlaying || isExporting);
   useEffect(() => {
     const map = mapRef.current;
@@ -692,6 +694,10 @@ export function useTrailPlaybackCamera({
         smoothedElevationRef.current = null;
       }
 
+      if (recordedElevationEnabled && currentPosition && Number.isFinite(currentPosition.elevation)) {
+        centerElevation = { elevation: currentPosition.elevation };
+      }
+
       // Apply the already-smoothed pose with `jumpTo` rather than `easeTo` in
       // both live playback and export. `easeTo` used to be how live playback
       // got its center-panning smoothing, but that made it diverge from
@@ -737,6 +743,7 @@ export function useTrailPlaybackCamera({
     computedJourney,
     currentIcon,
     currentPosition,
+    recordedElevationEnabled,
     currentSegment,
     currentTimeMs,
     currentTrackColor,

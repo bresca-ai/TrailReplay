@@ -144,6 +144,7 @@ export const de = {
     cameraTitle: 'Kamerasteuerung',
     terrainTitle: 'Terrain',
     displayOptions: 'Anzeigeoptionen',
+    routeElevationMode: 'Routenhöhe', followTerrainElevation: 'Gelände folgen', followRouteElevation: 'Routenhöhe folgen', routeElevationHint: 'Verwendet die in der Datei aufgezeichnete Höhe. Fehlende Höhen können auf Meereshöhe erscheinen.',
     show3dTerrain: '3D-Gelände',
     showHeartRate: 'Herzfrequenzfarben',
     showPictures: 'Bilder anzeigen',

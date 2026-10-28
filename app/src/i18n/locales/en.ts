@@ -150,6 +150,7 @@ export const en = {
     cameraTitle: 'Camera Controls',
     terrainTitle: 'Terrain',
     displayOptions: 'Display Options',
+    routeElevationMode: 'Route elevation', followTerrainElevation: 'Follow terrain', followRouteElevation: 'Follow route elevation', routeElevationHint: 'Uses the elevation recorded in the file. Missing elevations may appear at sea level.',
     show3dTerrain: '3D Terrain',
     showHeartRate: 'Heart Rate Colors',
     showPictures: 'Show Pictures',
