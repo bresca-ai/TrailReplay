@@ -454,6 +454,19 @@ export function SettingsPanel() {
             className="w-5 h-5 accent-[var(--trail-orange)]"
           />
         </label>
+        <fieldset className="mt-3">
+          <legend className="text-sm font-medium text-[var(--evergreen)]">{t('settings.routeElevationMode')}</legend>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {[false, true].map((recorded) => (
+              <button key={String(recorded)} type="button" aria-pressed={!!settings.recordedElevationPrototype === recorded}
+                onClick={() => setSettings({ recordedElevationPrototype: recorded })}
+                className={`rounded-lg border px-3 py-2 text-sm ${!!settings.recordedElevationPrototype === recorded ? 'border-[var(--trail-orange)] bg-[var(--trail-orange)]/10 text-[var(--evergreen)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)]'}`}>
+                {t(recorded ? 'settings.followRouteElevation' : 'settings.followTerrainElevation')}
+              </button>
+            ))}
+          </div>
+          {settings.recordedElevationPrototype && <p className="mt-2 text-xs text-[var(--evergreen-60)]">{t('settings.routeElevationHint')}</p>}
+        </fieldset>
       </div>
 
       {/* Map filter — last, since it restyles everything chosen above */}

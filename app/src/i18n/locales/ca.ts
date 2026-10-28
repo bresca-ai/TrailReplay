@@ -144,6 +144,7 @@ export const ca = {
     cameraTitle: 'Controls de càmera',
     terrainTitle: 'Terreny',
     displayOptions: 'Opcions de visualització',
+    routeElevationMode: 'Elevació de la ruta', followTerrainElevation: 'Seguir el terreny', followRouteElevation: 'Seguir elevació de ruta', routeElevationHint: 'Utilitza l’altitud registrada al fitxer. Si falta, pot aparèixer al nivell del mar.',
     show3dTerrain: 'Terreny 3D',
     showHeartRate: 'Colors de pols',
     showPictures: 'Mostrar imatges',

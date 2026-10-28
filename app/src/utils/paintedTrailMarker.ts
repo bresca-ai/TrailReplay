@@ -33,7 +33,13 @@ export class PaintedTrailMarker {
     if (!this.tip) return;
     const point = map.project(this.tip.position);
     if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
-    const transform = `translate(-50%, -50%) translate(${point.x}px, ${point.y}px)`;
+    this.renderAt(point.x, point.y);
+  }
+
+  /** Position the same DOM adornment at a screen point painted by a 3D layer. */
+  renderAt(x: number, y: number): void {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
     if (this.element.style.transform !== transform) this.element.style.transform = transform;
     this.element.style.visibility = 'visible';
   }

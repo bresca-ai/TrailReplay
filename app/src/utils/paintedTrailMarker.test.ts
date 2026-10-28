@@ -73,6 +73,13 @@ describe('render-only playback marker', () => {
     expect(h.map.queryRenderedFeatures).not.toHaveBeenCalled();
   });
 
+  it('positions the existing marker at a 3D layer’s projected screen point', () => {
+    const h = harness();
+    h.marker.renderAt(123.5, 87.25);
+    expect(h.element.style.transform).toContain('123.5px, 87.25px');
+    expect(h.element.style.visibility).toBe('visible');
+  });
+
   it('waits for the first painted tip and removes its listener and element', () => {
     const h = harness();
     h.emit('render');

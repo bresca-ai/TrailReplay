@@ -70,6 +70,7 @@ export function useMapInitialization({
 
     return () => {
       onReadyChange?.(false);
+      onSetMapLoaded(false);
       mapGlobalRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
