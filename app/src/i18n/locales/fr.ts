@@ -140,7 +140,7 @@ export const fr = {
     mapCameraTitle: 'Choisir la carte et la caméra',
     mapCameraHint: 'La carte est le paysage de votre vidéo. Choisissez son style, le terrain et le point de vue qui suit votre itinéraire.',
     title: 'Paramètres de la carte',
-    overlaysTitle: 'Couches',
+    overlaysTitle: 'Couches', noOverlays: 'Aucune active', moreMapStyles: 'Plus de styles de carte', mapControlsHelp: 'Commandes de la carte',
     cameraTitle: 'Contrôle de la caméra',
     terrainTitle: 'Terrain',
     displayOptions: 'Options d\'affichage',

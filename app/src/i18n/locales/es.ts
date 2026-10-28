@@ -140,7 +140,7 @@ export const es = {
     mapCameraTitle: 'Elige el mapa y la cámara',
     mapCameraHint: 'El mapa es el paisaje de tu vídeo. Elige su aspecto, el terreno y el punto de vista que sigue tu ruta.',
     title: 'Ajustes del mapa',
-    overlaysTitle: 'Superposiciones',
+    overlaysTitle: 'Superposiciones', noOverlays: 'Ninguna activa', moreMapStyles: 'Más estilos de mapa', mapControlsHelp: 'Controles del mapa',
     cameraTitle: 'Controles de cámara',
     terrainTitle: 'Terreno',
     displayOptions: 'Opciones de visualización',

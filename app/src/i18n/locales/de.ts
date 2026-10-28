@@ -140,7 +140,7 @@ export const de = {
     mapCameraTitle: 'Karte und Kamera wählen',
     mapCameraHint: 'Die Karte ist die Landschaft Deines Videos. Wähle Aussehen, Gelände und die Kameraperspektive entlang Deiner Route.',
     title: 'Karteneinstellungen',
-    overlaysTitle: 'Overlays',
+    overlaysTitle: 'Overlays', noOverlays: 'Keine aktiv', moreMapStyles: 'Weitere Kartenstile', mapControlsHelp: 'Kartensteuerung',
     cameraTitle: 'Kamerasteuerung',
     terrainTitle: 'Terrain',
     displayOptions: 'Anzeigeoptionen',

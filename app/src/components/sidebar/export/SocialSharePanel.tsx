@@ -508,11 +508,10 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
             {([
               { id: 'satellite', label: 'settings.mapStyles.satellite' },
               { id: 'topo', label: 'settings.mapStyles.topo' },
-              { id: 'outdoor', label: 'settings.mapStyles.outdoor' },
               { id: 'street', label: 'settings.mapStyles.street' },
             ] as const satisfies Array<{ id: MapStyle; label: string }>).map((option) => <button key={option.id} type="button"
-              onClick={() => setMapStyle(option.id)} aria-pressed={mapStyle === option.id}
-              className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${mapStyle === option.id ? 'bg-[var(--trail-orange)] text-white' : 'bg-white text-[var(--evergreen)] hover:bg-black/10'}`}>
+              onClick={() => setMapStyle(option.id)} aria-pressed={(mapStyle === option.id || (mapStyle === 'outdoor' && option.id === 'topo'))}
+              className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${(mapStyle === option.id || (mapStyle === 'outdoor' && option.id === 'topo')) ? 'bg-[var(--trail-orange)] text-white' : 'bg-white text-[var(--evergreen)] hover:bg-black/10'}`}>
               {t(option.label)}
             </button>)}
           </div>

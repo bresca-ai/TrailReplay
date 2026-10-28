@@ -140,7 +140,7 @@ export const ca = {
     mapCameraTitle: 'Tria el mapa i la càmera',
     mapCameraHint: 'El mapa és el paisatge del teu vídeo. Tria l’aspecte, el terreny i el punt de vista que segueix la ruta.',
     title: 'Ajustos del mapa',
-    overlaysTitle: 'Superposicions',
+    overlaysTitle: 'Superposicions', noOverlays: 'Cap activa', moreMapStyles: 'Més estils de mapa', mapControlsHelp: 'Controls del mapa',
     cameraTitle: 'Controls de càmera',
     terrainTitle: 'Terreny',
     displayOptions: 'Opcions de visualització',

@@ -19,15 +19,14 @@ import {
   Palette,
 } from 'lucide-react';
 
-const MAP_STYLES: { id: MapStyle; nameKey: string; icon: string }[] = [
-  { id: 'satellite', nameKey: 'settings.mapStyles.satellite', icon: '🛰️' },
-  { id: 'topo', nameKey: 'settings.mapStyles.topo', icon: '🗺️' },
-  { id: 'street', nameKey: 'settings.mapStyles.street', icon: '🏙️' },
-  { id: 'outdoor', nameKey: 'settings.mapStyles.outdoor', icon: '🌲' },
-  { id: 'esri-clarity', nameKey: 'settings.mapStyles.esri', icon: '📡' },
-  { id: 'wayback', nameKey: 'settings.mapStyles.wayback', icon: '🕰️' },
+const MAP_STYLES: { id: MapStyle; nameKey: string }[] = [
+  { id: 'satellite', nameKey: 'settings.mapStyles.satellite' },
+  { id: 'topo', nameKey: 'settings.mapStyles.topo' },
+  { id: 'street', nameKey: 'settings.mapStyles.street' },
+  { id: 'esri-clarity', nameKey: 'settings.mapStyles.esri' },
+  { id: 'wayback', nameKey: 'settings.mapStyles.wayback' },
   ...(import.meta.env.VITE_MAPBOX_TOKEN
-    ? [{ id: 'mapbox-streets' as MapStyle, nameKey: 'settings.mapStyles.mapboxStreets', icon: '🗺️' }]
+    ? [{ id: 'mapbox-streets' as MapStyle, nameKey: 'settings.mapStyles.mapboxStreets' }]
     : []),
 ];
 
@@ -108,6 +107,7 @@ const getWaybackItems = async (): Promise<WaybackItem[]> => {
 export function SettingsPanel() {
   const { t } = useI18n();
   const settings = useAppStore((state) => state.settings);
+  const displayedMapStyle = settings.mapStyle === 'outdoor' ? 'topo' : settings.mapStyle;
   const cameraSettings = useAppStore((state) => state.cameraSettings);
   const setSettings = useAppStore((state) => state.setSettings);
   const setCameraSettings = useAppStore((state) => state.setCameraSettings);
@@ -190,11 +190,84 @@ export function SettingsPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-3">
-        <h3 className="text-sm font-bold text-[var(--evergreen)]">{t('settings.mapCameraTitle')}</h3>
-        <p className="mt-1 text-xs leading-4 text-[var(--evergreen-80)]">{t('settings.mapCameraHint')}</p>
+      {/* Camera Mode */}
+      <div>
+        <h3 className="text-sm font-bold text-[var(--evergreen)] mb-3 uppercase tracking-wide flex items-center gap-2">
+          <Video className="w-4 h-4" />
+          {t('settings.cameraTitle')}
+        </h3>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label={t('settings.cameraTitle')}>
+          {CAMERA_MODES.map((mode) => (
+            <button key={mode.id} type="button" onClick={() => selectCameraMode(mode.id)} aria-pressed={cameraSettings.mode === mode.id}
+              className={`min-h-11 rounded-lg border-2 px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${cameraSettings.mode === mode.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] text-[var(--evergreen)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)] hover:border-[var(--trail-orange)]/50'}`}>
+              {t(mode.nameKey)}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-[var(--evergreen-60)]" aria-live="polite">{t(CAMERA_MODES.find((mode) => mode.id === cameraSettings.mode)!.descriptionKey)}</p>
+
+        {/* Follow Behind Presets */}
+        {cameraSettings.mode === 'follow-behind' && (
+          <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg">
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-xs text-[var(--evergreen-60)]">{t('settings.followPresets.title')}</p>
+              <span className="text-[10px] font-medium text-[var(--evergreen-60)]">
+                {t(`settings.followPresets.${FOLLOW_PRESET_NAME_KEYS[cameraSettings.followBehindPreset]}`)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={FOLLOW_BEHIND_STOP_COUNT - 1}
+              step={1}
+              value={getFollowBehindStopIndexForLevel(cameraSettings.followBehindZoomLevel)}
+              onChange={(e) => {
+                const level = getFollowBehindLevelForStopIndex(Number(e.target.value));
+                setCameraSettings({
+                  followBehindZoomLevel: level,
+                  followBehindPreset: getNearestFollowBehindPreset(level),
+                });
+                trackEvent('settings_changed', {
+                  setting_name: 'follow_behind_distance',
+                  setting_value: level,
+                });
+              }}
+              className="w-full accent-[var(--trail-orange)]"
+            />
+            <div className="flex justify-between text-[10px] text-[var(--evergreen-60)]">
+              <span>{t('settings.followPresets.far')}</span>
+              <span>{t('settings.followPresets.veryClose')}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Cinematic keyframes */}
+        {cameraSettings.mode === 'cinematic' && <CinematicCameraEditor />}
+
+        {/* Camera Stability */}
+        {cameraSettings.mode !== 'overview' && (
+          <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg">
+            <p className="text-xs text-[var(--evergreen-60)] mb-2">{t('settings.cameraStability.title')}</p>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={cameraSettings.cameraStability}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                setCameraSettings({ cameraStability: value });
+                trackEvent('settings_changed', { setting_name: 'camera_stability', setting_value: value });
+              }}
+              className="w-full accent-[var(--trail-orange)]"
+            />
+            <div className="flex justify-between text-[10px] text-[var(--evergreen-60)]">
+              <span>{t('settings.cameraStability.stable')}</span>
+              <span>{t('settings.cameraStability.reactive')}</span>
+            </div>
+          </div>
+        )}
       </div>
-      <MapNavigationGuide />
 
       {/* Map Style */}
       <div>
@@ -202,24 +275,22 @@ export function SettingsPanel() {
           <MapIcon className="w-4 h-4" />
           {t('settings.title')}
         </h3>
-        <div className="grid grid-cols-2 gap-2">
-          {MAP_STYLES.map((style) => (
-            <button
-              key={style.id}
-              onClick={() => selectMapStyle(style.id)}
-              className={`
-                flex items-center gap-2 p-3 rounded-lg border-2 transition-colors text-left
-                ${settings.mapStyle === style.id
-                  ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]'
-                  : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'
-                }
-              `}
-            >
-              <span className="text-xl">{style.icon}</span>
-              <span className="text-sm font-medium text-[var(--evergreen)]">{t(style.nameKey)}</span>
+        <div className="grid grid-cols-3 gap-2">
+          {MAP_STYLES.slice(0, 3).map((style) => (
+            <button key={style.id} type="button" onClick={() => selectMapStyle(style.id)} aria-pressed={displayedMapStyle === style.id}
+              className={`min-w-0 rounded-lg border-2 p-1 text-center text-xs font-medium text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${displayedMapStyle === style.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
+              <img src={`/media/images/map-previews/${style.id === 'satellite' ? 'satellite.jpg' : `${style.id}.png`}`} alt="" className="h-14 w-full rounded object-cover" />
+              <span className="block py-1 break-words">{t(style.nameKey)}</span>
             </button>
           ))}
         </div>
+        <p className="mt-1 text-[10px] text-[var(--evergreen-60)]">© Esri · © <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a className="underline" href="https://opentopomap.org/about" target="_blank" rel="noreferrer">OpenTopoMap</a> (CC-BY-SA)</p>
+        <details className="mt-2 rounded-lg border border-[var(--evergreen)]/20">
+          <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-[var(--evergreen)]">{t('settings.moreMapStyles')}{MAP_STYLES.slice(3).some((style) => style.id === settings.mapStyle) && <span className="font-normal text-[var(--evergreen-60)]"> · {t(MAP_STYLES.find((style) => style.id === settings.mapStyle)!.nameKey)}</span>}</summary>
+          <div className="grid grid-cols-2 gap-2 p-2 pt-0">
+            {MAP_STYLES.slice(3).map((style) => <button key={style.id} type="button" onClick={() => selectMapStyle(style.id)} aria-pressed={displayedMapStyle === style.id} className={`rounded-lg border-2 p-2 text-left text-sm text-[var(--evergreen)] ${displayedMapStyle === style.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>{t(style.nameKey)}</button>)}
+          </div>
+        </details>
 
         {/* Wayback options — date selector */}
         {settings.mapStyle === 'wayback' && (
@@ -264,14 +335,15 @@ export function SettingsPanel() {
 
       </div>
 
-      <RouteLandmarksEditor />
+      <details className="rounded-lg border border-[var(--evergreen)]/20">
+        <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('routeLandmarks.title')}</summary>
+        <div className="px-3 pb-3"><RouteLandmarksEditor /></div>
+      </details>
 
       {/* Map Overlays */}
-      <div>
-        <h3 className="text-sm font-bold text-[var(--evergreen)] mb-3 uppercase tracking-wide flex items-center gap-2">
-          <MapIcon className="w-4 h-4" />
-          {t('settings.overlaysTitle')}
-        </h3>
+      <details className="rounded-lg border border-[var(--evergreen)]/20">
+        <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('settings.overlaysTitle')} <span className="font-normal text-[var(--evergreen-60)]"> · {MAP_OVERLAYS.filter((overlay) => settings.mapOverlays?.[overlay.id as keyof MapOverlays]).map((overlay) => t(overlay.nameKey)).join(', ') || t('settings.noOverlays')}</span></summary>
+        <div className="px-3 pb-3">
         <div className="space-y-2">
           {MAP_OVERLAYS.map((overlay) => {
             const isActive = !!settings.mapOverlays?.[overlay.id as keyof MapOverlays];
@@ -348,104 +420,13 @@ export function SettingsPanel() {
             </p>
           </div>
         )}
-      </div>
-
-      {/* Camera Mode */}
-      <div>
-        <h3 className="text-sm font-bold text-[var(--evergreen)] mb-3 uppercase tracking-wide flex items-center gap-2">
-          <Video className="w-4 h-4" />
-          {t('settings.cameraTitle')}
-        </h3>
-        <div className="space-y-2">
-          {CAMERA_MODES.map((mode) => (
-            <button
-              key={mode.id}
-              onClick={() => selectCameraMode(mode.id)}
-              className={`
-                w-full flex items-center justify-between p-3 rounded-lg border-2 transition-colors
-                ${cameraSettings.mode === mode.id
-                  ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]'
-                  : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'
-                }
-              `}
-            >
-              <div className="text-left">
-                <span className="text-sm font-medium text-[var(--evergreen)] block">
-                  {t(mode.nameKey)}
-                </span>
-                <span className="text-xs text-[var(--evergreen-60)]">
-                  {t(mode.descriptionKey)}
-                </span>
-              </div>
-              {cameraSettings.mode === mode.id && (
-                <div className="w-3 h-3 rounded-full bg-[var(--trail-orange)]" />
-              )}
-            </button>
-          ))}
         </div>
-        
-        {/* Follow Behind Presets */}
-        {cameraSettings.mode === 'follow-behind' && (
-          <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg">
-            <div className="flex items-baseline justify-between mb-2">
-              <p className="text-xs text-[var(--evergreen-60)]">{t('settings.followPresets.title')}</p>
-              <span className="text-[10px] font-medium text-[var(--evergreen-60)]">
-                {t(`settings.followPresets.${FOLLOW_PRESET_NAME_KEYS[cameraSettings.followBehindPreset]}`)}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={FOLLOW_BEHIND_STOP_COUNT - 1}
-              step={1}
-              value={getFollowBehindStopIndexForLevel(cameraSettings.followBehindZoomLevel)}
-              onChange={(e) => {
-                const level = getFollowBehindLevelForStopIndex(Number(e.target.value));
-                setCameraSettings({
-                  followBehindZoomLevel: level,
-                  followBehindPreset: getNearestFollowBehindPreset(level),
-                });
-                trackEvent('settings_changed', {
-                  setting_name: 'follow_behind_distance',
-                  setting_value: level,
-                });
-              }}
-              className="w-full accent-[var(--trail-orange)]"
-            />
-            <div className="flex justify-between text-[10px] text-[var(--evergreen-60)]">
-              <span>{t('settings.followPresets.far')}</span>
-              <span>{t('settings.followPresets.veryClose')}</span>
-            </div>
-          </div>
-        )}
+      </details>
 
-        {/* Cinematic keyframes */}
-        {cameraSettings.mode === 'cinematic' && <CinematicCameraEditor />}
-
-        {/* Camera Stability */}
-        {cameraSettings.mode !== 'overview' && (
-          <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg">
-            <p className="text-xs text-[var(--evergreen-60)] mb-2">{t('settings.cameraStability.title')}</p>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={cameraSettings.cameraStability}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                setCameraSettings({ cameraStability: value });
-                trackEvent('settings_changed', { setting_name: 'camera_stability', setting_value: value });
-              }}
-              className="w-full accent-[var(--trail-orange)]"
-            />
-            <div className="flex justify-between text-[10px] text-[var(--evergreen-60)]">
-              <span>{t('settings.cameraStability.stable')}</span>
-              <span>{t('settings.cameraStability.reactive')}</span>
-            </div>
-          </div>
-        )}
-      </div>
+      <details className="rounded-lg border border-[var(--evergreen)]/20">
+        <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('settings.mapControlsHelp')}</summary>
+        <div className="px-3 pb-3"><MapNavigationGuide /></div>
+      </details>
 
       {/* Terrain */}
       <div>

@@ -20,44 +20,21 @@ export function WorkflowGuide() {
   const activeStep = steps[activeIndex];
   const nextStep = steps[activeIndex + 1];
 
-  if (activePanel === 'journey') return (
-    <section className="mb-4">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--trail-orange)]">{t('workflow.step', { current: activeIndex + 1, total: steps.length })}</p>
-      <h2 className="mt-1 text-lg font-bold tracking-tight text-[var(--evergreen)]">{t(activeStep.labelKey)}</h2>
-      <p className="mt-1 text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t('journey.editor.description')}</p>
-      <div className="mt-3 grid grid-cols-6 gap-1" aria-label={t('workflow.progressLabel')}>
-        {steps.map((step, index) => <button key={step.id} type="button" onClick={() => setActivePanel(step.id)} aria-label={t(step.labelKey)}
-          className={`h-1 rounded-full ${index <= activeIndex ? 'bg-[var(--trail-orange)]' : 'bg-[var(--evergreen)]/10'}`} />)}
-      </div>
-    </section>
-  );
-
   return (
-    <section className="mb-4 rounded-xl border border-[var(--trail-orange)]/35 bg-[var(--trail-orange-15)] p-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--trail-orange)]">
-          {t('workflow.step', { current: activeIndex + 1, total: steps.length })}
-        </p>
+    <section className="mb-4">
+      <div className="flex min-h-9 items-center justify-between gap-2">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--trail-orange)]">{t('workflow.step', { current: activeIndex + 1, total: steps.length })}</p>
+        {nextStep && <button type="button" onClick={() => setActivePanel(nextStep.id)}
+          className="group inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-[var(--evergreen)] underline decoration-[var(--trail-orange)]/50 underline-offset-4 transition-colors hover:text-[var(--trail-orange)] hover:decoration-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+          <span>{t('workflow.next', { step: t(nextStep.labelKey) })}</span><ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+        </button>}
       </div>
-      <h2 className="mt-1 text-sm font-bold text-[var(--evergreen)]">{t(activeStep.labelKey)}</h2>
-      <p className="mt-1 text-xs leading-4 text-[var(--evergreen-80)]">{t(activeStep.descriptionKey)}</p>
+      <h2 className="mt-1 text-lg font-bold tracking-tight text-[var(--evergreen)]">{t(activeStep.labelKey)}</h2>
+      <p className="mt-1 text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t(activePanel === 'journey' ? 'journey.editor.description' : activeStep.descriptionKey)}</p>
       <div className="mt-3 grid grid-cols-6 gap-1" aria-label={t('workflow.progressLabel')}>
-        {steps.map((step, index) => (
-          <button
-            key={step.id}
-            type="button"
-            onClick={() => setActivePanel(step.id)}
-            aria-label={t(step.labelKey)}
-            className={`h-1.5 rounded-full transition-colors ${index <= activeIndex ? 'bg-[var(--trail-orange)]' : 'bg-[var(--evergreen)]/15'}`}
-          />
-        ))}
+        {steps.map((step, index) => <button key={step.id} type="button" onClick={() => setActivePanel(step.id)} aria-label={t(step.labelKey)} aria-current={index === activeIndex ? 'step' : undefined}
+          className={`h-1 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--evergreen)] ${index <= activeIndex ? 'bg-[var(--trail-orange)]' : 'bg-[var(--evergreen)]/10'}`} />)}
       </div>
-      {nextStep && (
-        <button type="button" onClick={() => setActivePanel(nextStep.id)} className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--evergreen)] hover:text-[var(--trail-orange)]">
-          {t('workflow.next', { step: t(nextStep.labelKey) })}
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
-      )}
     </section>
   );
 }
