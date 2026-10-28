@@ -236,7 +236,14 @@ export interface CameraSettings {
   zoom: number;
   pitch: number;
   bearing: number;
-  followBehindPreset: 'very-close' | 'close' | 'medium' | 'far';
+  followBehindPreset:
+    | 'maximum-close'
+    | 'extreme-close'
+    | 'ultra-close'
+    | 'very-close'
+    | 'close'
+    | 'medium'
+    | 'far';
   followBehindZoomLevel: number;
   /** 0 = maximally stable/smooth camera, 1 = maximally reactive/tight tracking. */
   cameraStability: number;
@@ -362,6 +369,11 @@ export interface ComparisonTrack {
   offset: number;
   /** Set when this track was auto-grouped with an overlapping-time upload; names the primary track's id. */
   groupId?: string;
+  /** Original sequence entries retained when an already loaded route is compared. */
+  sequenceRestore?: {
+    trackIndex: number;
+    segments: Array<{ index: number; segment: JourneySegment }>;
+  };
 }
 
 export type UnitSystem = 'metric' | 'imperial';
@@ -434,6 +446,11 @@ export interface AppSettings {
   /** `panel` is the dark rounded card; `transparent` leaves only the text over the map. */
   statsBackground: 'panel' | 'transparent';
   statsColumns: number | null;
+  /** Position within the available space around the scaled leaderboard (0–1). */
+  leaderboardPosition: { x: number; y: number } | null;
+  leaderboardScale: number;
+  leaderboardBackground: 'panel' | 'transparent';
+  showLeaderboard: boolean;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
   /** Automatically focus the elevation chart on significant climbs and descents. */

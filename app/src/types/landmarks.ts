@@ -28,7 +28,7 @@ export interface RouteLandmark {
   title: string;
   subtitle?: string;
   importance: 1 | 2 | 3 | 4 | 5;
-  /** Explicit glyph override chosen by the user; falls back to the type's glyph. */
+  /** Built-in glyph, `pinhead:<id>`, or `emoji:<text>`; falls back to the type's glyph. */
   icon?: string;
   routeDistanceMeters?: number;
   color?: string;

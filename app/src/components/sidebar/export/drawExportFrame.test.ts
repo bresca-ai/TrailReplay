@@ -61,4 +61,34 @@ describe('opaque sky in replay exports', () => {
     expect(MAP_STYLE.sky['sky-horizon-blend']).toBe(0);
     expect(MAP_STYLE.sky['fog-ground-blend']).toBe(1);
   });
+
+  it('paints both colors of a unified comparison marker into the exported canvas', () => {
+    const marker = document.createElement('div');
+    marker.className = 'tr-marker';
+    marker.getBoundingClientRect = () => new DOMRect(100, 200, 24, 24);
+    const dot = document.createElement('div');
+    dot.dataset.markerDot = '';
+    dot.dataset.markerColors = encodeURIComponent(JSON.stringify(['#c1652f', '#3b82f6']));
+    dot.style.width = '24px';
+    dot.style.border = '2.5px solid white';
+    marker.appendChild(dot);
+    document.body.appendChild(marker);
+
+    const { options } = frameOptions();
+    const fills: string[] = [];
+    const context = {
+      fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
+      beginPath: vi.fn(), moveTo: vi.fn(), arc: vi.fn(), closePath: vi.fn(), stroke: vi.fn(),
+      fill() { fills.push(this.fillStyle); },
+    };
+    options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+    expect(document.querySelector('.tr-marker [data-marker-dot]')).toBe(dot);
+    drawExportFrame(options);
+
+    expect(context.drawImage).toHaveBeenCalled();
+    expect(fills).toEqual(['#c1652f', '#3b82f6']);
+    expect(context.moveTo).toHaveBeenCalledTimes(2);
+    expect(context.arc).toHaveBeenCalledTimes(3);
+    expect(context.stroke).toHaveBeenCalledOnce();
+  });
 });

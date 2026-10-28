@@ -5,7 +5,7 @@ import { createUserLandmark } from '@/utils/createUserLandmark';
 import { useFindNearestRoutePoint } from '@/components/map/hooks/useFindNearestRoutePoint.ts';
 
 /** Kept in sync with useRouteLandmarksLayer, which owns these layers. */
-const LANDMARK_LAYER_IDS = ['route-landmarks-icon', 'route-landmarks-label'];
+const LANDMARK_LAYER_IDS = ['route-landmarks-icon', 'route-landmarks-emoji', 'route-landmarks-label'];
 
 interface UseLandmarkPlacementParams {
   isMapLoaded: boolean;

@@ -9,6 +9,7 @@ import {
 } from '@/store/defaults';
 import type { Recipe } from './types';
 import type { ResolvedRecipe } from './resolveRecipe';
+import { normalizeRouteDivergenceThreshold } from '@/utils/routeDivergence';
 import { createPhotoSlot, presetSettings } from '@/components/sidebar/export/socialSharePresets';
 import {
   getFollowBehindLevelForStopIndex,
@@ -45,6 +46,7 @@ export function mergeRecipeCameraSettings(recipe: Recipe): CameraSettings {
   const authored = recipe.cameraSettings ?? {};
   const merged = { ...defaults, ...authored };
 
+  // Authored distances must use the same discrete ladder as the UI.
   if (authored.followBehindZoomLevel !== undefined) {
     const stopIndex = getFollowBehindStopIndexForLevel(authored.followBehindZoomLevel);
     const level = getFollowBehindLevelForStopIndex(stopIndex);
@@ -104,6 +106,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
   store.hydrateState({
     // Kept so saving preserves where this came from, not only what it became.
     sourceRecipe: recipe,
+    comparisonThresholdMeters: normalizeRouteDivergenceThreshold(recipe.comparisonThresholdMeters),
     activeTrackId: resolved.activeTrackId,
     journey: {
       id: 'recipe-journey',

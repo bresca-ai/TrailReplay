@@ -44,6 +44,18 @@ function createTrack(overrides: Partial<GPXTrack> = {}): GPXTrack {
   };
 }
 
+function comparisonReadyTrack(id: string, lat: number, timed: boolean): GPXTrack {
+  const base = createTrack().points[0];
+  return createTrack({
+    id,
+    totalDistance: 1000,
+    points: [
+      { ...base, lat, time: timed ? new Date('2026-10-25T10:00:00Z') : null },
+      { ...base, lat: lat + 0.01, distance: 1000, time: timed ? new Date('2026-10-25T10:10:00Z') : null },
+    ],
+  });
+}
+
 function createPendingPlacement(id: string): PendingPicturePlacement {
   return {
     id,
@@ -55,6 +67,95 @@ function createPendingPlacement(id: string): PendingPicturePlacement {
 }
 
 describe('createAppStore', () => {
+  it('moves a loaded route into comparison and restores its timing and transport connection', () => {
+    const useStore = createAppStore();
+    useStore.getState().addTrack(createTrack({ id: 'first', activityIcon: 'svg-biking' }));
+    useStore.getState().addTrack(createTrack({ id: 'second', activityIcon: 'svg-walking' }));
+    const [first, second] = useStore.getState().journeySegments;
+    useStore.getState().reorderJourneySegments([
+      { ...first, duration: 22_000 },
+      { id: 'connection', type: 'transport', mode: 'bike', from: { lat: 42, lon: 1 }, to: { lat: 43, lon: 2 }, duration: 8_000, distance: 1000 },
+      { ...second, duration: 37_000 },
+    ]);
+    const before = useStore.getState().journeySegments;
+    useStore.getState().moveTrackToComparison('second', 'first');
+    expect(useStore.getState().tracks.map((track) => track.id)).toEqual(['first']);
+    expect(useStore.getState().journeySegments).toEqual([before[0]]);
+    expect(useStore.getState().comparisonTracks[0]).toMatchObject({ id: 'second', groupId: 'first', track: { activityIcon: 'svg-walking' } });
+    useStore.getState().ungroupComparisonTrack('second');
+    expect(useStore.getState().tracks.map((track) => track.id)).toEqual(['first', 'second']);
+    expect(useStore.getState().journeySegments).toEqual(before);
+    expect(useStore.getState().comparisonTracks).toEqual([]);
+  });
+
+  it('keeps the primary route and ignores repeated or invalid comparison moves', () => {
+    const useStore = createAppStore();
+    useStore.getState().addTrack(createTrack({ id: 'first' }));
+    useStore.getState().addTrack(createTrack({ id: 'second' }));
+    useStore.getState().moveTrackToComparison('first', 'first');
+    useStore.getState().moveTrackToComparison('second', 'missing');
+    expect(useStore.getState().tracks).toHaveLength(2);
+    useStore.getState().moveTrackToComparison('second', 'first');
+    useStore.getState().moveTrackToComparison('second', 'first');
+    expect(useStore.getState().tracks).toHaveLength(1);
+    expect(useStore.getState().comparisonTracks).toHaveLength(1);
+  });
+
+  it('starts live route comparison at half speed without changing authored duration', () => {
+    const useStore = createAppStore();
+    const start = createTrack().points[0];
+    const points = [
+      { ...start, time: new Date('2026-10-25T10:00:00Z') },
+      { ...start, lat: 42.01, distance: 1000, time: new Date('2026-10-25T10:10:00Z') },
+    ];
+    useStore.getState().addTrack(createTrack({ id: 'first', points, totalDistance: 1000 }));
+    useStore.getState().addTrack(createTrack({ id: 'second', points, totalDistance: 1000 }));
+    useStore.getState().moveTrackToComparison('second', 'first');
+    useStore.getState().setComparisonMode('route');
+    expect(useStore.getState().playback.speed).toBe(0.5);
+    expect(useStore.getState().journeySegments[0].duration).toBe(60_000);
+    useStore.getState().setSpeed(0.25);
+    useStore.getState().setComparisonMode('time');
+    useStore.getState().setComparisonMode('route');
+    expect(useStore.getState().playback.speed).toBe(0.25);
+  });
+
+  it('switches to Route and rejects Time when a route has no timestamps', () => {
+    const useStore = createAppStore();
+    useStore.getState().setSettings({ language: 'en' });
+    useStore.getState().addTrack(comparisonReadyTrack('first', 42, true));
+    useStore.getState().addTrack(comparisonReadyTrack('second', 42, false));
+    useStore.getState().moveTrackToComparison('second', 'first');
+    expect(useStore.getState().comparisonMode).toBe('route');
+    expect(useStore.getState().error).toContain('Time comparison is unavailable');
+    useStore.getState().setComparisonMode('time');
+    expect(useStore.getState().comparisonMode).toBe('route');
+    useStore.getState().play();
+    expect(useStore.getState().playback.isPlaying).toBe(true);
+  });
+
+  it('rejects Route when timed routes have no shared points', () => {
+    const useStore = createAppStore();
+    useStore.getState().setSettings({ language: 'en' });
+    useStore.getState().addTrack(comparisonReadyTrack('first', 42, true));
+    useStore.getState().addTrack(comparisonReadyTrack('second', 43, true));
+    useStore.getState().moveTrackToComparison('second', 'first');
+    useStore.getState().setComparisonMode('route');
+    expect(useStore.getState().comparisonMode).toBe('time');
+    expect(useStore.getState().error).toContain('Route comparison is unavailable');
+  });
+
+  it('blocks playback when neither comparison mode is valid', () => {
+    const useStore = createAppStore();
+    useStore.getState().setSettings({ language: 'en' });
+    useStore.getState().addTrack(comparisonReadyTrack('first', 42, true));
+    useStore.getState().addTrack(comparisonReadyTrack('second', 43, false));
+    useStore.getState().moveTrackToComparison('second', 'first');
+    useStore.getState().play();
+    expect(useStore.getState().playback.isPlaying).toBe(false);
+    expect(useStore.getState().error).toContain('Time comparison is unavailable');
+  });
+
   it('defaults to the satellite map style', () => {
     const useStore = createAppStore();
 

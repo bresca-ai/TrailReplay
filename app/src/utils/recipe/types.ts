@@ -21,6 +21,8 @@ export interface Recipe {
 
   tracks?: RecipeTrackSpec[] | RecipeTrackGlob;
   comparisonTracks?: RecipeTrackSpec[];
+  /** Distance in metres that makes an entire route split count as a difference. */
+  comparisonThresholdMeters?: number;
 
   /**
    * How the tracks relate. `stitch` plays them one after another as one

@@ -41,6 +41,8 @@ export const zhTW = {
   },
   fileImport: { openingProject: '正在開啟重播專案…', applyingRecipe: '正在建立重播…', loadingRoutes: '正在載入路線…', fileCount: '{count} 個檔案', keepOpen: '大型檔案可能需要一些時間，請保持此分頁開啟。' },
   tracks: {
+    compareByTime: '依時間比較', compareByRoute: '依路線比較', compareTimeHint: '軌跡依記錄時間移動。', compareRouteHint: '比較路線形狀；分岔至匯合的路段若任一處相距超過 {threshold} 公尺，整段會標成紅色。',
+    leaderboard: '即時排名', leaderboardShow: '顯示排名', leaderboardMove: '拖曳排名以移動，拖曳角落以調整大小。使用上方選擇的字體。', leaderboardResize: '調整排名大小', leaderboardSize: '排名大小', leaderboardBackground: '排名背景', leaderboardReset: '重設位置與大小', routeShared: '相同路線', routeSplit: '不同路線', leader: '領先者',
     dropTitle: '拖曳 GPX、KML 或 FIT 檔案至此', dropActive: '將 GPX／KML／FIT 檔案放在這裡', dropBrowse: '或點選以瀏覽檔案',
     dropHint: '也可拖入 .replay 專案，或將 recipe.json 與路線檔案一起拖入。', languageHint: '請先選擇介面語言，再匯入路線。',
     parsing: '正在解析 GPX 檔案…', loadedTracks: '已載入的軌跡（{count}）', dragReorder: '拖曳以調整順序',
@@ -90,7 +92,7 @@ export const zhTW = {
       bearing: { value: '方位角', decrease: '向左轉', increase: '向右轉' },
       zoom: { value: '距離', decrease: '拉近', increase: '拉遠' },
     },
-    followPresets: { title: '距離預設', veryClose: '非常近', close: '近', medium: '中', far: '遠' }, cameraStability: { title: '鏡頭穩定度', stable: '平穩運鏡', reactive: '即時跟隨' },
+    followPresets: { maximumClose: '最近', extremeClose: '極近', ultraClose: '超近', title: '距離預設', veryClose: '非常近', close: '近', medium: '中', far: '遠' }, cameraStability: { title: '鏡頭穩定度', stable: '平穩運鏡', reactive: '即時跟隨' },
     units: '單位', unitMetric: '公制（km）', unitImperial: '英制（mi）', language: '語言',
   },
   info: {
@@ -151,6 +153,13 @@ export const zhTW = {
     inactiveAnnotationsOpacityLabel: '標記', inactiveAnnotationsOpacity: '未啟用時的不透明度', inactiveAnnotationsOpacityHint: '標註未啟用時，會套用此不透明度。',
   },
   journey: {
+    editor: {
+      slowdown: '差異路段減速', slowdownOff: '關閉', slowdownGentle: '輕度 · 2 倍時間', slowdownMedium: '中度 · 4 倍時間', slowdownStrong: '強烈 · 10 倍時間',
+      slowdownHint: '兩個標記各自沿路線移動，並在共通點匯合。差異路段會花較多時間，影片仍維持所選長度。',
+      missingTiming: '無法依時間比較：每條路線都需要記錄時間。請匯入包含時間的原始 GPX 或 FIT 活動。', noSharedRoute: '無法依路線比較：這些路線沒有共通點。請選擇沿途相會的路線。',
+      replayMode: '重播配置', sequence: '依序播放', compare: '比較', videoDuration: '影片長度', sequenceRoutes: '路線順序', paceAndStats: '配速與統計', loadedRoutes: '已載入的路線', comparisonRoutes: '比較路線', primary: '主要路線', separate: '分離',
+      compareLoadedHint: '選擇已載入的路線，與主要路線一起重播。', needTwoRoutes: '請先在路線中載入至少兩條路線。', comparisonType: '比較方式', time: '時間', route: '路線', divergenceLegend: '超過 {threshold} 公尺的完整差異路段', differenceThreshold: '差異門檻（公尺）', differenceThresholdHint: '允許範圍：{min}–{max} 公尺。分岔路段任一處超過此距離時，整段會標示出來。', returnToSequence: '全部返回順序播放', description: '依序排列路線或一起比較。',
+    },
     videoTimingTitle: '設定影片時間', videoTimingHint: '選擇成品影片的長度，再決定標記沿路線移動的方式。', durationPreset: '{seconds} 秒', durationPresetHint: '影片長度', customDurationHint: '需要自訂長度嗎？請點選下方各旅程路段的編輯按鈕，個別設定播放時間。',
     defaultSettings: '預設設定', defaultTrackTime: '預設軌跡播放時間', defaultTrackTimeHint: '每條軌跡會在動畫中以此時間播放完畢', routeTiming: '路線配速', routeTimingRecorded: '實際配速', routeTimingUniform: '固定配速', routeTimingHint: '「實際配速」依 GPX 記錄時間播放；「固定配速」依距離等速移動，讓整條路線的播放速度一致。',
     statsMode: '重播統計', statsModeHint: '選擇距離、時間、配速與爬升要全程累計，或在每條軌跡開始時重新計算。', statsModeCumulative: '旅程累計', statsModePerTrack: '每條軌跡重新計算', totalDistance: '總距離：', totalDuration: '總時間：', totalSegments: '路段數：',

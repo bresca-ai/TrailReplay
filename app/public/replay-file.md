@@ -393,8 +393,9 @@ visible), `title`, `type`, `source` (use `"user"`). Optional: `display`
 `longest-climb` `major-descent` `halfway`
 
 **`icon`** (overrides the type's glyph) — `pin` `summit` `viewpoint` `waypoint`
-`town` `shelter` `camp` `water` `waterfall`. An aid station defaults to `town`;
-`water` usually reads better.
+`town` `shelter` `camp` `water` `waterfall`. You can also use a searchable
+Pinhead icon such as `pinhead:bicycle` or an emoji such as `emoji:🏕️`. An aid
+station defaults to `town`; `water` usually reads better.
 
 **Palette** — `#E86F51` `#F7F2E8` `#6D7E96` `#3C9DCC` `#63C5D9` `#B85E3C`
 `#3E9DB0` `#536B65`. Any hex works.
@@ -467,10 +468,12 @@ website's distance control exactly:
 | `far` | `0` | Widest Follow Behind view |
 | `medium` | `33` | Default balanced view |
 | `close` | `66` | Closer to the moving marker |
-| `very-close` | `100` | Tightest Follow Behind view |
+| `very-close` | `100` | Tight Follow Behind view |
+| `ultra-close` | `120` | Closer Follow Behind view |
+| `extreme-close` | `140` | Extreme close Follow Behind view |
 
 The exact slider stops are `0`, `11`, `22`, `33`, `49.5`, `66`, `83`, and
-`100`, ordered from farthest to closest. If a recipe provides a value between
+`100`, `120`, `140`, `145`, `150`, and `160`, ordered from farthest to closest. If a recipe provides a value between
 stops, TrailReplay snaps it to the nearest website stop. If it provides both a
 preset and a level, the more precise level wins and the preset label is updated
 to match.
@@ -624,6 +627,18 @@ stats at the bottom:
 - `enabledLandmarkGroups` — landmark types to enable.
 
 ### 5.10 `journey` and `journeySegments`
+
+For two tracks that should play together, add the second track to the first
+track's comparison group. `comparisonMode` chooses how they advance: `time`
+uses recorded timestamps and shows who leads; `route` compares distance along
+their paths and highlights a whole split when it exceeds the configured
+`comparisonThresholdMeters` anywhere. This distance defaults to 30 m and may
+be set from 5 to 1,000 m; it is saved with the project and can also be supplied
+at the top level of a recipe.
+`comparisonSlowdown` applies to route comparison split sections: `1` leaves
+their playback speed unchanged, `0.5` gives them twice as much screen time,
+`0.25` gives them four times as much (the default), and `0.1` gives them ten
+times as much. The total video duration stays the same.
 
 `journey` is `{ id, name, segments: [], totalDuration: 0, totalDistance: 0 }` —
 only `name` matters to you.

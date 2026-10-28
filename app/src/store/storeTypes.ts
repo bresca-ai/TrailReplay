@@ -40,6 +40,9 @@ export interface AppState {
   restoreTrackTrim: (trackId: string) => boolean;
   activeTrackId: string | null;
   comparisonTracks: ComparisonTrack[];
+  comparisonMode: 'time' | 'route';
+  comparisonSlowdown: number;
+  comparisonThresholdMeters: number;
   journey: Journey | null;
   journeySegments: JourneySegment[];
   cinematicCameraKeyframes: CinematicCameraKeyframe[];
@@ -108,12 +111,16 @@ export interface AppState {
   toggleTrackVisibility: (trackId: string) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
   addComparisonTrack: (track: ComparisonTrack) => void;
+  moveTrackToComparison: (trackId: string, primaryTrackId: string) => void;
   removeComparisonTrack: (trackId: string) => void;
   ungroupComparisonTrack: (trackId: string) => void;
   toggleComparisonTrack: (trackId: string) => void;
   updateComparisonOffset: (trackId: string, offset: number) => void;
   updateComparisonTrackName: (trackId: string, name: string) => void;
   updateComparisonColor: (trackId: string, color: string) => void;
+  setComparisonMode: (mode: AppState['comparisonMode']) => void;
+  setComparisonSlowdown: (speed: number) => void;
+  setComparisonThresholdMeters: (meters: number) => void;
   createJourney: (name: string) => void;
   updateJourneyName: (name: string) => void;
   addJourneySegment: (segment: JourneySegment) => void;

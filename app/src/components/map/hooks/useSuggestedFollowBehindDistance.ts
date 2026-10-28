@@ -31,6 +31,7 @@ export function shouldApplySuggestedDistance({
 interface UseSuggestedFollowBehindDistanceParams {
   allCoordinates: number[][];
   followBehindZoomLevel: number;
+  preserveAuthoredDistance: boolean;
   setCameraSettings: (settings: Partial<CameraSettings>) => void;
   totalDistanceMeters: number;
   totalDurationMs: number;
@@ -53,6 +54,7 @@ interface UseSuggestedFollowBehindDistanceParams {
 export function useSuggestedFollowBehindDistance({
   allCoordinates,
   followBehindZoomLevel,
+  preserveAuthoredDistance,
   setCameraSettings,
   totalDistanceMeters,
   totalDurationMs,
@@ -61,6 +63,7 @@ export function useSuggestedFollowBehindDistance({
   const lastRouteKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (preserveAuthoredDistance) return;
     if (totalDistanceMeters <= 0 || totalDurationMs <= 0 || allCoordinates.length === 0) {
       // No measurable route (all tracks removed): let the next one be suggested.
       lastRouteKeyRef.current = null;
@@ -102,6 +105,7 @@ export function useSuggestedFollowBehindDistance({
   }, [
     allCoordinates,
     followBehindZoomLevel,
+    preserveAuthoredDistance,
     setCameraSettings,
     totalDistanceMeters,
     totalDurationMs,

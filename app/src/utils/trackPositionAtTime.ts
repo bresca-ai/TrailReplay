@@ -17,6 +17,7 @@ export function buildTrackTimeIndex(track: GPXTrack): TrackTimeIndex | null {
   track.points.forEach((point, index) => {
     if (!point.time) return;
     const time = point.time.getTime();
+    if (!Number.isFinite(time)) return;
     // Guard against non-monotonic exports: a later timestamp that goes
     // backwards would break the binary search.
     if (times.length > 0 && time < times[times.length - 1]) return;

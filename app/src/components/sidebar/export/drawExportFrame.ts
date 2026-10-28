@@ -18,10 +18,43 @@ import type { VideoExportSettings } from '@/types';
 import { markerIconContrastFilter } from '@/utils/activityIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
+import { drawComparisonLeaderboard } from './drawComparisonLeaderboard';
 
 function extractCssUrl(value: string): string | null {
   const match = value.match(/url\((['"]?)(.*?)\1\)/);
   return match?.[2] ?? null;
+}
+
+function markerDotColors(element: HTMLElement): string[] {
+  try {
+    const colors = JSON.parse(decodeURIComponent(element.dataset.markerColors ?? ''));
+    if (Array.isArray(colors) && colors.length > 0 && colors.every((color) => typeof color === 'string' && color.length > 0)) return colors;
+  } catch { /* Older markers have no encoded colors. */ }
+  return [element.style.backgroundColor || '#FF9800'];
+}
+
+/** Canvas cannot use a CSS conic-gradient as fillStyle, so paint its sectors explicitly. */
+function drawMarkerDot(context: CanvasRenderingContext2D, element: HTMLElement, x: number, y: number, radius: number, scale: number) {
+  const colors = markerDotColors(element);
+  const strokeWidth = (parseFloat(element.style.borderWidth) || 2.5) * scale;
+  const fillRadius = Math.max(0, radius - strokeWidth / 2);
+  context.save();
+  colors.forEach((color, index) => {
+    const start = -Math.PI / 2 + index * Math.PI * 2 / colors.length;
+    const end = -Math.PI / 2 + (index + 1) * Math.PI * 2 / colors.length;
+    context.beginPath();
+    if (colors.length > 1) context.moveTo(x, y);
+    context.arc(x, y, fillRadius, start, end);
+    context.closePath();
+    context.fillStyle = color;
+    context.fill();
+  });
+  context.beginPath();
+  context.arc(x, y, radius - strokeWidth / 2, 0, Math.PI * 2);
+  context.strokeStyle = element.style.borderColor || '#FFFFFF';
+  context.lineWidth = strokeWidth;
+  context.stroke();
+  context.restore();
 }
 
 function drawTintedSvgIcon(
@@ -324,17 +357,7 @@ export function drawExportFrame({
       const circleElement = markerContainer.querySelector('[data-marker-dot]') as HTMLElement | null;
       if (circleElement) {
         const circleSize = parseFloat(circleElement.style.width || '0');
-        const scaledRadius = (circleSize / 2) * scaleX;
-        const borderColor = circleElement.style.borderColor || '#FF9800';
-
-        context.fillStyle = circleElement.style.background || 'rgba(255, 152, 0, 0.25)';
-        context.beginPath();
-        context.arc(markerX, markerY, scaledRadius, 0, Math.PI * 2);
-        context.fill();
-
-        context.strokeStyle = borderColor;
-        context.lineWidth = 2 * scaleX;
-        context.stroke();
+        drawMarkerDot(context, circleElement, markerX, markerY, circleSize / 2 * scaleX, scaleX);
       }
 
       const markerIcon = markerContainer.querySelector('span') as HTMLElement | null;
@@ -395,6 +418,8 @@ export function drawExportFrame({
         context.restore();
       }
     }
+
+    drawComparisonLeaderboard(context, document.querySelector('.tr-comparison-leaderboard'), { containerRect, cropX, cropY, scaleX, scaleY });
 
     if (cachedLogoRef.current) {
       const box = getVideoLogoBox(recordW, recordH);

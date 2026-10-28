@@ -11,6 +11,7 @@ import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability'
 import { useAvailableStats } from '@/hooks/useAvailableStats';
 import { Trash2 } from 'lucide-react';
 import { OverlayFontPicker } from './OverlayFontPicker';
+import { ComparisonLeaderboardSettings } from './ComparisonLeaderboardSettings';
 
 function parsePercent(raw: string): number | null {
   const parsed = parseFloat(raw.replace(',', '.'));
@@ -525,6 +526,8 @@ export function AnnotationsPanel() {
           </p>
         </div>
       </div>
+
+      <ComparisonLeaderboardSettings />
 
       {/* ── Stats visibility ─────────────────────────────────────── */}
       <div className="space-y-3">

@@ -4,8 +4,9 @@ import type { AppState } from '@/store/storeTypes';
 import type { AppSliceCreator } from './types';
 import { DEFAULT_ACTIVITY_ICON } from '@/utils/activityIcons';
 import { getTrackTimeRange } from '@/utils/trackTimeOverlap';
-import type { GPXTrack } from '@/types';
+import { comparisonIssueForMode, getComparisonAvailability } from '@/utils/comparisonAvailability';
 import { translate } from '@/i18n/translations';
+import type { GPXTrack } from '@/types';
 
 type TracksSlice = Pick<
   AppState,
@@ -22,6 +23,7 @@ type TracksSlice = Pick<
   | 'toggleTrackVisibility'
   | 'reorderTracks'
   | 'addComparisonTrack'
+  | 'moveTrackToComparison'
   | 'removeComparisonTrack'
   | 'ungroupComparisonTrack'
   | 'toggleComparisonTrack'
@@ -92,6 +94,20 @@ function insertTrackIntoJourney(state: AppState, track: GPXTrack, insertIndex?: 
   state.activePanel = 'journey';
 }
 
+function reconcileComparisonMode(state: AppState) {
+  if (!state.comparisonTracks.some((track) => track.visible)) return;
+  const primary = state.tracks.find((track) => track.id === state.activeTrackId) ?? state.tracks[0];
+  const availability = getComparisonAvailability(primary, state.comparisonTracks.filter((track) => track.visible).map((track) => track.track));
+  const issue = comparisonIssueForMode(availability, state.comparisonMode);
+  if (!issue) return;
+  const alternative = state.comparisonMode === 'time' ? 'route' : 'time';
+  if (availability[alternative]) {
+    state.comparisonMode = alternative;
+    if (alternative === 'route' && state.playback.speed === 1) state.playback.speed = 0.5;
+  }
+  state.error = translate(state.settings.language, `journey.editor.${issue}`);
+}
+
 export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
   tracks: [],
   activeTrackId: null,
@@ -109,6 +125,7 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
       // installed.
       tracks.forEach((track) => insertTrackIntoJourney(state, track));
       state.comparisonTracks.push(...comparisonTracks);
+      reconcileComparisonMode(state);
     }),
 
   removeTrack: (trackId) =>
@@ -191,6 +208,48 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
   addComparisonTrack: (track) =>
     set((state) => {
       state.comparisonTracks.push(track);
+      reconcileComparisonMode(state);
+    }),
+
+  moveTrackToComparison: (trackId, primaryTrackId) =>
+    set((state) => {
+      const trackIndex = state.tracks.findIndex((track) => track.id === trackId);
+      const track = state.tracks[trackIndex];
+      const primary = state.tracks.find((entry) => entry.id === primaryTrackId);
+      if (!track || !primary || trackId === primaryTrackId) return;
+      const removedIndices = new Set<number>();
+      state.journeySegments.forEach((segment, index) => {
+        if (segment.type !== 'track' || segment.trackId !== trackId) return;
+        removedIndices.add(index);
+        // Connections touching the moved route belong to its sequence too.
+        if (state.journeySegments[index - 1]?.type === 'transport') removedIndices.add(index - 1);
+        if (state.journeySegments[index + 1]?.type === 'transport') removedIndices.add(index + 1);
+      });
+      state.comparisonTracks.push({
+        id: track.id, name: track.name,
+        color: track.color !== primary.color ? track.color : trackColors.find((color) => color !== primary.color && !state.comparisonTracks.some((entry) => entry.color === color)) ?? '#059669',
+        track,
+        visible: true, offset: 0, groupId: primary.id,
+        sequenceRestore: {
+          trackIndex,
+          segments: state.journeySegments.flatMap((segment, index) => removedIndices.has(index) ? [{ index, segment }] : []),
+        },
+      });
+      state.tracks.splice(trackIndex, 1);
+      state.journeySegments = state.journeySegments.filter((_, index) => !removedIndices.has(index));
+      if (!state.journeySegments.some((segment) => segment.type === 'track' && segment.trackId === primary.id)) {
+        state.journeySegments.push({ id: createId('segment'), type: 'track', trackId: primary.id, duration: 60_000 });
+      }
+      state.activeTrackId = primary.id;
+      state.settings.trailStyle.trailColor = primary.color;
+      state.settings.trailStyle.currentIcon = primary.activityIcon;
+      state.settings.trailStyle.markerColor = primary.color;
+      state.playback.isPlaying = false;
+      state.playback.currentTime = 0;
+      state.playback.progress = 0;
+      state.cinematicPlayed = false;
+      state.animationPhase = 'idle';
+      reconcileComparisonMode(state);
     }),
 
   removeComparisonTrack: (trackId) =>
@@ -204,6 +263,17 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
       if (!comparisonTrack) return;
 
       state.comparisonTracks = state.comparisonTracks.filter((entry) => entry.id !== trackId);
+
+      if (comparisonTrack.sequenceRestore) {
+        const restore = comparisonTrack.sequenceRestore;
+        state.tracks.splice(Math.min(restore.trackIndex, state.tracks.length), 0, comparisonTrack.track);
+        restore.segments.forEach(({ index, segment }) => {
+          if (!state.journeySegments.some((entry) => entry.id === segment.id)) {
+            state.journeySegments.splice(Math.min(index, state.journeySegments.length), 0, segment);
+          }
+        });
+        return;
+      }
 
       const range = getTrackTimeRange(comparisonTrack.track);
       const insertIndex = range
@@ -223,7 +293,10 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
   toggleComparisonTrack: (trackId) =>
     set((state) => {
       const track = state.comparisonTracks.find((entry) => entry.id === trackId);
-      if (track) track.visible = !track.visible;
+      if (track) {
+        track.visible = !track.visible;
+        if (track.visible) reconcileComparisonMode(state);
+      }
     }),
 
   updateComparisonOffset: (trackId, offset) =>

@@ -64,6 +64,13 @@ describe('a .replay holding only a recipe', () => {
 });
 
 describe('round trip', () => {
+  it('applies the authored comparison distance from a recipe', () => {
+    const authored = { ...recipe, comparisonThresholdMeters: 80 };
+    const resolved = resolveRecipe(authored, [parseGPX(gpx, 'ridge.gpx')], ['ridge.gpx']);
+    const store = createAppStore();
+    applyRecipe(authored, resolved, store.getState());
+    expect(store.getState().comparisonThresholdMeters).toBe(80);
+  });
   it('keeps the recipe through a save, so the source is not lost', async () => {
     const parsed = await parseReplayArchive(packRecipeArchive());
     const tracks = parsed.routes.map((route) => parseGPX(route.gpxText, route.fileName));
@@ -98,5 +105,39 @@ describe('round trip', () => {
     const blob = await buildReplayArchive(store.getState());
     const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
     expect(Object.keys(entries)).not.toContain('recipe.json');
+  });
+
+  it('keeps recipe camera distance on the same discrete ladder as the UI', () => {
+    const authored: Recipe = {
+      ...recipe,
+      cameraSettings: {
+        mode: 'follow-behind',
+        followBehindPreset: 'very-close',
+      },
+    };
+    const tracks = [parseGPX(gpx, 'ridge.gpx')];
+    const resolved = resolveRecipe(authored, tracks, ['ridge.gpx']);
+    const store = createAppStore();
+
+    applyRecipe(authored, resolved, store.getState());
+
+    expect(store.getState().cameraSettings.followBehindZoomLevel).toBe(100);
+  });
+
+  it('snaps an arbitrary recipe distance to a real UI stop', () => {
+    const authored: Recipe = {
+      ...recipe,
+      cameraSettings: {
+        mode: 'follow-behind',
+        followBehindZoomLevel: 125,
+      },
+    };
+    const tracks = [parseGPX(gpx, 'ridge.gpx')];
+    const resolved = resolveRecipe(authored, tracks, ['ridge.gpx']);
+    const store = createAppStore();
+
+    applyRecipe(authored, resolved, store.getState());
+
+    expect(store.getState().cameraSettings.followBehindZoomLevel).toBe(120);
   });
 });

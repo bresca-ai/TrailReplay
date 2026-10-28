@@ -18,6 +18,35 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves comparison mode, existing activity icons, and the original sequence through a saved project', async () => {
+    const source = createAppStore();
+    const first = parseGPX(sampleGpx, 'first.gpx');
+    const second = { ...parseGPX(sampleGpx, 'second.gpx'), activityIcon: 'svg-biking' };
+    source.getState().addTrack(first);
+    source.getState().addTrack(second);
+    source.getState().updateJourneySegmentDuration(source.getState().journeySegments[1].id, 27_000);
+    const originalSegments = source.getState().journeySegments;
+    source.getState().moveTrackToComparison(second.id, first.id);
+    source.getState().setComparisonMode('route');
+    source.getState().setComparisonSlowdown(0.1);
+    source.getState().setComparisonThresholdMeters(65);
+    const blob = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'comparison.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().comparisonMode).toBe('route');
+    expect(target.getState().comparisonSlowdown).toBe(0.1);
+    expect(target.getState().comparisonThresholdMeters).toBe(65);
+    delete parsed.project!.comparisonThresholdMeters;
+    const legacy = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, legacy.getState());
+    expect(legacy.getState().comparisonThresholdMeters).toBe(30);
+    expect(target.getState().comparisonTracks[0].track.activityIcon).toBe('svg-biking');
+    target.getState().ungroupComparisonTrack(second.id);
+    expect(target.getState().journeySegments).toEqual(originalSegments);
+    expect(target.getState().tracks[1].activityIcon).toBe('svg-biking');
+  });
+
   it('preserves the Taiwan locale and authored Chinese annotations through save and reopen', async () => {
     const source = createAppStore();
     source.getState().setSettings({ language: 'zh-TW' });
@@ -199,6 +228,34 @@ describe('hydrateProject', () => {
     expect(legacyStore.getState().settings.statsScale).toBe(1);
     expect(legacyStore.getState().settings.statsLayout).toBe('auto');
     expect(legacyStore.getState().settings.statsColumns).toBeNull();
+  });
+
+  it('round trips leaderboard styling and defaults older projects', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
+    const presentation = { leaderboardPosition: { x: 0.25, y: 0.6 }, leaderboardScale: 1.4, leaderboardBackground: 'transparent' as const, showLeaderboard: false };
+    source.getState().setSettings(presentation);
+    const blob = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
+    const restored = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().settings).toMatchObject(presentation);
+    for (const key of Object.keys(presentation)) delete (parsed.project!.settings as Record<string, unknown>)[key];
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().settings).toMatchObject({ leaderboardPosition: null, leaderboardScale: 1, leaderboardBackground: 'panel', showLeaderboard: true });
+  });
+
+  it('preserves selected library and emoji landmark icons in saved projects', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    for (const [id, icon] of [['bike', 'pinhead:bicycle'], ['tent', 'emoji:🏕️'], ['legacy', 'camp']]) {
+      source.getState().addLandmark({ id, icon, type: 'custom', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: id, importance: 3 });
+    }
+    const blob = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
+    const restored = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
   });
 
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
