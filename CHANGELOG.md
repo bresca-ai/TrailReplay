@@ -4,26 +4,31 @@ All notable user-facing changes are recorded here. TrailReplay follows [Semantic
 
 ## [1.4.0] - 2026-10-28
 
+This release makes it easier to compare routes, arrange a replay, and prepare a video or shareable image. It also refreshes the editor from route import through export.
+
 ### Added
 
-- Compare routes by recorded time or route geometry in the timeline, with a live leaderboard, configurable separation threshold and split-camera playback.
-- Trim imported GPX routes, search a larger library of landmark icons, and use Traditional Chinese (Taiwan) throughout the editor.
-- Place map captions and field notes at a selected distance along a route, or at the playhead. Set annotation opacity and colour route sections by distance in kilometres or percentage.
-- Try an experimental recorded-elevation mode for routes above the terrain. Terrain clearance depends on loaded map tiles, missing elevations may appear at sea level, and comparison tracks retain their existing behaviour; further flight and export validation is needed.
+- **Route comparisons:** Group routes in the timeline and compare their recorded times with a live leaderboard, or compare their geometry to highlight sections where they diverge. Set the separation threshold and slowdown, and customize the leaderboard's appearance, position and size. These settings are saved with the project and appear in exported videos.
+- **Route trimming and languages:** Trim imported GPX routes before using them in a replay, and use the editor in Traditional Chinese (Taiwan).
+- **Annotation placement:** Choose between a short map caption and a larger field note, then place it at a specific kilometre or at the playhead. Annotation opacity is adjustable.
+- **Route colouring:** Define coloured route segments using either percentages or distances in kilometres. Heart-rate colour controls have also been reorganized.
+- **Landmark icons:** Search a larger icon library or select an emoji for route landmarks; selected icons and colours are retained in saved projects and exports.
+- **Experimental recorded elevation:** An optional map setting displays a route at its recorded altitude instead of following the terrain. Terrain clearance depends on loaded tiles, missing elevations may appear at sea level, and comparison tracks retain their existing behaviour. Further real-flight and export validation is needed.
 
 ### Improved
 
-- Redesign the Routes, Style, Map & Camera, Media and Generate panels, with more prominent camera controls, visual map and export presets, compact expandable controls and easier navigation between steps.
-- Configure video format, visual aspect ratio, quality and frame rate directly in Generate. Image and cover editing use compact sections, while project saving remains accessible in both modes.
-- Estimate video file size using the configured resolution, frame rate and rendering quality.
-- Customize the comparison leaderboard and preserve its styling and position in saved projects and video exports.
-- Improve cinematic camera and elevation sections, cover editing, and the export sky. Reduce noisy elevation gain and keep replay totals consistent.
-- Keep the replay marker aligned with the painted route and preserve route styling in recorded-elevation mode. Preview the watermark while arranging export overlays and use a transparent white logo in exports.
-- Add camera pitch and bearing sliders, refine German translations, and update application dependencies.
+- **Editor navigation:** Redesigned Routes, Style, Map & Camera, Media and Generate panels organize controls around the task at hand. Workflow headers link to the next step, and secondary options take less space.
+- **Map and camera:** Camera controls are more prominent, map styles have visual previews, and overlays and points of interest are more compact. Pitch and bearing can also be adjusted with sliders.
+- **Route styling:** Route name and colour are easier to find, followed by advanced colouring, marker, label and statistics options. Comparison and route ordering are managed in the timeline instead of duplicated in Routes.
+- **Video export:** Configure format, visual aspect ratio, quality and frame rate directly in Generate. The file-size estimate now reflects resolution, frame rate and rendering quality. Studio uses a higher target bitrate to preserve map detail.
+- **Image and cover export:** Visual presets and expandable design, photo, map, title, statistics, route and logo controls make the image editor easier to scan. The interactive preview and video-cover workflow remain available. Project saving is accessible from both video and image modes.
+- **Replay and presentation:** Improved cinematic camera behaviour, elevation sections, cover editing and export sky. Elevation gain is less affected by noisy data, and replay totals stay consistent. The replay marker follows the painted route more closely.
+- **Export branding and localization:** Preview the watermark while arranging overlays, use the transparent white logo in video and cover exports, and benefit from more consistent German translations.
+- Updated application dependencies and improved manual preview support for contributions from forks.
 
 ### Fixed
 
-- Keep route trimming safe around route-anchored elevation sections and colour zones.
+- Prevent route trimming from invalidating route-anchored elevation sections and colour zones.
 - Improve landmark coordinate editing and prevent landmark-layer errors when the map style changes.
 - Update the Zod dependency to address a known vulnerability.
 
