@@ -1,3 +1,4 @@
+import { drawBuildingsAttribution } from './mapAttribution';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -428,6 +429,8 @@ export function drawExportFrame({
       context.drawImage(cachedLogoRef.current, box.x, box.y, box.w, box.h);
       context.restore();
     }
+
+    if (currentState.settings.show3DBuildings) drawBuildingsAttribution(context, recordW, recordH);
 
     overlayFramesSinceRefreshRef.current += 1;
     const overlayDue = overlayLastUpdateRef.current === 0

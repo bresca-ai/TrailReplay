@@ -1,3 +1,5 @@
+import { useAppStore } from '@/store/useAppStore';
+import { drawBuildingsAttribution } from './mapAttribution';
 import type { SocialShareAspectRatio, SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import { getCropRegion } from '@/utils/crop';
 import { getActivityIconOption } from '@/utils/activityIcons';
@@ -550,6 +552,7 @@ function drawMapFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input
     }
   }
   drawCustomStats(ctx, w, h, input);
+  if (mapCanvas && useAppStore.getState().settings.show3DBuildings) drawBuildingsAttribution(ctx, w, h);
 }
 
 function drawPhotoFirst(ctx: CanvasRenderingContext2D, w: number, h: number, input: RenderInput) {
@@ -727,4 +730,5 @@ function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: R
   }
   drawCustomStats(ctx, w, h, input);
   drawBrandMark(ctx, w, h, input);
+  if (mapCanvas && useAppStore.getState().settings.show3DBuildings) drawBuildingsAttribution(ctx, w, h);
 }

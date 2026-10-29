@@ -431,6 +431,8 @@ export interface AppSettings {
   mapFilter: MapFilter;
   mapOverlays: MapOverlays;
   show3DTerrain: boolean;
+  show3DBuildings?: boolean;
+  paint3DBuildings?: boolean;
   showHeartRate: boolean;
   showPictures: boolean;
   cameraMode: CameraMode;
