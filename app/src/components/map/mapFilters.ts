@@ -1,5 +1,6 @@
 import type * as maplibregl from 'maplibre-gl';
 import type { MapFilter } from '@/types';
+import { setBuildingFilter } from './buildingFrameReadiness';
 import {
   STATIC_BASEMAP_LAYER_IDS,
   STATIC_FALLBACK_LAYER_IDS,
@@ -39,9 +40,20 @@ export function applyBasemapFilter(map: maplibregl.Map, filter: MapFilter) {
     if (!map.getLayer(layerId)) return;
     updatedLayer = true;
     (Object.keys(paint) as (keyof BasemapFilterPaint)[]).forEach((property) => {
+      map.setPaintProperty(layerId, `${property}-transition` as 'raster-saturation-transition' | 'raster-contrast-transition' | 'raster-brightness-max-transition', { duration: 0, delay: 0 });
       map.setPaintProperty(layerId, property, paint[property]);
     });
   });
+
+  if (map.getLayer('buildings-3d')) {
+    const buildingColor: Record<MapFilter, string> = {
+      none: '#c9c3b9', muted: '#c7c4bf', mono: '#c3c3c3', noir: '#9a9a9a',
+    };
+    map.setPaintProperty('buildings-3d', 'fill-extrusion-color-transition', { duration: 0, delay: 0 });
+    map.setPaintProperty('buildings-3d', 'fill-extrusion-color', buildingColor[filter] ?? buildingColor.none);
+    updatedLayer = true;
+  }
+  setBuildingFilter(map, filter);
 
   // An idle map may not schedule another frame after a batch of raster paint
   // changes. Camera movement does, which made the filter appear only after the

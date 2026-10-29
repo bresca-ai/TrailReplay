@@ -270,7 +270,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     store.setAnimationPhase('intro');
     setExportStage(t('export.recordingIntro'));
     await waitForMapFrame();
-    await captureDeterministicPhase(introDuration, coverDurationMs, true);
+    await captureDeterministicPhase(introDuration, coverDurationMs, true, true);
 
     if (!isRecordingRef.current || recordingCancelledRef.current) return;
 
@@ -403,7 +403,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       setStudioMapTime(encodedDurationMs);
       store.setAnimationPhase('outro');
       setExportStage(t('export.recordingOutro'));
-      await captureDeterministicPhase(OUTRO_DURATION, encodedDurationMs, false);
+      await captureDeterministicPhase(OUTRO_DURATION, encodedDurationMs, false, true);
     }
 
     if (!recordingCancelledRef.current) finishRecording();
@@ -655,7 +655,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       // Disable Studio raster fades before preloading so cached opening tiles
       // are painted immediately when the encoder starts.
-      if (videoExportSettings.qualityMode === 'studio') {
+      if (videoExportSettings.qualityMode === 'studio' || useAppStore.getState().settings.show3DBuildings) {
         applyStudioMapSettings();
       }
 
@@ -694,6 +694,10 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       if (videoExportSettings.qualityMode === 'studio' && !useWebCodecsRef.current) {
         throw new Error(t('export.qualityModeStudioUnavailable'));
+      }
+
+      if (!useWebCodecsRef.current && useAppStore.getState().settings.show3DBuildings) {
+        throw new Error(t('export.buildingsNeedMp4'));
       }
 
       if (!useWebCodecsRef.current) {
