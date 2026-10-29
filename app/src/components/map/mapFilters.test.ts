@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type * as maplibregl from 'maplibre-gl';
+import { setBuildingFrameController } from './buildingFrameReadiness';
 import {
   BASEMAP_FILTER_PAINT,
   FILTERABLE_BASEMAP_LAYER_IDS,
@@ -48,6 +49,17 @@ describe('applyBasemapFilter', () => {
     expect(setPaintProperty).toHaveBeenCalledWith('background', 'raster-saturation', 0);
     expect(setPaintProperty).toHaveBeenCalledWith('background', 'raster-contrast', 0);
     expect(setPaintProperty).toHaveBeenCalledWith('background', 'raster-brightness-max', 1);
+  });
+
+  it('updates painted and gray buildings along with the map', () => {
+    const { map, setPaintProperty } = fakeMap(['background', 'buildings-3d']);
+    const setFilter = vi.fn();
+    setBuildingFrameController(map, { prepare: () => {}, isReady: () => true, setFilter });
+    applyBasemapFilter(map, 'mono');
+    expect(setFilter).toHaveBeenCalledWith('mono');
+    expect(setPaintProperty).toHaveBeenCalledWith('buildings-3d', 'fill-extrusion-color', '#c3c3c3');
+    expect(setPaintProperty).toHaveBeenCalledWith('background', 'raster-saturation-transition', { duration: 0, delay: 0 });
+    setBuildingFrameController(map, null);
   });
 
   it('covers the wayback layers, which are re-added outside the static style', () => {

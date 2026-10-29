@@ -66,6 +66,9 @@ export const zhTW = {
   settings: {
     mapCameraTitle: '設定地圖與鏡頭', mapCameraHint: '地圖是影片的背景，請選擇地圖樣式、地形，以及跟隨路線的觀看角度。',
     title: '地圖設定', overlaysTitle: '疊加圖層', cameraTitle: '鏡頭控制', terrainTitle: '地形', displayOptions: '顯示選項',
+    paint3dBuildings: '使用衛星影像為建築上色',
+    paint3dBuildingsHint: '適用於衛星地圖。為建築上色會延長影片匯出時間。',
+    show3dBuildings: '3D 建築',
     show3dTerrain: '3D 地形', showHeartRate: '心率分色', showPictures: '顯示照片', heartRateZones: '心率區間', heartRateZone: '區間 {index}',
     mapFilterTitle: '地圖濾鏡', mapFilterHint: '僅調整底圖影像，保留路線原有的顏色。',
     mapFilters: { none: '原始', muted: '柔和', mono: '黑白', noir: '高對比黑白' },
@@ -194,7 +197,7 @@ export const zhTW = {
     startRecording: '開始錄製', needsJourney: '請先載入軌跡並加入旅程', recordingInProgress: '錄製中…', complete: '匯出完成！', shareTitle: '分享你的重播', shareBodyBefore: 'TrailReplay 完全免費且開放原始碼。歡迎標註', shareBodyAfter: '，或在 Instagram 邀請我們協作，幫助更多人認識這個專案。', shareFeature: '我們也很期待在社群動態中分享你的影片。', downloadAgain: '再次下載', newExport: '重新匯出',
     mp4Unsupported: '此瀏覽器不支援原生 MP4 錄製，將改用 WebM。若要匯出原生 MP4，請使用 Safari 或 Chrome。', mp4Supported: '支援原生 MP4 錄製。', aspectRatio: '長寬比', aspectLandscape: '橫式', aspectSquare: '正方形', aspectPortrait: '直式', frameRate: '影格率', fpsLabel: '{fps} FPS', overlays: '疊加資訊', statsOverlay: '統計資訊（距離、配速、爬升）', elevationProfile: '海拔剖面圖', logoNote: '匯出內容一律包含標誌浮水印。',
     recording: '錄製中', recordingIntro: '正在錄製開場…', recordingOutro: '正在錄製結尾…', stageFinalizing: '正在完成影片…', noCanvas: '找不到地圖畫布，請先載入軌跡。', stagePreparing: '準備中…', stageCreateCanvas: '正在建立錄製畫布…', stageLoadOverlay: '正在載入畫面擷取工具…', stageResetting: '正在回到起點…', stageSetupRecorder: '正在設定錄製器…', stageComplete: '完成！', stageFailedNoData: '匯出失敗，未錄製到任何資料', stageStartingRecording: '正在開始錄製…', stageRecordingAnimation: '正在錄製動畫…', stageFailedWithError: '匯出失敗：{error}',
-    qualityMode: '算圖畫質', qualityModeStandard: '標準', qualityModeStudio: '精細', qualityModeStandardSummary: '快速匯出', qualityModeStudioSummary: '保留完整地圖細節', qualityModeStudioBadge: '最佳細節', qualityModeStandardHint: '速度最快。部分影格可能在地圖圖磚尚未載入完成時擷取。', qualityModeStudioHint: '每個影格都會等待地圖圖磚載入完成後再擷取，保留整段影片的完整細節，所需時間約為 6 倍。', qualityModeStudioUnavailable: '精細畫質需要原生 MP4 錄製，但目前瀏覽器不支援。', openSettings: '畫質設定',
+    qualityMode: '算圖畫質', qualityModeStandard: '標準', qualityModeStudio: '精細', qualityModeStandardSummary: '快速匯出', qualityModeStudioSummary: '保留完整地圖細節', qualityModeStudioBadge: '最佳細節', qualityModeStandardHint: '速度最快。部分影格可能在地圖圖磚尚未載入完成時擷取。', qualityModeStudioHint: '每個影格都會等待地圖圖磚載入完成後再擷取，保留整段影片的完整細節，所需時間約為 6 倍。', buildingsNeedMp4: '3D 建築需要使用支援的瀏覽器匯出 MP4。請選擇 MP4 或關閉 3D 建築。', qualityModeStudioUnavailable: '精細畫質需要原生 MP4 錄製，但目前瀏覽器不支援。', openSettings: '畫質設定',
     studioSidebarSummary: '保留完整地圖細節，以電子郵件寄送下載連結。', studioLocalSummary: '保留完整地圖細節。在本機開發環境中，完成的 MP4 會下載至此裝置。', studioTabWarning: '算圖期間請保持此分頁顯示，切換分頁會暫停匯出。', studioProgress: '第 {frame}／{total} 個影格 · 約剩 {minutes} 分鐘', studioProgressSoon: '第 {frame}／{total} 個影格 · 即將完成', stageCompleteStudioPartial: '已完成，其中 {frames} 個影格在地圖圖磚載入完成前擷取',
     studioEmailLabel: '接收影片下載連結的電子郵件', studioEmailPlaceholder: 'you@example.com', studioEmailHint: '我們會上傳完成的 MP4，並寄送有效期限為 7 天的私人下載連結；影片不會自動下載。', studioEmailRequired: '請在匯出設定中輸入有效的電子郵件，才能使用精細畫質。', marketingConsent: 'TrailReplay 手機版推出時，請通知我。', marketingConsentHint: '自由選填，可隨時取消訂閱。',
     stageRegisteringDelivery: '正在準備安全傳送…', stageUploadingVideo: '正在上傳完成的影片…', stageEmailingLink: '正在寄送私人下載連結…', stageEmailSent: '完成！已寄出下載連結。', stageDeliveryFailed: '影片已完成，但電子郵件傳送需要處理', deliverySent: '已將私人下載連結寄至 {email}。', deliveryFailed: '無法寄送影片下載連結。請先下載下方的本機副本，保留已完成的影片。', downloadRecovery: '下載本機副本', deliverySetupFailed: '無法啟動精細畫質影片的傳送流程。',

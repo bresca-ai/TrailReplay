@@ -473,6 +473,19 @@ export function SettingsPanel() {
             className="w-5 h-5 accent-[var(--trail-orange)]"
           />
         </label>
+        <label className="mt-2 flex items-center justify-between p-3 bg-[var(--evergreen)]/5 rounded-lg cursor-pointer">
+          <span className="text-sm text-[var(--evergreen)]">{t('settings.show3dBuildings')}</span>
+          <input type="checkbox" checked={!!settings.show3DBuildings} onChange={(e) => setSettings({ show3DBuildings: e.target.checked })} className="w-5 h-5 accent-[var(--trail-orange)]" />
+        </label>
+        {settings.show3DBuildings && (
+          <div className="mt-2 rounded-lg border border-[var(--evergreen)]/15 p-3">
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm text-[var(--evergreen)]">{t('settings.paint3dBuildings')}</span>
+              <input type="checkbox" checked={settings.paint3DBuildings !== false} onChange={(e) => setSettings({ paint3DBuildings: e.target.checked })} className="w-5 h-5 accent-[var(--trail-orange)]" />
+            </label>
+            <p className="mt-2 text-xs text-[var(--evergreen-60)]">{t('settings.paint3dBuildingsHint')}</p>
+          </div>
+        )}
       </div>
 
       {/* Map filter — last, since it restyles everything chosen above */}
@@ -486,6 +499,8 @@ export function SettingsPanel() {
           {MAP_FILTERS.map((filter) => (
             <button
               key={filter.id}
+              type="button"
+              aria-pressed={(settings.mapFilter ?? 'none') === filter.id}
               onClick={() => selectMapFilter(filter.id)}
               className={`
                 p-2 rounded-lg border-2 transition-colors text-left text-sm font-medium text-[var(--evergreen)]

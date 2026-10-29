@@ -46,6 +46,8 @@ export interface StudioWaitOptions {
   timeoutMs: number;
   /** See MapSettlePredicateOptions.allowMoving. */
   allowMoving?: boolean;
+  /** Optional resources owned outside MapLibre, prepared for the current pose. */
+  additionalReady?: () => boolean;
 }
 
 export interface StudioWaitResult {
@@ -78,9 +80,9 @@ export async function waitForSettledFrame(
   await options.renderOnce();
 
   while (!options.isCancelled()) {
-    if (isMapSettled(map, options)) {
+    if (isMapSettled(map, options) && (options.additionalReady?.() ?? true)) {
       await options.renderOnce();
-      if (isMapSettled(map, options)) break;
+      if (isMapSettled(map, options) && (options.additionalReady?.() ?? true)) break;
     }
 
     if (options.now() - start >= options.timeoutMs) {
