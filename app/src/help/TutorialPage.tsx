@@ -80,7 +80,7 @@ export function TutorialPage() {
           </ol>
         </article>
 
-        <aside className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-[linear-gradient(160deg,var(--evergreen),#223428)] p-6 text-[var(--canvas)] shadow-sm">
+        <aside id="sample-routes" className="scroll-mt-24 rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-[linear-gradient(160deg,var(--evergreen),#223428)] p-6 text-[var(--canvas)] shadow-sm">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white/80">
             <Download className="h-4 w-4" />
             {t('help.tutorial.sampleRoutesBadge')}

@@ -66,6 +66,13 @@ function validateStructuredData(html, file) {
 for (const { file, canonical } of requiredDocuments) {
   const html = await readFile(path.join(distRoot, file), 'utf8');
   validateStructuredData(html, file);
+  for (const match of html.matchAll(/href="(\/media\/samples\/[^"?#]+)"/g)) {
+    try {
+      await access(path.join(distRoot, match[1]));
+    } catch {
+      failures.push(`${file} links to a missing sample file: ${match[1]}`);
+    }
+  }
   if (!html.includes('<title>')) failures.push(`${file} is missing a title`);
   if (!html.includes(`rel="canonical" href="${canonical}"`)) {
     failures.push(`${file} is missing canonical ${canonical}`);
@@ -87,6 +94,12 @@ for (const { file, canonical } of requiredDocuments) {
   if (file.includes('-to-video') || file.includes('route-animation') || file === 'gpx-animation.html') {
     if (!html.includes('application/ld+json')) failures.push(`${file} is missing structured data`);
   }
+}
+
+const tutorial = await readFile(path.join(distRoot, 'tutorial.html'), 'utf8');
+const gpxAnimation = await readFile(path.join(distRoot, 'gpx-animation.html'), 'utf8');
+if (!tutorial.includes('id="sample-routes"') || !gpxAnimation.includes('href="/tutorial#sample-routes"')) {
+  failures.push('the GPX animator sample-routes link or its tutorial target is missing');
 }
 
 await access(path.join(distRoot, '404.html'));
