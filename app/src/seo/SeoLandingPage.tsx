@@ -21,6 +21,8 @@ const seoUi = {
     uploadGpx: 'Upload a GPX', explore: 'Explore more route-video guides', footer: 'Free and open-source GPX storytelling', privacy: 'Privacy', language: 'Language',
     importRoute: 'Import a route',
     cameraVideoLabel: 'Cinematic camera tutorial video', cameraVideoCaption: 'Watch how to frame and save camera shots',
+    sampleTitle: 'Try a real route', sampleDescription: 'No GPX file handy? Download a sample running or cycling route from the tutorial, then import it into TrailReplay to explore the map and make a replay.',
+    sampleLink: 'Find sample GPX files',
   },
   de: {
     animatedExport: 'Animierter TrailReplay-GPX-Export mit Live-Statistiken',
@@ -35,6 +37,8 @@ const seoUi = {
     uploadGpx: 'GPX-Datei hochladen', explore: 'Weitere Anleitungen zu Streckenvideos', footer: 'Kostenloses Open-Source-Storytelling mit GPX', privacy: 'Datenschutz', language: 'Sprache',
     importRoute: 'Route importieren',
     cameraVideoLabel: 'Videoanleitung zur filmischen Kamera', cameraVideoCaption: 'Sehen Sie, wie Kameraeinstellungen gerahmt und gespeichert werden',
+    sampleTitle: 'Eine echte Strecke ausprobieren', sampleDescription: 'Keine GPX-Datei zur Hand? Laden Sie eine Lauf- oder Radstrecke aus dem Tutorial herunter und importieren Sie sie in TrailReplay, um die Karte zu erkunden und eine Wiedergabe zu erstellen.',
+    sampleLink: 'GPX-Beispieldateien ansehen',
   },
 } as const;
 
@@ -122,8 +126,8 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
     .filter((candidate) => candidate.slug !== localizedPage.slug);
 
   useEffect(() => {
-    document.documentElement.lang = isGerman ? 'de' : language;
-  }, [isGerman, language]);
+    document.documentElement.lang = isGerman ? 'de' : 'en';
+  }, [isGerman]);
 
   return (
     <div className="min-h-screen bg-[var(--canvas)] text-[var(--evergreen)]">
@@ -254,6 +258,18 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             </div>
           </div>
         </section>
+
+        {localizedPage.slug === 'gpx-animation' && (
+          <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:pb-28">
+            <div className="rounded-2xl border-2 border-[var(--evergreen)] bg-white/70 p-6 sm:p-8">
+              <h2 className="text-2xl font-bold tracking-[-0.04em]">{ui.sampleTitle}</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--evergreen-80)]">{ui.sampleDescription}</p>
+              <a href="/tutorial#sample-routes" className="mt-4 inline-flex items-center gap-2 font-bold text-[var(--trail-orange)] hover:underline">
+                {ui.sampleLink} <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+          </section>
+        )}
 
         <section className="bg-[var(--trail-orange)] text-[var(--canvas)]">
           <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-4 py-14 sm:px-6 md:flex-row md:items-center">
