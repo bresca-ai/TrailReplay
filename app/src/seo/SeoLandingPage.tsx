@@ -6,7 +6,7 @@ import { RouteImportWalkthrough } from '@/help/RouteImportWalkthrough';
 import { trackEvent } from '@/utils/analytics';
 import { SEO_LANDING_PAGES, type SeoLandingPageConfig } from './seoPages';
 import { SEO_LANDING_PAGES_DE } from './seoPages.de';
-import { existingSeoLanguage } from './seoLocale';
+import { existingSeoLanguage, seoLocalizedPath } from './seoLocale';
 
 const seoUi = {
   en: {
@@ -139,8 +139,8 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             <span className="hidden text-sm font-bold tracking-[-0.04em] text-white sm:inline">TRAILREPLAY</span>
           </a>
           <div className="hidden items-center gap-6 text-xs font-semibold md:flex">
-            <a href="/tutorial" className="text-white/70 transition-colors hover:text-white">{ui.howItWorks}</a>
-            <a href="/gpx-download-guide" className="text-white/70 transition-colors hover:text-white">{ui.getGpx}</a>
+            <a href={seoLocalizedPath('/tutorial', isGerman ? 'de' : 'en')} className="text-white/70 transition-colors hover:text-white">{ui.howItWorks}</a>
+            <a href={seoLocalizedPath('/gpx-download-guide', isGerman ? 'de' : 'en')} className="text-white/70 transition-colors hover:text-white">{ui.getGpx}</a>
             <a href="https://github.com/bresca-ai/TrailReplay" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-white/70 transition-colors hover:text-white">
               <Github className="h-4 w-4" /> {ui.openSource}
             </a>
@@ -149,7 +149,11 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             <span className="sr-only">{ui.language}</span>
             <select
               value={isGerman ? 'de' : 'en'}
-              onChange={(event) => setLanguage(event.target.value === 'de' ? 'de' : 'en')}
+              onChange={(event) => {
+                const next = event.target.value === 'de' ? 'de' : 'en';
+                setLanguage(next);
+                window.location.assign(seoLocalizedPath(`/${page.slug}`, next));
+              }}
               className="bg-transparent font-semibold text-white outline-none"
               aria-label={ui.language}
             >
@@ -243,8 +247,8 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
               {localizedPage.detailParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="/gpx-download-guide" className="tr-btn tr-btn-secondary inline-flex items-center gap-2"><Download className="h-4 w-4" /> {ui.gpxGuide}</a>
-              <a href="/tutorial" className="tr-btn tr-btn-outline inline-flex items-center gap-2"><Film className="h-4 w-4" /> {ui.tutorial}</a>
+              <a href={seoLocalizedPath('/gpx-download-guide', isGerman ? 'de' : 'en')} className="tr-btn tr-btn-secondary inline-flex items-center gap-2"><Download className="h-4 w-4" /> {ui.gpxGuide}</a>
+              <a href={seoLocalizedPath('/tutorial', isGerman ? 'de' : 'en')} className="tr-btn tr-btn-outline inline-flex items-center gap-2"><Film className="h-4 w-4" /> {ui.tutorial}</a>
             </div>
           </article>
           <div>
@@ -265,7 +269,7 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             <div className="rounded-2xl border-2 border-[var(--evergreen)] bg-white/70 p-6 sm:p-8">
               <h2 className="text-2xl font-bold tracking-[-0.04em]">{ui.sampleTitle}</h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--evergreen-80)]">{ui.sampleDescription}</p>
-              <a href="/tutorial#sample-routes" className="mt-4 inline-flex items-center gap-2 font-bold text-[var(--trail-orange)] hover:underline">
+              <a href={`${seoLocalizedPath('/tutorial', isGerman ? 'de' : 'en')}#sample-routes`} className="mt-4 inline-flex items-center gap-2 font-bold text-[var(--trail-orange)] hover:underline">
                 {ui.sampleLink} <ArrowRight className="h-4 w-4" />
               </a>
             </div>
@@ -285,7 +289,7 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
           <h2 className="text-xl font-bold">{ui.explore}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {relatedPages.map((related) => (
-              <a key={related.slug} href={`/${related.slug}`} className="group border-t-2 border-[var(--evergreen)] pt-4 transition-colors hover:border-[var(--trail-orange)]">
+              <a key={related.slug} href={seoLocalizedPath(`/${related.slug}`, isGerman ? 'de' : 'en')} className="group border-t-2 border-[var(--evergreen)] pt-4 transition-colors hover:border-[var(--trail-orange)]">
                 <span className="text-sm font-bold group-hover:text-[var(--trail-orange)]">{related.eyebrow}</span>
                 <span className="mt-2 block text-xs leading-5 text-[var(--evergreen-60)]">{related.description}</span>
               </a>

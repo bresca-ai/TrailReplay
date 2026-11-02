@@ -21,16 +21,19 @@ const vite = await createServer({
 
 let rendered;
 let localizedHelpMetadata;
+let germanLandingMetadata;
 try {
   const module = await vite.ssrLoadModule('/src/prerender/entry-server.tsx');
   rendered = module.renderAllPages();
   localizedHelpMetadata = module.localizedHelpMetadata;
+  germanLandingMetadata = module.germanLandingMetadata;
 } finally {
   await vite.close();
 }
 
 const locales = ['en', 'es', 'ca', 'de', 'fr', 'zh-TW'];
 const helpSlugs = ['tutorial', 'gpx-download-guide', 'agents'];
+const landingSlugs = ['strava-to-video', 'garmin-to-video', 'gpx-animation', 'cycling-route-animation', 'running-route-animation', 'cinematic-camera'];
 const templates = new Map();
 for (const file of Object.keys(rendered)) {
   const base = file.split('/').at(-1);
@@ -49,14 +52,15 @@ for (const [file, markup] of Object.entries(rendered)) {
   let html = templates.get(baseFile);
   if (!html.includes(ROOT_DIV)) throw new Error(`prerender: no empty #root mount point found in ${template}`);
 
-  if (helpSlugs.includes(slug)) {
-    const alternates = locales.map((code) => {
+  if (helpSlugs.includes(slug) || landingSlugs.includes(slug)) {
+    const pageLocales = helpSlugs.includes(slug) ? locales : ['en', 'de'];
+    const alternates = pageLocales.map((code) => {
       const prefix = code === 'en' ? '' : `/${code.toLowerCase()}`;
       return `<link rel="alternate" hreflang="${code}" href="https://trailreplay.com${prefix}/${slug}" />`;
     }).join('\n    ');
     html = html.replace('</head>', `    ${alternates}\n  </head>`);
     if (localized) {
-      const metadata = localizedHelpMetadata(language, slug);
+      const metadata = helpSlugs.includes(slug) ? localizedHelpMetadata(language, slug) : germanLandingMetadata(slug);
       const url = `https://trailreplay.com/${language.toLowerCase()}/${slug}`;
       const title = escapeHtml(`${metadata.title} | TrailReplay`);
       const description = escapeHtml(metadata.description);
