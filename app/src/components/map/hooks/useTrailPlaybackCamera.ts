@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { cameraTransitionPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
@@ -73,6 +74,8 @@ interface UseTrailPlaybackCameraParams {
       startCoordIndex: number;
       endCoordIndex: number;
       transportMode?: string;
+      progressStartRatio?: number;
+      progressEndRatio?: number;
     };
     localProgress?: number;
   } | null;
@@ -92,6 +95,7 @@ interface UseTrailPlaybackCameraParams {
     startCoordIndex: number;
     endCoordIndex: number;
     color?: string;
+    transportMode?: string;
   }>;
   setCameraPosition: (position: {
     lat: number;
@@ -291,7 +295,8 @@ export function useTrailPlaybackCamera({
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded || !currentPosition) return;
 
-    const shouldShowPlaybackAdornment = shouldRenderPlaybackAdornment({
+    const isCameraTransition = currentSegment?.segment.transportMode === 'camera';
+    const shouldShowPlaybackAdornment = !isCameraTransition && shouldRenderPlaybackAdornment({
       activeTextAnnotationId,
       animationPhase,
       playbackProgress,
@@ -393,6 +398,7 @@ export function useTrailPlaybackCamera({
           : computedJourney?.coordinates ?? [];
 
         for (let index = 0; index < completedCoordinates.length - 1; index++) {
+          if (segmentTimings.length && !segmentTimings.some((segment) => segment.transportMode !== 'camera' && index >= segment.startCoordIndex && index + 1 <= segment.endCoordIndex)) continue;
           const heartRate = heartRatePoints[index]?.heartRate;
           features.push({
             type: 'Feature',
@@ -424,9 +430,10 @@ export function useTrailPlaybackCamera({
         const zoneFeatures = buildColorZoneLineFeatures({
           coordinates: allCoordinates,
           colorZones: trailStyle.colorZones,
+          segmentTimings,
           fallbackColor: trailStyle.trailColor,
           maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
+          partialEndpoint: !isCameraTransition && currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
         });
 
         paintCompletedTrail({
@@ -440,12 +447,12 @@ export function useTrailPlaybackCamera({
           segmentTimings,
           fallbackColor: trailStyle.trailColor,
           maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
+          partialEndpoint: !isCameraTransition && currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
           partialSegmentIndex: currentSegment?.segment.segmentIndex ?? null,
         });
 
         paintCompletedTrail(
-          coloredFeatures.length > 0
+          coloredFeatures.length > 0 || segmentTimings.length > 0
             ? {
                 type: 'FeatureCollection',
                 features: coloredFeatures,
@@ -459,7 +466,37 @@ export function useTrailPlaybackCamera({
       }
     }
 
-    if (animationPhase === 'playing' && cameraMode !== 'overview') {
+    if (isCameraTransition && currentSegment && (animationPhase === 'playing' || animationPhase === 'idle')) {
+      const segment = currentSegment.segment;
+      const from = allCoordinates[segment.startCoordIndex] as [number, number] | undefined;
+      const to = allCoordinates[segment.endCoordIndex] as [number, number] | undefined;
+      if (from && to) {
+        const poseAt = (progress: number) => getPlaybackCameraPose({
+          cameraMode: cameraMode === 'overview' || cameraMode === 'cinematic' ? 'follow' : cameraMode,
+          coordinates: cameraCoordinates, elevationData, followBehindZoomLevel, progress,
+        });
+        const start = poseAt(segment.progressStartRatio ?? 0);
+        const end = poseAt(segment.progressEndRatio ?? 1);
+        const startZoom = start?.zoom ?? mapRef.current.getZoom();
+        const endZoom = end?.zoom ?? startZoom;
+        const adjustedTo: [number, number] = [from[0] + (((to[0] - from[0] + 540) % 360) - 180), to[1]];
+        const bounds = new maplibregl.LngLatBounds(from, adjustedTo);
+        const fitted = mapRef.current.cameraForBounds(bounds, { padding: 100 });
+        const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(startZoom - 2, endZoom - 2, fitted?.zoom ?? Infinity));
+        const pose = cameraTransitionPose(from, to, currentSegment.localProgress ?? 0, startZoom, endZoom, wideZoom);
+        const ease = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
+        const local = currentSegment.localProgress ?? 0;
+        const opening = 1 - ease(local / 0.25);
+        const closing = ease((local - 0.75) / 0.25);
+        const pitch = (start?.pitch ?? 0) * opening + (end?.pitch ?? 0) * closing;
+        const bearing = (start?.bearing ?? 0) * opening + (end?.bearing ?? 0) * closing;
+        mapRef.current.jumpTo({ ...pose, pitch, bearing });
+        smoothedCenterRef.current = pose.center;
+        lastCameraFrameTimeRef.current = null;
+        smoothedZoomTargetRef.current = null;
+        smoothedElevationRef.current = null;
+      }
+    } else if (animationPhase === 'playing' && cameraMode !== 'overview') {
       // The one dial cinematic mode has, in fractions of the whole replay.
       const anchorSmoothingHalfWindow = cinematicAnchorSmoothingHalfWindow(
         cameraStability,

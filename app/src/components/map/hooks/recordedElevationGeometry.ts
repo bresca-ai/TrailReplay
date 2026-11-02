@@ -44,6 +44,7 @@ export function buildElevatedSegments(points: readonly ElevationPoint[], style: 
     return segment?.type === 'transport' ? '#888888' : segment?.color || style.trailColor;
   };
   for (let i = 0; i < n; i++) {
+    if (style.segmentTimings.length && !style.segmentTimings.some(s => s.transportMode !== 'camera' && i >= s.startCoordIndex && i + 1 <= s.endCoordIndex)) continue;
     const a = points[i]; const b = points[i + 1];
     // Sampling between fixes prevents a long straight segment cutting through a ridge.
     const count = Math.min(256, Math.max(1, Math.ceil(calculateDistance(a.lat, a.lon, b.lat, b.lon) / 20)));

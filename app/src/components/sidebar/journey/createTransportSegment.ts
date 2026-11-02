@@ -10,6 +10,7 @@ const TRANSPORT_SPEEDS: Record<TransportMode, number> = {
   bike: 15,
   walk: 4,
   ferry: 25,
+  camera: 0,
 };
 
 export function createTransportSegment(
@@ -18,7 +19,7 @@ export function createTransportSegment(
   to: { lat: number; lon: number }
 ): TransportSegment {
   const distanceKm = calculateDistance(from.lat, from.lon, to.lat, to.lon);
-  const distance = distanceKm * 1000;
+  const distance = mode === 'camera' ? 0 : distanceKm * 1000;
   const speed = TRANSPORT_SPEEDS[mode] || 30;
   const defaultDuration = Math.max(3000, (distanceKm / speed) * 3600 * 1000);
 
@@ -28,7 +29,7 @@ export function createTransportSegment(
     mode,
     from,
     to,
-    duration: Math.min(defaultDuration, 10000),
+    duration: mode === 'camera' ? 5000 : Math.min(defaultDuration, 10000),
     distance,
   };
 }

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import {
   buildComputedJourney,
+  uniformJourneyWithCameraTransitions,
   buildJourneyDistanceProfile,
   calculateBearing,
   getBearingAtProgress,
@@ -202,12 +203,15 @@ export function useComputedJourney() {
   const comparisonSlowdown = useAppStore((state) => state.comparisonSlowdown);
   const comparisonThresholdMeters = useAppStore((state) => state.comparisonThresholdMeters);
   const routeComparisonActive = comparisonMode === 'route' && comparisonTracks.some((track) => track.visible);
-  const routeTimingMode = routeComparisonActive ? 'uniform' : storedPlayback.routeTimingMode;
+  const selectedTimingMode = routeComparisonActive ? 'uniform' : storedPlayback.routeTimingMode;
+  const hasCameraTransition = journeySegments.some((segment) => segment.type === 'transport' && segment.mode === 'camera');
+  const routeTimingMode = hasCameraTransition && selectedTimingMode === 'uniform' ? 'recorded' : selectedTimingMode;
 
   // Build the computed journey whenever segments or tracks change
   const computedJourney = useMemo<ComputedJourney | null>(() => {
-    return getCachedComputedJourney(journeySegments, tracks);
-  }, [journeySegments, tracks]);
+    const journey = getCachedComputedJourney(journeySegments, tracks);
+    return journey && hasCameraTransition && selectedTimingMode === 'uniform' ? uniformJourneyWithCameraTransitions(journey) : journey;
+  }, [journeySegments, tracks, hasCameraTransition, selectedTimingMode]);
 
   // Get active track for single-track mode
   const activeTrack = useMemo(() => {

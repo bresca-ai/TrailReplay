@@ -18,6 +18,19 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves camera transitions and their duration through a saved project', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'first.gpx'));
+    source.getState().addTrack(parseGPX(sampleGpx, 'second.gpx'));
+    const segments = source.getState().journeySegments;
+    source.getState().reorderJourneySegments([segments[0], { id: 'camera', type: 'transport', mode: 'camera', from: { lat: 42.101, lon: 1.201 }, to: { lat: 42.1, lon: 1.2 }, duration: 7000, distance: 0 }, segments[1]]);
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'camera.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().journeySegments[1]).toMatchObject({ mode: 'camera', duration: 7000, distance: 0 });
+  });
+
   it('preserves comparison mode, existing activity icons, and the original sequence through a saved project', async () => {
     const source = createAppStore();
     const first = parseGPX(sampleGpx, 'first.gpx');

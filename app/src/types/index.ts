@@ -39,7 +39,7 @@ export interface GPXTrack {
   visible: boolean;
 }
 
-export type TransportMode = 'car' | 'bus' | 'train' | 'plane' | 'bike' | 'walk' | 'ferry';
+export type TransportMode = 'car' | 'bus' | 'train' | 'plane' | 'bike' | 'walk' | 'ferry' | 'camera';
 
 export interface TransportSegment {
   id: string;

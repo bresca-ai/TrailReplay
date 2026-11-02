@@ -133,7 +133,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const overlayRefreshIntervalMs = useMemo(() => getOverlayRefreshIntervalMs(videoExportSettings.fps), [videoExportSettings.fps]);
   const getStatsValues = useCallback((progress: number): Partial<Record<StatId, string>> => {
     const state = useAppStore.getState();
-    const routeTimingMode = state.playback.routeTimingMode;
+    const routeTimingMode = computedJourney?.segmentTimings.some((segment) => segment.transportMode === 'camera') ? 'recorded' : state.playback.routeTimingMode;
     let journeyPosition: JourneyPoint | null = null;
     if (computedJourney) {
       journeyPosition = routeTimingMode === 'uniform' && journeyDistanceProfile
@@ -225,7 +225,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         : null;
     }
 
-    const currentSegment = state.playback.routeTimingMode === 'uniform' && journeyDistanceProfile
+    const currentSegment = state.playback.routeTimingMode === 'uniform' && !segmentTimings.some((segment) => segment.transportMode === 'camera') && journeyDistanceProfile
       ? getSegmentAtDistance(
           journeyDistanceProfile,
           journeyDistanceProfile.totalDistance * progress,

@@ -163,7 +163,7 @@ export function TransportSegmentItem({
 
       <div className="flex-1">
         <p className="font-medium text-sm text-[var(--evergreen)]">
-          {t('journey.transportSegment', { mode: modeLabel })}
+          {segment.mode === 'camera' ? modeLabel : t('journey.transportSegment', { mode: modeLabel })}
         </p>
 
         <button

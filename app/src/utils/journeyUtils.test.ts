@@ -159,3 +159,24 @@ describe('Real Pace timestamp mapping', () => {
     expect(halfway.distance).toBeCloseTo(150, 8);
   });
 });
+
+describe('camera transitions', () => {
+  it('reserves playback time without adding distance in either timing mode', async () => {
+    const { uniformJourneyWithCameraTransitions, getSegmentAtProgress } = await import('./journeyUtils');
+    const first = trackWithTimes([0, 10]);
+    const second = { ...trackWithTimes([0, 10]), id: 'second', points: trackWithTimes([0, 10]).points.map((p) => ({ ...p, lon: 10 })) };
+    const segments: JourneySegment[] = [
+      { id: 'a', type: 'track', trackId: first.id, duration: 10000 },
+      { id: 'move', type: 'transport', mode: 'camera', from: { lat: first.points[1].lat, lon: first.points[1].lon }, to: { lat: second.points[0].lat, lon: second.points[0].lon }, duration: 5000, distance: 0 },
+      { id: 'b', type: 'track', trackId: second.id, duration: 10000 },
+    ];
+    const journey = buildComputedJourney(segments, [first, second])!;
+    const profile = buildJourneyDistanceProfile(journey.coordinates)!;
+    expect(journey.totalDistance).toBe(200);
+    expect(profile.totalDistance).toBe(200);
+    for (const candidate of [journey, uniformJourneyWithCameraTransitions(journey)]) {
+      expect(getSegmentAtProgress(0.5, candidate.segmentTimings)?.segment.transportMode).toBe('camera');
+      expect(getJourneyDistanceAtProgress(0.5, buildJourneyDistanceProfile(candidate.coordinates)!, candidate.segmentTimings)).toBeCloseTo(100);
+    }
+  });
+});
