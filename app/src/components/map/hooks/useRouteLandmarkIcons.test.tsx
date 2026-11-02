@@ -15,7 +15,7 @@ it('loads a saved library icon onto the map and keeps emoji in a separate full-c
   const layers = new Map<string, unknown>();
   const source = { setData: vi.fn() };
   const addImage = vi.fn((id: string) => { images.add(id); });
-  const map = { isStyleLoaded: () => true, on: vi.fn(), off: vi.fn(), addImage, hasImage: (id: string) => images.has(id), getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), addSource: vi.fn(), getSource: () => source, setLayoutProperty: vi.fn(), setPaintProperty: vi.fn() };
+  const map = { isStyleLoaded: () => true, on: vi.fn(), off: vi.fn(), addImage, updateImage: vi.fn(), hasImage: (id: string) => images.has(id), getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), addSource: vi.fn(), getSource: () => source, setLayoutProperty: vi.fn(), setPaintProperty: vi.fn() };
   const base: RouteLandmark = { id: 'bike', icon: 'pinhead:bicycle', type: 'custom', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: 'Bike', importance: 3 };
   const landmarks = [base, { ...base, id: 'tent', title: 'Tent', icon: 'emoji:🏕️' }];
   renderHook(() => useRouteLandmarksLayer({ isMapLoaded: true, overlayFont: 'modern', landmarks, mapRef: { current: map as unknown as MapLibreMap } }));
@@ -62,4 +62,40 @@ it('waits for a recreated map style before adding landmark sources and layers', 
   await waitFor(() => expect(source.setData).toHaveBeenCalled());
   unmount();
   expect(listeners.size).toBe(0);
+});
+
+
+it('shows places after the intro while map tiles and fonts are still loading', async () => {
+  vi.stubGlobal('Path2D', class {});
+  let finishFont!: () => void;
+  Object.defineProperty(document, 'fonts', { configurable: true, value: { load: vi.fn(() => new Promise<void>((resolve) => { finishFont = resolve; })) } });
+  const context = { clearRect: vi.fn(), scale: vi.fn(), fill: vi.fn(), fillText: vi.fn(), strokeText: vi.fn(), measureText: () => ({ width: 20 }), getImageData: () => ({}) };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  const images = new Set<string>();
+  const layers = new Map<string, unknown>();
+  const source = { setData: vi.fn() };
+  let styleLoaded = true;
+  const map = {
+    isStyleLoaded: () => styleLoaded, on: vi.fn(), off: vi.fn(),
+    hasImage: (id: string) => images.has(id), addImage: (id: string) => images.add(id), updateImage: vi.fn(),
+    getSource: () => source, addSource: vi.fn(), getLayer: (id: string) => layers.get(id),
+    addLayer: (layer: { id: string }) => layers.set(layer.id, layer), setLayoutProperty: vi.fn(), setPaintProperty: vi.fn(),
+  };
+  const landmark: RouteLandmark = { id: 'place', icon: 'emoji:🏕️', type: 'custom', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: 'Camp', importance: 3 };
+  const ref = { current: map as unknown as MapLibreMap };
+  const landmarks = [landmark];
+  const { rerender } = renderHook(({ visible, places }) => useRouteLandmarksLayer({ isMapLoaded: true, overlayFont: 'modern', landmarks: places, mapRef: ref, visible }), { initialProps: { visible: false, places: landmarks } });
+  expect(source.setData.mock.lastCall?.[0].features).toHaveLength(1);
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'visibility', 'none');
+  styleLoaded = false; // Tiles are still being fetched by the opening camera.
+  map.setLayoutProperty.mockClear();
+  rerender({ visible: true, places: landmarks });
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-icon', 'visibility', 'visible');
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'visibility', 'visible');
+  const updated = [...landmarks, { ...landmark, id: 'another', title: 'Another camp' }];
+  rerender({ visible: true, places: updated });
+  expect(source.setData.mock.lastCall?.[0].features).toHaveLength(2);
+  finishFont();
+  await waitFor(() => expect(source.setData).toHaveBeenCalledTimes(3));
+  expect(source.setData.mock.lastCall?.[0].features[0].properties.labelImageId).toMatch(/-ready$/);
 });

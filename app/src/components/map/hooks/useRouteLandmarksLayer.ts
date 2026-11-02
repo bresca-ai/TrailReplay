@@ -1,4 +1,4 @@
-import { useEffect, type MutableRefObject } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { FeatureCollection, Point } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import type { OverlayFont } from '@/types';
@@ -42,11 +42,11 @@ function landmarkLabel(landmark: RouteLandmark) {
     : landmark.title;
 }
 
-function labelImageId(landmark: RouteLandmark, overlayFont: OverlayFont) {
+function labelImageId(landmark: RouteLandmark, overlayFont: OverlayFont, fontReady = false) {
   const text = landmarkLabel(landmark);
   let hash = 0;
   for (let index = 0; index < text.length; index++) hash = (Math.imul(hash, 31) + text.charCodeAt(index)) >>> 0;
-  return `${LANDMARK_LABEL_IMAGE_PREFIX}${overlayFont}-${landmark.id}-${hash.toString(36)}`;
+  return `${LANDMARK_LABEL_IMAGE_PREFIX}${overlayFont}-${landmark.id}-${hash.toString(36)}${fontReady ? '-ready' : ''}`;
 }
 
 function labelImage(text: string, overlayFont: OverlayFont): ImageData | null {
@@ -90,13 +90,13 @@ function labelImage(text: string, overlayFont: OverlayFont): ImageData | null {
   return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-function data(landmarks: RouteLandmark[], selectedId: string | null, overlayFont: OverlayFont): FeatureCollection<Point> {
+function data(landmarks: RouteLandmark[], selectedId: string | null, overlayFont: OverlayFont, fontReady = false): FeatureCollection<Point> {
   return { type: 'FeatureCollection', features: landmarks.map((landmark) => ({
     type: 'Feature', geometry: { type: 'Point', coordinates: [landmark.lon, landmark.lat] },
     properties: {
       landmarkId: landmark.id,
       title: landmarkLabel(landmark),
-      labelImageId: labelImageId(landmark, overlayFont),
+      labelImageId: labelImageId(landmark, overlayFont, fontReady),
       importance: landmark.importance,
       icon: landmarkImageKey(landmark),
       emoji: isEmojiLandmark(landmark),
@@ -173,12 +173,16 @@ export function useRouteLandmarksLayer({
   visible = true,
 }: UseRouteLandmarksLayerParams) {
   const pinheadIcons = usePinheadIcons(needsPinheadIcons(landmarks.map((landmark) => landmark.icon)));
+  const visibleRef = useRef(visible);
+  useEffect(() => { visibleRef.current = visible; }, [visible]);
   useEffect(() => {
     const map = mapRef.current; if (!map || !isMapLoaded) return;
     let cancelled = false;
     let pending = true;
     const install = () => {
-      if (cancelled || !pending || !map.isStyleLoaded()) return;
+      if (cancelled || !pending) return;
+      // Existing layers are writable even while map tiles are loading.
+      if (!map.isStyleLoaded() && (!map.getSource(SOURCE) || !map.getLayer(LABEL))) return;
       pending = false;
       LANDMARK_GLYPH_KEYS.forEach((kind) => {
         const imageId = `${IMAGE_PREFIX}${kind}`;
@@ -201,22 +205,35 @@ export function useRouteLandmarksLayer({
       if (!map.getLayer(ICON)) map.addLayer(landmarkIconLayer(scale), beforeAnnotations);
       if (!map.getLayer(LANDMARK_EMOJI_LAYER_ID)) map.addLayer(landmarkEmojiLayer(scale), beforeAnnotations);
       if (!map.getLayer(LABEL)) map.addLayer(landmarkLabelLayer(scale, labelFade), beforeAnnotations);
+      // Keep the source populated during the intro. Toggling layer visibility
+      // avoids waiting for source tiles to become idle during playback.
+      for (const landmark of landmarks) {
+        const imageId = labelImageId(landmark, overlayFont);
+        if (!map.hasImage(imageId)) {
+          const image = labelImage(landmarkLabel(landmark), overlayFont);
+          if (image) map.addImage(imageId, image, { pixelRatio: 2 });
+        }
+      }
+      (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(data(landmarks, selectedLandmarkId, overlayFont));
+      for (const layer of [ICON, LANDMARK_EMOJI_LAYER_ID, LABEL]) {
+        if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visibleRef.current ? 'visible' : 'none');
+      }
+      // Draw immediately using the fallback font, then refresh the sprites
+      // once the selected font loads. Tile loading must not block either step.
       const updateLabels = async () => {
-        try { await document.fonts.load(`700 12px ${overlayCanvasFontFamily(overlayFont)}`); } catch { /* Use the CSS fallback font. */ }
+        try { await document.fonts.load(`700 12px ${overlayCanvasFontFamily(overlayFont)}`); } catch { /* Keep the fallback font. */ }
         if (cancelled) return;
-        if (!map.isStyleLoaded() || !map.getLayer(LABEL)) {
+        if (!map.getSource(SOURCE) || !map.getLayer(LABEL)) {
           pending = true;
           return;
         }
         for (const landmark of landmarks) {
-          const imageId = labelImageId(landmark, overlayFont);
+          const imageId = labelImageId(landmark, overlayFont, true);
           if (map.hasImage(imageId)) continue;
           const image = labelImage(landmarkLabel(landmark), overlayFont);
           if (image) map.addImage(imageId, image, { pixelRatio: 2 });
         }
-        (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(
-          data(visible ? landmarks : [], selectedLandmarkId, overlayFont),
-        );
+        (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(data(landmarks, selectedLandmarkId, overlayFont, true));
       };
       void updateLabels();
     };
@@ -236,7 +253,15 @@ export function useRouteLandmarksLayer({
       map.off('sourcedata', retry);
       map.off('idle', retry);
     };
-  }, [isMapLoaded, labelFade, landmarks, mapRef, overlayFont, pinheadIcons, scale, selectedLandmarkId, visible]);
+  }, [isMapLoaded, labelFade, landmarks, mapRef, overlayFont, pinheadIcons, scale, selectedLandmarkId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded) return;
+    for (const layer of [ICON, LANDMARK_EMOJI_LAYER_ID, LABEL]) {
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+    }
+  }, [isMapLoaded, mapRef, visible]);
 
   // The layers are only added once, so size and fade changes have to be pushed
   // onto the existing layers rather than waiting for a re-add.
