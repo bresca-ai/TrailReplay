@@ -49,6 +49,10 @@ export interface TransportSegment {
   to: { lat: number; lon: number; name?: string };
   duration: number;
   distance: number;
+  /** Extra zoom levels to pull back during a camera transition. */
+  cameraZoomOut?: number;
+  /** Extra zoom levels at arrival, eased back to the route camera after arrival. */
+  cameraZoomIn?: number;
 }
 
 export interface TrackSegment {

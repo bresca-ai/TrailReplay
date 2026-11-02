@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
 import {
+  useTrailPlaybackCamera,
   resolvePlaybackMarkerColor,
   shouldRenderPlaybackAdornment,
   updatePlaybackMarkerElement,
@@ -66,5 +68,41 @@ describe('playback marker presentation', () => {
 
     expect(shouldRenderPlaybackAdornment({ ...options, animationPhase: 'preloading' })).toBe(false);
     expect(shouldRenderPlaybackAdornment({ ...options, animationPhase: 'intro' })).toBe(true);
+  });
+});
+
+
+describe('camera transition handoff', () => {
+  it('starts at the live camera pose and retains its smoothing state on arrival', () => {
+    let pose = { center: [2, 41] as [number, number], zoom: 14, pitch: 25, bearing: 30 };
+    const map = {
+      getCenter: () => ({ lng: pose.center[0], lat: pose.center[1] }),
+      getZoom: () => pose.zoom, getPitch: () => pose.pitch, getBearing: () => pose.bearing,
+      getMinZoom: () => 0, getMaxZoom: () => 22,
+      getSource: () => undefined, queryTerrainElevation: () => null,
+      getCenterClampedToGround: () => true, setCenterClampedToGround: vi.fn(),
+      jumpTo: (next: typeof pose) => { pose = { ...pose, ...next }; },
+    };
+    const transition = { segmentIndex: 1, startCoordIndex: 1, endCoordIndex: 2, transportMode: 'camera', progressStartRatio: 0.4, progressEndRatio: 0.6, cameraZoomOut: 3, cameraZoomIn: 1 };
+    const props = {
+      activeTrack: null, activeTextAnnotationId: null, allCoordinates: [[1, 41], [2, 41], [5, 42], [6, 42]],
+      cameraCoordinates: [[1, 41], [2, 41], [5, 42], [6, 42]], animationPhase: 'playing', cameraMode: 'follow', cameraStability: 0.5,
+      currentTimeMs: 4000, completedCoordinates: [], computedJourney: null, currentIcon: '', currentPosition: { lat: 41, lon: 2, elevation: 0 },
+      recordedElevationEnabled: true, currentSegment: { segment: transition, localProgress: 0 }, currentTrackColor: null, currentTrackName: null,
+      elevationData: [], followBehindZoomLevel: 1, isInTransport: true, isMapLoaded: true,
+      mapRef: { current: map }, markerRef: { current: null }, playbackProgress: 0.4,
+      segmentTimings: [{ ...transition, type: 'transport' }], setCameraPosition: vi.fn(), totalDurationMs: 10000,
+      smoothBearingRef: { current: 30 }, targetBearingRef: { current: 30 }, isExporting: false, isPlaying: true,
+      trailStyle: { colorMode: 'fixed', colorZones: [], currentIcon: '', markerColor: '#000', markerSize: 1, markerType: 'icon', overlayFont: 'inter', showCircle: false, showMarker: false, showTrackLabels: false, trailColor: '#000' },
+    } as unknown as Parameters<typeof useTrailPlaybackCamera>[0];
+    const { rerender } = renderHook((input) => useTrailPlaybackCamera(input), { initialProps: props });
+    expect(pose).toEqual({ center: [2, 41], zoom: 14, pitch: 25, bearing: 30 });
+    rerender({ ...props, currentTimeMs: 6000, playbackProgress: 0.6, currentPosition: { lat: 42, lon: 5, elevation: 0 }, currentSegment: { segment: transition, localProgress: 1 } });
+    const arrival = { ...pose, center: [...pose.center] };
+    expect(arrival.center).toEqual([5, 42]);
+    rerender({ ...props, currentTimeMs: 6010, playbackProgress: 0.601, currentPosition: { lat: 42, lon: 5.001, elevation: 0 }, currentSegment: { segment: { segmentIndex: 2, startCoordIndex: 3, endCoordIndex: 3 }, localProgress: 0.001 }, isInTransport: false });
+    expect(Math.abs(pose.zoom - arrival.zoom)).toBeLessThan(0.1);
+    expect(Math.abs(pose.center[0] - arrival.center[0])).toBeLessThan(0.1);
+    expect(Math.abs(pose.pitch - arrival.pitch)).toBeLessThan(0.1);
   });
 });

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
-import { cameraTransitionPose } from '@/utils/cameraTransition';
+import { arrivalZoomOffset, transitionCameraPose, type TransitionCameraPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
@@ -76,6 +76,8 @@ interface UseTrailPlaybackCameraParams {
       transportMode?: string;
       progressStartRatio?: number;
       progressEndRatio?: number;
+      cameraZoomOut?: number;
+      cameraZoomIn?: number;
     };
     localProgress?: number;
   } | null;
@@ -96,6 +98,8 @@ interface UseTrailPlaybackCameraParams {
     endCoordIndex: number;
     color?: string;
     transportMode?: string;
+    cameraZoomIn?: number;
+    progressEndRatio?: number;
   }>;
   setCameraPosition: (position: {
     lat: number;
@@ -239,6 +243,7 @@ export function useTrailPlaybackCamera({
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
   const trailRevisionRef = useRef(0);
+  const transitionStartRef = useRef<{ segmentIndex: number | undefined; pose: TransitionCameraPose } | null>(null);
 
   // The height filter samples this planned anchor path, not raw switchbacks.
   // Prepare it only when authoring inputs change, never on the playback clock.
@@ -468,35 +473,41 @@ export function useTrailPlaybackCamera({
 
     if (isCameraTransition && currentSegment && (animationPhase === 'playing' || animationPhase === 'idle')) {
       const segment = currentSegment.segment;
-      const from = allCoordinates[segment.startCoordIndex] as [number, number] | undefined;
       const to = allCoordinates[segment.endCoordIndex] as [number, number] | undefined;
-      if (from && to) {
-        const poseAt = (progress: number) => getPlaybackCameraPose({
-          cameraMode: cameraMode === 'overview' || cameraMode === 'cinematic' ? 'follow' : cameraMode,
-          coordinates: cameraCoordinates, elevationData, followBehindZoomLevel, progress,
-        });
-        const start = poseAt(segment.progressStartRatio ?? 0);
-        const end = poseAt(segment.progressEndRatio ?? 1);
-        const startZoom = start?.zoom ?? mapRef.current.getZoom();
-        const endZoom = end?.zoom ?? startZoom;
-        const adjustedTo: [number, number] = [from[0] + (((to[0] - from[0] + 540) % 360) - 180), to[1]];
-        const bounds = new maplibregl.LngLatBounds(from, adjustedTo);
-        const fitted = mapRef.current.cameraForBounds(bounds, { padding: 100 });
-        const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(startZoom - 2, endZoom - 2, fitted?.zoom ?? Infinity));
-        const pose = cameraTransitionPose(from, to, currentSegment.localProgress ?? 0, startZoom, endZoom, wideZoom);
-        const ease = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
-        const local = currentSegment.localProgress ?? 0;
-        const opening = 1 - ease(local / 0.25);
-        const closing = ease((local - 0.75) / 0.25);
-        const pitch = (start?.pitch ?? 0) * opening + (end?.pitch ?? 0) * closing;
-        const bearing = (start?.bearing ?? 0) * opening + (end?.bearing ?? 0) * closing;
-        mapRef.current.jumpTo({ ...pose, pitch, bearing });
+      if (to) {
+        if (!transitionStartRef.current || transitionStartRef.current.segmentIndex !== segment.segmentIndex) {
+          const center = mapRef.current.getCenter();
+          transitionStartRef.current = {
+            segmentIndex: segment.segmentIndex,
+            pose: { center: [center.lng, center.lat], zoom: mapRef.current.getZoom(), pitch: mapRef.current.getPitch(), bearing: mapRef.current.getBearing() },
+          };
+        }
+        const start = transitionStartRef.current.pose;
+        const endProgress = segment.progressEndRatio ?? 1;
+        const followMode = cameraMode === 'overview' ? 'follow' : cameraMode === 'cinematic' ? 'follow-behind' : cameraMode;
+        const fallback = getPlaybackCameraPose({ cameraMode: followMode, coordinates: cameraCoordinates, elevationData, followBehindZoomLevel, progress: endProgress });
+        const anchorWindow = cinematicAnchorSmoothingHalfWindow(cameraStability, totalDurationMs / 1000);
+        const heading = cameraMode === 'cinematic' ? getSmoothedRouteHeadingDeg({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, baselineHalfWidth: cinematicHeadingBaselineHalfWidth(anchorWindow) }) ?? getRouteBearingAtProgress(cameraCoordinates, endProgress) : 0;
+        const cinematic = cameraMode === 'cinematic' ? getCinematicCameraPose({ keyframes: cinematicKeyframes ?? [], coordinates: cameraCoordinates, progress: endProgress, routeHeadingDeg: heading }) : null;
+        const target = cinematic ?? (fallback && cameraMode === 'cinematic' ? { ...fallback, bearing: heading } : fallback);
+        const endZoom = Math.min(mapRef.current.getMaxZoom(), (target?.zoom ?? start.zoom) + Math.max(0, Math.min(4, segment.cameraZoomIn ?? 0)));
+        const endCenter = cameraMode === 'cinematic' && target
+          ? getSmoothedCameraAnchor({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, markerPosition: to, zoom: target.zoom })
+          : to;
+        const endPose: TransitionCameraPose = { center: endCenter, zoom: endZoom, pitch: target?.pitch ?? start.pitch, bearing: target?.bearing ?? start.bearing };
+        const depth = Math.max(0, Math.min(8, segment.cameraZoomOut ?? 4));
+        const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(start.zoom, endZoom) - depth);
+        const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, wideZoom);
+        mapRef.current.jumpTo(pose);
         smoothedCenterRef.current = pose.center;
-        lastCameraFrameTimeRef.current = null;
-        smoothedZoomTargetRef.current = null;
+        smoothBearingRef.current = pose.bearing;
+        targetBearingRef.current = pose.bearing;
+        lastCameraFrameTimeRef.current = currentTimeMs;
+        smoothedZoomTargetRef.current = pose.zoom;
         smoothedElevationRef.current = null;
       }
     } else if (animationPhase === 'playing' && cameraMode !== 'overview') {
+      transitionStartRef.current = null;
       // The one dial cinematic mode has, in fractions of the whole replay.
       const anchorSmoothingHalfWindow = cinematicAnchorSmoothingHalfWindow(
         cameraStability,
@@ -543,7 +554,7 @@ export function useTrailPlaybackCamera({
         return followBehindPose && { ...followBehindPose, bearing: cinematicHeadingDeg };
       };
 
-      const targetPose = cameraMode === 'cinematic'
+      let targetPose = cameraMode === 'cinematic'
         ? getCinematicCameraPose({
             keyframes: cinematicKeyframes ?? [],
             coordinates: cameraCoordinates,
@@ -558,6 +569,11 @@ export function useTrailPlaybackCamera({
             progress: playbackProgress,
           });
       if (!targetPose) return;
+      const previous = segmentTimings.find((segment) => segment.segmentIndex === (currentSegment?.segment.segmentIndex ?? -1) - 1);
+      if (previous?.transportMode === 'camera' && previous.progressEndRatio !== undefined) {
+        const extra = Math.max(0, Math.min(4, previous.cameraZoomIn ?? 0));
+        targetPose = { ...targetPose, zoom: Math.min(mapRef.current.getMaxZoom(), targetPose.zoom + arrivalZoomOffset(extra, (playbackProgress - previous.progressEndRatio) * totalDurationMs)) };
+      }
 
       // Cinematic mode's pose is already smooth by construction (it comes
       // from a spline through authored keyframes, not a noisy input) — the
@@ -753,6 +769,7 @@ export function useTrailPlaybackCamera({
         bearing: usesRawPose ? targetPose.bearing : smoothBearingRef.current,
       });
     } else {
+      if (!isCameraTransition) transitionStartRef.current = null;
       // Playback is paused/idle or a new export is starting: don't let a gap
       // since the last frame (e.g. time spent paused) be read as an elapsed
       // delta once playback resumes.

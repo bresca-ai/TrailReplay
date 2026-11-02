@@ -613,6 +613,7 @@ export const fr = {
     dragToReorder: 'Glisser pour réorganiser',
     emptyTitle: 'Aucun segment dans le trajet',
     emptySubtitle: 'Ajoutez des parcours et des transports',
+    cameraZoomOut: 'Zoom arrière', cameraZoomIn: 'Zoom à l’arrivée', cameraZoomHint: 'Niveaux de zoom ; la vue revient progressivement à la caméra du parcours.',
     addTransport: 'Ajouter un transport',
     runsSimultaneously: 'Exécuté simultanément',
     runsSimultaneouslyHint: 'Ces parcours sont animés en même temps que votre trajet principal, du début à la fin.',

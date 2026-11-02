@@ -59,6 +59,8 @@ export interface SegmentTiming {
   distanceEndRatio: number; // 0-1
   trackId?: string;
   transportMode?: string;
+  cameraZoomOut?: number;
+  cameraZoomIn?: number;
   color?: string;
 }
 
@@ -341,6 +343,8 @@ export function buildComputedJourney(
       distanceEndRatio,
       trackId: segment.type === 'track' ? (segment as TrackSegment).trackId : undefined,
       transportMode: segment.type === 'transport' ? (segment as TransportSegment).mode : undefined,
+      cameraZoomOut: segment.type === 'transport' ? segment.cameraZoomOut : undefined,
+      cameraZoomIn: segment.type === 'transport' ? segment.cameraZoomIn : undefined,
       color,
     });
   });

@@ -613,6 +613,7 @@ export const es = {
     dragToReorder: 'Arrastra para reordenar',
     emptyTitle: 'No hay segmentos en el recorrido',
     emptySubtitle: 'Añade rutas y transportes',
+    cameraZoomOut: 'Alejar', cameraZoomIn: 'Acercar al llegar', cameraZoomHint: 'Niveles de zoom; al llegar vuelve suavemente a la cámara de ruta.',
     addTransport: 'Añadir transporte',
     runsSimultaneously: 'Se ejecutan simultáneamente',
     runsSimultaneouslyHint: 'Estas rutas se animan al mismo tiempo que tu recorrido principal, de inicio a fin.',

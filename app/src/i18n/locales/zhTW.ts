@@ -173,7 +173,7 @@ export const zhTW = {
     defaultSettings: '預設設定', defaultTrackTime: '預設軌跡播放時間', defaultTrackTimeHint: '每條軌跡會在動畫中以此時間播放完畢', routeTiming: '路線配速', routeTimingRecorded: '實際配速', routeTimingUniform: '固定配速', routeTimingHint: '「實際配速」依 GPX 記錄時間播放；「固定配速」依距離等速移動，讓整條路線的播放速度一致。',
     statsMode: '重播統計', statsModeHint: '選擇距離、時間、配速與爬升要全程累計，或在每條軌跡開始時重新計算。', statsModeCumulative: '旅程累計', statsModePerTrack: '每條軌跡重新計算', totalDistance: '總距離：', totalDuration: '總時間：', totalSegments: '路段數：',
     quickStart: '編排多條路線的旅程', quickStartHint: '加入更多路線，拖曳調整順序，再用交通路段連接。', addAllTracks: '加入所有軌跡', clearJourney: '清空旅程', addTracksTitle: '將軌跡加入旅程', addTracksHint: '點選軌跡即可加入時間軸；已加入的軌跡無法重複選取。', added: '已加入', timelineTitle: '旅程時間軸', dragToReorder: '拖曳以調整順序',
-    emptyTitle: '旅程中尚無路段', emptySubtitle: '加入軌跡與交通方式', addTransport: '新增交通路段', runsSimultaneously: '同步播放', runsSimultaneouslyHint: '這些軌跡會從頭到尾與主旅程同步播放。', fullJourney: '完整旅程', selectTransportTitle: '選擇連接方式', selectTransportHint: '選擇如何連接這些軌跡。',
+    emptyTitle: '旅程中尚無路段', emptySubtitle: '加入軌跡與交通方式', cameraZoomOut: '拉遠', cameraZoomIn: '抵達時拉近', cameraZoomHint: '縮放級數；抵達後會平順恢復路線鏡頭。', addTransport: '新增交通路段', runsSimultaneously: '同步播放', runsSimultaneouslyHint: '這些軌跡會從頭到尾與主旅程同步播放。', fullJourney: '完整旅程', selectTransportTitle: '選擇連接方式', selectTransportHint: '選擇如何連接這些軌跡。',
     editDurationTitle: '編輯播放時間', durationSeconds: '播放時間（秒）', durationHint: '這是此路段在動畫中的播放時間', goToSegment: '前往此路段', changeTrackIcon: '更換軌跡圖示', transportSegment: '{mode}路段',
   },
   media: {

@@ -622,6 +622,7 @@ export const en = {
     dragToReorder: 'Drag to reorder',
     emptyTitle: 'No segments in journey',
     emptySubtitle: 'Add tracks and transport modes',
+    cameraZoomOut: 'Zoom out', cameraZoomIn: 'Zoom in on arrival', cameraZoomHint: 'Zoom levels; arrival zoom eases back to the route camera.',
     addTransport: 'Add Transport',
     runsSimultaneously: 'Runs Simultaneously',
     runsSimultaneouslyHint: 'These tracks animate at the same time as your main journey, from start to finish.',

@@ -13,6 +13,7 @@ interface SegmentItemProps {
   onRemove: () => void;
   onEditDuration: () => void;
   onSeek: () => void;
+  onCameraZoomChange?: (key: 'cameraZoomOut' | 'cameraZoomIn', value: number) => void;
 }
 
 export function TrackSegmentItem({
@@ -138,6 +139,7 @@ export function TransportSegmentItem({
   onRemove,
   onEditDuration,
   onSeek,
+  onCameraZoomChange,
 }: SegmentItemProps) {
   const { t } = useI18n();
   if (segment.type !== 'transport') return null;
@@ -174,6 +176,20 @@ export function TransportSegmentItem({
           <span className="font-semibold">{formatDuration(durationSeconds)}</span>
           <Edit3 className="w-3 h-3 ml-1 opacity-50" />
         </button>
+        {segment.mode === 'camera' && onCameraZoomChange && (
+          <div className="mt-2 space-y-2" onPointerDown={(event) => event.stopPropagation()}>
+            {(['cameraZoomOut', 'cameraZoomIn'] as const).map((key) => (
+              <label key={key} className="block text-[10px] text-[var(--evergreen)]">
+                <span className="flex justify-between gap-2"><span>{t(`journey.${key}`)}</span><span>{(segment[key] ?? (key === 'cameraZoomOut' ? 4 : 0)).toFixed(1)}</span></span>
+                <input type="range" min="0" max={key === 'cameraZoomOut' ? 8 : 4} step="0.5"
+                  value={segment[key] ?? (key === 'cameraZoomOut' ? 4 : 0)}
+                  onChange={(event) => onCameraZoomChange(key, Number(event.target.value))}
+                  className="w-full" />
+              </label>
+            ))}
+            <p className="text-[10px] text-[var(--evergreen-60)]">{t('journey.cameraZoomHint')}</p>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1">

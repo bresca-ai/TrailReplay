@@ -231,6 +231,7 @@ export function JourneyPanel() {
                   onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 30000) / 1000); }}
                   onSeek={() => seekToProgress(getSegmentProgress(index))} /> :
                   <TransportSegmentItem segment={segment} index={index}
+                    onCameraZoomChange={(key, value) => reorderJourneySegments(journeySegments.map((item) => item.id === segment.id ? { ...item, [key]: value } : item))}
                     onRemove={() => removeJourneySegment(segment.id)}
                     onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 5000) / 1000); }}
                     onSeek={() => seekToProgress(getSegmentProgress(index))} />}
