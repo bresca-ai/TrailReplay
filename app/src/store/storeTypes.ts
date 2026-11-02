@@ -52,6 +52,7 @@ export interface AppState {
   iconChanges: IconChange[];
   textAnnotations: TextAnnotation[];
   userLandmarks: RouteLandmark[];
+  landmarkPriorityIds: string[];
   enrichedLandmarks: RouteLandmark[];
   /** Ids of derived landmarks the user removed from the replay. */
   hiddenLandmarkIds: string[];
@@ -158,6 +159,7 @@ export interface AppState {
   addTextAnnotation: (annotation: TextAnnotation) => void;
   updateTextAnnotation: (annotationId: string, updates: Partial<TextAnnotation>) => void;
   removeTextAnnotation: (annotationId: string) => void;
+  setLandmarkPriorityIds: (ids: string[]) => void;
   addLandmark: (landmark: RouteLandmark) => void;
   hideLandmark: (landmarkId: string) => void;
   restoreHiddenLandmarks: () => void;

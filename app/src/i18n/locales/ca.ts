@@ -825,6 +825,7 @@ export const ca = {
     parseGpxFailed: 'No s\'han pogut analitzar els fitxers GPX',
   },
   routeLandmarks: {
+    priorityHint: 'Mou els llocs importants amunt. Tindran prioritat quan se superposin llocs o etiquetes.', moveUp: 'Puja {name}', moveDown: 'Baixa {name}', dragPriority: 'Arrossega per canviar la prioritat',
     title: 'Punts d’interès de la ruta', description: 'Tria els detalls del paisatge que vols mostrar a la reproducció. El marcador de la ruta manté la prioritat visual.',
     routeMoments: 'Moments de la ruta', routeMomentsDescription: 'Punt més alt, ascens i descens principals, meitat i final. Desactivats per defecte.',
     nearbyPlaces: 'Llocs propers amb nom', nearbyPlacesDescription: 'Cerca cims, colls, llacs, refugis i pobles amb nom a prop d’aquesta ruta mitjançant OpenStreetMap.',

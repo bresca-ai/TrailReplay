@@ -834,6 +834,7 @@ export const en = {
     parseGpxFailed: 'Failed to parse GPX files',
   },
   routeLandmarks: {
+    priorityHint: 'Move important landmarks to the top. They take priority when places or labels overlap.', moveUp: 'Move {name} up', moveDown: 'Move {name} down', dragPriority: 'Drag to change priority',
     title: 'Route landmarks', description: 'Choose the landscape details you want on the replay. Your route marker remains the visual priority.',
     routeMoments: 'Route moments', routeMomentsDescription: 'Highest point, major climb/descent, halfway and finish. Off by default.',
     nearbyPlaces: 'Nearby named places', nearbyPlacesDescription: 'Finds named peaks, passes, lakes, huts and towns near this route using OpenStreetMap.',

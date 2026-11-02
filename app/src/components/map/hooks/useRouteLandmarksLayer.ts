@@ -91,13 +91,14 @@ function labelImage(text: string, overlayFont: OverlayFont): ImageData | null {
 }
 
 function data(landmarks: RouteLandmark[], selectedId: string | null, overlayFont: OverlayFont, fontReady = false): FeatureCollection<Point> {
-  return { type: 'FeatureCollection', features: landmarks.map((landmark) => ({
+  return { type: 'FeatureCollection', features: landmarks.map((landmark, index) => ({
     type: 'Feature', geometry: { type: 'Point', coordinates: [landmark.lon, landmark.lat] },
     properties: {
       landmarkId: landmark.id,
       title: landmarkLabel(landmark),
       labelImageId: labelImageId(landmark, overlayFont, fontReady),
       importance: landmark.importance,
+      labelPriority: index,
       icon: landmarkImageKey(landmark),
       emoji: isEmojiLandmark(landmark),
       color: landmark.color ?? colorForLandmark(landmark),

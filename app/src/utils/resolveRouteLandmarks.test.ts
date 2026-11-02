@@ -9,6 +9,12 @@ describe('resolveRouteLandmarks', () => {
     expect(resolveRouteLandmarks([landmark('automatic', 'automatic', 100), landmark('user', 'user', 110)]).map((entry) => entry.id)).toEqual(['user']);
   });
 
+  it('lets the saved order choose which overlapping landmark remains', () => {
+    const places = [landmark('default', 'user', 100, 5), landmark('preferred', 'automatic', 110, 1)];
+    expect(resolveRouteLandmarks(places).map((entry) => entry.id)).toEqual(['default']);
+    expect(resolveRouteLandmarks(places, null, ['preferred', 'default']).map((entry) => entry.id)).toEqual(['preferred']);
+  });
+
   it('caps lower-priority labels in the same route corridor', () => {
     expect(resolveRouteLandmarks([landmark('first', 'automatic', 100), landmark('second', 'automatic', 200)]).length).toBe(1);
   });

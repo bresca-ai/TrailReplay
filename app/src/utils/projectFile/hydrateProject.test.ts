@@ -265,10 +265,15 @@ describe('hydrateProject', () => {
     for (const [id, icon] of [['bike', 'pinhead:bicycle'], ['tent', 'emoji:🏕️'], ['legacy', 'camp']]) {
       source.getState().addLandmark({ id, icon, type: 'custom', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: id, importance: 3 });
     }
+    source.getState().setLandmarkPriorityIds(['tent', 'bike']);
     const blob = await buildReplayArchive(source.getState());
     const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
     const restored = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().landmarkPriorityIds).toEqual(['tent', 'bike']);
+    delete parsed.project!.landmarkPriorityIds;
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().landmarkPriorityIds).toEqual([]);
     expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
   });
 

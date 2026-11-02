@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { analyzeRouteLandmarks } from '@/utils/routeLandmarks';
-import { resolveRouteLandmarks } from '@/utils/resolveRouteLandmarks';
+import { orderRouteLandmarks, resolveRouteLandmarks } from '@/utils/resolveRouteLandmarks';
 import type { RouteLandmark } from '@/types/landmarks';
 
 /**
@@ -14,7 +14,8 @@ import type { RouteLandmark } from '@/types/landmarks';
  * outright, and an adopted one deliberately reuses the derived id, so it must
  * survive the hidden filter that suppresses the original.
  */
-export function useAllRouteLandmarks(): RouteLandmark[] {
+export function useAllRouteLandmarks(includeSuppressed = false): RouteLandmark[] {
+  const priorityIds = useAppStore((state) => state.landmarkPriorityIds);
   const userLandmarks = useAppStore((state) => state.userLandmarks);
   const hiddenLandmarkIds = useAppStore((state) => state.hiddenLandmarkIds);
   const showAutomaticLandmarks = useAppStore((state) => state.showAutomaticLandmarks);
@@ -36,6 +37,7 @@ export function useAllRouteLandmarks(): RouteLandmark[] {
       ...visibleNearbyPlaces,
     ].filter((landmark) => !hidden.has(landmark.id));
 
-    return resolveRouteLandmarks([...derived, ...userLandmarks]);
-  }, [automatic, enrichedLandmarks, hiddenLandmarkIds, nearbyPlaceTypes, showAutomaticLandmarks, userLandmarks]);
+    const candidates = [...new Map([...derived, ...userLandmarks].map((landmark) => [landmark.id, landmark])).values()];
+    return includeSuppressed ? orderRouteLandmarks(candidates, priorityIds) : resolveRouteLandmarks(candidates, null, priorityIds);
+  }, [automatic, enrichedLandmarks, hiddenLandmarkIds, includeSuppressed, nearbyPlaceTypes, priorityIds, showAutomaticLandmarks, userLandmarks]);
 }

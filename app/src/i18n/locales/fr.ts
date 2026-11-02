@@ -825,6 +825,7 @@ export const fr = {
     parseGpxFailed: 'Impossible d\'analyser les fichiers GPX',
   },
   routeLandmarks: {
+    priorityHint: 'Placez les lieux importants en haut. Ils sont prioritaires lorsque les lieux ou les étiquettes se chevauchent.', moveUp: 'Monter {name}', moveDown: 'Descendre {name}', dragPriority: 'Faites glisser pour changer la priorité',
     title: 'Points d’intérêt du parcours', description: 'Choisissez les détails du paysage à afficher dans le replay. Le marqueur du parcours reste la priorité visuelle.',
     routeMoments: 'Moments du parcours', routeMomentsDescription: 'Point culminant, montée et descente principales, mi-parcours et arrivée. Désactivés par défaut.',
     nearbyPlaces: 'Lieux nommés à proximité', nearbyPlacesDescription: 'Recherche avec OpenStreetMap les sommets, cols, lacs, refuges et villes nommés proches du parcours.',

@@ -825,6 +825,7 @@ export const es = {
     parseGpxFailed: 'No se pudieron analizar los archivos GPX',
   },
   routeLandmarks: {
+    priorityHint: 'Mueve los lugares importantes arriba. Tendrán prioridad cuando se solapen lugares o etiquetas.', moveUp: 'Subir {name}', moveDown: 'Bajar {name}', dragPriority: 'Arrastra para cambiar la prioridad',
     title: 'Puntos de interés de la ruta', description: 'Elige los detalles del paisaje que quieres mostrar en la repetición. El marcador de la ruta mantiene la prioridad visual.',
     routeMoments: 'Momentos de la ruta', routeMomentsDescription: 'Punto más alto, ascenso y descenso principales, mitad y final. Desactivados de forma predeterminada.',
     nearbyPlaces: 'Lugares cercanos con nombre', nearbyPlacesDescription: 'Busca picos, puertos, lagos, refugios y pueblos con nombre cerca de esta ruta mediante OpenStreetMap.',

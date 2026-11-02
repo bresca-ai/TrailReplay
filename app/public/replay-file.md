@@ -402,6 +402,8 @@ station defaults to `town`; `water` usually reads better.
 
 `hiddenLandmarkIds` is a list of derived landmark ids to suppress.
 
+`landmarkPriorityIds` is an optional array of landmark ids in priority order, most important first. It controls which nearby landmarks and overlapping labels are kept; unlisted landmarks use the default priority.
+
 ### 5.3 `textAnnotations` — timed cards for moments
 
 A card fades in over the `displayDuration` **before** the replay reaches
