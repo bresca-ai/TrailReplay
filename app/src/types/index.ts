@@ -433,7 +433,19 @@ export type StatId =
   | 'speed'
   | 'altitude';
 
+export interface LocationChapterSettings {
+  level: 'off' | 'country' | 'region';
+  color: string;
+  width: number;
+  fill: boolean;
+  showName: boolean;
+  showFlag: boolean;
+  zoomToPlace: boolean;
+  durationSeconds: number;
+}
+
 export interface AppSettings {
+  locationChapters: LocationChapterSettings;
   unitSystem: UnitSystem;
   language: LanguageCode;
   mapStyle: MapStyle;

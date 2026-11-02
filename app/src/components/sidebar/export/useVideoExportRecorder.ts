@@ -543,6 +543,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
 
   const handleStartExport = useCallback(async () => {
+    const chapterStatus = document.querySelector('[data-location-chapters-status]')?.getAttribute('data-location-chapters-status');
+    if ((useAppStore.getState().settings.locationChapters?.level ?? 'off') !== 'off' && chapterStatus !== 'ready') {
+      alert(t('locationChapters.notReady'));
+      return;
+    }
     const mapCanvas = document.querySelector('.maplibregl-canvas') as HTMLCanvasElement | null;
     if (!mapCanvas) {
       alert(t('export.noCanvas'));

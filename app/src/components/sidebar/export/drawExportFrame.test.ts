@@ -92,3 +92,15 @@ describe('opaque sky in replay exports', () => {
     expect(context.stroke).toHaveBeenCalledOnce();
   });
 });
+
+it('paints location names, flags and source credits into cropped video frames', () => {
+  const container = document.getElementById('map-capture-container')!;
+  const label = document.createElement('div'); label.className = 'tr-location-chapter'; label.textContent = '🇪🇸 Spain'; container.appendChild(label);
+  const credit = document.createElement('div'); credit.className = 'tr-location-credit'; credit.textContent = 'geoBoundaries · source · CC BY 4.0'; container.appendChild(credit);
+  const { options } = frameOptions();
+  const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(), fillText: vi.fn(), measureText: (value: string) => ({ width: value.length * 10 }) };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  drawExportFrame(options);
+  expect(context.fillText).toHaveBeenCalledWith('🇪🇸 Spain', 540, expect.any(Number), expect.any(Number));
+  expect(context.fillText.mock.calls.some(call => String(call[0]).includes('geoBoundaries'))).toBe(true);
+});

@@ -12,6 +12,7 @@ import { trackEvent } from '@/utils/analytics';
 import { RouteLandmarksEditor } from './RouteLandmarksEditor';
 import { MapNavigationGuide } from './MapNavigationGuide';
 import { CinematicCameraEditor } from './CinematicCameraEditor';
+import { LocationChapterControls } from './LocationChapterControls';
 import {
   Map as MapIcon,
   Video,
@@ -199,6 +200,7 @@ export function SettingsPanel() {
 
   return (
     <div className="space-y-6">
+      <LocationChapterControls />
       {/* Camera Mode */}
       <div>
         <h3 className="text-sm font-bold text-[var(--evergreen)] mb-3 uppercase tracking-wide flex items-center gap-2">

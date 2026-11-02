@@ -1,6 +1,7 @@
 import { help } from './caHelp';
 
 export const ca = {
+  locationChapters: { coverage: 'La cobertura varia; poden faltar llocs petits o passos breus.', loading: 'Carregant límits geogràfics…', privacy: 'Les peticions de límits revelen els països de la ruta a geoBoundaries i GitHub; els punts romanen al navegador.', notReady: 'Espera que es carreguin els límits o desactiva els capítols de lloc abans d’exportar.', title: 'Capítols de lloc', description: 'Destaca els llocs que recorre el viatge.', level: 'Nivell de límits', off: 'Desactivat', country: 'Països', region: 'Regions', color: 'Color del contorn', width: 'Gruix del contorn', fill: 'Ressalta la zona', showName: 'Mostra el nom', showFlag: 'Mostra la bandera del país', zoom: 'Allunya fins al lloc', duration: 'Durada (segons)', unavailable: 'No hi ha límits disponibles per a aquesta ruta.', credit: 'Límits: geoBoundaries i proveïdors originals. Consulta de països: Natural Earth.' },
   app: {
     title: 'Trail Replay',
     subtitle: 'VISUALITZACIÓ GPX & KML',

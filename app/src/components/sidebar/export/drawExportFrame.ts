@@ -185,6 +185,34 @@ export function drawExportFrame({
       context.drawImage(cachedOverlayRef.current, 0, 0, recordW, recordH);
     }
 
+    // HTML chapter labels are not part of the map canvas. Position them within
+    // the output frame so portrait crops cannot remove the required credit.
+    const chapterLabel = container.querySelector('.tr-location-chapter')?.textContent;
+    const chapterCredit = container.querySelector('.tr-location-credit')?.textContent;
+    const scale = recordW / 1080;
+    if (chapterLabel) {
+      context.save(); context.font = `700 ${Math.max(18, 30 * scale)}px sans-serif`;
+      context.textAlign = 'center'; context.textBaseline = 'middle';
+      const width = Math.min(recordW - 40 * scale, context.measureText(chapterLabel).width + 40 * scale);
+      const height = 56 * scale, y = 32 * scale;
+      context.fillStyle = 'rgba(0,0,0,.75)'; context.fillRect((recordW - width) / 2, y, width, height);
+      context.fillStyle = '#fff'; context.fillText(chapterLabel, recordW / 2, y + height / 2, width - 16 * scale);
+      context.restore();
+    }
+    if (chapterCredit) {
+      context.save(); context.font = `${Math.max(12, 15 * scale)}px sans-serif`; context.textBaseline = 'bottom';
+      const maxWidth = recordW - 24 * scale, lines: string[] = []; let line = '';
+      for (const word of chapterCredit.split(/\s+/)) {
+        const next = line ? `${line} ${word}` : word;
+        if (line && context.measureText(next).width > maxWidth) { lines.push(line); line = word; } else line = next;
+      }
+      if (line) lines.push(line);
+      const lineHeight = Math.max(14, 19 * scale), height = (lines.length + .5) * lineHeight;
+      context.fillStyle = 'rgba(0,0,0,.75)'; context.fillRect(0, recordH - height, recordW, height);
+      context.fillStyle = '#fff'; lines.forEach((text, i) => context.fillText(text, 8 * scale, recordH - (lines.length - i - .3) * lineHeight, maxWidth));
+      context.restore();
+    }
+
     // DOM overlays are not part of MapLibre's canvas. Paint the side panel
     // explicitly for video frames, including the slowed section of the route.
     const currentState = useAppStore.getState();

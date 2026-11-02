@@ -1,6 +1,9 @@
 import { help } from './enHelp';
 
 export const en = {
+  locationChapters: { coverage: 'Boundary coverage varies; small places or brief crossings may be missed.', loading: 'Loading location boundaries…', privacy: 'Boundary requests disclose the countries along your route to geoBoundaries and GitHub; route points stay in your browser.', notReady: 'Wait for location boundaries to load, or turn off location chapters before exporting.',
+    title: 'Location chapters', description: 'Highlight places as your trip crosses them.', level: 'Boundary level', off: 'Off', country: 'Countries', region: 'Regions', color: 'Border color', width: 'Border width', fill: 'Highlight area', showName: 'Show place name', showFlag: 'Show country flag', zoom: 'Zoom out to the place', duration: 'Duration (seconds)', unavailable: 'Location boundaries unavailable for this route.', credit: 'Boundaries: geoBoundaries and original data providers. Country lookup: Natural Earth.',
+  },
   app: {
     title: 'Trail Replay',
     subtitle: 'GPX & KML VISUALIZATION',

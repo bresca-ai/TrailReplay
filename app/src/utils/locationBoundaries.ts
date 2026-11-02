@@ -1,0 +1,94 @@
+import type { Feature, FeatureCollection, MultiPolygon, Polygon, Position } from 'geojson';
+
+export type LocationGeometry = Polygon | MultiPolygon;
+export type LocationFeature = Feature<LocationGeometry, { name: string; iso2?: string; iso3: string; id: string; credit: string }>;
+export type LocationLevel = 'country' | 'region';
+type CountryFeature = Feature<LocationGeometry, { name: string; iso2: string; iso3: string }>;
+const API = 'https://www.geoboundaries.org/api/current/gbOpen';
+const cachedLayers = new Map<string, Promise<LocationFeature[]>>();
+let countriesPromise: Promise<CountryFeature[]> | undefined;
+
+const ringBounds = new WeakMap<Position[], [number, number, number, number]>();
+function pointInRing([x, y]: Position, ring: Position[]): boolean {
+  let bounds = ringBounds.get(ring);
+  if (!bounds) {
+    bounds = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const point of ring) { bounds[0] = Math.min(bounds[0], point[0]); bounds[1] = Math.min(bounds[1], point[1]); bounds[2] = Math.max(bounds[2], point[0]); bounds[3] = Math.max(bounds[3], point[1]); }
+    ringBounds.set(ring, bounds);
+  }
+  if (x < bounds[0] || x > bounds[2] || y < bounds[1] || y > bounds[3]) return false;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i], b = ring[j];
+    if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
+export function containsPosition(feature: Feature<LocationGeometry>, point: Position): boolean {
+  const polygons = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+  return polygons.some(([outer, ...holes]) => !!outer && pointInRing(point, outer) && !holes.some(ring => pointInRing(point, ring)));
+}
+export function countryEmoji(code: string | undefined): string {
+  if (!code || !/^[A-Z]{2}$/.test(code)) return '';
+  return String.fromCodePoint(...Array.from(code, char => 0x1f1e6 + char.charCodeAt(0) - 65));
+}
+async function json(url: string): Promise<unknown> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Boundary data unavailable (${response.status})`);
+    return await response.json();
+  } finally { clearTimeout(timer); }
+}
+export function loadCountryIndex(): Promise<CountryFeature[]> {
+  if (!countriesPromise) countriesPromise = json(`${import.meta.env.BASE_URL}location-countries.geojson`)
+    .then(data => (data as FeatureCollection<LocationGeometry, CountryFeature['properties']>).features)
+    .catch(error => { countriesPromise = undefined; throw error; });
+  return countriesPromise;
+}
+/** GeoBoundaries supplies metadata and a versioned file URL, not a spatial API. */
+export function loadBoundaryLayer(country: CountryFeature, level: LocationLevel): Promise<LocationFeature[]> {
+  const iso = country.properties.iso3;
+  if (!/^[A-Z]{3}$/.test(iso)) return Promise.reject(new Error('Country is unavailable'));
+  const key = `${iso}:${level}`;
+  let pending = cachedLayers.get(key);
+  if (!pending) {
+    pending = (async () => {
+      const metadata = await json(`${API}/${iso}/${level === 'country' ? 'ADM0' : 'ADM1'}/`) as Record<string, unknown>;
+      const url = new URL(String(metadata.simplifiedGeometryGeoJSON));
+      if (url.protocol !== 'https:' || url.hostname !== 'github.com' || !url.pathname.startsWith('/wmgeolab/geoBoundaries/')) throw new Error('Invalid boundary source');
+      // GitHub's redirect lacks CORS headers. The equivalent media URL serves
+      // the same commit-pinned Git LFS content with a browser CORS header.
+      const path = url.pathname.match(/^\/wmgeolab\/geoBoundaries\/raw\/([0-9a-f]{7,40})\/(releaseData\/gbOpen\/.*\.geojson)$/);
+      if (!path) throw new Error('Invalid boundary source');
+      const collection = await json(`https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/${path[1]}/${path[2]}`) as FeatureCollection<LocationGeometry, Record<string, string>>;
+      if (collection.type !== 'FeatureCollection' || !Array.isArray(collection.features)) throw new Error('Invalid boundary data');
+      return collection.features.filter(feature => feature.geometry?.type === 'Polygon' || feature.geometry?.type === 'MultiPolygon').map((feature, index) => ({
+        type: 'Feature' as const, geometry: feature.geometry,
+        properties: { id: feature.properties?.shapeID ?? `${iso}-${index}`, name: level === 'country' ? country.properties.name : feature.properties?.shapeName ?? country.properties.name,
+          iso2: country.properties.iso2, iso3: iso, credit: `geoBoundaries · ${String(metadata.boundarySource ?? "")} · ${String(metadata.boundaryLicense ?? "")}` },
+      }));
+    })().catch(error => { cachedLayers.delete(key); throw error; });
+    cachedLayers.set(key, pending);
+  }
+  return pending;
+}
+/** Finds countries from route points and fetches only those country layers.
+ * The overview index is generalized; small islands and narrow crossings can be missed. */
+export async function loadRouteBoundaries(points: Position[], level: LocationLevel): Promise<LocationFeature[]> {
+  const countries = await loadCountryIndex();
+  const found = new Map<string, CountryFeature>();
+  for (const point of points) {
+    const match = countries.find(country => containsPosition(country, point));
+    if (match) found.set(match.properties.iso3, match);
+  }
+  const queue = [...found.values()];
+  const layers: LocationFeature[][] = Array.from({ length: queue.length });
+  let next = 0;
+  // Avoid flooding the public service when a long trip crosses many countries.
+  await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
+    while (next < queue.length) { const index = next++; layers[index] = await loadBoundaryLayer(queue[index], level); }
+  }));
+  return layers.flat();
+}
