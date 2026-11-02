@@ -19,6 +19,7 @@ export const zhTW = {
     mapCanvas: '地圖', resetBearing: '將地圖轉回北方',
   },
   sidebar: {
+    panelLoadError: '無法載入此面板。', panelLoadErrorHelp: '您的作品仍然開啟中。請先從匯出分頁儲存專案，再重新載入並開啟專案。', reloadPage: '重新載入頁面',
     tabs: { tracks: '路線', journey: '時間軸', annotations: '樣式', pictures: '媒體', export: '製作輸出', settings: '地圖與鏡頭' },
     preferencesTitle: '偏好設定', footerTitle: 'Trail Replay', footerSubtitle: 'GPX 與 KML 軌跡視覺化',
     footerGithub: '在 GitHub 上查看', saveProject: '儲存專案',

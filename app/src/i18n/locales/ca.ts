@@ -23,6 +23,7 @@ export const ca = {
     mapCanvas: 'Mapa', resetBearing: 'Orienta el mapa al nord',
   },
   sidebar: {
+    panelLoadError: 'No s’ha pogut carregar aquest tauler.', panelLoadErrorHelp: 'El teu treball continua obert. Desa el projecte des de la pestanya Crea abans de tornar a carregar i torna’l a obrir.', reloadPage: 'Torna a carregar la pàgina',
     tabs: {
       tracks: 'Rutes',
       journey: 'Cronologia',

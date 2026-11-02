@@ -23,6 +23,7 @@ export const de = {
     mapCanvas: 'Karte', resetBearing: 'Karte nach Norden ausrichten',
   },
   sidebar: {
+    panelLoadError: 'Dieser Bereich konnte nicht geladen werden.', panelLoadErrorHelp: 'Deine Arbeit ist noch geöffnet. Speichere das Projekt vor dem Neuladen im Export-Tab und öffne es danach erneut.', reloadPage: 'Seite neu laden',
     tabs: {
       tracks: 'Routen',
       journey: 'Zeitleiste',

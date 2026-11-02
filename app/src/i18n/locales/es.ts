@@ -23,6 +23,7 @@ export const es = {
     mapCanvas: 'Mapa', resetBearing: 'Orientar el mapa al norte',
   },
   sidebar: {
+    panelLoadError: 'No se ha podido cargar este panel.', panelLoadErrorHelp: 'Tu trabajo sigue abierto. Guarda el proyecto desde la pestaña Crear antes de recargar y vuelve a abrirlo.', reloadPage: 'Recargar página',
     tabs: {
       tracks: 'Rutas',
       journey: 'Cronología',

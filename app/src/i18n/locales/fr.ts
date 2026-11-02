@@ -23,6 +23,7 @@ export const fr = {
     mapCanvas: 'Carte', resetBearing: 'Orienter la carte vers le nord',
   },
   sidebar: {
+    panelLoadError: 'Impossible de charger ce panneau.', panelLoadErrorHelp: 'Votre travail est toujours ouvert. Enregistrez le projet depuis l’onglet Exporter avant de recharger, puis rouvrez-le.', reloadPage: 'Recharger la page',
     tabs: {
       tracks: 'Parcours',
       journey: 'Chronologie',

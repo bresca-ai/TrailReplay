@@ -23,6 +23,7 @@ export const en = {
     mapCanvas: 'Map', resetBearing: 'Reset bearing to north',
   },
   sidebar: {
+    panelLoadError: 'This panel could not be loaded.', panelLoadErrorHelp: 'Your work is still open. Save your project from the Export tab before reloading, then reopen it.', reloadPage: 'Reload page',
     tabs: {
       tracks: 'Routes',
       journey: 'Timeline',
