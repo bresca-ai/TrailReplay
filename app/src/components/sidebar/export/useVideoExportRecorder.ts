@@ -1,3 +1,4 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { VIDEO_LOGO_URL } from './videoExportBrand';
 import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { useAppStore } from '@/store/useAppStore';
@@ -239,7 +240,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const frameDurationMs = 1000 / fps;
     const store = useAppStore.getState();
     const routeDurationMs = store.playback.totalDuration;
-    const annotations = store.textAnnotations;
+    const annotations = resolveSharedRouteMoments(store.textAnnotations, store.journeySegments, store.tracks, store.playback.routeTimingMode);
     const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations);
     // Preview speed only affects interactive playback. Export always preserves
     // the configured journey duration on the encoded timeline.

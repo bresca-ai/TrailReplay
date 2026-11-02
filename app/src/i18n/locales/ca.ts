@@ -540,7 +540,7 @@ export const ca = {
     routeAnnotationNoPosition: 'Reprodueix o mou la ruta per triar on ha d\'anar l\'anotació.',
     routeAnnotationElevation: '{elevation} {unit}',
     addRouteAnnotation: 'Afegeix anotació',
-    routeAnnotationsEmpty: 'Encara no hi ha anotacions de ruta.',
+    showOnMatchingRoutes: 'Mostra a les rutes coincidents', showOnMatchingRoutesHint: 'Es mostra un cop per ruta que passi a menys de 50 m.', routeAnnotationsEmpty: 'Encara no hi ha anotacions de ruta.',
     routeAnnotationProgress: '{percent}% del trajecte',
     goToAnnotation: 'Vés-hi',
     annotationDuration: 'Durada en segons',

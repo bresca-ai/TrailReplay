@@ -540,7 +540,7 @@ export const es = {
     routeAnnotationNoPosition: 'Reproduce o desplaza la ruta para elegir dónde debe ir la anotación.',
     routeAnnotationElevation: '{elevation} {unit}',
     addRouteAnnotation: 'Añadir anotación',
-    routeAnnotationsEmpty: 'Todavía no hay anotaciones de ruta.',
+    showOnMatchingRoutes: 'Mostrar en rutas coincidentes', showOnMatchingRoutesHint: 'Se muestra una vez por ruta que pase a menos de 50 m.', routeAnnotationsEmpty: 'Todavía no hay anotaciones de ruta.',
     routeAnnotationProgress: '{percent}% del recorrido',
     goToAnnotation: 'Ir',
     annotationDuration: 'Duración en segundos',

@@ -540,7 +540,7 @@ export const de = {
     routeAnnotationNoPosition: 'Spiele oder Scrubbe die Route, um auszuwählen, wo die Anmerkung gespeichert werden soll.',
     routeAnnotationElevation: '{elevation} {unit}',
     addRouteAnnotation: 'Anmerkung hinzufügen',
-    routeAnnotationsEmpty: 'Noch keine Routenanmerkungen.',
+    showOnMatchingRoutes: 'Auf passenden Routen anzeigen', showOnMatchingRoutesHint: 'Einmal pro Route, die innerhalb von 50 m vorbeiführt.', routeAnnotationsEmpty: 'Noch keine Routenanmerkungen.',
     routeAnnotationProgress: '{percent} % der Reise',
     goToAnnotation: 'Gehe zu',
     annotationDuration: 'Dauer in Sekunden',

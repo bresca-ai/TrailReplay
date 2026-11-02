@@ -158,7 +158,7 @@ export const zhTW = {
     iconSearchLabel: '搜尋地圖圖示', iconSearchPlaceholder: '搜尋超過 2,300 個圖示：山、水、帳篷…', iconSearchLoading: '正在載入圖示…', iconSearchEmpty: '找不到符合「{query}」的圖示。', iconSearchCount: '目前顯示 {shown}／{total} 個，可增加關鍵字縮小範圍。', iconSearchError: '無法載入圖示。', iconSearchRetry: '再試一次', iconSearchCredit: '圖示由 Pinhead 提供（CC0）',
     slowdownSeconds: '減速時間（秒）', textLanguage: '標註文字語言', translationFallback: '標註文字會依介面語言顯示；尚未翻譯的語言會顯示原文。', moveToPlayhead: '移至此處', moveToPlayheadHint: '拖曳時間軸至新位置，再將這則標註移到該處。',
     routeAnnotationsMovedHint: '路線標註已移至「媒體」分頁，方便與照片、影片及地圖文字一起管理。', routeAnnotationTitlePlaceholder: '標題', routeAnnotationSubtitlePlaceholder: '副標題', routeAnnotationColor: '標註顏色', routeAnnotationReady: '將新增至旅程的 {percent}% 位置。', routeAnnotationNoPosition: '請播放或拖曳時間軸，選擇標註位置。', routeAnnotationElevation: '{elevation} {unit}',
-    addRouteAnnotation: '新增標註', routeAnnotationsEmpty: '尚未新增路線標註。', routeAnnotationProgress: '旅程的 {percent}%', goToAnnotation: '前往', annotationDuration: '顯示時間（秒）', annotationDurationShort: '秒數', annotationLeadTime: '抵達前提早顯示（秒）', annotationLeadTimeShort: '提前', removeRouteAnnotation: '移除標註',
+    addRouteAnnotation: '新增標註', showOnMatchingRoutes: '顯示於符合的路線', showOnMatchingRoutesHint: '每條經過 50 公尺範圍內的路線顯示一次。', routeAnnotationsEmpty: '尚未新增路線標註。', routeAnnotationProgress: '旅程的 {percent}%', goToAnnotation: '前往', annotationDuration: '顯示時間（秒）', annotationDurationShort: '秒數', annotationLeadTime: '抵達前提早顯示（秒）', annotationLeadTimeShort: '提前', removeRouteAnnotation: '移除標註',
     inactiveAnnotationsOpacityLabel: '標記', inactiveAnnotationsOpacity: '未啟用時的不透明度', inactiveAnnotationsOpacityHint: '標註未啟用時，會套用此不透明度。',
   },
   journey: {

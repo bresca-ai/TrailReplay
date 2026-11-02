@@ -65,7 +65,7 @@ describe('hydrateProject', () => {
     source.getState().setSettings({ language: 'zh-TW' });
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
     source.getState().addTextAnnotation({
-      id: 'aid-station', lat: 42.1, lon: 1.2, progress: 0.5, title: 'Aid station',
+      id: 'aid-station', lat: 42.1, lon: 1.2, progress: 0.5, title: 'Aid station', showOnMatchingRoutes: true,
       color: '#C1652F', displayDuration: 3000,
       translations: { 'zh-TW': { title: '第一補給站', subtitle: '飲水與點心' } },
     });
@@ -75,6 +75,7 @@ describe('hydrateProject', () => {
     hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
     expect(target.getState().settings.language).toBe('zh-TW');
     expect(target.getState().journey?.name).toBe('我的旅程');
+    expect(target.getState().textAnnotations[0].showOnMatchingRoutes).toBe(true);
     expect(target.getState().textAnnotations[0].translations?.['zh-TW']).toEqual({ title: '第一補給站', subtitle: '飲水與點心' });
   });
 

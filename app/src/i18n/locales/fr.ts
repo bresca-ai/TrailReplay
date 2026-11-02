@@ -540,7 +540,7 @@ export const fr = {
     routeAnnotationNoPosition: 'Lancez la lecture ou déplacez le curseur du parcours pour choisir l\'emplacement de l\'annotation.',
     routeAnnotationElevation: '{elevation} {unit}',
     addRouteAnnotation: 'Ajouter une annotation',
-    routeAnnotationsEmpty: 'Aucune annotation de parcours pour le moment.',
+    showOnMatchingRoutes: 'Afficher sur les parcours correspondants', showOnMatchingRoutesHint: 'Une fois par parcours passant à moins de 50 m.', routeAnnotationsEmpty: 'Aucune annotation de parcours pour le moment.',
     routeAnnotationProgress: '{percent}% du trajet',
     goToAnnotation: 'Aller à l\'annotation',
     annotationDuration: 'Durée en secondes',

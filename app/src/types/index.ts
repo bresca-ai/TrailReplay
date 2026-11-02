@@ -173,6 +173,8 @@ export interface IconChange {
 
 export interface TextAnnotation {
   id: string;
+  /** Show the same moment once on each nearby route in the journey. */
+  showOnMatchingRoutes?: boolean;
   progress: number;
   /** Stable distance from the journey start, used when timing mode changes. */
   routeDistance?: number;

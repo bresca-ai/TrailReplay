@@ -549,7 +549,7 @@ export const en = {
     routeAnnotationNoPosition: 'Play or scrub the route to choose where the annotation should live.',
     routeAnnotationElevation: '{elevation} {unit}',
     addRouteAnnotation: 'Add Annotation',
-    routeAnnotationsEmpty: 'No route annotations yet.',
+    showOnMatchingRoutes: 'Show on matching routes', showOnMatchingRoutesHint: 'Shows once per route passing within 50 m.', routeAnnotationsEmpty: 'No route annotations yet.',
     routeAnnotationProgress: '{percent}% of journey',
     goToAnnotation: 'Go To',
     annotationDuration: 'Duration in seconds',

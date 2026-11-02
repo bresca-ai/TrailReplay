@@ -1,3 +1,4 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
@@ -144,7 +145,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       // animation into ~75s of wall-clock (and recording) time.
       const state = useAppStore.getState();
       const { currentTime, speed } = state.playback;
-      const annotations = state.textAnnotations;
+      const annotations = resolveSharedRouteMoments(state.textAnnotations, state.journeySegments, state.tracks, state.playback.routeTimingMode);
       const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations) + deltaTime * speed;
       const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations);
 
