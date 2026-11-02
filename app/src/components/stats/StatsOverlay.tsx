@@ -174,7 +174,7 @@ export function StatsOverlay({ compact = false, layout = 'default', variant = 'd
         : Math.min(visibleStats.length, 4));
 
   const trackCount = segmentTimings.filter((s) => s.type === 'track').length;
-  const transportCount = segmentTimings.filter((s) => s.type === 'transport' && s.transportMode !== 'camera').length;
+  const transportCount = segmentTimings.filter((s) => s.type === 'transport').length;
 
   return (
     <div

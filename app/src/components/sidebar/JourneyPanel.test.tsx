@@ -75,17 +75,17 @@ describe('Timeline editor', () => {
     fireEvent.change(screen.getByLabelText('Duration (seconds)'), { target: { value: '27' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(useAppStore.getState().journeySegments[0].duration).toBe(27_000);
-    fireEvent.click(screen.getByRole('button', { name: 'Add Transport' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Transition' }));
     for (const name of ['Driving', 'Bus', 'Train', 'Flying', 'Cycling', 'Walking', 'Ferry', 'Camera transition']) {
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
     }
     fireEvent.click(screen.getByRole('button', { name: 'Cycling' }));
     expect(useAppStore.getState().journeySegments[1]).toMatchObject({ type: 'transport', mode: 'bike' });
-    expect(screen.getByText('Cycling Transport')).toBeInTheDocument();
+    expect(screen.getByText('Cycling transition')).toBeInTheDocument();
   });
   it('adds an editable camera transition between routes', () => {
     render(<JourneyPanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add Transport' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Transition' }));
     fireEvent.click(screen.getByRole('button', { name: 'Camera transition' }));
     expect(useAppStore.getState().journeySegments[1]).toMatchObject({ type: 'transport', mode: 'camera', duration: 5000, distance: 0 });
     expect(screen.getByText('Camera transition')).toBeInTheDocument();

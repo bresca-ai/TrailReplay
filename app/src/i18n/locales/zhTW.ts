@@ -125,7 +125,7 @@ export const zhTW = {
   stats: {
     distance: '距離', duration: '總時間', movingDuration: '移動時間', avgPace: '平均配速', pace: '配速', elev: '累積爬升', speed: '速度', altitude: '海拔', heartRateShort: '心率',
     label_distance: '距離', label_duration: '總時間', label_movingDuration: '移動時間', label_pace: '平均配速', label_elevation: '累積爬升', label_heartRate: '心率', label_speed: '速度', label_altitude: '海拔',
-    cadence: '步頻／踏頻', power: '功率', bpm: 'bpm', rpm: 'rpm', watts: 'W', track: '軌跡', trackSingle: '條軌跡', trackPlural: '條軌跡', transport: '交通路段', transportSingle: '段交通路段', transportPlural: '段交通路段',
+    cadence: '步頻／踏頻', power: '功率', bpm: 'bpm', rpm: 'rpm', watts: 'W', track: '軌跡', trackSingle: '條軌跡', trackPlural: '條軌跡', transport: '交通路段', transportSingle: '個轉場', transportPlural: '個轉場',
     transportLabels: { camera: '鏡頭轉場', car: '開車', bus: '公車', train: '火車', plane: '搭飛機', bike: '騎自行車', walk: '步行', ferry: '渡輪' },
   },
   common: { name: '名稱', color: '顏色', cancel: '取消', save: '儲存', done: '完成', close: '關閉', remove: '移除', clickRename: '點選以重新命名', secondsShort: '秒', processing: '處理中…' },
@@ -172,9 +172,9 @@ export const zhTW = {
     videoTimingTitle: '設定影片時間', videoTimingHint: '選擇成品影片的長度，再決定標記沿路線移動的方式。', durationPreset: '{seconds} 秒', durationPresetHint: '影片長度', customDurationHint: '需要自訂長度嗎？請點選下方各旅程路段的編輯按鈕，個別設定播放時間。',
     defaultSettings: '預設設定', defaultTrackTime: '預設軌跡播放時間', defaultTrackTimeHint: '每條軌跡會在動畫中以此時間播放完畢', routeTiming: '路線配速', routeTimingRecorded: '實際配速', routeTimingUniform: '固定配速', routeTimingHint: '「實際配速」依 GPX 記錄時間播放；「固定配速」依距離等速移動，讓整條路線的播放速度一致。',
     statsMode: '重播統計', statsModeHint: '選擇距離、時間、配速與爬升要全程累計，或在每條軌跡開始時重新計算。', statsModeCumulative: '旅程累計', statsModePerTrack: '每條軌跡重新計算', totalDistance: '總距離：', totalDuration: '總時間：', totalSegments: '路段數：',
-    quickStart: '編排多條路線的旅程', quickStartHint: '加入更多路線，拖曳調整順序，再用交通路段連接。', addAllTracks: '加入所有軌跡', clearJourney: '清空旅程', addTracksTitle: '將軌跡加入旅程', addTracksHint: '點選軌跡即可加入時間軸；已加入的軌跡無法重複選取。', added: '已加入', timelineTitle: '旅程時間軸', dragToReorder: '拖曳以調整順序',
-    emptyTitle: '旅程中尚無路段', emptySubtitle: '加入軌跡與交通方式', cameraSettings: '鏡頭設定', cameraTransitionZoom: '轉場縮放', cameraZoomWide: '較遠', cameraZoomClose: '較近', cameraTransitionPitch: '轉場傾斜', cameraPitchTopDown: '俯視', cameraPitchTilted: '傾斜', addTransport: '新增交通路段', runsSimultaneously: '同步播放', runsSimultaneouslyHint: '這些軌跡會從頭到尾與主旅程同步播放。', fullJourney: '完整旅程', selectTransportTitle: '選擇連接方式', selectTransportHint: '選擇如何連接這些軌跡。',
-    editDurationTitle: '編輯播放時間', durationSeconds: '播放時間（秒）', durationHint: '這是此路段在動畫中的播放時間', goToSegment: '前往此路段', changeTrackIcon: '更換軌跡圖示', transportSegment: '{mode}路段',
+    quickStart: '編排多條路線的旅程', quickStartHint: '加入路線並排列順序，再於路線間新增轉場。', addAllTracks: '加入所有軌跡', clearJourney: '清空旅程', addTracksTitle: '將軌跡加入旅程', addTracksHint: '點選軌跡即可加入時間軸；已加入的軌跡無法重複選取。', added: '已加入', timelineTitle: '旅程時間軸', dragToReorder: '拖曳以調整順序',
+    emptyTitle: '旅程中尚無路段', emptySubtitle: '加入路線與轉場', cameraSettings: '鏡頭設定', cameraTransitionZoom: '轉場縮放', cameraZoomWide: '較遠', cameraZoomClose: '較近', cameraTransitionPitch: '轉場傾斜', cameraPitchTopDown: '俯視', cameraPitchTilted: '傾斜', addTransport: '新增轉場', runsSimultaneously: '同步播放', runsSimultaneouslyHint: '這些軌跡會從頭到尾與主旅程同步播放。', fullJourney: '完整旅程', selectTransportTitle: '選擇轉場', selectTransportHint: '選擇如何在路線之間轉場。',
+    editDurationTitle: '編輯播放時間', durationSeconds: '播放時間（秒）', durationHint: '這是此路段在動畫中的播放時間', goToSegment: '前往此路段', changeTrackIcon: '更換軌跡圖示', transportSegment: '{mode}轉場',
   },
   media: {
     videoMomentsTitle: '加入旅途片刻', videoMomentsHint: '加入照片、影片片段與路線標註，訴說你的旅程。', picturesTab: '照片（{count}）', videosTab: '影片（{count}）', annotationsTab: '標註（{count}）', picturesTabLabel: '照片', videosTabLabel: '影片', annotationsTabLabel: '標註',
