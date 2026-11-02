@@ -205,7 +205,7 @@ Do not send raw filenames.
 | Event | Trigger | Parameters | Key Event |
 | --- | --- | --- | --- |
 | `export_started` | User starts export | `export_format`, `export_quality`, `export_fps`, `export_aspect_ratio`, `export_include_stats`, `export_include_elevation`, `track_count`, `picture_count`, `export_duration_bucket` | No |
-| `export_completed` | Export finishes with a downloadable blob | `export_format`, `export_blob_size_bucket`, `export_encoder_path`, `export_duration_bucket` | Yes |
+| `export_completed` | Export finishes with a downloadable blob | `export_format`, `export_blob_size_bucket`, `export_encoder_path`, `export_duration_bucket`, `export_elapsed_seconds`, `export_foreground_seconds` | Yes |
 | `export_failed` | Export fails | `export_failure_scope`, `export_format`, `export_encoder_path` | No |
 | `export_cancelled` | User cancels export | `export_progress_bucket`, `export_stage` | No |
 | `export_downloaded_again` | User re-downloads a completed export | `export_format` | No |
@@ -220,7 +220,10 @@ Parameter definitions:
 - `export_include_elevation`: `true`, `false`
 - `track_count`: integer
 - `picture_count`: integer
-- `export_duration_bucket`: `short`, `medium`, `long`
+- `export_duration_bucket`: `short`, `medium`, `long`; based on playback duration, not export waiting time
+- `export_elapsed_seconds`: wall-clock seconds from export start through blob finalization, including preparation and time in a hidden tab; excludes Studio delivery upload
+- `export_foreground_seconds`: seconds in that interval while the document is visible, not proof of attention or sponsor placement visibility
+- Register these numeric event parameters as GA4 event-scoped custom metrics for future reporting; historical exports cannot be backfilled.
 - `export_blob_size_bucket`: `small`, `medium`, `large`, `xlarge`
 - `export_encoder_path`: `webcodecs`, `mediarecorder`
 - `export_failure_scope`: `setup`, `no_data`, `encoder_finalize`, `recorder_error`, `unknown`

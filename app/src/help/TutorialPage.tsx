@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import {
   Bot,
   BookOpen,
@@ -25,7 +26,7 @@ import { RouteImportTutorial } from './RouteImportTutorial';
 const featureIcons = [MapPin, TimerReset, Palette, Mountain, ImageIcon, Film];
 
 export function TutorialPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const quickStartSteps = getQuickStartSteps(t);
   const sampleTracks = getSampleTracks(t);
   const tutorialFeatures = getTutorialFeatures(t);
@@ -80,7 +81,7 @@ export function TutorialPage() {
           </ol>
         </article>
 
-        <aside className="rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-[linear-gradient(160deg,var(--evergreen),#223428)] p-6 text-[var(--canvas)] shadow-sm">
+        <aside id="sample-routes" className="scroll-mt-24 rounded-[1.5rem] border border-[var(--evergreen)]/15 bg-[linear-gradient(160deg,var(--evergreen),#223428)] p-6 text-[var(--canvas)] shadow-sm">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white/80">
             <Download className="h-4 w-4" />
             {t('help.tutorial.sampleRoutesBadge')}
@@ -108,7 +109,7 @@ export function TutorialPage() {
             ))}
           </div>
           <a
-            href="/gpx-download-guide"
+            href={localizedSitePath('/gpx-download-guide', language)}
             onClick={() => trackEvent('help_cta_clicked', {
               cta_location: 'tutorial',
               target_page: 'gpx_guide',

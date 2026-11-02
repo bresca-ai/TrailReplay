@@ -1,6 +1,8 @@
 import { SEO_LANDING_PAGES, type SeoLandingPageConfig, type SeoLandingSlug } from './seoPages';
 
 const germanCopy: Record<string, string> = {
+  'To preview a GPX on a 3D map, import the file and explore the terrain before recording. Choose a view that shows the whole route, then adjust the camera and playback speed to make important climbs and turns easy to follow.': 'Um eine GPX-Datei auf einer 3D-Karte anzusehen, importieren Sie sie und erkunden Sie das Gelände vor der Aufnahme. Wählen Sie eine Ansicht der gesamten Strecke und passen Sie Kamera und Wiedergabegeschwindigkeit an, damit wichtige Anstiege und Kurven gut zu erkennen sind.',
+  'For a timed activity, recorded timestamps help the replay follow your progress. A route without timestamps can still be displayed and animated, but it cannot reproduce the original timing or provide statistics that were not recorded.': 'Bei einer aufgezeichneten Aktivität helfen Zeitstempel dabei, den Verlauf der Wiedergabe nachzuvollziehen. Eine Strecke ohne Zeitstempel lässt sich ebenfalls anzeigen und animieren, kann aber weder den ursprünglichen Zeitverlauf noch nicht aufgezeichnete Statistiken wiedergeben.',
   'Strava activity to video': 'Strava-Aktivität zum Video',
   'Turn a Strava Activity Into a 3D Route Video': 'Verwandeln Sie eine Strava-Aktivität in ein 3D-Routenvideo',
   'Open a Strava activity in TrailReplay with one saved bookmark, or import its GPX manually. Turn the real route into a 3D video with stats and elevation.': 'Öffnen Sie eine Strava-Aktivität mit einem gespeicherten Lesezeichen in TrailReplay oder importieren Sie die GPX-Datei manuell. Machen Sie aus der echten Route ein 3D-Video mit Statistiken und Höhenmetern.',

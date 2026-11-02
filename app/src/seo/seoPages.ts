@@ -188,6 +188,8 @@ export const SEO_LANDING_PAGES: Record<SeoLandingSlug, SeoLandingPageConfig> = {
     detailParagraphs: [
       'A clean track, useful timestamps, and a deliberate camera angle matter more than excessive effects. Start with the whole route, then choose a playback speed that keeps the geography readable.',
       'For a vertical social post, preview the 9:16 crop before recording. For YouTube or a longer film, landscape output leaves more space for the map and statistics.',
+      'To preview a GPX on a 3D map, import the file and explore the terrain before recording. Choose a view that shows the whole route, then adjust the camera and playback speed to make important climbs and turns easy to follow.',
+      'For a timed activity, recorded timestamps help the replay follow your progress. A route without timestamps can still be displayed and animated, but it cannot reproduce the original timing or provide statistics that were not recorded.',
       'Unlike animator tools that require a desktop install, TrailReplay runs entirely in the browser: no download, no Java runtime, no OS-specific build. Import a file, compose the view, and export, all in the same tab.',
     ],
     faq: [
