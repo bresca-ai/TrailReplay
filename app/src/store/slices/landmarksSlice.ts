@@ -8,7 +8,7 @@ type LandmarksSlice = Pick<AppState,
   'showAutomaticLandmarks' |
   'enrichedLandmarks' | 'nearbyPlacesEnabled' | 'nearbyPlacesLoading' | 'nearbyPlacesError' | 'nearbyPlacesCoverage' |
   'addLandmark' | 'updateLandmark' | 'removeLandmark' | 'hideLandmark' | 'restoreHiddenLandmarks' |
-  'selectLandmark' | 'setIsPlacingLandmark' | 'adoptLandmark' | 'setEnabledLandmarkGroups' | 'setNearbyPlaceTypes' |
+  'landmarkEditorRequested' | 'revealLandmarkEditor' | 'clearLandmarkEditorRequest' | 'selectLandmark' | 'setIsPlacingLandmark' | 'adoptLandmark' | 'setEnabledLandmarkGroups' | 'setNearbyPlaceTypes' |
   'setNearbyPlacesEnabled' | 'setEnrichedLandmarks' | 'setNearbyPlacesStatus' | 'setShowAutomaticLandmarks'>;
 
 export const createLandmarksSlice: AppSliceCreator<LandmarksSlice> = (set) => ({
@@ -16,6 +16,7 @@ export const createLandmarksSlice: AppSliceCreator<LandmarksSlice> = (set) => ({
   landmarkPriorityIds: [],
   hiddenLandmarkIds: [],
   selectedLandmarkId: null,
+  landmarkEditorRequested: false,
   isPlacingLandmark: false,
   showAutomaticLandmarks: false,
   enabledLandmarkGroups: [],
@@ -44,6 +45,15 @@ export const createLandmarksSlice: AppSliceCreator<LandmarksSlice> = (set) => ({
   }),
   restoreHiddenLandmarks: () => set((state) => { state.hiddenLandmarkIds = []; }),
   selectLandmark: (id) => set((state) => { state.selectedLandmarkId = id; }),
+  revealLandmarkEditor: (id) => set((state) => {
+    if (state.isExporting) return;
+    state.selectedLandmarkId = id;
+    state.landmarkEditorRequested = true;
+    state.isSidebarOpen = true;
+    state.activePanel = 'settings';
+    state.trackTrimPreview = null;
+  }),
+  clearLandmarkEditorRequest: () => set((state) => { state.landmarkEditorRequested = false; }),
   setIsPlacingLandmark: (isPlacing) => set((state) => {
     state.isPlacingLandmark = isPlacing;
     if (isPlacing) state.selectedLandmarkId = null;

@@ -57,6 +57,7 @@ export interface AppState {
   /** Ids of derived landmarks the user removed from the replay. */
   hiddenLandmarkIds: string[];
   selectedLandmarkId: string | null;
+  landmarkEditorRequested: boolean;
   /** True while the next map click drops a new landmark. */
   isPlacingLandmark: boolean;
   showAutomaticLandmarks: boolean;
@@ -164,6 +165,8 @@ export interface AppState {
   hideLandmark: (landmarkId: string) => void;
   restoreHiddenLandmarks: () => void;
   selectLandmark: (landmarkId: string | null) => void;
+  revealLandmarkEditor: (landmarkId: string) => void;
+  clearLandmarkEditorRequest: () => void;
   setIsPlacingLandmark: (isPlacing: boolean) => void;
   /** Turns a derived landmark into an editable copy owned by the user. */
   adoptLandmark: (landmark: RouteLandmark) => string;

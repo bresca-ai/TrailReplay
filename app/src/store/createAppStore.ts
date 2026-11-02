@@ -52,6 +52,7 @@ export function createAppStore() {
           state.textAnnotations = [];
           state.userLandmarks = [];
           state.landmarkPriorityIds = [];
+          state.landmarkEditorRequested = false;
           state.enrichedLandmarks = [];
           state.showAutomaticLandmarks = false;
           state.enabledLandmarkGroups = [];
