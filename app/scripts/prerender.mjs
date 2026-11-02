@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createServer } from 'vite';
@@ -20,21 +20,57 @@ const vite = await createServer({
 });
 
 let rendered;
+let localizedHelpMetadata;
 try {
-  const { renderAllPages } = await vite.ssrLoadModule('/src/prerender/entry-server.tsx');
-  rendered = renderAllPages();
+  const module = await vite.ssrLoadModule('/src/prerender/entry-server.tsx');
+  rendered = module.renderAllPages();
+  localizedHelpMetadata = module.localizedHelpMetadata;
 } finally {
   await vite.close();
 }
 
+const locales = ['en', 'es', 'ca', 'de', 'fr', 'zh-TW'];
+const helpSlugs = ['tutorial', 'gpx-download-guide', 'agents'];
+const templates = new Map();
+for (const file of Object.keys(rendered)) {
+  const base = file.split('/').at(-1);
+  if (!templates.has(base)) templates.set(base, await readFile(path.join(distRoot, base), 'utf8'));
+}
+const escapeHtml = (text) => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
 for (const [file, markup] of Object.entries(rendered)) {
   const target = path.join(distRoot, file);
-  const html = await readFile(target, 'utf8');
+  const parts = file.split('/');
+  const localized = parts.length === 2;
+  const baseFile = parts.at(-1);
+  const slug = baseFile.replace(/\.html$/, '');
+  const language = localized ? locales.find((code) => code.toLowerCase() === parts[0]) : 'en';
+  const template = path.join(distRoot, baseFile);
+  let html = templates.get(baseFile);
+  if (!html.includes(ROOT_DIV)) throw new Error(`prerender: no empty #root mount point found in ${template}`);
 
-  if (!html.includes(ROOT_DIV)) {
-    throw new Error(`prerender: no empty #root mount point found in ${file}`);
+  if (helpSlugs.includes(slug)) {
+    const alternates = locales.map((code) => {
+      const prefix = code === 'en' ? '' : `/${code.toLowerCase()}`;
+      return `<link rel="alternate" hreflang="${code}" href="https://trailreplay.com${prefix}/${slug}" />`;
+    }).join('\n    ');
+    html = html.replace('</head>', `    ${alternates}\n  </head>`);
+    if (localized) {
+      const metadata = localizedHelpMetadata(language, slug);
+      const url = `https://trailreplay.com/${language.toLowerCase()}/${slug}`;
+      const title = escapeHtml(`${metadata.title} | TrailReplay`);
+      const description = escapeHtml(metadata.description);
+      html = html.replace('<html lang="en">', `<html lang="${language}">`)
+        .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+        .replace(/<meta name="description" content="[^"]*"\s*\/>/, `<meta name="description" content="${description}" />`)
+        .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, `<link rel="canonical" href="${url}" />`)
+        .replace(/<meta property="og:url" content="[^"]*"\s*\/>/, `<meta property="og:url" content="${url}" />`)
+        .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, `<meta property="og:title" content="${title}" />`)
+        .replace(/<meta property="og:description" content="[^"]*"\s*\/>/, `<meta property="og:description" content="${description}" />`)
+        .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '');
+    }
   }
-
+  await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, html.replace(ROOT_DIV, `<div id="root">${markup}</div>`), 'utf8');
 }
 

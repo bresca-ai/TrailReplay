@@ -3,6 +3,7 @@ import { ArrowLeft, ExternalLink, Sparkles } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
 import { languageLabels, type LanguageCode } from '@/i18n/translations';
+import { seoLanguageFromPath, seoLocalizedPath } from '@/seo/seoLocale';
 
 interface HelpHeaderAction {
   href: string;
@@ -45,7 +46,14 @@ export function HelpLayout({ eyebrow, title, description, headerActions = [], ch
             <select
               aria-label={t('settings.language')}
               value={language}
-              onChange={(event) => setLanguage(event.target.value as LanguageCode)}
+              onChange={(event) => {
+                const next = event.target.value as LanguageCode;
+                setLanguage(next);
+                const current = window.location.pathname;
+                const currentLanguage = seoLanguageFromPath(current);
+                const base = currentLanguage === 'en' ? current : current.slice(currentLanguage.length + 1);
+                window.location.assign(seoLocalizedPath(base.replace(/\.html$/, ''), next));
+              }}
               className="max-w-36 rounded-lg border border-white/20 bg-[var(--evergreen)] px-2 py-1.5 text-xs text-[var(--canvas)]"
             >
               {Object.entries(languageLabels).map(([code, label]) => <option key={code} value={code}>{label}</option>)}

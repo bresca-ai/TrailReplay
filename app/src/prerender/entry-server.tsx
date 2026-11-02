@@ -5,6 +5,9 @@ import { AgentsPage } from '@/help/AgentsPage';
 import { HomeStaticContent } from '@/prerender/HomeStaticContent';
 import { SeoLandingPage } from '@/seo/SeoLandingPage';
 import { SEO_LANDING_PAGES, type SeoLandingSlug } from '@/seo/seoPages';
+import { LANGUAGE_CODES } from '@/i18n/languages';
+import { translate } from '@/i18n/translations';
+import { PrerenderLanguageContext } from '@/i18n/useI18n';
 
 /**
  * Build-time prerendering of every crawlable document.
@@ -29,7 +32,22 @@ const pages: Record<string, () => string> = {
 };
 
 export function renderAllPages(): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(pages).map(([file, render]) => [file, render()]),
-  );
+  const result = Object.fromEntries(Object.entries(pages).map(([file, render]) => [file, render()]));
+  const helpComponents = { tutorial: TutorialPage, 'gpx-download-guide': GpxDownloadGuidePage, agents: AgentsPage };
+  for (const language of LANGUAGE_CODES.filter((code) => code !== 'en')) {
+    for (const [slug, Component] of Object.entries(helpComponents)) {
+      result[`${language.toLowerCase()}/${slug}.html`] = renderToString(
+        <PrerenderLanguageContext.Provider value={language}><Component /></PrerenderLanguageContext.Provider>,
+      );
+    }
+  }
+  return result;
+}
+
+export function localizedHelpMetadata(language: (typeof LANGUAGE_CODES)[number], slug: string) {
+  const key = slug === 'gpx-download-guide' ? 'gpxGuide' : slug;
+  return {
+    title: translate(language, `help.${key}.title`),
+    description: translate(language, `help.${key}.description`),
+  };
 }

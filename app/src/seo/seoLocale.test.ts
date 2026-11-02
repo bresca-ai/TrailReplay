@@ -26,3 +26,10 @@ describe('SEO language paths', () => {
     expect(existingSeoLanguage('es')).toBe('en');
   });
 });
+
+it('recognizes localized URL prefixes case insensitively', async () => {
+  const { seoLanguageFromPath } = await import('./seoLocale');
+  expect(seoLanguageFromPath('/zh-tw/tutorial')).toBe('zh-TW');
+  expect(seoLanguageFromPath('/es/tutorial')).toBe('es');
+  expect(seoLanguageFromPath('/tutorial')).toBe('en');
+});
