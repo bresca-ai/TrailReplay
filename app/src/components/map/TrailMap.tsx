@@ -87,8 +87,7 @@ export function TrailMap(_props: TrailMapProps) {
   const landmarks = useRouteLandmarks();
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const isPlacingLandmark = useAppStore((state) => state.isPlacingLandmark);
-  const selectLandmark = useAppStore((state) => state.selectLandmark);
-  const setActivePanel = useAppStore((state) => state.setActivePanel);
+  const revealLandmarkEditor = useAppStore((state) => state.revealLandmarkEditor);
   const inactiveAnnotationsOpacity = useAppStore((state) => state.settings.inactiveAnnotationsOpacity);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -185,13 +184,6 @@ export function TrailMap(_props: TrailMapProps) {
     inactiveAnnotationsOpacity,
   });
 
-  const handleSelectLandmark = useCallback((landmarkId: string) => {
-    selectLandmark(landmarkId);
-    // Reveal the editor the selection drives, so clicking a pin on the map has
-    // a visible effect even when another panel is open.
-    setActivePanel('settings');
-  }, [selectLandmark, setActivePanel]);
-
   useRouteLandmarksLayer({
     isMapLoaded,
     labelFade: settings.landmarkLabelFade,
@@ -199,7 +191,7 @@ export function TrailMap(_props: TrailMapProps) {
     overlayFont: trailStyle.overlayFont,
     landmarks,
     mapRef: map,
-    onSelectLandmark: handleSelectLandmark,
+    onSelectLandmark: revealLandmarkEditor,
     selectedLandmarkId,
     visible: shouldShowRouteLandmarks(animationPhase),
   });

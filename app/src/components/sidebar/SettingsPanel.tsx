@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { MapStyle, MapFilter, CameraMode, MapOverlays, CameraSettings } from '@/types';
 import { useI18n } from '@/i18n/useI18n';
@@ -106,6 +106,15 @@ const getWaybackItems = async (): Promise<WaybackItem[]> => {
 
 export function SettingsPanel() {
   const { t } = useI18n();
+  const landmarkEditorRequested = useAppStore((state) => state.landmarkEditorRequested);
+  const clearLandmarkEditorRequest = useAppStore((state) => state.clearLandmarkEditorRequest);
+  const landmarkSectionRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (!landmarkEditorRequested || !landmarkSectionRef.current) return;
+    landmarkSectionRef.current.open = true;
+    landmarkSectionRef.current.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    clearLandmarkEditorRequest();
+  }, [landmarkEditorRequested, clearLandmarkEditorRequest]);
   const settings = useAppStore((state) => state.settings);
   const displayedMapStyle = settings.mapStyle === 'outdoor' ? 'topo' : settings.mapStyle;
   const cameraSettings = useAppStore((state) => state.cameraSettings);
@@ -335,7 +344,7 @@ export function SettingsPanel() {
 
       </div>
 
-      <details className="rounded-lg border border-[var(--evergreen)]/20">
+      <details ref={landmarkSectionRef} className="rounded-lg border border-[var(--evergreen)]/20">
         <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('routeLandmarks.title')}</summary>
         <div className="px-3 pb-3"><RouteLandmarksEditor /></div>
       </details>

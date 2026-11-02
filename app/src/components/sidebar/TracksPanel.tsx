@@ -60,7 +60,7 @@ export function TracksPanel() {
       'application/vnd.google-earth.kml+xml': ['.kml'],
       // A watch's original recording, which keeps the timestamps a GPX
       // route export drops.
-      'application/octet-stream': ['.fit'],
+      'application/octet-stream': ['.fit', '.replay'],
       'application/zip': ['.replay'],
       // A recipe is dropped together with the routes it names.
       'application/json': ['.json'],

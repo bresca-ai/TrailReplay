@@ -64,7 +64,7 @@ export function landmarkLabelLayer(scale: number, labelFade: boolean): LayerSpec
       // Labels, unlike icons, drop out when they cannot be placed without
       // overlapping — a wall of colliding names is worse than a missing one.
       'icon-optional': true,
-      'symbol-sort-key': ['get', 'importance'],
+      'symbol-sort-key': ['get', 'labelPriority'],
     },
     paint: {
       'icon-opacity': landmarkTextOpacityExpression(labelFade),

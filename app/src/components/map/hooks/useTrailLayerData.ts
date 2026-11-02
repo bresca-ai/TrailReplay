@@ -66,6 +66,7 @@ interface UseTrailLayerDataParams {
     startCoordIndex: number;
     endCoordIndex: number;
     color?: string;
+    transportMode?: string;
   }>;
   trailColor: string;
   colorMode: 'fixed' | 'heartRate' | 'zones';
@@ -109,6 +110,7 @@ export function useTrailLayerData({
     timing.startCoordIndex,
     timing.endCoordIndex,
     timing.color ?? '',
+    timing.transportMode ?? '',
   ].join(':')).join('|');
   const segmentData = getStableSegmentData(segmentDataSignature, segmentTimings);
   const journeyHeartRatePoints = computedJourney?.coordinates;
@@ -124,6 +126,7 @@ export function useTrailLayerData({
     if (colorMode === 'heartRate' && allCoordinates.length > 0 && mapRef.current.getSource('trail-line')) {
       const features: Array<Feature<LineString, { color: string }>> = [];
       for (let index = 0; index < allCoordinates.length - 1; index++) {
+        if (segmentData.length && !segmentData.some((segment) => segment.transportMode !== 'camera' && index >= segment.startCoordIndex && index + 1 <= segment.endCoordIndex)) continue;
         const heartRate = heartRatePoints[index]?.heartRate;
         features.push({
           type: 'Feature',
@@ -143,6 +146,7 @@ export function useTrailLayerData({
       const zoneFeatures = buildColorZoneLineFeatures({
         coordinates: allCoordinates,
         colorZones,
+        segmentTimings: segmentData,
         fallbackColor: trailColor,
       });
 
@@ -158,7 +162,7 @@ export function useTrailLayerData({
       });
 
       (mapRef.current.getSource('trail-line') as maplibregl.GeoJSONSource).setData(
-        coloredFeatures.length > 0
+        coloredFeatures.length > 0 || segmentData.length > 0
           ? {
               type: 'FeatureCollection',
               features: coloredFeatures,
@@ -175,7 +179,7 @@ export function useTrailLayerData({
       const transportCoordinates: number[][][] = [];
 
       segmentData.forEach((timing) => {
-        if (timing.type !== 'transport') return;
+        if (timing.type !== 'transport' || timing.transportMode === 'camera') return;
 
         const segmentCoordinates: number[][] = [];
         const startIndex = timing.startCoordIndex;

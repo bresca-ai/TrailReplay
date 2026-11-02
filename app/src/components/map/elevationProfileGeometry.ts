@@ -70,6 +70,7 @@ export function buildElevationProfileGeometry(
 
   const segmentPaths: ElevationSegmentPath[] = [];
   segmentTimings.forEach((timing) => {
+    if (timing.transportMode === 'camera') return;
     const points = pointsBySegment.get(timing.segmentIndex) ?? [];
     if (points.length < 2) return;
 

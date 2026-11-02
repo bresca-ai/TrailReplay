@@ -40,6 +40,8 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     routeTimingMode,
   } = useComputedJourney();
 
+  const dynamicSections = settings.dynamicElevationProfile && !settings.elevationProfilePerRoute;
+
   const segmentProgressRange = (timing: typeof segmentTimings[number]) => ({
     start: routeTimingMode === 'uniform' ? timing.distanceStartRatio : timing.progressStartRatio,
     end: routeTimingMode === 'uniform' ? timing.distanceEndRatio : timing.progressEndRatio,
@@ -55,11 +57,19 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     [elevationData, segmentTimings, trailStyle.trailColor, tracks],
   );
 
+  // Keep the preceding route visible during a connection; before the first
+  // route, show the first available route.
+  const routeTiming = settings.elevationProfilePerRoute
+    ? (currentSegment?.segment.type === 'track' ? currentSegment.segment :
+      [...segmentTimings].reverse().find((timing) => timing.type === 'track' && segmentProgressRange(timing).start <= playback.progress)
+        ?? segmentTimings.find((timing) => timing.type === 'track'))
+    : undefined;
+
   const detectedFocusSections = useMemo(
-    () => settings.dynamicElevationProfile
+    () => dynamicSections
       ? detectElevationFocusSections(elevationData)
       : [],
-    [elevationData, settings.dynamicElevationProfile],
+    [elevationData, dynamicSections],
   );
   const focusSections = useMemo(
     () => applyElevationSectionOverrides(
@@ -88,12 +98,12 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     setSettings,
   });
   const isExportPreview = isExporting || activePanel === 'export';
-  const isEditingSections = settings.dynamicElevationProfile
+  const isEditingSections = dynamicSections
     && !playback.isPlaying
     && !isExportPreview;
 
   const dynamicViewport = useMemo(() => {
-    if (!profileData || !settings.dynamicElevationProfile || isEditingSections) return null;
+    if (!profileData || !dynamicSections || isEditingSections) return null;
     return getDynamicElevationViewport({
       currentTimeMs: playback.currentTime,
       totalDurationMs: playback.totalDuration,
@@ -101,7 +111,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       fullElevationMax: profileData.maxElevation,
       sections: focusSections,
     });
-  }, [focusSections, isEditingSections, playback.currentTime, playback.totalDuration, profileData, settings.dynamicElevationProfile]);
+  }, [focusSections, isEditingSections, playback.currentTime, playback.totalDuration, profileData, dynamicSections]);
 
   // Only the clip width and interpolated label change during playback. The
   // profile paths themselves stay static, avoiding a full GPX scan and a large
@@ -117,7 +127,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     // Find the current segment's color
     let currentColor = currentTrackColor || trailStyle.trailColor;
     if (isInTransport) {
-      currentColor = '#888888';
+      currentColor = routeTiming?.color || (routeTiming?.trackId ? tracks.find((track) => track.id === routeTiming.trackId)?.color : undefined) || (routeTiming ? trailStyle.trailColor : '#888888');
     }
 
     let currentPoints = currentSegment
@@ -136,7 +146,27 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       : 0;
 
     return { currentElevation, markerX: progressX, currentColor };
-  }, [profileData, playback.progress, currentTrackColor, trailStyle.trailColor, isInTransport, currentSegment]);
+  }, [profileData, playback.progress, currentTrackColor, trailStyle.trailColor, isInTransport, currentSegment, routeTiming, tracks]);
+
+  const routeBounds = useMemo(() => {
+    if (!routeTiming || !profileData) return null;
+    const points = profileData.pointsBySegment.get(routeTiming.segmentIndex) ?? [];
+    if (points.length < 2) return null;
+    let min = Infinity;
+    let max = -Infinity;
+    for (const point of points) {
+      if (point.elevation > 0) {
+        min = Math.min(min, point.elevation);
+        max = Math.max(max, point.elevation);
+      }
+    }
+    return {
+      start: routeTimingMode === 'uniform' ? routeTiming.distanceStartRatio : routeTiming.progressStartRatio,
+      end: routeTimingMode === 'uniform' ? routeTiming.distanceEndRatio : routeTiming.progressEndRatio,
+      min,
+      max,
+    };
+  }, [profileData, routeTiming, routeTimingMode]);
 
   // The Style setting is the single source of truth for both preview and export.
   const shouldShow = profileData &&
@@ -166,23 +196,28 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     if (elevationRange <= 0) return padding + chartHeight / 2;
     return svgHeight - padding - ((elevation - minElevation) / elevationRange) * chartHeight;
   };
-  const progressDomain = dynamicViewport?.progressDomain ?? [0, 1];
-  const elevationDomain = dynamicViewport?.elevationDomain ?? [minElevation, maxElevation];
+  const routeRange = routeBounds;
+  const routeMin = routeBounds?.min ?? Infinity;
+  const routeMax = routeBounds?.max ?? -Infinity;
+  const progressDomain = routeRange && routeRange.end > routeRange.start
+    ? [routeRange.start, routeRange.end] : dynamicViewport?.progressDomain ?? [0, 1];
+  const elevationDomain = routeRange && Number.isFinite(routeMin) && routeMax > routeMin
+    ? [routeMin, routeMax] : dynamicViewport?.elevationDomain ?? [minElevation, maxElevation];
   const viewBoxX = progressDomain[0] * svgWidth;
   const viewBoxWidth = Math.max(1, (progressDomain[1] - progressDomain[0]) * svgWidth);
-  const focusAmount = dynamicViewport?.focusAmount ?? 0;
+  const focusAmount = dynamicViewport?.focusAmount ?? (routeRange ? 1 : 0);
   const focusedViewBoxTop = elevationToY(elevationDomain[1]);
   const focusedViewBoxBottom = elevationToY(elevationDomain[0]);
-  const viewBoxTop = dynamicViewport
+  const viewBoxTop = dynamicViewport || (routeRange && Number.isFinite(routeMin) && routeMax > routeMin)
     ? focusedViewBoxTop - padding * (1 - focusAmount)
     : 0;
-  const viewBoxBottom = dynamicViewport
+  const viewBoxBottom = dynamicViewport || (routeRange && Number.isFinite(routeMin) && routeMax > routeMin)
     ? focusedViewBoxBottom + padding * (1 - focusAmount)
     : svgHeight;
   const viewBoxHeight = Math.max(1, viewBoxBottom - viewBoxTop);
   const markerPosition = Math.min(1, Math.max(0, (markerX - viewBoxX) / viewBoxWidth));
   const focusedSection = dynamicViewport?.activeSection ?? null;
-  const upcomingFocusSection = settings.dynamicElevationProfile
+  const upcomingFocusSection = dynamicSections
     && dynamicViewport?.mode === 'overview'
     ? focusSections.find((section) => section.startProgress >= playback.progress - 0.000001) ?? null
     : null;
@@ -275,7 +310,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             height: viewBoxHeight,
             bottom: viewBoxBottom,
           }}
-          markerX={markerX}
+          markerX={routeRange ? Math.max(viewBoxX, Math.min(viewBoxX + viewBoxWidth, markerX)) : markerX}
           currentColor={currentColor}
           progress={playback.progress}
           focusAmount={focusAmount}
@@ -283,7 +318,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           sectionHighlights={sectionHighlights}
           segmentTimings={segmentTimings}
           routeTimingMode={routeTimingMode}
-          dynamic={settings.dynamicElevationProfile}
+          dynamic={dynamicSections || settings.elevationProfilePerRoute}
           tall={isNonWideExportPreview}
         />
         {isEditingSections && (
@@ -307,7 +342,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           tall={isNonWideExportPreview}
         />
         {/* Segment labels (small indicators at top) */}
-        {!settings.dynamicElevationProfile && segmentTimings.length > 1 && (
+        {!dynamicSections && !settings.elevationProfilePerRoute && segmentTimings.length > 1 && (
           <div className="absolute top-0 left-0 right-0 flex">
             {segmentTimings.map((timing, i) => {
               const { start, end } = segmentProgressRange(timing);

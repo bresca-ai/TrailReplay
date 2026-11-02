@@ -4,6 +4,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppState } from '@/store/storeTypes';
 import { WorkflowGuide } from './WorkflowGuide';
+import { PanelErrorBoundary } from './PanelErrorBoundary';
 
 const TracksPanel = lazy(() => import('./TracksPanel').then((module) => ({ default: module.TracksPanel })));
 const JourneyPanel = lazy(() => import('./JourneyPanel').then((module) => ({ default: module.JourneyPanel })));
@@ -38,13 +39,16 @@ const panelRegistry: Record<
 };
 
 export function SidebarPanelContent() {
+  const { t } = useI18n();
   const activePanel = useAppStore((state) => state.activePanel);
   const renderPanel = panelRegistry[activePanel];
 
   return (
     <>
       <WorkflowGuide />
-      <Suspense fallback={<PanelFallback />}>{renderPanel()}</Suspense>
+      <PanelErrorBoundary key={activePanel} title={t('sidebar.panelLoadError')} message={t('sidebar.panelLoadErrorHelp')} reloadLabel={t('sidebar.reloadPage')}>
+        <Suspense fallback={<PanelFallback />}>{renderPanel()}</Suspense>
+      </PanelErrorBoundary>
     </>
   );
 }

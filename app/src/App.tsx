@@ -1,3 +1,4 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { ExportAwareSidebar } from '@/components/sidebar/ExportAwareSidebar';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
@@ -131,6 +132,7 @@ function App() {
   const exportVideoHoldTimeSeconds = useAppStore((state) => state.exportVideoHoldTimeSeconds);
   const pendingPicturePlacements = useAppStore((state) => state.pendingPicturePlacements);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
+  const journeySegments = useAppStore((state) => state.journeySegments);
   const playback = useAppStore((state) => state.playback);
   const settings = useAppStore((state) => state.settings);
   const { visibleStats: availableStats } = useAvailableStats();
@@ -539,11 +541,11 @@ function App() {
   const { activePicture, activeVideo, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
 
   const activeTextAnnotationId = useMemo(() => getActivePlaybackAnnotationId({
-    annotations: textAnnotations,
+    annotations: resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode),
     currentTime: playback.currentTime,
     totalDuration: playback.totalDuration,
     phase: animationPhase,
-  }), [animationPhase, playback.currentTime, playback.totalDuration, textAnnotations]);
+  }), [animationPhase, playback.currentTime, playback.totalDuration, playback.routeTimingMode, textAnnotations, journeySegments, tracks]);
   const activeSideAnnotation = textAnnotations.find((annotation) =>
     annotation.id === activeTextAnnotationId && annotation.presentation === 'side-panel');
   const localizedSideAnnotation = activeSideAnnotation ? localizedAnnotation(activeSideAnnotation, language) : null;

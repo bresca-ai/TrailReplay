@@ -229,6 +229,7 @@ export function projectCoordinateToJourney(
   let bestMatch: RouteMatch | null = null;
 
   for (const segmentTiming of segmentTimings) {
+    if (segmentTiming.transportMode === 'camera') continue;
     if (segmentTiming.endCoordIndex <= segmentTiming.startCoordIndex) {
       const point = coordinates[segmentTiming.startCoordIndex];
       if (!point) {

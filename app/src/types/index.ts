@@ -39,7 +39,7 @@ export interface GPXTrack {
   visible: boolean;
 }
 
-export type TransportMode = 'car' | 'bus' | 'train' | 'plane' | 'bike' | 'walk' | 'ferry';
+export type TransportMode = 'car' | 'bus' | 'train' | 'plane' | 'bike' | 'walk' | 'ferry' | 'camera';
 
 export interface TransportSegment {
   id: string;
@@ -49,6 +49,12 @@ export interface TransportSegment {
   to: { lat: number; lon: number; name?: string };
   duration: number;
   distance: number;
+  /** Map zoom and tilt used while moving between routes. */
+  cameraTransitionZoom?: number;
+  cameraTransitionPitch?: number;
+  /** Legacy settings from earlier drafts, retained when reopening projects. */
+  cameraZoomOut?: number;
+  cameraZoomIn?: number;
 }
 
 export interface TrackSegment {
@@ -167,6 +173,8 @@ export interface IconChange {
 
 export interface TextAnnotation {
   id: string;
+  /** Show the same moment once on each nearby route in the journey. */
+  showOnMatchingRoutes?: boolean;
   progress: number;
   /** Stable distance from the journey start, used when timing mode changes. */
   routeDistance?: number;
@@ -457,6 +465,7 @@ export interface AppSettings {
   showElevationProfile: boolean;
   /** Automatically focus the elevation chart on significant climbs and descents. */
   dynamicElevationProfile: boolean;
+  elevationProfilePerRoute: boolean;
   /** Route-specific boundary adjustments for automatically detected elevation sections. */
   elevationSectionOverrides: ElevationSectionOverride[];
   /** User-authored zoom sections added from the paused elevation editor. */

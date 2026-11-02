@@ -1,3 +1,4 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -188,7 +189,7 @@ export function drawExportFrame({
     // explicitly for video frames, including the slowed section of the route.
     const currentState = useAppStore.getState();
     const activeId = getActivePlaybackAnnotationId({
-      annotations: currentState.textAnnotations,
+      annotations: resolveSharedRouteMoments(currentState.textAnnotations, currentState.journeySegments, currentState.tracks, currentState.playback.routeTimingMode),
       currentTime: currentState.playback.currentTime,
       totalDuration: currentState.playback.totalDuration,
       phase: currentState.animationPhase,

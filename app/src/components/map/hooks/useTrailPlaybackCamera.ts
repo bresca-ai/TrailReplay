@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
@@ -73,6 +74,11 @@ interface UseTrailPlaybackCameraParams {
       startCoordIndex: number;
       endCoordIndex: number;
       transportMode?: string;
+      progressStartRatio?: number;
+      progressEndRatio?: number;
+      cameraZoomOut?: number;
+      cameraTransitionZoom?: number;
+      cameraTransitionPitch?: number;
     };
     localProgress?: number;
   } | null;
@@ -92,6 +98,7 @@ interface UseTrailPlaybackCameraParams {
     startCoordIndex: number;
     endCoordIndex: number;
     color?: string;
+    transportMode?: string;
   }>;
   setCameraPosition: (position: {
     lat: number;
@@ -235,6 +242,7 @@ export function useTrailPlaybackCamera({
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
   const trailRevisionRef = useRef(0);
+  const transitionStartRef = useRef<{ segmentIndex: number | undefined; pose: TransitionCameraPose } | null>(null);
 
   // The height filter samples this planned anchor path, not raw switchbacks.
   // Prepare it only when authoring inputs change, never on the playback clock.
@@ -291,7 +299,8 @@ export function useTrailPlaybackCamera({
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded || !currentPosition) return;
 
-    const shouldShowPlaybackAdornment = shouldRenderPlaybackAdornment({
+    const isCameraTransition = currentSegment?.segment.transportMode === 'camera';
+    const shouldShowPlaybackAdornment = !isCameraTransition && shouldRenderPlaybackAdornment({
       activeTextAnnotationId,
       animationPhase,
       playbackProgress,
@@ -393,6 +402,7 @@ export function useTrailPlaybackCamera({
           : computedJourney?.coordinates ?? [];
 
         for (let index = 0; index < completedCoordinates.length - 1; index++) {
+          if (segmentTimings.length && !segmentTimings.some((segment) => segment.transportMode !== 'camera' && index >= segment.startCoordIndex && index + 1 <= segment.endCoordIndex)) continue;
           const heartRate = heartRatePoints[index]?.heartRate;
           features.push({
             type: 'Feature',
@@ -424,9 +434,10 @@ export function useTrailPlaybackCamera({
         const zoneFeatures = buildColorZoneLineFeatures({
           coordinates: allCoordinates,
           colorZones: trailStyle.colorZones,
+          segmentTimings,
           fallbackColor: trailStyle.trailColor,
           maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
+          partialEndpoint: !isCameraTransition && currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
         });
 
         paintCompletedTrail({
@@ -440,12 +451,12 @@ export function useTrailPlaybackCamera({
           segmentTimings,
           fallbackColor: trailStyle.trailColor,
           maxCoordIndex: completedBaseIndex,
-          partialEndpoint: currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
+          partialEndpoint: !isCameraTransition && currentPosition ? [currentPosition.lon, currentPosition.lat] : null,
           partialSegmentIndex: currentSegment?.segment.segmentIndex ?? null,
         });
 
         paintCompletedTrail(
-          coloredFeatures.length > 0
+          coloredFeatures.length > 0 || segmentTimings.length > 0
             ? {
                 type: 'FeatureCollection',
                 features: coloredFeatures,
@@ -459,7 +470,43 @@ export function useTrailPlaybackCamera({
       }
     }
 
-    if (animationPhase === 'playing' && cameraMode !== 'overview') {
+    if (isCameraTransition && currentSegment && (animationPhase === 'playing' || animationPhase === 'idle')) {
+      const segment = currentSegment.segment;
+      const to = allCoordinates[segment.endCoordIndex] as [number, number] | undefined;
+      if (to) {
+        if (!transitionStartRef.current || transitionStartRef.current.segmentIndex !== segment.segmentIndex) {
+          const center = mapRef.current.getCenter();
+          transitionStartRef.current = {
+            segmentIndex: segment.segmentIndex,
+            pose: { center: [center.lng, center.lat], zoom: mapRef.current.getZoom(), pitch: mapRef.current.getPitch(), bearing: mapRef.current.getBearing() },
+          };
+        }
+        const start = transitionStartRef.current.pose;
+        const endProgress = segment.progressEndRatio ?? 1;
+        const followMode = cameraMode === 'overview' ? 'follow' : cameraMode === 'cinematic' ? 'follow-behind' : cameraMode;
+        const fallback = getPlaybackCameraPose({ cameraMode: followMode, coordinates: cameraCoordinates, elevationData, followBehindZoomLevel, progress: endProgress });
+        const anchorWindow = cinematicAnchorSmoothingHalfWindow(cameraStability, totalDurationMs / 1000);
+        const heading = cameraMode === 'cinematic' ? getSmoothedRouteHeadingDeg({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, baselineHalfWidth: cinematicHeadingBaselineHalfWidth(anchorWindow) }) ?? getRouteBearingAtProgress(cameraCoordinates, endProgress) : 0;
+        const cinematic = cameraMode === 'cinematic' ? getCinematicCameraPose({ keyframes: cinematicKeyframes ?? [], coordinates: cameraCoordinates, progress: endProgress, routeHeadingDeg: heading }) : null;
+        const target = cinematic ?? (fallback && cameraMode === 'cinematic' ? { ...fallback, bearing: heading } : fallback);
+        const endZoom = target?.zoom ?? start.zoom;
+        const endCenter = cameraMode === 'cinematic' && target
+          ? getSmoothedCameraAnchor({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, markerPosition: to, zoom: target.zoom })
+          : to;
+        const endPose: TransitionCameraPose = { center: endCenter, zoom: endZoom, pitch: target?.pitch ?? start.pitch, bearing: target?.bearing ?? start.bearing };
+        const { zoom, pitch } = transitionSettings(segment);
+        const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(mapRef.current.getMaxZoom(), zoom));
+        const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, wideZoom, pitch);
+        mapRef.current.jumpTo(pose);
+        smoothedCenterRef.current = pose.center;
+        smoothBearingRef.current = pose.bearing;
+        targetBearingRef.current = pose.bearing;
+        lastCameraFrameTimeRef.current = currentTimeMs;
+        smoothedZoomTargetRef.current = pose.zoom;
+        smoothedElevationRef.current = null;
+      }
+    } else if (animationPhase === 'playing' && cameraMode !== 'overview') {
+      transitionStartRef.current = null;
       // The one dial cinematic mode has, in fractions of the whole replay.
       const anchorSmoothingHalfWindow = cinematicAnchorSmoothingHalfWindow(
         cameraStability,
@@ -716,6 +763,7 @@ export function useTrailPlaybackCamera({
         bearing: usesRawPose ? targetPose.bearing : smoothBearingRef.current,
       });
     } else {
+      if (!isCameraTransition) transitionStartRef.current = null;
       // Playback is paused/idle or a new export is starting: don't let a gap
       // since the last frame (e.g. time spent paused) be read as an elapsed
       // delta once playback resumes.

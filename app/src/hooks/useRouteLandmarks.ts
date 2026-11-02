@@ -225,6 +225,6 @@ export function useRouteLandmarks(): RouteLandmark[] {
   // Every landmark stays on the map for the whole replay. Landmarks used to be
   // ranked by importance and culled to the ones near the marker, which made
   // pins appear and vanish as the replay moved; the set is now exactly what the
-  // sidebar list shows.
+  // sidebar enables after resolving the saved landmark priorities.
   return allLandmarks;
 }

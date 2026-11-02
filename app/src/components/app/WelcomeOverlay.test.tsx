@@ -11,3 +11,11 @@ it('opens the tutorial and GPX guide in the selected language', () => {
   expect(screen.getByRole('link', { name: /tutorial/i })).toHaveAttribute('href', '/es/tutorial');
   expect(screen.getByRole('link', { name: /animador.*gpx/i })).toHaveAttribute('href', '/es/gpx-animation');
 });
+
+it('offers saved replay projects on the welcome screen', () => {
+  useAppStore.getState().setSettings({ language: 'en' });
+  const open = vi.fn();
+  render(<WelcomeOverlay onExplore={vi.fn()} onOpenFilePicker={open} />);
+  expect(screen.getByText(/open a saved \.replay project/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /upload routes or \.replay/i })).toBeInTheDocument();
+});

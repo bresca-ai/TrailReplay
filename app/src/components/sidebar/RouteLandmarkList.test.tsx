@@ -7,6 +7,7 @@ import type { RouteLandmark } from '@/types/landmarks';
 const landmark: RouteLandmark = { id: 'place', type: 'summit', source: 'enriched', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: 'Puig Alt', importance: 3 };
 beforeEach(() => {
   useAppStore.getState().reset();
+  useAppStore.getState().restoreHiddenLandmarks();
   useAppStore.getState().setSettings({ language: 'en' });
   useAppStore.getState().setEnrichedLandmarks([landmark]);
   useAppStore.getState().selectLandmark(landmark.id);
@@ -27,4 +28,14 @@ it('searches the route moment icon library, adopts a derived landmark and displa
   fireEvent.change(input, { target: { value: '' } });
   fireEvent.change(input, { target: { value: '🏕️' } });
   expect(useAppStore.getState().userLandmarks[0].icon).toBe('emoji:🏕️');
+});
+
+
+it('shows overlapping candidates and moves a preferred landmark to the top', () => {
+  useAppStore.getState().setEnrichedLandmarks([landmark, { ...landmark, id: 'other', title: 'Water', progress: 0.7, lat: 42.00001 }]);
+  render(<RouteLandmarkList />);
+  fireEvent.click(screen.getByRole('button', { name: 'Move Water up' }));
+  expect(useAppStore.getState().landmarkPriorityIds).toEqual(['other', 'place']);
+  expect(Array.from(screen.getAllByRole('listitem')).map((item) => item.textContent)).toEqual(['Water', 'Puig Alt']);
+  expect(screen.getByRole('button', { name: 'Move Water up' })).toBeDisabled();
 });

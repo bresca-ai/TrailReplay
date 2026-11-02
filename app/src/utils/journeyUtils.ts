@@ -59,6 +59,9 @@ export interface SegmentTiming {
   distanceEndRatio: number; // 0-1
   trackId?: string;
   transportMode?: string;
+  cameraZoomOut?: number;
+  cameraTransitionZoom?: number;
+  cameraTransitionPitch?: number;
   color?: string;
 }
 
@@ -215,6 +218,7 @@ export function buildComputedJourney(
       return sum + (track?.totalDistance || 0);
     }
 
+    if (segment.mode === 'camera') return sum;
     return sum + calculateDistance(
       segment.from.lat,
       segment.from.lon,
@@ -261,7 +265,7 @@ export function buildComputedJourney(
         50 // Number of interpolated points
       );
 
-      const transportDistance = calculateDistance(
+      const transportDistance = transportSeg.mode === 'camera' ? 0 : calculateDistance(
         transportSeg.from.lat,
         transportSeg.from.lon,
         transportSeg.to.lat,
@@ -288,8 +292,8 @@ export function buildComputedJourney(
           cadence: null,
           power: null,
           temperature: null,
-          distance: accDistance,
-          speed: TRANSPORT_SPEEDS[transportSeg.mode] || 30,
+          distance: transportSeg.mode === 'camera' ? 0 : accDistance,
+          speed: transportSeg.mode === 'camera' ? 0 : TRANSPORT_SPEEDS[transportSeg.mode] || 30,
           segmentIndex,
           segmentType: 'transport',
           transportMode: transportSeg.mode,
@@ -340,6 +344,9 @@ export function buildComputedJourney(
       distanceEndRatio,
       trackId: segment.type === 'track' ? (segment as TrackSegment).trackId : undefined,
       transportMode: segment.type === 'transport' ? (segment as TransportSegment).mode : undefined,
+      cameraZoomOut: segment.type === 'transport' ? segment.cameraZoomOut : undefined,
+      cameraTransitionZoom: segment.type === 'transport' ? segment.cameraTransitionZoom : undefined,
+      cameraTransitionPitch: segment.type === 'transport' ? segment.cameraTransitionPitch : undefined,
       color,
     });
   });
@@ -374,6 +381,11 @@ export function progressForRouteDistance(
   routeTimingMode: RouteTimingMode = 'recorded'
 ): number | null {
   if (segmentTimings.length === 0 || !Number.isFinite(routeDistance)) return null;
+  if (routeTimingMode === 'uniform' && segmentTimings.some((segment) => segment.transportMode === 'camera')) {
+    const totalDuration = segmentTimings.at(-1)?.endTime ?? 0;
+    const adjusted = uniformJourneyWithCameraTransitions({ coordinates, segmentTimings, totalDuration, totalDistance: segmentTimings.at(-1)?.endDistance ?? 0, trackDuration: 0, transportDuration: 0 });
+    return progressForRouteDistance(adjusted.coordinates, adjusted.segmentTimings, routeDistance, 'recorded');
+  }
 
   const timing = segmentTimings.find(
     (candidate) => routeDistance >= candidate.startDistance && routeDistance <= candidate.endDistance
@@ -534,7 +546,8 @@ export function buildJourneyDistanceProfile(coordinates: JourneyPoint[]): Journe
       current.segmentType === 'track' &&
       previous.trackId === current.trackId;
 
-    const delta = isSameTrackSegment && current.distance >= previous.distance
+    const isCameraGap = previous.transportMode === 'camera' || current.transportMode === 'camera';
+    const delta = isCameraGap ? 0 : isSameTrackSegment && current.distance >= previous.distance
       ? current.distance - previous.distance
       : calculateDistance(previous.lat, previous.lon, current.lat, current.lon) * 1000;
 
@@ -954,4 +967,31 @@ export function getJourneyElevationData(
   });
 
   return data;
+}
+
+/** Allocate explicit time to camera transitions while keeping route motion distance-based. */
+export function uniformJourneyWithCameraTransitions(journey: ComputedJourney): ComputedJourney {
+  if (!journey.segmentTimings.some((segment) => segment.transportMode === 'camera')) return journey;
+  const totalTime = journey.totalDuration || 1;
+  const cameraTime = journey.segmentTimings.reduce((sum, segment) => sum + (segment.transportMode === 'camera' ? segment.duration : 0), 0);
+  const remaining = Math.max(0, totalTime - cameraTime);
+  const totalDistance = journey.segmentTimings.reduce((sum, segment) => sum + Math.max(0, segment.endDistance - segment.startDistance), 0);
+  let elapsed = 0;
+  const coordinates = journey.coordinates.map((point) => ({ ...point }));
+  const segmentTimings = journey.segmentTimings.map((segment) => {
+    const span = segment.endDistance - segment.startDistance;
+    const duration = segment.transportMode === 'camera' ? segment.duration : totalDistance > 0 ? remaining * span / totalDistance : 0;
+    const startTime = elapsed;
+    elapsed += duration;
+    for (let i = segment.startCoordIndex; i <= segment.endCoordIndex; i++) {
+      const point = coordinates[i];
+      if (!point || segment.transportMode === 'camera') continue;
+      const first = coordinates[segment.startCoordIndex];
+      const last = coordinates[segment.endCoordIndex];
+      const distanceSpan = last.distance - first.distance;
+      point.recordedProgress = distanceSpan > 0 ? (point.distance - first.distance) / distanceSpan : 0;
+    }
+    return { ...segment, duration, startTime, endTime: elapsed, progressStartRatio: startTime / totalTime, progressEndRatio: elapsed / totalTime };
+  });
+  return { ...journey, coordinates, segmentTimings };
 }

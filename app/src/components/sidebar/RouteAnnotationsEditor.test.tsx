@@ -46,3 +46,16 @@ it('uses the manually entered distance instead of the playhead and can return to
   fireEvent.click(screen.getByRole('button', { name: 'Use playhead' }));
   expect(screen.getByRole('textbox', { name: 'Position on route' })).toHaveValue('0.20');
 });
+
+it('saves and edits the matching-routes option on a single moment', () => {
+  render(<RouteAnnotationsEditor />);
+  fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Water' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: /Show on matching routes/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  expect(useAppStore.getState().textAnnotations).toHaveLength(1);
+  expect(useAppStore.getState().textAnnotations[0].showOnMatchingRoutes).toBe(true);
+  fireEvent.click(screen.getByText('Water').closest('summary')!);
+  const editor = screen.getByText('Water').closest('details')!;
+  fireEvent.click(editor.querySelector('input[type=checkbox]')!);
+  expect(useAppStore.getState().textAnnotations[0].showOnMatchingRoutes).toBe(false);
+});
