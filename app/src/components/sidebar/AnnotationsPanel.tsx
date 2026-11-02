@@ -610,11 +610,11 @@ export function AnnotationsPanel() {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
-          <Label className="text-xs text-[var(--evergreen)]">
+        <div className="space-y-1.5">
+          <Label className="block text-xs text-[var(--evergreen)]">
             {t('annotations.statsBackground')}
           </Label>
-          <div className="flex rounded-lg border border-[var(--evergreen)]/20 overflow-hidden">
+          <div className="flex overflow-hidden rounded-lg border border-[var(--evergreen)]/20">
             {(['panel', 'transparent'] as const).map((mode) => (
               <button
                 key={mode}
