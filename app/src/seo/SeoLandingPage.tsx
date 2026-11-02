@@ -6,6 +6,7 @@ import { RouteImportWalkthrough } from '@/help/RouteImportWalkthrough';
 import { trackEvent } from '@/utils/analytics';
 import { SEO_LANDING_PAGES, type SeoLandingPageConfig } from './seoPages';
 import { SEO_LANDING_PAGES_DE } from './seoPages.de';
+import { existingSeoLanguage } from './seoLocale';
 
 const seoUi = {
   en: {
@@ -119,7 +120,7 @@ function HeroMedia({ page, ui }: { page: SeoLandingPageConfig; ui: typeof seoUi.
 
 export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
   const { language, setLanguage } = useI18n();
-  const isGerman = language === 'de';
+  const isGerman = existingSeoLanguage(language) === 'de';
   const ui = seoUi[isGerman ? 'de' : 'en'];
   const localizedPage = (isGerman ? SEO_LANDING_PAGES_DE : SEO_LANDING_PAGES)[page.slug];
   const relatedPages = Object.values(isGerman ? SEO_LANDING_PAGES_DE : SEO_LANDING_PAGES)
