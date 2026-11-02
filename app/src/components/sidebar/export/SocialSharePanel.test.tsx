@@ -77,6 +77,21 @@ describe('cover title and places controls', () => {
     expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('');
   });
 
+  it('undoes cover edits with the button and keyboard shortcut', () => {
+    render(<TestPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Map' }));
+    const undo = screen.getByRole('button', { name: 'Undo' });
+    expect(undo).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Show places' }));
+    expect(useAppStore.getState().socialShareSettings.showMapPlaces).toBe(true);
+    fireEvent.click(undo);
+    expect(useAppStore.getState().socialShareSettings.showMapPlaces).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Show places' }));
+    fireEvent.keyDown(window, { key: 'z', metaKey: true });
+    expect(useAppStore.getState().socialShareSettings.showMapPlaces).toBe(false);
+    expect(undo).toBeDisabled();
+  });
+
   it('defaults cover places off and exposes one action to show or hide them', () => {
     render(<TestPanel />);
     fireEvent.click(screen.getByRole('button', { name: 'Map' }));

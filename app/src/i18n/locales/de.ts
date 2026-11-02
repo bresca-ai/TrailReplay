@@ -843,6 +843,8 @@ export const de = {
     pasteCoordinates: 'Oder Koordinaten hier einfügen',
   },
   imageExport: {
+    undo: 'Rückgängig',
+    showSplitMap: 'Karte anzeigen',
     showMapPlaces: 'Orte anzeigen', hideMapPlaces: 'Orte ausblenden',
     editorSections: 'Bereiche des Cover-Editors', designSection: 'Design', mapSection: 'Karte', logoSection: 'Logo',
     modeVideo: 'Video',
