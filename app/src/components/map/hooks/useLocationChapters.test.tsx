@@ -53,3 +53,24 @@ it('waits briefly before switching chapters at a border', async () => {
   rerender({ time: 1600, lon: 1.5 }); expect(source.setData).toHaveBeenCalledWith(second);
   rerender({ time: 2200, lon: 1.5 }); expect(result.current.label).toBe('two');
 });
+it('installs and displays the chapter when tiles keep the style loading', async () => {
+  const feature = { type: 'Feature' as const, properties: { id: 'es', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
+  vi.mocked(loadRouteBoundaries).mockResolvedValue([feature]);
+  const listeners = new Map<string, () => void>(), layers = new Map<string, unknown>();
+  const source = { setData: vi.fn() }; let sourceExists = false, styleReady = false;
+  const map = { isStyleLoaded: () => false, getSource: () => sourceExists ? source : undefined,
+    addSource: () => { if (!styleReady) throw new Error('Style not ready'); sourceExists = true; }, removeSource: () => { sourceExists = false; },
+    getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), removeLayer: (id: string) => layers.delete(id),
+    on: (event: string, handler: () => void) => listeners.set(event, handler), off: (event: string) => listeners.delete(event),
+    setPaintProperty: vi.fn(), cameraForBounds: () => undefined } as unknown as MapLibreMap;
+  const settings = { level: 'country' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: true, zoomToPlace: false, durationSeconds: 4 };
+  const coords = [[.5, .5]], point = { lon: .5, lat: .5 }, ref = { current: map };
+  const { rerender } = renderHook(({ time }) => useLocationChapters(ref, true, settings, coords, point, time, 'playing'), { initialProps: { time: 0 } });
+  await waitFor(() => expect(loadRouteBoundaries).toHaveBeenCalled());
+  styleReady = true;
+  const { act } = await import('@testing-library/react');
+  act(() => listeners.get('sourcedata')?.());
+  await waitFor(() => expect(source.setData).toHaveBeenCalledWith(feature));
+  rerender({ time: 1000 });
+  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-line', 'line-opacity', 1);
+});

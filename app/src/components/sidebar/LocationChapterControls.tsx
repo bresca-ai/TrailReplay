@@ -18,6 +18,7 @@ export function LocationChapterControls() {
       </select>
     </label>
     {settings.level !== 'off' && <div className="space-y-2 text-sm">
+      <p className="text-xs text-[var(--evergreen-60)]">{t('locationChapters.playHint')}</p>
       <label className="flex items-center justify-between">{t('locationChapters.color')}<input aria-label={t('locationChapters.color')} type="color" value={settings.color} onChange={e => update({ color: e.target.value })} /></label>
       <label className="flex items-center justify-between">{t('locationChapters.width')}<input aria-label={t('locationChapters.width')} type="range" min="1" max="8" step="1" value={settings.width} onChange={e => update({ width: Number(e.target.value) })} /></label>
       {([['fill', 'fill'], ['showName', 'showName'], ['showFlag', 'showFlag'], ['zoomToPlace', 'zoom']] as const).map(([key, label]) => <label key={key} className="flex items-center gap-2"><input type="checkbox" checked={settings[key]} onChange={e => update({ [key]: e.target.checked })} />{t(`locationChapters.${label}`)}</label>)}

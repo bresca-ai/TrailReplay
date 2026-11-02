@@ -10,6 +10,7 @@ const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
 export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loaded: boolean, settings: LocationChapterSettings | undefined,
   coordinates: number[][], current: { lon: number; lat: number } | null, time: number, phase: string, cameraCanFollow = true) {
   const [features, setFeatures] = useState<LocationFeature[]>([]), [error, setError] = useState(false), [label, setLabel] = useState(''), [credit, setCredit] = useState(''), [loading, setLoading] = useState(false);
+  const [layerRevision, setLayerRevision] = useState(0);
   const previous = useRef<{ id: string; start: number; feature: LocationFeature; target?: { lng: number; lat: number; zoom: number } } | null>(null);
   const candidate = useRef<{ id: string; since: number } | null>(null);
   const mode = settings?.level ?? 'off';
@@ -27,14 +28,23 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || mode === 'off') return;
+    let installing = false;
     const ensure = () => {
-      if (!map.isStyleLoaded()) return;
-      if (!map.getSource(SOURCE)) { previous.current = null; map.addSource(SOURCE, { type: 'geojson', data: empty }); }
-      if (!map.getLayer(FILL)) map.addLayer({ id: FILL, type: 'fill', source: SOURCE, paint: { 'fill-color': '#ffbd66', 'fill-opacity': 0 } });
-      if (!map.getLayer(LINE)) map.addLayer({ id: LINE, type: 'line', source: SOURCE, paint: { 'line-color': '#ffbd66', 'line-width': 3, 'line-opacity': 0 } });
+      if (installing || (map.getSource(SOURCE) && map.getLayer(FILL) && map.getLayer(LINE))) return;
+      installing = true;
+      try {
+        // isStyleLoaded() includes pending tile requests; a loaded style can
+        // accept layers while those requests are still in flight.
+        if (!map.getSource(SOURCE)) { previous.current = null; map.addSource(SOURCE, { type: 'geojson', data: empty }); }
+        if (!map.getLayer(FILL)) map.addLayer({ id: FILL, type: 'fill', source: SOURCE, paint: { 'fill-color': '#ffbd66', 'fill-opacity': 0 } });
+        if (!map.getLayer(LINE)) map.addLayer({ id: LINE, type: 'line', source: SOURCE, paint: { 'line-color': '#ffbd66', 'line-width': 3, 'line-opacity': 0 } });
+        setLayerRevision(revision => revision + 1);
+      } catch {
+        // A style replacement may not be ready yet. Retry on the next event.
+      } finally { installing = false; }
     };
-    ensure(); map.on('styledata', ensure);
-    return () => { map.off('styledata', ensure); if (map.getLayer(LINE)) map.removeLayer(LINE); if (map.getLayer(FILL)) map.removeLayer(FILL); if (map.getSource(SOURCE)) map.removeSource(SOURCE); };
+    map.on('styledata', ensure); map.on('sourcedata', ensure); map.on('idle', ensure); ensure();
+    return () => { map.off('styledata', ensure); map.off('sourcedata', ensure); map.off('idle', ensure); if (map.getLayer(LINE)) map.removeLayer(LINE); if (map.getLayer(FILL)) map.removeLayer(FILL); if (map.getSource(SOURCE)) map.removeSource(SOURCE); };
   }, [loaded, mapRef, mode]);
   useEffect(() => {
     const map = mapRef.current;
@@ -89,6 +99,6 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     setCredit(opacity > 0 ? active.properties.credit : '');
     const flag = settings?.showFlag ? countryEmoji(active.properties.iso2) : '';
     setLabel(opacity > 0 && (settings?.showName || flag) ? `${flag} ${settings?.showName ? active.properties.name : ''}`.trim() : '');
-  }, [cameraCanFollow, current, features, loaded, mapRef, mode, phase, settings, time]);
+  }, [cameraCanFollow, current, features, layerRevision, loaded, mapRef, mode, phase, settings, time]);
   return { label, error, credit, loading };
 }
