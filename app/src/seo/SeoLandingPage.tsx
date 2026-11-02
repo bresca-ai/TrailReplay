@@ -6,42 +6,10 @@ import { RouteImportWalkthrough } from '@/help/RouteImportWalkthrough';
 import { trackEvent } from '@/utils/analytics';
 import { SEO_LANDING_PAGES, type SeoLandingPageConfig } from './seoPages';
 import { SEO_LANDING_PAGES_DE } from './seoPages.de';
-import { existingSeoLanguage, seoLocalizedPath } from './seoLocale';
-
-const seoUi = {
-  en: {
-    animatedExport: 'TrailReplay animated GPX route export with live statistics',
-    realExport: 'Real TrailReplay export',
-    runnerImage: 'Trail runner on an alpine ridgeline',
-    cyclistImage: 'Cyclist riding a mountain switchback',
-    runnerCaption: 'Routes with real elevation and effort',
-    cyclistCaption: 'Make the geography part of the ride story',
-    home: 'TrailReplay home', howItWorks: 'How it works', getGpx: 'Get a GPX', openSource: 'Open source', openApp: 'Open app',
-    animateGpx: 'Animate your GPX', seeSteps: 'See the steps', tryRoute: 'Try it with your route', gpxGuide: 'GPX guide',
-    tutorial: 'Tutorial', questions: 'Common questions', finalTitle: 'Your route already has a story.', finalDescription: 'Turn it into a replay you can share.',
-    uploadGpx: 'Upload a GPX', explore: 'Explore more route-video guides', footer: 'Free and open-source GPX storytelling', privacy: 'Privacy', language: 'Language',
-    importRoute: 'Import a route',
-    cameraVideoLabel: 'Cinematic camera tutorial video', cameraVideoCaption: 'Watch how to frame and save camera shots',
-    sampleTitle: 'Try a real route', sampleDescription: 'No GPX file handy? Download a sample running or cycling route from the tutorial, then import it into TrailReplay to explore the map and make a replay.',
-    sampleLink: 'Find sample GPX files',
-  },
-  de: {
-    animatedExport: 'Animierter TrailReplay-GPX-Export mit Live-Statistiken',
-    realExport: 'Echter TrailReplay-Export',
-    runnerImage: 'Trailrunner auf einem alpinen Grat',
-    cyclistImage: 'Radfahrer auf einer Bergserpentine',
-    runnerCaption: 'Strecken mit echten Höhenmetern und echter Anstrengung',
-    cyclistCaption: 'Machen Sie die Geografie zum Teil der Tourgeschichte',
-    home: 'TrailReplay-Startseite', howItWorks: 'So funktioniert es', getGpx: 'GPX-Datei besorgen', openSource: 'Open Source', openApp: 'App öffnen',
-    animateGpx: 'GPX-Datei animieren', seeSteps: 'Schritte ansehen', tryRoute: 'Mit Ihrer Strecke ausprobieren', gpxGuide: 'GPX-Anleitung',
-    tutorial: 'Tutorial', questions: 'Häufige Fragen', finalTitle: 'Ihre Strecke hat bereits eine Geschichte.', finalDescription: 'Machen Sie daraus eine Wiedergabe zum Teilen.',
-    uploadGpx: 'GPX-Datei hochladen', explore: 'Weitere Anleitungen zu Streckenvideos', footer: 'Kostenloses Open-Source-Storytelling mit GPX', privacy: 'Datenschutz', language: 'Sprache',
-    importRoute: 'Route importieren',
-    cameraVideoLabel: 'Videoanleitung zur filmischen Kamera', cameraVideoCaption: 'Sehen Sie, wie Kameraeinstellungen gerahmt und gespeichert werden',
-    sampleTitle: 'Eine echte Strecke ausprobieren', sampleDescription: 'Keine GPX-Datei zur Hand? Laden Sie eine Lauf- oder Radstrecke aus dem Tutorial herunter und importieren Sie sie in TrailReplay, um die Karte zu erkunden und eine Wiedergabe zu erstellen.',
-    sampleLink: 'GPX-Beispieldateien ansehen',
-  },
-} as const;
+import { seoLocalizedPath } from './seoLocale';
+import { landingLanguage, landingLanguages, translateSeoCopy } from './seoTranslations';
+import { languageLabels, type LanguageCode } from '@/i18n/translations';
+import { seoUi } from './seoUi';
 
 function trackSeoCta(page: SeoLandingPageConfig, location: string) {
   trackEvent('seo_cta_clicked', {
@@ -51,7 +19,7 @@ function trackSeoCta(page: SeoLandingPageConfig, location: string) {
   });
 }
 
-function HeroMedia({ page, ui }: { page: SeoLandingPageConfig; ui: typeof seoUi.en | typeof seoUi.de }) {
+function HeroMedia({ page, ui }: { page: SeoLandingPageConfig; ui: { [K in keyof typeof seoUi.en]: string } }) {
   if (page.slug === 'cinematic-camera') {
     return (
       <figure className="overflow-hidden rounded-2xl border-2 border-white/18 bg-[#101713] shadow-[10px_10px_0_rgba(193,101,47,0.28)]">
@@ -120,15 +88,17 @@ function HeroMedia({ page, ui }: { page: SeoLandingPageConfig; ui: typeof seoUi.
 
 export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
   const { language, setLanguage } = useI18n();
-  const isGerman = existingSeoLanguage(language) === 'de';
-  const ui = seoUi[isGerman ? 'de' : 'en'];
-  const localizedPage = (isGerman ? SEO_LANDING_PAGES_DE : SEO_LANDING_PAGES)[page.slug];
+  const activeLanguage = landingLanguage(page.slug, language);
+  const isGerman = activeLanguage === 'de';
+  const ui = isGerman ? seoUi.de : translateSeoCopy(seoUi.en, activeLanguage);
+  const localizedPage = isGerman ? SEO_LANDING_PAGES_DE[page.slug] : translateSeoCopy(SEO_LANDING_PAGES[page.slug], activeLanguage);
   const relatedPages = Object.values(isGerman ? SEO_LANDING_PAGES_DE : SEO_LANDING_PAGES)
-    .filter((candidate) => candidate.slug !== localizedPage.slug);
+    .filter((candidate) => candidate.slug !== localizedPage.slug && landingLanguages(candidate.slug).includes(activeLanguage))
+    .map((candidate) => isGerman ? candidate : translateSeoCopy(candidate, activeLanguage));
 
   useEffect(() => {
-    document.documentElement.lang = isGerman ? 'de' : 'en';
-  }, [isGerman]);
+    document.documentElement.lang = activeLanguage;
+  }, [activeLanguage]);
 
   return (
     <div className="min-h-screen bg-[var(--canvas)] text-[var(--evergreen)]">
@@ -139,26 +109,25 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             <span className="hidden text-sm font-bold tracking-[-0.04em] text-white sm:inline">TRAILREPLAY</span>
           </a>
           <div className="hidden items-center gap-6 text-xs font-semibold md:flex">
-            <a href={seoLocalizedPath('/tutorial', isGerman ? 'de' : 'en')} className="text-white/70 transition-colors hover:text-white">{ui.howItWorks}</a>
-            <a href={seoLocalizedPath('/gpx-download-guide', isGerman ? 'de' : 'en')} className="text-white/70 transition-colors hover:text-white">{ui.getGpx}</a>
+            <a href={seoLocalizedPath('/tutorial', activeLanguage)} className="text-white/70 transition-colors hover:text-white">{ui.howItWorks}</a>
+            <a href={seoLocalizedPath('/gpx-download-guide', activeLanguage)} className="text-white/70 transition-colors hover:text-white">{ui.getGpx}</a>
             <a href="https://github.com/bresca-ai/TrailReplay" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-white/70 transition-colors hover:text-white">
               <Github className="h-4 w-4" /> {ui.openSource}
             </a>
           </div>
-          <label className="hidden items-center gap-2 text-xs text-white/70 sm:flex">
+          <label className="flex items-center gap-2 text-xs text-white/70">
             <span className="sr-only">{ui.language}</span>
             <select
-              value={isGerman ? 'de' : 'en'}
+              value={activeLanguage}
               onChange={(event) => {
-                const next = event.target.value === 'de' ? 'de' : 'en';
+                const next = event.target.value as LanguageCode;
                 setLanguage(next);
                 window.location.assign(seoLocalizedPath(`/${page.slug}`, next));
               }}
               className="bg-transparent font-semibold text-white outline-none"
               aria-label={ui.language}
             >
-              <option value="en">English</option>
-              <option value="de">Deutsch</option>
+              {landingLanguages(page.slug).map((code) => <option key={code} value={code}>{languageLabels[code]}</option>)}
             </select>
           </label>
           <a
@@ -247,8 +216,8 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
               {localizedPage.detailParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href={seoLocalizedPath('/gpx-download-guide', isGerman ? 'de' : 'en')} className="tr-btn tr-btn-secondary inline-flex items-center gap-2"><Download className="h-4 w-4" /> {ui.gpxGuide}</a>
-              <a href={seoLocalizedPath('/tutorial', isGerman ? 'de' : 'en')} className="tr-btn tr-btn-outline inline-flex items-center gap-2"><Film className="h-4 w-4" /> {ui.tutorial}</a>
+              <a href={seoLocalizedPath('/gpx-download-guide', activeLanguage)} className="tr-btn tr-btn-secondary inline-flex items-center gap-2"><Download className="h-4 w-4" /> {ui.gpxGuide}</a>
+              <a href={seoLocalizedPath('/tutorial', activeLanguage)} className="tr-btn tr-btn-outline inline-flex items-center gap-2"><Film className="h-4 w-4" /> {ui.tutorial}</a>
             </div>
           </article>
           <div>
@@ -269,7 +238,7 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
             <div className="rounded-2xl border-2 border-[var(--evergreen)] bg-white/70 p-6 sm:p-8">
               <h2 className="text-2xl font-bold tracking-[-0.04em]">{ui.sampleTitle}</h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--evergreen-80)]">{ui.sampleDescription}</p>
-              <a href={`${seoLocalizedPath('/tutorial', isGerman ? 'de' : 'en')}#sample-routes`} className="mt-4 inline-flex items-center gap-2 font-bold text-[var(--trail-orange)] hover:underline">
+              <a href={`${seoLocalizedPath('/tutorial', activeLanguage)}#sample-routes`} className="mt-4 inline-flex items-center gap-2 font-bold text-[var(--trail-orange)] hover:underline">
                 {ui.sampleLink} <ArrowRight className="h-4 w-4" />
               </a>
             </div>
@@ -289,7 +258,7 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageConfig }) {
           <h2 className="text-xl font-bold">{ui.explore}</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {relatedPages.map((related) => (
-              <a key={related.slug} href={seoLocalizedPath(`/${related.slug}`, isGerman ? 'de' : 'en')} className="group border-t-2 border-[var(--evergreen)] pt-4 transition-colors hover:border-[var(--trail-orange)]">
+              <a key={related.slug} href={seoLocalizedPath(`/${related.slug}`, landingLanguage(related.slug, activeLanguage))} className="group border-t-2 border-[var(--evergreen)] pt-4 transition-colors hover:border-[var(--trail-orange)]">
                 <span className="text-sm font-bold group-hover:text-[var(--trail-orange)]">{related.eyebrow}</span>
                 <span className="mt-2 block text-xs leading-5 text-[var(--evergreen-60)]">{related.description}</span>
               </a>

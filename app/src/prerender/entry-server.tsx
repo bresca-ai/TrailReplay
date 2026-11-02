@@ -6,6 +6,7 @@ import { HomeStaticContent } from '@/prerender/HomeStaticContent';
 import { SeoLandingPage } from '@/seo/SeoLandingPage';
 import { SEO_LANDING_PAGES, type SeoLandingSlug } from '@/seo/seoPages';
 import { SEO_LANDING_PAGES_DE } from '@/seo/seoPages.de';
+import { landingLanguages, translateSeoCopy } from '@/seo/seoTranslations';
 import { LANGUAGE_CODES } from '@/i18n/languages';
 import { translate } from '@/i18n/translations';
 import { PrerenderLanguageContext } from '@/i18n/useI18n';
@@ -45,9 +46,11 @@ export function renderAllPages(): Record<string, string> {
     }
   }
   for (const slug of seoSlugs) {
-    result[`de/${slug}.html`] = renderToString(
-      <PrerenderLanguageContext.Provider value="de"><SeoLandingPage page={SEO_LANDING_PAGES[slug]} /></PrerenderLanguageContext.Provider>,
-    );
+    for (const language of landingLanguages(slug).filter((code) => code !== 'en')) {
+      result[`${language.toLowerCase()}/${slug}.html`] = renderToString(
+        <PrerenderLanguageContext.Provider value={language}><SeoLandingPage page={SEO_LANDING_PAGES[slug]} /></PrerenderLanguageContext.Provider>,
+      );
+    }
   }
   return result;
 }
@@ -60,8 +63,8 @@ export function localizedHelpMetadata(language: (typeof LANGUAGE_CODES)[number],
   };
 }
 
-export function germanLandingMetadata(slug: SeoLandingSlug) {
-  const page = SEO_LANDING_PAGES_DE[slug];
+export function localizedLandingMetadata(language: (typeof LANGUAGE_CODES)[number], slug: SeoLandingSlug) {
+  const page = language === 'de' ? SEO_LANDING_PAGES_DE[slug] : translateSeoCopy(SEO_LANDING_PAGES[slug], language);
   return { title: page.title, description: page.description };
 }
 

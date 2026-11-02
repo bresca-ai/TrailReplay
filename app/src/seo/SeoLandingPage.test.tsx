@@ -17,7 +17,7 @@ describe('SEO landing page language', () => {
   it('declares the language actually displayed, including fallback and language changes', () => {
     state.language = 'es';
     const { rerender } = render(<SeoLandingPage page={SEO_LANDING_PAGES['gpx-animation']} />);
-    expect(document.documentElement.lang).toBe('en');
+    expect(document.documentElement.lang).toBe('es');
 
     state.language = 'de';
     rerender(<SeoLandingPage page={SEO_LANDING_PAGES['gpx-animation']} />);
@@ -25,6 +25,6 @@ describe('SEO landing page language', () => {
 
     state.language = 'fr';
     rerender(<SeoLandingPage page={SEO_LANDING_PAGES['gpx-animation']} />);
-    expect(document.documentElement.lang).toBe('en');
+    expect(document.documentElement.lang).toBe('fr');
   });
 });

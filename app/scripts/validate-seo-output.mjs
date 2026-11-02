@@ -137,6 +137,22 @@ for (const slug of ['strava-to-video', 'garmin-to-video', 'gpx-animation', 'cycl
   if (!/<h1[\s>]/.test(html) || html.includes('<div id="root"></div>')) failures.push(`${file} is not prerendered`);
 }
 
+for (const slug of ['gpx-animation', 'strava-to-video']) {
+  for (const locale of ['en', 'es', 'ca', 'de', 'fr', 'zh-TW']) {
+    const prefix = locale === 'en' ? '' : `${locale.toLowerCase()}/`;
+    const file = `${prefix}${slug}.html`;
+    const html = await readFile(path.join(distRoot, file), 'utf8');
+    const canonical = `https://trailreplay.com/${prefix}${slug}`;
+    if (!html.includes(`<html lang="${locale}">`)) failures.push(`${file} has incorrect language`);
+    if (!html.includes(`rel="canonical" href="${canonical}"`)) failures.push(`${file} has incorrect canonical`);
+    for (const code of ['en', 'es', 'ca', 'de', 'fr', 'zh-TW']) {
+      const pathPrefix = code === 'en' ? '' : `${code.toLowerCase()}/`;
+      if (!html.includes(`hreflang="${code}" href="https://trailreplay.com/${pathPrefix}${slug}"`)) failures.push(`${file} is missing ${code} alternate`);
+    }
+    if (!/<h1[\s>]/.test(html) || html.includes('<div id="root"></div>')) failures.push(`${file} is not prerendered`);
+  }
+}
+
 const tutorial = await readFile(path.join(distRoot, 'tutorial.html'), 'utf8');
 const gpxAnimation = await readFile(path.join(distRoot, 'gpx-animation.html'), 'utf8');
 if (!tutorial.includes('id="sample-routes"') || !gpxAnimation.includes('href="/tutorial#sample-routes"')) {

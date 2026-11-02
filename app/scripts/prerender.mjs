@@ -21,13 +21,13 @@ const vite = await createServer({
 
 let rendered;
 let localizedHelpMetadata;
-let germanLandingMetadata;
+let localizedLandingMetadata;
 let localizedHomeMetadata;
 try {
   const module = await vite.ssrLoadModule('/src/prerender/entry-server.tsx');
   rendered = module.renderAllPages();
   localizedHelpMetadata = module.localizedHelpMetadata;
-  germanLandingMetadata = module.germanLandingMetadata;
+  localizedLandingMetadata = module.localizedLandingMetadata;
   localizedHomeMetadata = module.localizedHomeMetadata;
 } finally {
   await vite.close();
@@ -79,14 +79,14 @@ for (const [file, markup] of Object.entries(rendered)) {
     }
   }
   if (helpSlugs.includes(slug) || landingSlugs.includes(slug)) {
-    const pageLocales = helpSlugs.includes(slug) ? locales : ['en', 'de'];
+    const pageLocales = helpSlugs.includes(slug) || ['gpx-animation', 'strava-to-video'].includes(slug) ? locales : ['en', 'de'];
     const alternates = pageLocales.map((code) => {
       const prefix = code === 'en' ? '' : `/${code.toLowerCase()}`;
       return `<link rel="alternate" hreflang="${code}" href="https://trailreplay.com${prefix}/${slug}" />`;
     }).join('\n    ');
     html = html.replace('</head>', `    ${alternates}\n  </head>`);
     if (localized) {
-      const metadata = helpSlugs.includes(slug) ? localizedHelpMetadata(language, slug) : germanLandingMetadata(slug);
+      const metadata = helpSlugs.includes(slug) ? localizedHelpMetadata(language, slug) : localizedLandingMetadata(language, slug);
       const url = `https://trailreplay.com/${language.toLowerCase()}/${slug}`;
       const title = escapeHtml(`${metadata.title} | TrailReplay`);
       const description = escapeHtml(metadata.description);

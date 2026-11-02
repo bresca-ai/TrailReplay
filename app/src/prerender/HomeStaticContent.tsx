@@ -1,6 +1,7 @@
 import { HOME_TRANSLATIONS } from './homeTranslations';
 import type { LanguageCode } from '@/i18n/languages';
 import { seoLocalizedPath } from '@/seo/seoLocale';
+import { landingLanguage } from '@/seo/seoTranslations';
 import { SEO_LANDING_PAGES, type SeoLandingSlug } from '@/seo/seoPages';
 
 const HELP_LINKS = [
@@ -27,7 +28,7 @@ export function HomeStaticContent({ language = 'en' }: { language?: LanguageCode
         <li><a href={seoLocalizedPath('/gpx-download-guide', language)}>{copy.guide}</a></li>
       </ul>
       <h2 className="mt-10 text-xl font-bold">{copy.landing}</h2><ul>
-        {Object.values(SEO_LANDING_PAGES).map((page, index) => <li key={page.slug}><a href={seoLocalizedPath(`/${page.slug}`, language === 'de' ? 'de' : 'en')}>{copy.pageTitles[index]}</a></li>)}
+        {Object.values(SEO_LANDING_PAGES).map((page, index) => <li key={page.slug}><a href={seoLocalizedPath(`/${page.slug}`, landingLanguage(page.slug, language))}>{copy.pageTitles[index]}</a></li>)}
       </ul>
     </main>;
   }
