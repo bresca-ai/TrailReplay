@@ -98,7 +98,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     setUndoCount(historyRef.current.length);
   };
   const captureHistoryRef = useRef(captureHistory);
-  captureHistoryRef.current = captureHistory;
+  useEffect(() => { captureHistoryRef.current = captureHistory; });
   useEffect(() => useAppStore.subscribe((state, previous) => {
     if (state.socialShareSettings === previous.socialShareSettings && state.settings.mapStyle === previous.settings.mapStyle
       && state.settings.trailStyle.overlayFont === previous.settings.trailStyle.overlayFont) return;
@@ -127,7 +127,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     }
   };
   const undoRef = useRef(undo);
-  undoRef.current = undo;
+  useEffect(() => { undoRef.current = undo; });
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
