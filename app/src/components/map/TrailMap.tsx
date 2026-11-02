@@ -388,6 +388,7 @@ export function TrailMap(_props: TrailMapProps) {
     smoothBearingRef,
     targetBearingRef,
     totalDurationMs: playback.totalDuration,
+    locationBoundariesLoading: locationChapter.loading,
   });
 
   const tileDiagnostics = useTilePreloadDiagnostics({
@@ -528,7 +529,7 @@ export function TrailMap(_props: TrailMapProps) {
       <div ref={mapContainer} className="w-full h-full" />
 
       <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : locationChapter.error ? "error" : "ready"} />
-      {locationChapter.label && <div className="tr-location-chapter absolute left-1/2 top-8 z-20 -translate-x-1/2 rounded-full bg-black/75 px-5 py-2 text-lg font-bold text-white" role="status">{locationChapter.label}</div>}
+      {locationChapter.label && <div className="tr-location-chapter absolute left-1/2 top-28 z-20 -translate-x-1/2 rounded-full bg-black/75 px-5 py-2 text-lg font-bold text-white" role="status">{locationChapter.label}</div>}
       {locationChapter.credit && <div className="tr-location-credit absolute bottom-1 left-1 z-20 bg-black/75 px-1 text-[10px] text-white">{locationChapter.credit}</div>}
       {locationChapter.loading && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.loading')}</div>}
       {locationChapter.error && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.unavailable')}</div>}

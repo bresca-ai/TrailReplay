@@ -35,6 +35,7 @@ interface UseTilePreloadParams {
   smoothBearingRef: React.MutableRefObject<number>;
   targetBearingRef: React.MutableRefObject<number>;
   totalDurationMs: number;
+  locationBoundariesLoading?: boolean;
 }
 
 /**
@@ -58,6 +59,7 @@ export function useTilePreload({
   smoothBearingRef,
   targetBearingRef,
   totalDurationMs,
+  locationBoundariesLoading = false,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
 
@@ -71,6 +73,9 @@ export function useTilePreload({
       setAnimationPhase('idle');
       return;
     }
+
+    // The opening reveal needs the first polygon before the fly-in starts.
+    if (locationBoundariesLoading) return;
 
     const map = mapRef.current;
     if (!map || !isMapLoaded || allCoordinates.length === 0 || cameraMode === 'overview') {
@@ -196,6 +201,7 @@ export function useTilePreload({
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying,
+    locationBoundariesLoading,
     mapRef,
     setAnimationPhase,
     smoothBearingRef,

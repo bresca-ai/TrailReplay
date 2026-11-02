@@ -74,3 +74,37 @@ it('installs and displays the chapter when tiles keep the style loading', async 
   rerender({ time: 1000 });
   expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-line', 'line-opacity', 1);
 });
+it('shows the first boundary during the opening fly-in without a second zoom after it', async () => {
+  const feature = { type: 'Feature' as const, properties: { id: 'es', name: 'Catalonia', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
+  vi.mocked(loadRouteBoundaries).mockResolvedValue([feature]);
+  const layers = new Map<string, unknown>(); let sourceExists = false;
+  const source = { setData: vi.fn() }, jumpTo = vi.fn();
+  const map = { getSource: () => sourceExists ? source : undefined, addSource: () => { sourceExists = true; }, removeSource: () => { sourceExists = false; },
+    getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), removeLayer: (id: string) => layers.delete(id),
+    on: vi.fn(), off: vi.fn(), setPaintProperty: vi.fn(), cameraForBounds: () => ({ center: [1, 1], zoom: 5 }), jumpTo } as unknown as MapLibreMap;
+  const settings = { level: 'region' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 };
+  const ref = { current: map }, coords = [[.5, .5]], point = { lon: .5, lat: .5 };
+  const { result, rerender } = renderHook(({ time, phase }: {time: number; phase: string}) => useLocationChapters(ref, true, settings, coords, point, time, phase), { initialProps: { time: 0, phase: 'intro' } });
+  await waitFor(() => expect(result.current.label).toBe('🇪🇸 Catalonia'));
+  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-line', 'line-opacity', 1);
+  rerender({ time: 500, phase: 'playing' }); expect(result.current.label).toBe('🇪🇸 Catalonia');
+  expect(jumpTo).not.toHaveBeenCalled();
+  rerender({ time: 2000, phase: 'playing' }); expect(result.current.label).toBe('');
+});
+it('prepares the first region during preloading and reveals the next one during playback', async () => {
+  const make = (id: string, x: number) => ({ type: 'Feature' as const, properties: { id, name: id, iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]] } });
+  const first = make('Catalonia', 0), second = make('Occitanie', 1); vi.mocked(loadRouteBoundaries).mockResolvedValue([first, second]);
+  const layers = new Map<string, unknown>(); let sourceExists = false; const source = { setData: vi.fn() };
+  const map = { getSource: () => sourceExists ? source : undefined, addSource: () => { sourceExists = true; }, removeSource: () => { sourceExists = false; },
+    getLayer: (id: string) => layers.get(id), addLayer: (layer: {id:string}) => layers.set(layer.id, layer), removeLayer: (id:string) => layers.delete(id),
+    on: vi.fn(), off: vi.fn(), setPaintProperty: vi.fn(), cameraForBounds: () => undefined } as unknown as MapLibreMap;
+  const settings = { level: 'region' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: false, zoomToPlace: false, durationSeconds: 4.5 };
+  const ref = { current: map }, coords = [[.5, .5], [1.5, .5]];
+  const { result, rerender } = renderHook(({ time, lon, phase }: {time: number; lon: number; phase: string}) => useLocationChapters(ref, true, settings, coords, { lon, lat: .5 }, time, phase), { initialProps: { time: 0, lon: .5, phase: 'preloading' } });
+  await waitFor(() => expect(source.setData).toHaveBeenCalledWith(first)); expect(result.current.label).toBe('');
+  rerender({ time: 0, lon: .5, phase: 'intro' }); expect(result.current.label).toBe('Catalonia');
+  rerender({ time: 1000, lon: .5, phase: 'playing' }); expect(result.current.label).toBe('Catalonia');
+  rerender({ time: 2000, lon: 1.5, phase: 'playing' });
+  rerender({ time: 2600, lon: 1.5, phase: 'playing' }); expect(source.setData).toHaveBeenCalledWith(second);
+  rerender({ time: 3200, lon: 1.5, phase: 'playing' }); expect(result.current.label).toBe('Occitanie');
+});

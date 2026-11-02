@@ -5,13 +5,14 @@ import { LngLatBounds, LngLat, type Map as MapLibreMap, type GeoJSONSource } fro
 import type { FeatureCollection, Position } from 'geojson';
 import { containsPosition, countryEmoji, loadRouteBoundaries, type LocationFeature } from '@/utils/locationBoundaries';
 import type { LocationChapterSettings } from '@/types';
+import { INTRO_DURATION } from '@/components/playback/PlaybackProvider';
 const SOURCE = 'location-chapter', FILL = 'location-chapter-fill', LINE = 'location-chapter-line';
 const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
 export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loaded: boolean, settings: LocationChapterSettings | undefined,
   coordinates: number[][], current: { lon: number; lat: number } | null, time: number, phase: string, cameraCanFollow = true) {
   const [features, setFeatures] = useState<LocationFeature[]>([]), [error, setError] = useState(false), [label, setLabel] = useState(''), [credit, setCredit] = useState(''), [loading, setLoading] = useState(false);
   const [layerRevision, setLayerRevision] = useState(0);
-  const previous = useRef<{ id: string; start: number; feature: LocationFeature; target?: { lng: number; lat: number; zoom: number } } | null>(null);
+  const previous = useRef<{ id: string; start: number; feature: LocationFeature; startedInIntro: boolean; target?: { lng: number; lat: number; zoom: number } } | null>(null);
   const candidate = useRef<{ id: string; since: number } | null>(null);
   const mode = settings?.level ?? 'off';
   useEffect(() => {
@@ -49,7 +50,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !map.getSource(SOURCE)) return;
-    let active = mode !== 'off' && current && (phase === 'playing' || phase === 'intro')
+    let active = mode !== 'off' && current && (phase === 'playing' || phase === 'intro' || phase === 'preloading')
       ? features.find(feature => containsPosition(feature, [current.lon, current.lat])) : undefined;
     if (previous.current && time < previous.current.start) { previous.current = null; candidate.current = null; }
     // Ignore brief boundary jitter; the first location is immediate.
@@ -73,14 +74,16 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
           if (camera?.center && typeof camera.zoom === 'number') { const center = LngLat.convert(camera.center); target = { lng: center.lng, lat: center.lat, zoom: camera.zoom }; }
         } catch { /* A very small viewport may not admit a fitted camera. */ }
       }
-      previous.current = { id: active.properties.id, start: time, feature: active, target };
+      previous.current = { id: active.properties.id, start: time, feature: active, startedInIntro: phase === 'intro' || phase === 'preloading', target };
       (map.getSource(SOURCE) as GeoJSONSource).setData(active);
     }
-    const age = Math.max(0, time - previous.current.start);
+    const age = Math.max(0, time - previous.current.start) + (previous.current.startedInIntro && phase === 'playing' ? INTRO_DURATION : 0);
     const duration = Math.max(2000, Math.min(8000, (settings?.durationSeconds ?? 4.5) * 1000));
-    const opacity = Math.min(1, age / 500, Math.max(0, (duration - age) / 800));
+    // Route time is frozen at zero throughout the opening camera fly-in.
+    // Show the starting place there, then finish its fade on the route clock.
+    const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? 1 : Math.min(1, age / 500, Math.max(0, (duration - age) / 800));
     const target = previous.current.target;
-    if (settings?.zoomToPlace && cameraCanFollow && target && phase === 'playing' && age > 0 && age < duration) {
+    if (settings?.zoomToPlace && !previous.current.startedInIntro && cameraCanFollow && target && phase === 'playing' && age > 0 && age < duration) {
       const smooth = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
       const weight = Math.min(smooth(age / (duration * .3)), smooth((duration - age) / (duration * .3)));
       const center = map.getCenter();
