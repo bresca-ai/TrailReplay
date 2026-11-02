@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, Undo2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, Crosshair, Download, ImagePlus, Loader2, Minus, Plus, X } from 'lucide-react';
 import type { useSocialShareExport } from './useSocialShareExport';
 import { SocialSharePreviewModal, type CoverEditorSection } from './SocialSharePreviewModal';
 import { mapGlobalRef } from '@/utils/mapRef';
@@ -344,11 +344,6 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           </div>
         </div>
       )}
-
-      <button type="button" disabled={undoCount === 0} onClick={undo} title={`${t('imageExport.undo')} (Ctrl/⌘ Z)`}
-        className="inline-flex items-center gap-2 rounded-lg bg-black/5 px-3 py-2 text-xs font-semibold hover:bg-black/10 disabled:opacity-40">
-        <Undo2 className="h-4 w-4" />{t('imageExport.undo')}
-      </button>
 
       <input ref={photoInputRef} type="file" accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif" className="hidden" onChange={(event) => {
         const file = event.target.files?.[0];
@@ -982,6 +977,8 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           onDownload={onUseCover ? () => { onPosterReady?.(previewUrl); void exportPng(); } : undefined}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
+          onUndo={undo}
+          canUndo={undoCount > 0}
           onMapRouteGesture={transformMapViewport}
           onMapEditStart={() => captureHistory()}
           onPhotoSlotPick={openPhotoPicker}

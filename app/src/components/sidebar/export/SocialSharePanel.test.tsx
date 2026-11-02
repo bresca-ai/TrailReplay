@@ -18,7 +18,7 @@ vi.mock('./useSocialShareExport', () => ({
       settings: state.socialShareSettings,
       setSocialShareSettings: state.setSocialShareSettings,
       resolvedTitle: resolveSocialShareTitle(state.socialShareSettings, names.tracks, 'alba', names.journey),
-      previewUrl: null, isRendering: false, pictures: [], hasTracks: false,
+      previewUrl: 'data:image/png,test', isRendering: false, pictures: [], hasTracks: false,
       routeBboxNorm: null, dataPanelBboxNorm: null, titleBboxNorm: { x: 0, y: 0, w: 0.7, h: 0.2 }, logoBboxNorm: { x: 0.76, y: 0.04, w: 0.2, h: 0.08 },
       generatePreview: vi.fn(), exportPng: vi.fn(), fitTrackToMap: vi.fn(), transformMapViewport: vi.fn(),
     };
@@ -77,8 +77,12 @@ describe('cover title and places controls', () => {
     expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('');
   });
 
-  it('undoes cover edits with the button and keyboard shortcut', () => {
-    render(<TestPanel />);
+  it('undoes cover edits from the preview toolbar and keyboard shortcut', () => {
+    const host = document.createElement('div');
+    host.id = 'map-capture-container';
+    document.body.appendChild(host);
+    vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+    render(<TestPanel coverMode />);
     fireEvent.click(screen.getByRole('button', { name: 'Map' }));
     const undo = screen.getByRole('button', { name: 'Undo' });
     expect(undo).toBeDisabled();
@@ -90,6 +94,10 @@ describe('cover title and places controls', () => {
     fireEvent.keyDown(window, { key: 'z', metaKey: true });
     expect(useAppStore.getState().socialShareSettings.showMapPlaces).toBe(false);
     expect(undo).toBeDisabled();
+    expect(host).toContainElement(undo);
+    expect(host.querySelector('[aria-label="Zoom out"]')).toBeInTheDocument();
+    host.remove();
+    vi.unstubAllGlobals();
   });
 
   it('defaults cover places off and exposes one action to show or hide them', () => {

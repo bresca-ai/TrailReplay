@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, Download, ImagePlus, Loader2, Minus, Move, Plus, X } from 'lucide-react';
+import { Check, Download, ImagePlus, Loader2, Minus, Move, Plus, Undo2, X } from 'lucide-react';
 import type { SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
@@ -17,6 +17,8 @@ interface Props {
   onDownload?: () => void;
   settings: SocialShareSettings;
   setSocialShareSettings: (patch: Partial<SocialShareSettings>) => void;
+  onUndo: () => void;
+  canUndo: boolean;
   onMapRouteGesture: (gesture: MapRouteGesture) => Promise<void>;
   onMapEditStart?: () => void;
   routeBboxNorm: RouteBboxNorm | null;
@@ -116,7 +118,7 @@ interface PhotoDragState {
 
 export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport, onDownload,
-  settings, setSocialShareSettings, onMapRouteGesture, onMapEditStart, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
+  settings, setSocialShareSettings, onUndo, canUndo, onMapRouteGesture, onMapEditStart, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
   logoBboxNorm,
   onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange, activePhotoSlotId, onPhotoSlotSelect, onElementSelect, selectedSection,
 }: Props) {
@@ -679,10 +681,16 @@ export function SocialSharePreviewModal({
               {t(photoEditMode ? 'imageExport.doneEditingPhoto' : 'imageExport.editPhoto')}
             </button>
           )}
-          {inline && <div className="ml-auto flex shrink-0 items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
+          {inline && <div className="ml-auto flex shrink-0 items-center gap-2">
+            <button type="button" onClick={onUndo} disabled={!canUndo} title={`${t('imageExport.undo')} (Ctrl/⌘ Z)`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-white/20 disabled:opacity-35">
+              <Undo2 className="h-3.5 w-3.5" />{t('imageExport.undo')}
+            </button>
+            <div className="flex items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
             <button type="button" onClick={() => setCanvasZoom((zoom) => Math.max(1, Number((zoom - 0.1).toFixed(2))))} disabled={canvasZoom <= 1} aria-label={t('imageExport.zoomOut')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Minus className="h-3.5 w-3.5" /></button>
             <span className="w-10 text-center text-[11px] tabular-nums">{Math.round(canvasZoom * 100)}%</span>
             <button type="button" onClick={() => setCanvasZoom((zoom) => Math.min(2.5, Number((zoom + 0.1).toFixed(2))))} disabled={canvasZoom >= 2.5} aria-label={t('imageExport.zoomIn')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Plus className="h-3.5 w-3.5" /></button>
+            </div>
           </div>}
           {!inline && <button onClick={onClose} className="p-1 hover:bg-black/5 rounded">
             <X className="w-4 h-4" />
