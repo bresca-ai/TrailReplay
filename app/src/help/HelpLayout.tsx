@@ -3,7 +3,7 @@ import { ArrowLeft, ExternalLink, Sparkles } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
 import { languageLabels, type LanguageCode } from '@/i18n/translations';
-import { seoLanguageFromPath, seoLocalizedPath } from '@/seo/seoLocale';
+import { localizedSitePath, seoLanguageFromPath, seoLocalizedPath } from '@/seo/seoLocale';
 
 interface HelpHeaderAction {
   href: string;
@@ -38,7 +38,7 @@ export function HelpLayout({ eyebrow, title, description, headerActions = [], ch
           {headerActions.length > 0 && (
             <div className="hidden items-center gap-2 md:flex">
               {headerActions.map((action) => (
-                <HeaderAction key={action.href} {...action} />
+                <HeaderAction key={action.href} {...action} href={localizedSitePath(action.href, language)} />
               ))}
             </div>
           )}
@@ -123,11 +123,11 @@ export function HelpLayout({ eyebrow, title, description, headerActions = [], ch
         <section className="border-t border-[var(--evergreen)]/12 pt-8">
           <h2 className="text-lg font-bold">Create your route video</h2>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3 text-sm">
-            <a href="/gpx-animation" className="font-semibold text-[var(--trail-orange)] hover:underline">GPX animation</a>
-            <a href="/strava-to-video" className="font-semibold text-[var(--trail-orange)] hover:underline">Strava to video</a>
-            <a href="/garmin-to-video" className="font-semibold text-[var(--trail-orange)] hover:underline">Garmin to video</a>
-            <a href="/cycling-route-animation" className="font-semibold text-[var(--trail-orange)] hover:underline">Cycling animation</a>
-            <a href="/running-route-animation" className="font-semibold text-[var(--trail-orange)] hover:underline">Running animation</a>
+            <a href={localizedSitePath('/gpx-animation', language)} className="font-semibold text-[var(--trail-orange)] hover:underline">GPX animation</a>
+            <a href={localizedSitePath('/strava-to-video', language)} className="font-semibold text-[var(--trail-orange)] hover:underline">Strava to video</a>
+            <a href={localizedSitePath('/garmin-to-video', language)} className="font-semibold text-[var(--trail-orange)] hover:underline">Garmin to video</a>
+            <a href={localizedSitePath('/cycling-route-animation', language)} className="font-semibold text-[var(--trail-orange)] hover:underline">Cycling animation</a>
+            <a href={localizedSitePath('/running-route-animation', language)} className="font-semibold text-[var(--trail-orange)] hover:underline">Running animation</a>
           </div>
         </section>
 

@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import { BookOpen, Info, Maximize2, Menu, Minimize2, X } from 'lucide-react';
 import { SupportButton } from '@/components/header/SupportButton';
 import { useI18n } from '@/i18n/useI18n';
@@ -20,7 +21,7 @@ export function AppHeader({
   onToggleInfoPanel,
   onToggleSidebar,
 }: AppHeaderProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   return (
     <header className="z-50 flex h-14 items-center justify-between bg-[var(--evergreen)] px-2 text-[var(--canvas)] sm:px-4">
@@ -53,7 +54,7 @@ export function AppHeader({
       <div className="ml-2 flex shrink-0 items-center gap-1 sm:gap-2">
         <SupportButton />
         <a
-          href="/tutorial"
+          href={localizedSitePath('/tutorial', language)}
           onClick={() => trackEvent('help_cta_clicked', {
             cta_location: 'app_header',
             target_page: 'tutorial',

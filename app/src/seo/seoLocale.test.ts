@@ -33,3 +33,11 @@ it('recognizes localized URL prefixes case insensitively', async () => {
   expect(seoLanguageFromPath('/es/tutorial')).toBe('es');
   expect(seoLanguageFromPath('/tutorial')).toBe('en');
 });
+
+it('links to published pages in the selected language and preserves fragments', async () => {
+  const { localizedSitePath } = await import('./seoLocale');
+  expect(localizedSitePath('/tutorial#sample-routes', 'es')).toBe('/es/tutorial#sample-routes');
+  expect(localizedSitePath('/gpx-animation', 'zh-TW')).toBe('/zh-tw/gpx-animation');
+  expect(localizedSitePath('/garmin-to-video', 'fr')).toBe('/garmin-to-video');
+  expect(localizedSitePath('/garmin-to-video', 'de')).toBe('/de/garmin-to-video');
+});

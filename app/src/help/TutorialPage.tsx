@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import {
   Bot,
   BookOpen,
@@ -25,7 +26,7 @@ import { RouteImportTutorial } from './RouteImportTutorial';
 const featureIcons = [MapPin, TimerReset, Palette, Mountain, ImageIcon, Film];
 
 export function TutorialPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const quickStartSteps = getQuickStartSteps(t);
   const sampleTracks = getSampleTracks(t);
   const tutorialFeatures = getTutorialFeatures(t);
@@ -108,7 +109,7 @@ export function TutorialPage() {
             ))}
           </div>
           <a
-            href="/gpx-download-guide"
+            href={localizedSitePath('/gpx-download-guide', language)}
             onClick={() => trackEvent('help_cta_clicked', {
               cta_location: 'tutorial',
               target_page: 'gpx_guide',

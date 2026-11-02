@@ -92,7 +92,7 @@ for (const [file, markup] of Object.entries(rendered)) {
       const description = escapeHtml(metadata.description);
       html = html.replace('<html lang="en">', `<html lang="${language}">`)
         .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
-        .replace(/<meta name="description" content="[^"]*"\s*\/>/, `<meta name="description" content="${description}" />`)
+        .replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/>/, `<meta name="description" content="${description}" />`)
         .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, `<link rel="canonical" href="${url}" />`)
         .replace(/<meta property="og:url" content="[^"]*"\s*\/>/, `<meta property="og:url" content="${url}" />`)
         .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, `<meta property="og:title" content="${title}" />`)

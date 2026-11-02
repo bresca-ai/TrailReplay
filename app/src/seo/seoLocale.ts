@@ -28,3 +28,25 @@ export function seoLanguageFromPath(path: string): LanguageCode {
 export function rememberSeoLanguage(language: LanguageCode): void {
   try { localStorage.setItem('trailReplayLang', language); } catch { /* Storage can be disabled. */ }
 }
+
+/** Localize links only where a corresponding page has actually been published. */
+export function localizedSitePath(href: string, language: LanguageCode): string {
+  const [path, fragment] = href.split('#', 2);
+  const allLanguages = ['/tutorial', '/gpx-download-guide', '/agents', '/gpx-animation', '/strava-to-video'];
+  const germanOnly = ['/garmin-to-video', '/cycling-route-animation', '/running-route-animation', '/cinematic-camera'];
+  const supported = allLanguages.includes(path) || (germanOnly.includes(path) && language === 'de');
+  const localized = supported ? seoLocalizedPath(path, language) : path;
+  return fragment === undefined ? localized : `${localized}#${fragment}`;
+}
+
+/** A home URL needs a trailing slash to match the published canonical. */
+export function localizedHomePath(language: LanguageCode): string {
+  return language === 'en' ? '/' : `${seoLocalizedPath('/', language)}/`;
+}
+
+export function isLocalizedHomePath(path: string): boolean {
+  if (path === '/') return true;
+  return LANGUAGE_CODES.filter((code) => code !== 'en').some((code) =>
+    path.toLowerCase().replace(/\/$/, '') === `/${code.toLowerCase()}`,
+  );
+}

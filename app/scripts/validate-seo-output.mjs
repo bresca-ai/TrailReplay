@@ -115,6 +115,10 @@ for (const locale of ['es', 'ca', 'de', 'fr', 'zh-tw']) {
     const file = `${locale}/${slug}.html`;
     const html = await readFile(path.join(distRoot, file), 'utf8');
     const lang = locale === 'zh-tw' ? 'zh-TW' : locale;
+    const english = await readFile(path.join(distRoot, `${slug}.html`), 'utf8');
+    const description = html.match(/<meta\s+name="description"\s+content="([^"]*)"/);
+    const englishDescription = english.match(/<meta\s+name="description"\s+content="([^"]*)"/);
+    if (!description || !englishDescription || description[1] === englishDescription[1]) failures.push(`${file} is missing a localized description`);
     if (!html.includes(`<html lang="${lang}">`)) failures.push(`${file} has incorrect language`);
     if (!html.includes(`rel="canonical" href="https://trailreplay.com/${locale}/${slug}"`)) failures.push(`${file} has incorrect canonical`);
     for (const code of ['en', 'es', 'ca', 'de', 'fr', 'zh-TW']) {

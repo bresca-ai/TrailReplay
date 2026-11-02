@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import { useCallback } from 'react';
 import { useDropzone, type DropEvent } from 'react-dropzone';
 import { useAppStore } from '@/store/useAppStore';
@@ -9,7 +10,7 @@ import { RecipeReportCard } from '@/components/sidebar/tracks/RecipeReportCard';
 import { trackEvent } from '@/utils/analytics';
 
 export function TracksPanel() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { parseFiles, isParsing } = useGPX();
   const tracks = useAppStore((state) => state.tracks);
   const activeTrackId = useAppStore((state) => state.activeTrackId);
@@ -123,7 +124,7 @@ export function TracksPanel() {
         <div className="text-center py-8 text-[var(--evergreen-60)]">
           <p className="text-sm">{t('tracks.emptyTitle')}</p>
           <p className="text-xs mt-1">{t('tracks.emptySubtitle')}</p>
-          <a href="/gpx-animation" className="mt-3 inline-block text-xs font-semibold text-[var(--evergreen)] underline hover:text-[var(--trail-orange)]">
+          <a href={localizedSitePath('/gpx-animation', language)} className="mt-3 inline-block text-xs font-semibold text-[var(--evergreen)] underline hover:text-[var(--trail-orange)]">
             {t('info.gpxAnimator')}
           </a>
           <button
