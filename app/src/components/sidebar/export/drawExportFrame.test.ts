@@ -101,6 +101,7 @@ it('paints location names, flags and source credits into cropped video frames', 
   const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(), fillText: vi.fn(), measureText: (value: string) => ({ width: value.length * 10 }) };
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
   drawExportFrame(options);
-  expect(context.fillText).toHaveBeenCalledWith('🇪🇸 Spain', 540, expect.any(Number), expect.any(Number));
+  // Keep the chapter below the statistics card at the top of the video.
+  expect(context.fillText).toHaveBeenCalledWith('🇪🇸 Spain', 540, expect.closeTo(1920 * 0.34 + 28), expect.any(Number));
   expect(context.fillText.mock.calls.some(call => String(call[0]).includes('geoBoundaries'))).toBe(true);
 });

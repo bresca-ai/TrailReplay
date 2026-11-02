@@ -298,8 +298,11 @@ export function TrailMap(_props: TrailMapProps) {
   const recordedStyle = useMemo(() => ({ colorMode: trailStyle.colorMode, trailColor: trailStyle.trailColor, colorZones: trailStyle.colorZones, segmentTimings: computedJourney?.segmentTimings ?? [] }), [trailStyle.colorMode, trailStyle.trailColor, trailStyle.colorZones, computedJourney]);
   useRecordedElevationLayer(map, isMapLoaded, recordedElevationEnabled, recordedPoints, currentPosition, completedCoordinates, markerRef, recordedStyle, trailStyle.ghostTrailOpacity);
 
+  const locationChapter = useLocationChapters(map, isMapLoaded, settings.locationChapters, allCoordinates, currentPosition, playback.currentTime, animationPhase, cameraMode !== 'overview' && !routeComparisonActive);
+
   useTrailPlaybackCamera({
     activeTrack,
+    introStartOverride: locationChapter.introCamera,
     activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
     allCoordinates,
     cameraCoordinates: cameraPathCoordinates,
@@ -347,8 +350,6 @@ export function TrailMap(_props: TrailMapProps) {
     },
   });
 
-  const locationChapter = useLocationChapters(map, isMapLoaded, settings.locationChapters, allCoordinates, currentPosition, playback.currentTime, animationPhase, cameraMode !== 'overview' && !routeComparisonActive);
-
   useRouteComparisonCamera({
     enabled: comparisonMode === 'route' && playback.progress > 0 && (animationPhase === 'playing' || animationPhase === 'idle'),
     isPlaying: playback.isPlaying,
@@ -389,6 +390,7 @@ export function TrailMap(_props: TrailMapProps) {
     targetBearingRef,
     totalDurationMs: playback.totalDuration,
     locationBoundariesLoading: locationChapter.loading,
+    introStartOverride: locationChapter.introCamera,
   });
 
   const tileDiagnostics = useTilePreloadDiagnostics({
@@ -529,7 +531,7 @@ export function TrailMap(_props: TrailMapProps) {
       <div ref={mapContainer} className="w-full h-full" />
 
       <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : locationChapter.error ? "error" : "ready"} />
-      {locationChapter.label && <div className="tr-location-chapter absolute left-1/2 top-28 z-20 -translate-x-1/2 rounded-full bg-black/75 px-5 py-2 text-lg font-bold text-white" role="status">{locationChapter.label}</div>}
+      {locationChapter.label && <div className="tr-location-chapter absolute left-1/2 top-[34%] z-20 max-w-[90%] -translate-x-1/2 rounded-full bg-black/75 px-5 py-2 text-center text-lg font-bold text-white" role="status">{locationChapter.label}</div>}
       {locationChapter.credit && <div className="tr-location-credit absolute bottom-1 left-1 z-20 bg-black/75 px-1 text-[10px] text-white">{locationChapter.credit}</div>}
       {locationChapter.loading && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.loading')}</div>}
       {locationChapter.error && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.unavailable')}</div>}

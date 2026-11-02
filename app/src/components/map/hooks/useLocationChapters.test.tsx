@@ -3,6 +3,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { expect, it, vi } from 'vitest';
 import { useLocationChapters } from './useLocationChapters';
 import { loadRouteBoundaries } from '@/utils/locationBoundaries';
+import { locationChapterIntroCameraRef } from '@/utils/locationChapterCamera';
 vi.mock('@/utils/locationBoundaries', async importOriginal => ({ ...(await importOriginal<typeof import('@/utils/locationBoundaries')>()), loadRouteBoundaries: vi.fn() }));
 it('shows the current country and styles its outline during playback', async () => {
   const feature = { type: 'Feature' as const, properties: { id: 'test', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
@@ -33,10 +34,13 @@ it('zooms towards the current location while its chapter is active', async () =>
     getCenter: () => ({ lng: .5, lat: .5 }), getZoom: () => 12, getPitch: () => 40, jumpTo } as unknown as MapLibreMap;
   const settings = { level: 'country' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4 };
   const ref = { current: map }, coords = [[.5, .5]], point = { lon: .5, lat: .5 };
-  const { rerender } = renderHook(({ time }) => useLocationChapters(ref, true, settings, coords, point, time, 'playing'), { initialProps: { time: 0 } });
+  const { result, rerender, unmount } = renderHook(({ time }) => useLocationChapters(ref, true, settings, coords, point, time, 'playing'), { initialProps: { time: 0 } });
   await waitFor(() => expect(source.setData).toHaveBeenCalledWith(feature));
+  expect(locationChapterIntroCameraRef.current).toEqual({ center: [1, 1], zoom: 5, pitch: 0, bearing: 0 });
+  expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 5, pitch: 0, bearing: 0 });
   rerender({ time: 1200 });
   expect(jumpTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: 5, pitch: 0 }));
+  unmount(); expect(locationChapterIntroCameraRef.current).toBeUndefined();
 });
 it('waits briefly before switching chapters at a border', async () => {
   const make = (id: string, x: number) => ({ type: 'Feature' as const, properties: { id, name: id, iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]] } });

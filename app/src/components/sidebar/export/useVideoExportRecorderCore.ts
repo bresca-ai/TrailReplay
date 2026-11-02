@@ -14,6 +14,7 @@ import {
   type JourneyPoint,
 } from '@/utils/journeyUtils';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { locationChapterIntroCameraRef } from '@/utils/locationChapterCamera';
 import {
   deduplicateCameraPoses,
   getDeterministicIntroStartPose,
@@ -604,7 +605,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       progress: 0,
     });
     if (!introPose) return;
-    const introStartPose = getDeterministicIntroStartPose({
+    const introStartPose = locationChapterIntroCameraRef.current ?? getDeterministicIntroStartPose({
       coordinates: cameraPathCoordinates,
       introTo: introPose,
     });

@@ -109,3 +109,21 @@ describe('camera transition handoff', () => {
     expect(Math.abs(pose.pitch - arrival.pitch)).toBeLessThan(0.1);
   });
 });
+it('starts the intro at the selected place before flying to the route', () => {
+  const jumpTo = vi.fn(), flyTo = vi.fn();
+  const map = { getCenter: () => ({ lng: 2, lat: 41 }), getZoom: () => 12, getPitch: () => 0, getBearing: () => 0,
+    getSource: () => undefined, on: vi.fn(), off: vi.fn(), stop: vi.fn(), jumpTo, flyTo };
+  const introStartOverride = { center: [2, 41] as [number, number], zoom: 6, pitch: 0, bearing: 0 };
+  const props = { activeTrack: null, activeTextAnnotationId: null, allCoordinates: [[2, 41], [3, 42]], cameraCoordinates: [[2, 41], [3, 42]],
+    introStartOverride, animationPhase: 'intro', cameraMode: 'follow', cameraStability: 0.5, currentTimeMs: 0,
+    completedCoordinates: [], computedJourney: null, currentIcon: '', currentPosition: null, currentSegment: null,
+    currentTrackColor: null, currentTrackName: null, elevationData: [], followBehindZoomLevel: 33, isInTransport: false,
+    isMapLoaded: true, mapRef: { current: map }, markerRef: { current: null }, playbackProgress: 0, segmentTimings: [],
+    setCameraPosition: vi.fn(), totalDurationMs: 60000, smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 },
+    isExporting: false, isPlaying: true, trailStyle: { colorMode: 'fixed', colorZones: [], currentIcon: '', markerColor: '#000', markerSize: 1,
+      markerType: 'dot', overlayFont: 'inter', showCircle: false, showMarker: false, showTrackLabels: false, trailColor: '#000' },
+  } as unknown as Parameters<typeof useTrailPlaybackCamera>[0];
+  renderHook(() => useTrailPlaybackCamera(props));
+  expect(jumpTo).toHaveBeenCalledWith(introStartOverride);
+  expect(flyTo).toHaveBeenCalledWith(expect.objectContaining({ center: [2, 41], zoom: 14 }));
+});

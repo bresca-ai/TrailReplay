@@ -194,7 +194,7 @@ export function drawExportFrame({
       context.save(); context.font = `700 ${Math.max(18, 30 * scale)}px sans-serif`;
       context.textAlign = 'center'; context.textBaseline = 'middle';
       const width = Math.min(recordW - 40 * scale, context.measureText(chapterLabel).width + 40 * scale);
-      const height = 56 * scale, y = 112 * scale;
+      const height = 56 * scale, y = recordH * 0.34;
       context.fillStyle = 'rgba(0,0,0,.75)'; context.fillRect((recordW - width) / 2, y, width, height);
       context.fillStyle = '#fff'; context.fillText(chapterLabel, recordW / 2, y + height / 2, width - 16 * scale);
       context.restore();

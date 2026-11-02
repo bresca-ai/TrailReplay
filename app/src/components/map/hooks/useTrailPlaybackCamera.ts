@@ -47,6 +47,7 @@ import {
 } from '@/utils/cinematicCameraAnchor';
 
 interface UseTrailPlaybackCameraParams {
+  introStartOverride?: TransitionCameraPose;
   activeTrack: { color: string; points: Array<{ heartRate: number | null }> } | null | undefined;
   activeTextAnnotationId: string | null;
   allCoordinates: number[][];
@@ -203,6 +204,7 @@ export function updatePlaybackMarkerElement(
 
 export function useTrailPlaybackCamera({
   activeTrack,
+  introStartOverride,
   activeTextAnnotationId,
   allCoordinates,
   cameraCoordinates,
@@ -852,7 +854,7 @@ export function useTrailPlaybackCamera({
         });
 
     if (animationPhase === 'intro' && introPose) {
-      const introStartPose = getDeterministicIntroStartPose({
+      const introStartPose = introStartOverride ?? getDeterministicIntroStartPose({
         coordinates: allCoordinates,
         introTo: introPose,
       });
@@ -893,6 +895,7 @@ export function useTrailPlaybackCamera({
     allCoordinates,
     animationPhase,
     cameraMode,
+    introStartOverride,
     cameraCoordinates,
     cinematicKeyframes,
     elevationData,

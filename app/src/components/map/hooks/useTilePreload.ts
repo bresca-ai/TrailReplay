@@ -16,6 +16,7 @@ import {
 // Never hold the replay behind the preparation screen indefinitely. The opening
 // sequence gets the whole budget; each camera sample may finish sooner on idle.
 const PRELOAD_TIMEOUT_MS = 6000;
+const RESTORED_VIEW_TIMEOUT_MS = 3000;
 const OPENING_WINDOW_MS = 12000;
 const OPENING_SAMPLE_COUNT = 5;
 
@@ -36,6 +37,7 @@ interface UseTilePreloadParams {
   targetBearingRef: React.MutableRefObject<number>;
   totalDurationMs: number;
   locationBoundariesLoading?: boolean;
+  introStartOverride?: ReplayCameraPose;
 }
 
 /**
@@ -60,6 +62,7 @@ export function useTilePreload({
   targetBearingRef,
   totalDurationMs,
   locationBoundariesLoading = false,
+  introStartOverride,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
 
@@ -86,6 +89,7 @@ export function useTilePreload({
     hasAdvancedRef.current = false;
     let cancelled = false;
     let activeTimeout: ReturnType<typeof setTimeout> | null = null;
+    let pendingAdvance: (() => void) | null = null;
     const introPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
@@ -98,7 +102,7 @@ export function useTilePreload({
       setAnimationPhase('intro');
       return;
     }
-    const overview = getDeterministicIntroStartPose({
+    const overview = introStartOverride ?? getDeterministicIntroStartPose({
       coordinates: allCoordinates,
       introTo: introPose,
     });
@@ -161,7 +165,21 @@ export function useTilePreload({
         smoothBearingRef.current = introPose.bearing;
         targetBearingRef.current = introPose.bearing;
       }
-      setAnimationPhase('intro');
+      if (!introStartOverride) { setAnimationPhase('intro'); return; }
+      // jumpTo schedules a new render. Starting the fly-in immediately can
+      // expose the last warm-up frame (or empty tiles) for the opening frame.
+      // Give the restored overview a bounded chance to settle before revealing it.
+      const advance = () => {
+        if (cancelled || pendingAdvance !== advance) return;
+        pendingAdvance = null;
+        map.off('idle', advance);
+        if (activeTimeout) { clearTimeout(activeTimeout); activeTimeout = null; }
+        setAnimationPhase('intro');
+      };
+      pendingAdvance = advance;
+      map.once('idle', advance);
+      activeTimeout = setTimeout(advance, RESTORED_VIEW_TIMEOUT_MS);
+      map.triggerRepaint();
     };
 
     const warmPose = (pose: ReplayCameraPose) => new Promise<void>((resolve) => {
@@ -190,6 +208,7 @@ export function useTilePreload({
     return () => {
       cancelled = true;
       if (activeTimeout) clearTimeout(activeTimeout);
+      if (pendingAdvance) map.off('idle', pendingAdvance);
       if (!hasAdvancedRef.current) map.jumpTo(overview);
     };
   }, [
@@ -201,6 +220,7 @@ export function useTilePreload({
     followBehindZoomLevel,
     isMapLoaded,
     isPlaying,
+    introStartOverride,
     locationBoundariesLoading,
     mapRef,
     setAnimationPhase,
