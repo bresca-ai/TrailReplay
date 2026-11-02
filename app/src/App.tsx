@@ -1,3 +1,4 @@
+import { ExportAwareSidebar } from '@/components/sidebar/ExportAwareSidebar';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -627,13 +628,11 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 flex overflow-hidden">
           {/* Sidebar */}
-          {showSidebar && (
-            <div className="w-80 h-full flex-shrink-0 border-r-2 border-[var(--evergreen)] overflow-hidden">
-              <Suspense fallback={<SidebarFallback />}>
-                <Sidebar />
-              </Suspense>
-            </div>
-          )}
+          <ExportAwareSidebar open={showSidebar} exporting={isExporting}>
+            <Suspense fallback={<SidebarFallback />}>
+              <Sidebar />
+            </Suspense>
+          </ExportAwareSidebar>
           
           {/* Map Area */}
           <div className="flex-1 flex flex-col relative">

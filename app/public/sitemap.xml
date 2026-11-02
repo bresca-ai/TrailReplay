@@ -2,56 +2,181 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://trailreplay.com/</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/tutorial</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/agents</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/gpx-download-guide</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/strava-to-video</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/garmin-to-video</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/gpx-animation</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/cycling-route-animation</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/running-route-animation</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/cinematic-camera</loc>
-    <lastmod>2026-10-19</lastmod>
   </url>
 
   <url>
     <loc>https://trailreplay.com/acknowledgments</loc>
-    <lastmod>2026-10-18</lastmod>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/es/tutorial</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/es/gpx-download-guide</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/es/agents</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/ca/tutorial</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/ca/gpx-download-guide</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/ca/agents</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/tutorial</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/gpx-download-guide</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/agents</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/fr/tutorial</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/fr/gpx-download-guide</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/fr/agents</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/zh-tw/tutorial</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/zh-tw/gpx-download-guide</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/zh-tw/agents</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/strava-to-video</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/garmin-to-video</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/gpx-animation</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/cycling-route-animation</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/running-route-animation</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/cinematic-camera</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/es/</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/ca/</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/de/</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/fr/</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/zh-tw/</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/es/gpx-animation</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/es/strava-to-video</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/ca/gpx-animation</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/ca/strava-to-video</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/fr/gpx-animation</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/fr/strava-to-video</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/zh-tw/gpx-animation</loc>
+  </url>
+
+  <url>
+    <loc>https://trailreplay.com/zh-tw/strava-to-video</loc>
   </url>
 </urlset>

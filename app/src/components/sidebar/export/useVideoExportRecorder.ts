@@ -15,7 +15,8 @@ import {
 } from '@/utils/annotationTiming';
 import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
 import fixWebmDuration from 'fix-webm-duration';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { startExportTiming } from './exportTiming';
 import { getSupportedMimeType, getVideoBitrate } from './exportConfig';
 import { finishExportProfile, startExportProfile } from './exportProfiler';
 import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
@@ -47,6 +48,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   } = useVideoExportRecorderCore(options);
+
+  const exportTimingRef = useRef<ReturnType<typeof startExportTiming> | null>(null);
+  useEffect(() => () => { exportTimingRef.current?.(); }, []);
 
   const exportProfileMetadata = useCallback((encoderPath: string, blobSize = 0) => ({
     encoderPath,
@@ -95,6 +99,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           : t('export.stageComplete'));
         setExportProgress(100);
         trackEvent('export_completed', {
+          ...exportTimingRef.current?.(),
           ...getVideoExportAnalyticsParams(videoExportSettings, 'mp4', playback.totalDuration),
           export_blob_size_bucket: getBlobSizeBucket(blob.size),
           export_encoder_path: 'webcodecs',
@@ -158,6 +163,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         export_encoder_path: 'webcodecs',
       });
     } finally {
+      exportTimingRef.current?.();
       restoreStudioMapSettings();
       studioDeliveryJobRef.current = null;
       studioQualityRef.current = false;
@@ -480,6 +486,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         setExportStage(t('export.stageComplete'));
         setExportProgress(100);
         trackEvent('export_completed', {
+          ...exportTimingRef.current?.(),
           ...getVideoExportAnalyticsParams(videoExportSettings, extension, playback.totalDuration),
           export_blob_size_bucket: getBlobSizeBucket(blob.size),
           export_encoder_path: 'mediarecorder',
@@ -500,6 +507,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           export_encoder_path: 'mediarecorder',
         });
       }
+      exportTimingRef.current?.();
       setIsExporting(false);
       // The screen-recording fallback completes after the normal animation has
       // reached its finale. Reset so the next Play starts a fresh replay.
@@ -550,6 +558,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     }
 
+    exportTimingRef.current?.();
+    exportTimingRef.current = startExportTiming();
     startExportProfile();
     setIsExporting(true);
     setExportProgress(0);
@@ -740,6 +750,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     } catch (error) {
       finishExportProfile('failed', exportProfileMetadata(useWebCodecsRef.current ? 'webcodecs' : 'setup'));
+      exportTimingRef.current?.();
       console.error('Export failed:', error);
       trackEvent('export_failed', {
         export_failure_scope: 'setup',
@@ -787,6 +798,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   }, [hiddenMsRef, hiddenSinceRef, isExporting, requestScreenWakeLock, studioQualityRef, wakeLockRef]);
 
   const handleCancelExport = useCallback(() => {
+    exportTimingRef.current?.();
     const exportEncoderPath = useWebCodecsRef.current ? 'webcodecs' : 'mediarecorder';
     isRecordingRef.current = false;
     recordingCancelledRef.current = true;

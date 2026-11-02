@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import { Github, Instagram } from '@/components/icons/brandIcons';
 import { X, MessageSquare, Heart, ExternalLink, Shield, FileText, BookOpen, Download, Sparkles, Building2 } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
@@ -8,7 +9,7 @@ interface InfoPanelProps {
 }
 
 export function InfoPanel({ onClose }: InfoPanelProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   return (
     <div className="h-full bg-[var(--canvas)] border-l-2 border-[var(--evergreen)] flex flex-col">
       {/* Header */}
@@ -63,13 +64,13 @@ export function InfoPanel({ onClose }: InfoPanelProps) {
           </p>
           <div className="space-y-2">
             <InfoCard
-              href="/tutorial"
+              href={localizedSitePath('/tutorial', language)}
               icon={<BookOpen className="w-4 h-4" />}
               label={t('info.tutorial')}
               description={t('info.tutorialDesc')}
             />
             <InfoCard
-              href="/gpx-download-guide"
+              href={localizedSitePath('/gpx-download-guide', language)}
               icon={<Download className="w-4 h-4" />}
               label={t('info.gpxGuide')}
               description={t('info.gpxGuideDesc')}
@@ -211,8 +212,8 @@ export function InfoPanel({ onClose }: InfoPanelProps) {
             {t('info.moreTools')}
           </h3>
           <div className="space-y-1">
-            <InfoLink href="/gpx-animation" icon={<Sparkles className="w-4 h-4" />} label={t('info.gpxAnimator')} />
-            <InfoLink href="/strava-to-video" icon={<Sparkles className="w-4 h-4" />} label={t('info.stravaToVideo')} />
+            <InfoLink href={localizedSitePath('/gpx-animation', language)} icon={<Sparkles className="w-4 h-4" />} label={t('info.gpxAnimator')} />
+            <InfoLink href={localizedSitePath('/strava-to-video', language)} icon={<Sparkles className="w-4 h-4" />} label={t('info.stravaToVideo')} />
             <InfoLink href="/garmin-to-video" icon={<Sparkles className="w-4 h-4" />} label={t('info.garminToVideo')} />
             <InfoLink href="/cycling-route-animation" icon={<Sparkles className="w-4 h-4" />} label={t('info.cyclingRouteAnimation')} />
             <InfoLink href="/running-route-animation" icon={<Sparkles className="w-4 h-4" />} label={t('info.runningRouteAnimation')} />

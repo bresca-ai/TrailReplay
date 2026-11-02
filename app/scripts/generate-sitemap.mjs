@@ -1,29 +1,25 @@
 import { writeFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { SEO_PAGES } from './seo-pages.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const outputPath = path.resolve(scriptDirectory, '../public/sitemap.xml');
-const repositoryRoot = path.resolve(scriptDirectory, '../..');
 const siteUrl = 'https://trailreplay.com';
 
-function pageLastmod(page) {
-  try {
-    const date = execFileSync('git', [
-      'log', '-1', '--format=%cs', '--', ...page.sourceFiles,
-    ], { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-  } catch {
-    // Static exports without Git metadata use the checked-in fallback date.
-  }
-  return page.lastmod;
-}
-
-const urls = SEO_PAGES.map((page) => `  <url>
+// Shared source files and shallow build clones cannot reliably identify the
+// last significant change to each page. Omit lastmod until it can be tracked
+// per page, rather than publishing misleading dates.
+const localizedHelp = ['es', 'ca', 'de', 'fr', 'zh-tw'].flatMap((language) =>
+  ['tutorial', 'gpx-download-guide', 'agents'].map((slug) => ({ path: `/${language}/${slug}` })),
+);
+const germanLandings = ['strava-to-video', 'garmin-to-video', 'gpx-animation', 'cycling-route-animation', 'running-route-animation', 'cinematic-camera'].map((slug) => ({ path: `/de/${slug}` }));
+const requestedLandings = ['es', 'ca', 'fr', 'zh-tw'].flatMap((language) =>
+  ['gpx-animation', 'strava-to-video'].map((slug) => ({ path: `/${language}/${slug}` })),
+);
+const localizedHome = ['es', 'ca', 'de', 'fr', 'zh-tw'].map((language) => ({ path: `/${language}/` }));
+const urls = [...SEO_PAGES, ...localizedHelp, ...germanLandings, ...localizedHome, ...requestedLandings].map((page) => `  <url>
     <loc>${siteUrl}${page.path}</loc>
-    <lastmod>${pageLastmod(page)}</lastmod>
   </url>`).join('\n\n');
 
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -33,4 +29,4 @@ ${urls}
 `;
 
 await writeFile(outputPath, sitemap, 'utf8');
-console.log(`Generated sitemap with ${SEO_PAGES.length} canonical URLs.`);
+console.log(`Generated sitemap with ${SEO_PAGES.length + localizedHelp.length + germanLandings.length + localizedHome.length + requestedLandings.length} canonical URLs.`);
