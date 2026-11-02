@@ -38,6 +38,12 @@ function supportedLanguage(value: string): LanguageCode | undefined {
 export function getInitialLanguage(): LanguageCode {
   if (typeof window === 'undefined') return 'en';
 
+  const homePrefix = window.location.pathname.match(/^\/([a-z]{2}(?:-[a-z]{2})?)\/?$/i)?.[1];
+  if (homePrefix) {
+    const homeLanguage = LANGUAGE_CODES.find((code) => code.toLowerCase() === homePrefix.toLowerCase());
+    if (homeLanguage) return homeLanguage;
+  }
+
   try {
     const saved = localStorage.getItem('trailReplayLang');
     if (saved && LANGUAGE_CODES.includes(saved as LanguageCode)) {

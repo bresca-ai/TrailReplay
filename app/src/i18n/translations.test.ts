@@ -70,7 +70,7 @@ describe('translations', () => {
 });
 
 describe('initial language selection', () => {
-  afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+  afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); window.history.replaceState(null, '', '/'); });
 
   function browser(language: string, languages = [language]) {
     localStorage.clear();
@@ -79,6 +79,13 @@ describe('initial language selection', () => {
 
   it.each(['zh-TW', 'zh-tw', 'zh_TW', 'zh-Hant', 'zh-Hant-TW', 'zh-Hant-HK'])("recognizes '%s' without reducing it to 'zh'", (language) => {
     browser(language);
+    expect(getInitialLanguage()).toBe('zh-TW');
+  });
+
+  it('honours a localized homepage URL over stored or browser preferences', () => {
+    browser('en');
+    localStorage.setItem('trailReplayLang', 'fr');
+    window.history.replaceState(null, '', '/zh-tw/');
     expect(getInitialLanguage()).toBe('zh-TW');
   });
 

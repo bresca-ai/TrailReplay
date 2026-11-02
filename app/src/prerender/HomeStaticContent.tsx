@@ -1,3 +1,6 @@
+import { HOME_TRANSLATIONS } from './homeTranslations';
+import type { LanguageCode } from '@/i18n/languages';
+import { seoLocalizedPath } from '@/seo/seoLocale';
 import { SEO_LANDING_PAGES, type SeoLandingSlug } from '@/seo/seoPages';
 
 const HELP_LINKS = [
@@ -12,7 +15,22 @@ const HELP_LINKS = [
  * replaced as soon as the bundle executes. It exists so that crawlers (and the
  * first frame) get a described page and a link graph instead of an empty div.
  */
-export function HomeStaticContent() {
+export function HomeStaticContent({ language = 'en' }: { language?: LanguageCode }) {
+  if (language !== 'en') {
+    const copy = HOME_TRANSLATIONS[language];
+    return <main className="mx-auto max-w-3xl px-6 py-16 text-[var(--evergreen)]">
+      <h1 className="text-3xl font-bold">{copy.title}</h1>
+      <p className="mt-4 leading-7">{copy.description}</p><p className="mt-4 leading-7">{copy.privacy}</p>
+      <h2 className="mt-10 text-xl font-bold">{copy.how}</h2><ol>{copy.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+      <h2 className="mt-10 text-xl font-bold">{copy.guides}</h2><ul>
+        <li><a href={seoLocalizedPath('/tutorial', language)}>{copy.tutorial}</a></li>
+        <li><a href={seoLocalizedPath('/gpx-download-guide', language)}>{copy.guide}</a></li>
+      </ul>
+      <h2 className="mt-10 text-xl font-bold">{copy.landing}</h2><ul>
+        {Object.values(SEO_LANDING_PAGES).map((page, index) => <li key={page.slug}><a href={seoLocalizedPath(`/${page.slug}`, language === 'de' ? 'de' : 'en')}>{copy.pageTitles[index]}</a></li>)}
+      </ul>
+    </main>;
+  }
   const landingPages = Object.keys(SEO_LANDING_PAGES) as SeoLandingSlug[];
 
   return (

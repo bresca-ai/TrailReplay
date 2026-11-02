@@ -14,7 +14,8 @@ const localizedHelp = ['es', 'ca', 'de', 'fr', 'zh-tw'].flatMap((language) =>
   ['tutorial', 'gpx-download-guide', 'agents'].map((slug) => ({ path: `/${language}/${slug}` })),
 );
 const germanLandings = ['strava-to-video', 'garmin-to-video', 'gpx-animation', 'cycling-route-animation', 'running-route-animation', 'cinematic-camera'].map((slug) => ({ path: `/de/${slug}` }));
-const urls = [...SEO_PAGES, ...localizedHelp, ...germanLandings].map((page) => `  <url>
+const localizedHome = ['es', 'ca', 'de', 'fr', 'zh-tw'].map((language) => ({ path: `/${language}/` }));
+const urls = [...SEO_PAGES, ...localizedHelp, ...germanLandings, ...localizedHome].map((page) => `  <url>
     <loc>${siteUrl}${page.path}</loc>
   </url>`).join('\n\n');
 
@@ -25,4 +26,4 @@ ${urls}
 `;
 
 await writeFile(outputPath, sitemap, 'utf8');
-console.log(`Generated sitemap with ${SEO_PAGES.length + localizedHelp.length + germanLandings.length} canonical URLs.`);
+console.log(`Generated sitemap with ${SEO_PAGES.length + localizedHelp.length + germanLandings.length + localizedHome.length} canonical URLs.`);

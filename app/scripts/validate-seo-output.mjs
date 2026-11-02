@@ -96,6 +96,19 @@ for (const { file, canonical } of requiredDocuments) {
   }
 }
 
+for (const locale of ['es', 'ca', 'de', 'fr', 'zh-tw']) {
+  const file = `${locale}/index.html`;
+  const html = await readFile(path.join(distRoot, file), 'utf8');
+  const lang = locale === 'zh-tw' ? 'zh-TW' : locale;
+  if (!html.includes(`<html lang="${lang}">`)) failures.push(`${file} has incorrect language`);
+  if (!html.includes(`rel="canonical" href="https://trailreplay.com/${locale}/"`)) failures.push(`${file} has incorrect canonical`);
+  if (!/<h1[\s>]/.test(html) || html.includes('<div id="root"></div>')) failures.push(`${file} is not prerendered`);
+  for (const code of ['en', 'es', 'ca', 'de', 'fr', 'zh-TW']) {
+    const prefix = code === 'en' ? '' : `/${code.toLowerCase()}`;
+    if (!html.includes(`hreflang="${code}" href="https://trailreplay.com${prefix}/"`)) failures.push(`${file} is missing ${code} alternate`);
+  }
+}
+
 // Every published help translation must have its own language, canonical and reciprocal alternates.
 for (const locale of ['es', 'ca', 'de', 'fr', 'zh-tw']) {
   for (const slug of ['tutorial', 'gpx-download-guide', 'agents']) {

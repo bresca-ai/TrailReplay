@@ -9,6 +9,7 @@ import { SEO_LANDING_PAGES_DE } from '@/seo/seoPages.de';
 import { LANGUAGE_CODES } from '@/i18n/languages';
 import { translate } from '@/i18n/translations';
 import { PrerenderLanguageContext } from '@/i18n/useI18n';
+import { HOME_TRANSLATIONS } from '@/prerender/homeTranslations';
 
 /**
  * Build-time prerendering of every crawlable document.
@@ -36,6 +37,7 @@ export function renderAllPages(): Record<string, string> {
   const result = Object.fromEntries(Object.entries(pages).map(([file, render]) => [file, render()]));
   const helpComponents = { tutorial: TutorialPage, 'gpx-download-guide': GpxDownloadGuidePage, agents: AgentsPage };
   for (const language of LANGUAGE_CODES.filter((code) => code !== 'en')) {
+    result[`${language.toLowerCase()}/index.html`] = renderToString(<HomeStaticContent language={language} />);
     for (const [slug, Component] of Object.entries(helpComponents)) {
       result[`${language.toLowerCase()}/${slug}.html`] = renderToString(
         <PrerenderLanguageContext.Provider value={language}><Component /></PrerenderLanguageContext.Provider>,
@@ -61,4 +63,8 @@ export function localizedHelpMetadata(language: (typeof LANGUAGE_CODES)[number],
 export function germanLandingMetadata(slug: SeoLandingSlug) {
   const page = SEO_LANDING_PAGES_DE[slug];
   return { title: page.title, description: page.description };
+}
+
+export function localizedHomeMetadata(language: Exclude<(typeof LANGUAGE_CODES)[number], 'en'>) {
+  return HOME_TRANSLATIONS[language];
 }

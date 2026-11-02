@@ -22,11 +22,13 @@ const vite = await createServer({
 let rendered;
 let localizedHelpMetadata;
 let germanLandingMetadata;
+let localizedHomeMetadata;
 try {
   const module = await vite.ssrLoadModule('/src/prerender/entry-server.tsx');
   rendered = module.renderAllPages();
   localizedHelpMetadata = module.localizedHelpMetadata;
   germanLandingMetadata = module.germanLandingMetadata;
+  localizedHomeMetadata = module.localizedHomeMetadata;
 } finally {
   await vite.close();
 }
@@ -52,6 +54,30 @@ for (const [file, markup] of Object.entries(rendered)) {
   let html = templates.get(baseFile);
   if (!html.includes(ROOT_DIV)) throw new Error(`prerender: no empty #root mount point found in ${template}`);
 
+  if (slug === 'index') {
+    const alternates = locales.map((code) => {
+      const prefix = code === 'en' ? '' : `/${code.toLowerCase()}`;
+      return `<link rel="alternate" hreflang="${code}" href="https://trailreplay.com${prefix}/" />`;
+    }).join('\n    ');
+    html = html.replace('</head>', `    ${alternates}\n  </head>`);
+    if (localized) {
+      const metadata = localizedHomeMetadata(language);
+      const url = `https://trailreplay.com/${language.toLowerCase()}/`;
+      const title = escapeHtml(`${metadata.title} | TrailReplay`);
+      const description = escapeHtml(metadata.description);
+      html = html.replace('<html lang="en">', `<html lang="${language}">`)
+        .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+        .replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/>/, `<meta name="description" content="${description}" />`)
+        .replace(/<meta name="language" content="[^"]*"\s*\/>/, '')
+        .replace(/<link rel="canonical" href="[^"]*"\s*\/>/, `<link rel="canonical" href="${url}" />`)
+        .replace(/<meta property="og:url" content="[^"]*"\s*\/>/, `<meta property="og:url" content="${url}" />`)
+        .replace(/<meta property="og:title" content="[^"]*"\s*\/>/, `<meta property="og:title" content="${title}" />`)
+        .replace(/<meta\s+property="og:description"\s+content="[^"]*"\s*\/>/, `<meta property="og:description" content="${description}" />`)
+        .replace(/<meta name="twitter:title" content="[^"]*"\s*\/>/, `<meta name="twitter:title" content="${title}" />`)
+        .replace(/<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/>/, `<meta name="twitter:description" content="${description}" />`)
+        .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '');
+    }
+  }
   if (helpSlugs.includes(slug) || landingSlugs.includes(slug)) {
     const pageLocales = helpSlugs.includes(slug) ? locales : ['en', 'de'];
     const alternates = pageLocales.map((code) => {
