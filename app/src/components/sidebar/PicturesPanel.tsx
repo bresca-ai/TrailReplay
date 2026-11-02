@@ -128,7 +128,7 @@ export function PicturesPanel() {
       <input
         ref={relinkInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.m4v,.webm,.mov,.mkv,.avi"
         onChange={handleRelinkFileChange}
         className="hidden"
       />

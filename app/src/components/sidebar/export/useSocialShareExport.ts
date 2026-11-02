@@ -26,6 +26,9 @@ import { getSplitMapBox } from './socialShareSplit';
 
 const BRAND_ORANGE = '#C1652F';
 
+// Keep the cover camera separate from the playback camera across editor mounts.
+let savedCoverCamera: { trackKey: string; center: [number, number]; zoom: number; pitch: number; bearing: number } | null = null;
+
 export interface RouteBboxNorm {
   x: number; y: number; w: number; h: number;
 }
@@ -34,7 +37,7 @@ export type MapRouteGesture =
   | { type: 'move'; deltaX: number; deltaY: number }
   | { type: 'resize'; scaleFactor: number; anchorX: number; anchorY: number };
 
-export function useSocialShareExport(enabled = true) {
+export function useSocialShareExport(enabled = true, editorActive = enabled) {
   const settings = useAppStore((s) => s.socialShareSettings);
   const setSocialShareSettings = useAppStore((s) => s.setSocialShareSettings);
   const tracks = useAppStore((s) => s.tracks);
@@ -63,6 +66,22 @@ export function useSocialShareExport(enabled = true) {
   useEffect(() => () => {
     if (mapGestureSettleTimerRef.current !== null) window.clearTimeout(mapGestureSettleTimerRef.current);
   }, []);
+
+  const trackKey = tracks.filter((track) => track.visible && track.points.length > 0)
+    .map((track) => `${track.id}:${track.points.length}`).join('|');
+  useEffect(() => {
+    if (!editorActive) return;
+    const map = mapGlobalRef.current;
+    if (!map) return;
+    if (savedCoverCamera?.trackKey === trackKey) {
+      map.jumpTo(savedCoverCamera);
+      lastMapFirstFitKeyRef.current = trackKey;
+    }
+    return () => {
+      const center = map.getCenter();
+      savedCoverCamera = { trackKey, center: [center.lng, center.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
+    };
+  }, [editorActive, trackKey]);
 
   const selectablePictures = pictures.filter((p) => !p.isPlaceholder);
   const selectedPicture = selectablePictures.find((p) => p.id === settings.selectedPictureId) ?? null;
@@ -202,22 +221,14 @@ export function useSocialShareExport(enabled = true) {
     try {
       let preCapuredMapCanvas: HTMLCanvasElement | null = null;
 
-      if (settings.template !== 'photo-first') {
+      if (settings.template !== 'photo-first' && !(settings.template === 'split' && settings.showSplitMap === false)) {
         const map = mapGlobalRef.current;
         if (map) {
           const container = document.getElementById('map-capture-container');
           const visibleTracks = tracks.filter((track) => track.visible && track.points.length > 0);
           const visibleStatCount = Math.min(4, settings.stats?.filter((stat) => stat.visible).length ?? 3);
           const statsRows = visibleStatCount > 0 ? Math.ceil(visibleStatCount / (settings.statsLayout ?? 3)) : 0;
-          const fitKey = [
-            settings.template,
-            settings.aspectRatio,
-            settings.showLocation,
-            settings.showStats,
-            statsRows,
-            settings.showElevationMiniChart,
-            ...visibleTracks.map((track) => `${track.id}:${track.points.length}`),
-          ].join('|');
+          const fitKey = visibleTracks.map((track) => `${track.id}:${track.points.length}`).join('|');
 
           if (options.fitMapFirstRoute && container && visibleTracks.length > 0
             && lastMapFirstFitKeyRef.current !== fitKey) {
@@ -293,7 +304,9 @@ export function useSocialShareExport(enabled = true) {
       const input = buildInput(brandLogo, assets, preCapuredMapCanvas);
 
       // Compute the same route bounds used by the renderer for either template.
-      if (settings.template === 'split') {
+      if (settings.template === 'split' && settings.showSplitMap === false) {
+        setRouteBboxNorm(null);
+      } else if (settings.template === 'split') {
         const { w, h } = getPosterSize(settings.aspectRatio);
         const box = getSplitMapBox(w, h, settings.splitMapFrame);
         setRouteBboxNorm({ x: box.x / w, y: box.y / h, w: box.w / w, h: box.h / h });
@@ -362,15 +375,15 @@ export function useSocialShareExport(enabled = true) {
     }, 450);
   }, [generatePreview, settings.aspectRatio, settings.splitMapFrame, settings.template]);
 
-  const lastAutomaticRenderRef = useRef<{ generate: typeof generatePreview; photoVersion: number } | null>(null);
+  const lastAutomaticRenderRef = useRef<{ generate: typeof generatePreview; photoVersion: number; editorActive: boolean } | null>(null);
   useEffect(() => {
     if (!enabled) return;
     // Returning to the image tab alone must not recapture the video camera or
     // replace the composition that the user already designed.
     const previous = lastAutomaticRenderRef.current;
-    if (previous?.generate === generatePreview && previous.photoVersion === photoVersion) return;
+    if (previous?.generate === generatePreview && previous.photoVersion === photoVersion && previous.editorActive === editorActive) return;
     const render = () => {
-      lastAutomaticRenderRef.current = { generate: generatePreview, photoVersion };
+      lastAutomaticRenderRef.current = { generate: generatePreview, photoVersion, editorActive };
       void generatePreview({ fitMapFirstRoute: settings.template !== 'photo-first', reuseMapCapture: true });
     };
     if (settings.template === 'photo-first' || mapGlobalRef.current) {
@@ -387,6 +400,7 @@ export function useSocialShareExport(enabled = true) {
     return () => window.clearInterval(timer);
   }, [
     enabled,
+    editorActive,
     settings.template,
     settings.aspectRatio,
     settings.selectedPictureId,
@@ -441,7 +455,7 @@ export function useSocialShareExport(enabled = true) {
     setIsRendering(true);
     try {
       let preCapuredMapCanvas: HTMLCanvasElement | null = null;
-      if (settings.template !== 'photo-first') {
+      if (settings.template !== 'photo-first' && !(settings.template === 'split' && settings.showSplitMap === false)) {
         const map = mapGlobalRef.current;
         if (map) {
           preCapuredMapCanvas = await captureSocialMap(map, { showPlaces: settings.showMapPlaces });

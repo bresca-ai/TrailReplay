@@ -222,6 +222,8 @@ export const zhTW = {
     pasteCoordinates: '或在此貼上座標',
   },
   imageExport: {
+    undo: '復原',
+    showSplitMap: '顯示地圖',
     showMapPlaces: '顯示地點', hideMapPlaces: '隱藏地點', editorSections: '封面編輯區域', designSection: '設計', mapSection: '地圖', logoSection: '標誌', modeVideo: '影片', modeImage: '圖片', template: '範本', templateMapFirst: '地圖為主', templatePhotoFirst: '照片為主', templateSplit: '照片＋地圖',
     layoutPresets: '版面範本', presetClassic: '經典地圖', presetLongWay: '醒目路線', presetRidgePhoto: '照片＋地圖', presetPhotoGrid: '雙照片', coverTypography: '封面與影片字體', photoFrames: '照片框', photoFramesHint: '點選空白照片框即可加入照片。拖曳框體可移動，拖曳角落可調整大小，點兩下可裁切。', addFrame: '新增照片框', removePhoto: '移除照片', replacePhoto: '更換照片', zoomPhoto: '縮放', movePhotoCrop: '拖曳以裁切照片', movePhotoFrame: '移動照片框', resizePhotoFrame: '調整照片框大小', cropPhoto: '裁切照片', photoAboveMap: '將照片放在地圖前方',
     titleWidth: '標題寬度', resizeTitle: '調整標題大小', statIcon: '圖示', noIcon: '不使用圖示', ratio: '比例', photo: '照片', noPhotos: '尚未加入照片。', title: '標題', titleModeJourney: '旅程', titleModeTrack: '軌跡', titleModeCustom: '自訂', titlePlaceholder: '輸入標題…', titleSize: '標題大小', titleColor: '文字顏色', location: '地點', locationPlaceholder: '縣市、國家…',

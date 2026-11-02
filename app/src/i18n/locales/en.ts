@@ -852,6 +852,8 @@ export const en = {
     pasteCoordinates: 'Or paste coordinates here',
   },
   imageExport: {
+    undo: 'Undo',
+    showSplitMap: 'Show map',
     showMapPlaces: 'Show places', hideMapPlaces: 'Hide places',
     editorSections: 'Cover editor sections', designSection: 'Design', mapSection: 'Map', logoSection: 'Logo',
     modeVideo: 'Video',

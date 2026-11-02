@@ -843,6 +843,8 @@ export const ca = {
     pasteCoordinates: 'O enganxa les coordenades aquí',
   },
   imageExport: {
+    undo: 'Desfer',
+    showSplitMap: 'Mostrar mapa',
     showMapPlaces: 'Mostra els llocs', hideMapPlaces: 'Amaga els llocs',
     editorSections: 'Seccions de l’editor de portada', designSection: 'Disseny', mapSection: 'Mapa', logoSection: 'Logotip',
     modeVideo: 'Vídeo',

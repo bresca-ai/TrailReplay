@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, Download, ImagePlus, Loader2, Minus, Move, Plus, X } from 'lucide-react';
+import { Check, Download, ImagePlus, Loader2, Minus, Move, Plus, Undo2, X } from 'lucide-react';
 import type { SocialSharePhotoSlot, SocialShareSettings } from '@/types';
 import type { MapRouteGesture, RouteBboxNorm } from './useSocialShareExport';
 import { useI18n } from '@/i18n/useI18n';
@@ -17,7 +17,10 @@ interface Props {
   onDownload?: () => void;
   settings: SocialShareSettings;
   setSocialShareSettings: (patch: Partial<SocialShareSettings>) => void;
+  onUndo: () => void;
+  canUndo: boolean;
   onMapRouteGesture: (gesture: MapRouteGesture) => Promise<void>;
+  onMapEditStart?: () => void;
   routeBboxNorm: RouteBboxNorm | null;
   dataPanelBboxNorm: RouteBboxNorm | null;
   titleBboxNorm: RouteBboxNorm;
@@ -29,6 +32,7 @@ interface Props {
   activePhotoSlotId: string | null;
   onPhotoSlotSelect: (id: string) => void;
   onElementSelect?: (section: CoverEditorSection) => void;
+  selectedSection?: CoverEditorSection | null;
   coverMode?: boolean;
   inline?: boolean;
 }
@@ -114,9 +118,9 @@ interface PhotoDragState {
 
 export function SocialSharePreviewModal({
   previewUrl, isRendering, onClose, onExport, onDownload,
-  settings, setSocialShareSettings, onMapRouteGesture, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
+  settings, setSocialShareSettings, onUndo, canUndo, onMapRouteGesture, onMapEditStart, routeBboxNorm, dataPanelBboxNorm, titleBboxNorm, coverMode = false, inline = false,
   logoBboxNorm,
-  onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange, activePhotoSlotId, onPhotoSlotSelect, onElementSelect,
+  onPhotoSlotPick, onPhotoSlotFile, onPhotoSlotPicture, onPhotoSlotChange, activePhotoSlotId, onPhotoSlotSelect, onElementSelect, selectedSection,
 }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -218,7 +222,7 @@ export function SocialSharePreviewModal({
     return () => observer.disconnect();
   }, [inline]);
 
-  const showRouteOverlay = !!routeBboxNorm;
+  const showRouteOverlay = !!routeBboxNorm && !(settings.template === 'split' && settings.showSplitMap === false);
   const displayedMapFrame = settings.template === 'split' && splitMapDraft ? splitMapDraft : routeBboxNorm;
   const showPanelOverlay = !!dataPanelBboxNorm;
   const hasVisibleCoverStats = settings.showStats && (settings.stats?.some((stat) => stat.visible) ?? true);
@@ -398,6 +402,7 @@ export function SocialSharePreviewModal({
     e.stopPropagation();
     e.preventDefault();
     onElementSelect?.(settings.template === 'photo-first' ? 'route' : 'map');
+    if (settings.template !== 'photo-first' && type !== 'frame-move' && !(settings.template === 'split' && type === 'resize')) onMapEditStart?.();
     const container = containerRef.current;
     if (!container) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -574,7 +579,7 @@ export function SocialSharePreviewModal({
   if (settings.template === 'split') {
     for (const slot of settings.photoSlots ?? []) {
               const frame = splitPhotoDraft?.id === slot.id ? splitPhotoDraft.frame : slot;
-              const selected = activePhotoSlotId === slot.id;
+              const selected = selectedSection === 'photos' && activePhotoSlotId === slot.id;
               const cropping = splitPhotoCropId === slot.id;
               const photoResizeHandles: ReactNode[] = [];
               for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
@@ -676,10 +681,16 @@ export function SocialSharePreviewModal({
               {t(photoEditMode ? 'imageExport.doneEditingPhoto' : 'imageExport.editPhoto')}
             </button>
           )}
-          {inline && <div className="ml-auto flex shrink-0 items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
+          {inline && <div className="ml-auto flex shrink-0 items-center gap-2">
+            <button type="button" onClick={onUndo} disabled={!canUndo} title={`${t('imageExport.undo')} (Ctrl/⌘ Z)`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-white/20 disabled:opacity-35">
+              <Undo2 className="h-3.5 w-3.5" />{t('imageExport.undo')}
+            </button>
+            <div className="flex items-center gap-1 rounded-lg bg-white/10 p-1 text-white">
             <button type="button" onClick={() => setCanvasZoom((zoom) => Math.max(1, Number((zoom - 0.1).toFixed(2))))} disabled={canvasZoom <= 1} aria-label={t('imageExport.zoomOut')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Minus className="h-3.5 w-3.5" /></button>
             <span className="w-10 text-center text-[11px] tabular-nums">{Math.round(canvasZoom * 100)}%</span>
             <button type="button" onClick={() => setCanvasZoom((zoom) => Math.min(2.5, Number((zoom + 0.1).toFixed(2))))} disabled={canvasZoom >= 2.5} aria-label={t('imageExport.zoomIn')} className="rounded p-1 hover:bg-white/15 disabled:opacity-35"><Plus className="h-3.5 w-3.5" /></button>
+            </div>
           </div>}
           {!inline && <button onClick={onClose} className="p-1 hover:bg-black/5 rounded">
             <X className="w-4 h-4" />
@@ -748,11 +759,11 @@ export function SocialSharePreviewModal({
               onPointerCancel={onTitlePointerUp}
               aria-label={t('imageExport.dragTitle')}
             >
-              <div className="absolute bottom-0 right-0 flex h-5 w-5 translate-x-1/2 translate-y-1/2 cursor-nwse-resize items-center justify-center rounded-tl bg-white text-[var(--evergreen)] shadow"
+              {selectedSection === 'title' && <div className="absolute bottom-0 right-0 flex h-5 w-5 translate-x-1/2 translate-y-1/2 cursor-nwse-resize items-center justify-center rounded-tl bg-white text-[var(--evergreen)] shadow"
                 onPointerDown={onTitleResizeDown} onPointerUp={onTitleResizeUp} onPointerCancel={onTitleResizeUp}
                 aria-label={t('imageExport.resizeTitle')} title={t('imageExport.resizeTitle')}>
                 <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1 8L8 1M4 8L8 4" stroke="currentColor" strokeWidth="1.4" /></svg>
-              </div>
+              </div>}
             </div>
 
             {/* Drag stats to place them; resize their box to change row/column flow. */}
@@ -775,7 +786,7 @@ export function SocialSharePreviewModal({
                 onPointerCancel={onPanelPointerUp}
                 aria-label={t('imageExport.dragResizeStatsHint')}
               >
-                {hasVisibleCoverStats && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => (
+                {selectedSection === 'stats' && hasVisibleCoverStats && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => (
                   <div key={corner}
                     className={`absolute z-30 flex h-5 w-5 items-center justify-center rounded bg-white text-[var(--evergreen)] shadow cursor-nwse-resize ${corner.includes('top') ? 'top-0' : 'bottom-0'} ${corner.includes('left') ? 'left-0' : 'right-0'}`}
                     style={{ cursor: corner === 'top-right' || corner === 'bottom-left' ? 'nesw-resize' : 'nwse-resize' }}
@@ -835,6 +846,7 @@ export function SocialSharePreviewModal({
                 onPointerCancel={onRoutePointerUp}
                 onWheel={(event) => {
                   if (settings.template !== 'split') return;
+                  onMapEditStart?.();
                   event.preventDefault();
                   const rect = event.currentTarget.getBoundingClientRect();
                   void onMapRouteGesture({
@@ -846,7 +858,7 @@ export function SocialSharePreviewModal({
                 }}
                 aria-label={settings.template === 'split' ? t('imageExport.dragSplitMapHint') : t('imageExport.dragMapHint')}
               >
-                {settings.template === 'split' && <button type="button"
+                {selectedSection === 'map' && settings.template === 'split' && <button type="button"
                   className="absolute left-1/2 top-1 z-20 flex h-6 w-6 -translate-x-1/2 cursor-move items-center justify-center rounded-md bg-white text-[var(--evergreen)] shadow"
                   onPointerDown={(event) => onRoutePointerDown(event, 'frame-move')}
                   onPointerMove={onRoutePointerMove}
@@ -855,7 +867,7 @@ export function SocialSharePreviewModal({
                   aria-label={t('imageExport.moveMapFrame')} title={t('imageExport.moveMapFrame')}>
                   <Move className="h-3.5 w-3.5" />
                 </button>}
-                {settings.template === 'split'
+                {(selectedSection === 'map' || selectedSection === 'route') && (settings.template === 'split'
                   ? routeResizeHandles
                   : <div
                     className="absolute bottom-0 right-0 flex h-5 w-5 translate-x-1/2 translate-y-1/2 cursor-nwse-resize items-center justify-center rounded-tl-md bg-[var(--trail-orange)]"
@@ -865,7 +877,7 @@ export function SocialSharePreviewModal({
                     onPointerCancel={onRoutePointerUp}
                     aria-label={t('imageExport.zoomIn')}>
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 7L7 1M4 7L7 4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  </div>}
+                  </div>)}
               </div>
             )}
 

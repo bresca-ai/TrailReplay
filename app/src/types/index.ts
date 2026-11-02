@@ -320,6 +320,7 @@ export interface SocialShareSettings {
   photoSlots: SocialSharePhotoSlot[];
   /** Normalized position and size of the map inset in photo + map layouts. */
   splitMapFrame?: { x: number; y: number; w: number; h: number };
+  showSplitMap?: boolean;
   titleMode: 'journey-name' | 'track-name' | 'custom';
   customTitle: string;
   titleScale: number;
