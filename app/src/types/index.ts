@@ -49,9 +49,11 @@ export interface TransportSegment {
   to: { lat: number; lon: number; name?: string };
   duration: number;
   distance: number;
-  /** Extra zoom levels to pull back during a camera transition. */
+  /** Map zoom and tilt used while moving between routes. */
+  cameraTransitionZoom?: number;
+  cameraTransitionPitch?: number;
+  /** Legacy settings from earlier drafts, retained when reopening projects. */
   cameraZoomOut?: number;
-  /** Extra zoom levels at arrival, eased back to the route camera after arrival. */
   cameraZoomIn?: number;
 }
 

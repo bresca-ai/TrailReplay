@@ -613,7 +613,7 @@ export const de = {
     dragToReorder: 'Zum Neuanordnen ziehen',
     emptyTitle: 'Keine Segmente in der Reise',
     emptySubtitle: 'Füge Strecken und Transportmodi hinzu',
-    cameraZoomOut: 'Herauszoomen', cameraZoomIn: 'Bei Ankunft hineinzoomen', cameraZoomHint: 'Zoomstufen; bei Ankunft gleitet die Ansicht zur Routenkamera zurück.',
+    cameraSettings: 'Kameraeinstellungen', cameraTransitionZoom: 'Übergangszoom', cameraZoomWide: 'Weiter', cameraZoomClose: 'Näher', cameraTransitionPitch: 'Übergangsneigung', cameraPitchTopDown: 'Von oben', cameraPitchTilted: 'Geneigt',
     addTransport: 'Transport hinzufügen',
     runsSimultaneously: 'Läuft gleichzeitig',
     runsSimultaneouslyHint: 'Diese Tracks sind gleichzeitig mit Deiner Hauptreise von Anfang bis Ende animiert.',

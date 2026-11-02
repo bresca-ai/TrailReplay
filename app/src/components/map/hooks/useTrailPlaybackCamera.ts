@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
-import { arrivalZoomOffset, transitionCameraPose, type TransitionCameraPose } from '@/utils/cameraTransition';
+import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
@@ -77,7 +77,8 @@ interface UseTrailPlaybackCameraParams {
       progressStartRatio?: number;
       progressEndRatio?: number;
       cameraZoomOut?: number;
-      cameraZoomIn?: number;
+      cameraTransitionZoom?: number;
+      cameraTransitionPitch?: number;
     };
     localProgress?: number;
   } | null;
@@ -98,8 +99,6 @@ interface UseTrailPlaybackCameraParams {
     endCoordIndex: number;
     color?: string;
     transportMode?: string;
-    cameraZoomIn?: number;
-    progressEndRatio?: number;
   }>;
   setCameraPosition: (position: {
     lat: number;
@@ -490,14 +489,14 @@ export function useTrailPlaybackCamera({
         const heading = cameraMode === 'cinematic' ? getSmoothedRouteHeadingDeg({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, baselineHalfWidth: cinematicHeadingBaselineHalfWidth(anchorWindow) }) ?? getRouteBearingAtProgress(cameraCoordinates, endProgress) : 0;
         const cinematic = cameraMode === 'cinematic' ? getCinematicCameraPose({ keyframes: cinematicKeyframes ?? [], coordinates: cameraCoordinates, progress: endProgress, routeHeadingDeg: heading }) : null;
         const target = cinematic ?? (fallback && cameraMode === 'cinematic' ? { ...fallback, bearing: heading } : fallback);
-        const endZoom = Math.min(mapRef.current.getMaxZoom(), (target?.zoom ?? start.zoom) + Math.max(0, Math.min(4, segment.cameraZoomIn ?? 0)));
+        const endZoom = target?.zoom ?? start.zoom;
         const endCenter = cameraMode === 'cinematic' && target
           ? getSmoothedCameraAnchor({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, markerPosition: to, zoom: target.zoom })
           : to;
         const endPose: TransitionCameraPose = { center: endCenter, zoom: endZoom, pitch: target?.pitch ?? start.pitch, bearing: target?.bearing ?? start.bearing };
-        const depth = Math.max(0, Math.min(8, segment.cameraZoomOut ?? 4));
-        const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(start.zoom, endZoom) - depth);
-        const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, wideZoom);
+        const { zoom, pitch } = transitionSettings(segment);
+        const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(mapRef.current.getMaxZoom(), zoom));
+        const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, wideZoom, pitch);
         mapRef.current.jumpTo(pose);
         smoothedCenterRef.current = pose.center;
         smoothBearingRef.current = pose.bearing;
@@ -554,7 +553,7 @@ export function useTrailPlaybackCamera({
         return followBehindPose && { ...followBehindPose, bearing: cinematicHeadingDeg };
       };
 
-      let targetPose = cameraMode === 'cinematic'
+      const targetPose = cameraMode === 'cinematic'
         ? getCinematicCameraPose({
             keyframes: cinematicKeyframes ?? [],
             coordinates: cameraCoordinates,
@@ -569,11 +568,6 @@ export function useTrailPlaybackCamera({
             progress: playbackProgress,
           });
       if (!targetPose) return;
-      const previous = segmentTimings.find((segment) => segment.segmentIndex === (currentSegment?.segment.segmentIndex ?? -1) - 1);
-      if (previous?.transportMode === 'camera' && previous.progressEndRatio !== undefined) {
-        const extra = Math.max(0, Math.min(4, previous.cameraZoomIn ?? 0));
-        targetPose = { ...targetPose, zoom: Math.min(mapRef.current.getMaxZoom(), targetPose.zoom + arrivalZoomOffset(extra, (playbackProgress - previous.progressEndRatio) * totalDurationMs)) };
-      }
 
       // Cinematic mode's pose is already smooth by construction (it comes
       // from a spline through authored keyframes, not a noisy input) — the

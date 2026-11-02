@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalZoomOffset, cameraTransitionPose, transitionCameraPose } from './cameraTransition';
+import { cameraTransitionPose, transitionCameraPose, transitionSettings } from './cameraTransition';
 
 describe('camera transition', () => {
   it('zooms out before panning and zooms back in at the destination', () => {
@@ -34,10 +34,18 @@ describe('camera pose continuity', () => {
       expect(Math.abs(before.center[0] - after.center[0])).toBeLessThan(0.001);
     }
   });
-  it('smoothly returns custom arrival zoom to the route camera', () => {
-    expect(arrivalZoomOffset(2, 0)).toBe(2);
-    expect(arrivalZoomOffset(2, 750)).toBe(1);
-    expect(arrivalZoomOffset(2, 1500)).toBe(0);
-    expect(arrivalZoomOffset(2, 2000)).toBe(0);
+  it('holds the selected tilt while moving and restores each route camera', () => {
+    const start = { center: [1, 2] as [number, number], zoom: 14, pitch: 50, bearing: 0 };
+    const end = { center: [3, 4] as [number, number], zoom: 13, pitch: 40, bearing: 0 };
+    for (const pitch of [0, 30, 60]) {
+      expect(transitionCameraPose(start, end, 0.5, 8, pitch).pitch).toBe(pitch);
+      expect(transitionCameraPose(start, end, 0, 8, pitch).pitch).toBe(start.pitch);
+      expect(transitionCameraPose(start, end, 1, 8, pitch).pitch).toBe(end.pitch);
+    }
+  });
+  it('uses safe defaults and supports saved draft zoom settings', () => {
+    expect(transitionSettings({})).toEqual({ zoom: 10, pitch: 30 });
+    expect(transitionSettings({ cameraZoomOut: 6 })).toEqual({ zoom: 8, pitch: 30 });
+    expect(transitionSettings({ cameraTransitionZoom: 7, cameraTransitionPitch: 45 })).toEqual({ zoom: 7, pitch: 45 });
   });
 });

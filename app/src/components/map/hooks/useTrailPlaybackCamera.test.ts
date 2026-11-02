@@ -83,7 +83,7 @@ describe('camera transition handoff', () => {
       getCenterClampedToGround: () => true, setCenterClampedToGround: vi.fn(),
       jumpTo: (next: typeof pose) => { pose = { ...pose, ...next }; },
     };
-    const transition = { segmentIndex: 1, startCoordIndex: 1, endCoordIndex: 2, transportMode: 'camera', progressStartRatio: 0.4, progressEndRatio: 0.6, cameraZoomOut: 3, cameraZoomIn: 1 };
+    const transition = { segmentIndex: 1, startCoordIndex: 1, endCoordIndex: 2, transportMode: 'camera', progressStartRatio: 0.4, progressEndRatio: 0.6, cameraTransitionZoom: 8, cameraTransitionPitch: 35 };
     const props = {
       activeTrack: null, activeTextAnnotationId: null, allCoordinates: [[1, 41], [2, 41], [5, 42], [6, 42]],
       cameraCoordinates: [[1, 41], [2, 41], [5, 42], [6, 42]], animationPhase: 'playing', cameraMode: 'follow', cameraStability: 0.5,
@@ -97,6 +97,9 @@ describe('camera transition handoff', () => {
     } as unknown as Parameters<typeof useTrailPlaybackCamera>[0];
     const { rerender } = renderHook((input) => useTrailPlaybackCamera(input), { initialProps: props });
     expect(pose).toEqual({ center: [2, 41], zoom: 14, pitch: 25, bearing: 30 });
+    rerender({ ...props, currentTimeMs: 5000, playbackProgress: 0.5, currentSegment: { segment: transition, localProgress: 0.5 } });
+    expect(pose.zoom).toBe(8);
+    expect(pose.pitch).toBe(35);
     rerender({ ...props, currentTimeMs: 6000, playbackProgress: 0.6, currentPosition: { lat: 42, lon: 5, elevation: 0 }, currentSegment: { segment: transition, localProgress: 1 } });
     const arrival = { ...pose, center: [...pose.center] };
     expect(arrival.center).toEqual([5, 42]);

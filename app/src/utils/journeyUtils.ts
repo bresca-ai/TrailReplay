@@ -60,7 +60,8 @@ export interface SegmentTiming {
   trackId?: string;
   transportMode?: string;
   cameraZoomOut?: number;
-  cameraZoomIn?: number;
+  cameraTransitionZoom?: number;
+  cameraTransitionPitch?: number;
   color?: string;
 }
 
@@ -344,7 +345,8 @@ export function buildComputedJourney(
       trackId: segment.type === 'track' ? (segment as TrackSegment).trackId : undefined,
       transportMode: segment.type === 'transport' ? (segment as TransportSegment).mode : undefined,
       cameraZoomOut: segment.type === 'transport' ? segment.cameraZoomOut : undefined,
-      cameraZoomIn: segment.type === 'transport' ? segment.cameraZoomIn : undefined,
+      cameraTransitionZoom: segment.type === 'transport' ? segment.cameraTransitionZoom : undefined,
+      cameraTransitionPitch: segment.type === 'transport' ? segment.cameraTransitionPitch : undefined,
       color,
     });
   });

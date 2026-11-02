@@ -613,7 +613,7 @@ export const ca = {
     dragToReorder: 'Arrossega per reordenar',
     emptyTitle: 'Cap segment al viatge',
     emptySubtitle: 'Afegeix rutes i transports',
-    cameraZoomOut: 'Allunya', cameraZoomIn: 'Apropa en arribar', cameraZoomHint: 'Nivells de zoom; en arribar torna suaument a la càmera de ruta.',
+    cameraSettings: 'Ajustos de càmera', cameraTransitionZoom: 'Zoom de transició', cameraZoomWide: 'Més lluny', cameraZoomClose: 'Més a prop', cameraTransitionPitch: 'Inclinació de transició', cameraPitchTopDown: 'Zenital', cameraPitchTilted: 'Inclinat',
     addTransport: 'Afegeix transport',
     runsSimultaneously: 'S\'executen simultàniament',
     runsSimultaneouslyHint: 'Aquestes rutes s\'animen al mateix temps que el teu viatge principal, de principi a fi.',

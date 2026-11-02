@@ -89,9 +89,10 @@ describe('Timeline editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Camera transition' }));
     expect(useAppStore.getState().journeySegments[1]).toMatchObject({ type: 'transport', mode: 'camera', duration: 5000, distance: 0 });
     expect(screen.getByText('Camera transition')).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('slider', { name: /Zoom out/ }), { target: { value: '6' } });
-    fireEvent.change(screen.getByRole('slider', { name: /Zoom in on arrival/ }), { target: { value: '2' } });
-    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ cameraZoomOut: 6, cameraZoomIn: 2 });
+    fireEvent.click(screen.getByText('Camera settings'));
+    fireEvent.change(screen.getByRole('slider', { name: /Transition zoom/ }), { target: { value: '6' } });
+    fireEvent.change(screen.getByRole('slider', { name: /Transition tilt/ }), { target: { value: '45' } });
+    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ cameraTransitionZoom: 6, cameraTransitionPitch: 45 });
   });
 
 });
