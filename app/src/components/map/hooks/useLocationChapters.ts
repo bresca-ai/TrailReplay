@@ -27,10 +27,10 @@ function cameraForPlace(map: MapLibreMap, feature: LocationFeature, point: Posit
   return undefined;
 }
 export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loaded: boolean, settings: LocationChapterSettings | undefined,
-  coordinates: number[][], current: { lon: number; lat: number } | null, time: number, phase: string, cameraCanFollow = true) {
+  coordinates: number[][], current: { lon: number; lat: number } | null, time: number, phase: string) {
   const [features, setFeatures] = useState<LocationFeature[]>([]), [error, setError] = useState(false), [label, setLabel] = useState(''), [credit, setCredit] = useState(''), [loading, setLoading] = useState(false);
   const [layerRevision, setLayerRevision] = useState(0);
-  const previous = useRef<{ id: string; start: number; feature: LocationFeature; startedInIntro: boolean; target?: { lng: number; lat: number; zoom: number } } | null>(null);
+  const previous = useRef<{ id: string; start: number; feature: LocationFeature; startedInIntro: boolean } | null>(null);
   const candidate = useRef<{ id: string; since: number } | null>(null);
   const mode = settings?.level ?? 'off';
   const [introResult, setIntroResult] = useState<{ features: LocationFeature[]; coordinates: number[][]; mode: string; enabled: boolean; camera?: PlaceCamera }>();
@@ -93,9 +93,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     } else candidate.current = null;
     if (!active) { if (previous.current) (map.getSource(SOURCE) as GeoJSONSource).setData(empty); previous.current = null; setLabel(''); setCredit(''); return; }
     if (previous.current?.id !== active.properties.id || time < previous.current.start) {
-      const camera = cameraForPlace(map, active, [current!.lon, current!.lat]);
-      const target = camera ? { lng: camera.center[0], lat: camera.center[1], zoom: camera.zoom } : undefined;
-      previous.current = { id: active.properties.id, start: time, feature: active, startedInIntro: phase === 'intro' || phase === 'preloading', target };
+      previous.current = { id: active.properties.id, start: time, feature: active, startedInIntro: phase === 'intro' || phase === 'preloading' };
       (map.getSource(SOURCE) as GeoJSONSource).setData(active);
     }
     const age = Math.max(0, time - previous.current.start) + (previous.current.startedInIntro && phase === 'playing' ? INTRO_DURATION : 0);
@@ -103,16 +101,6 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     // Route time is frozen at zero throughout the opening camera fly-in.
     // Show the starting place there, then finish its fade on the route clock.
     const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? 1 : Math.min(1, age / 500, Math.max(0, (duration - age) / 800));
-    const target = previous.current.target;
-    if (settings?.zoomToPlace && !previous.current.startedInIntro && cameraCanFollow && target && phase === 'playing' && age > 0 && age < duration) {
-      const smooth = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
-      const weight = Math.min(smooth(age / (duration * .3)), smooth((duration - age) / (duration * .3)));
-      const center = map.getCenter();
-      const deltaLng = ((target.lng - center.lng + 540) % 360) - 180;
-      map.jumpTo({ center: [center.lng + deltaLng * weight, center.lat + (target.lat - center.lat) * weight],
-        zoom: map.getZoom() + (Math.min(map.getZoom(), target.zoom) - map.getZoom()) * weight,
-        pitch: map.getPitch() * (1 - weight) });
-    }
     if (map.getLayer(LINE) && map.getLayer(GLOW) && map.getLayer(FILL)) {
       map.setPaintProperty(GLOW, 'line-color', settings?.color ?? '#ffbd66');
       map.setPaintProperty(GLOW, 'line-width', (settings?.width ?? 3) + 8);
@@ -126,7 +114,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     setCredit(opacity > 0 ? active.properties.credit : '');
     const flag = settings?.showFlag ? countryEmoji(active.properties.iso2) : '';
     setLabel(opacity > 0 && (settings?.showName || flag) ? `${flag} ${settings?.showName ? active.properties.name : ''}`.trim() : '');
-  }, [cameraCanFollow, current, features, layerRevision, loaded, mapRef, mode, phase, settings, time]);
+  }, [current, features, layerRevision, loaded, mapRef, mode, phase, settings, time]);
   const preparingCamera = !error && loaded && mode !== 'off' && Boolean(settings?.zoomToPlace) && features.length > 0 && !introCurrent;
   return { label, error, credit, loading: loading || preparingCamera, introCamera };
 }
