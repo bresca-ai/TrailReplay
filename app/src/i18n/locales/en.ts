@@ -497,6 +497,7 @@ export const en = {
     paceModeCumulative: 'Overall',
     paceModePerKm: 'Per km',
     showElevationProfile: 'Elevation profile',
+    elevationProfilePerRoute: 'Per-route profile', elevationProfilePerRouteHint: 'Show each route separately during playback.',
     dynamicElevationProfile: 'Dynamic sections',
     dynamicElevationProfileHint: 'Automatically focuses the strongest sustained climbs and descents during playback.',
     dynamicElevationProfileGuideTitle: 'How it works',

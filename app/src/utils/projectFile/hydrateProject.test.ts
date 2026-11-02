@@ -276,6 +276,7 @@ describe('hydrateProject', () => {
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
     sourceStore.getState().setSettings({
       dynamicElevationProfile: true,
+      elevationProfilePerRoute: true,
       elevationSectionOverrides: [{
         sectionId: 'elevation-0-climb-1',
         segmentIndex: 0,
@@ -300,6 +301,7 @@ describe('hydrateProject', () => {
     const restoredStore = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, restoredStore.getState());
     expect(restoredStore.getState().settings.dynamicElevationProfile).toBe(true);
+    expect(restoredStore.getState().settings.elevationProfilePerRoute).toBe(true);
     expect(restoredStore.getState().settings.elevationSectionOverrides).toHaveLength(1);
     expect(restoredStore.getState().settings.customElevationSections).toHaveLength(1);
     expect(restoredStore.getState().settings.hiddenElevationSectionIds).toEqual([
@@ -307,12 +309,14 @@ describe('hydrateProject', () => {
     ]);
 
     delete (parsed.project!.settings as Record<string, unknown>).dynamicElevationProfile;
+    delete (parsed.project!.settings as Record<string, unknown>).elevationProfilePerRoute;
     delete (parsed.project!.settings as Record<string, unknown>).elevationSectionOverrides;
     delete (parsed.project!.settings as Record<string, unknown>).customElevationSections;
     delete (parsed.project!.settings as Record<string, unknown>).hiddenElevationSectionIds;
     const legacyStore = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, legacyStore.getState());
     expect(legacyStore.getState().settings.dynamicElevationProfile).toBe(false);
+    expect(legacyStore.getState().settings.elevationProfilePerRoute).toBe(false);
     expect(legacyStore.getState().settings.elevationSectionOverrides).toEqual([]);
     expect(legacyStore.getState().settings.customElevationSections).toEqual([]);
     expect(legacyStore.getState().settings.hiddenElevationSectionIds).toEqual([]);

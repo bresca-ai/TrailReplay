@@ -77,6 +77,35 @@ describe('MapElevationProfile dynamic sections', () => {
     };
   });
 
+  it('shows the active route separately and holds it during a connection', () => {
+    const first = { ...timing, progressEndRatio: 0.4, distanceEndRatio: 0.4 };
+    const connection: SegmentTiming = { ...timing, segmentId: 'connection', segmentIndex: 1, type: 'transport', trackId: undefined, transportMode: 'camera', progressStartRatio: 0.4, progressEndRatio: 0.6 };
+    const second: SegmentTiming = { ...timing, segmentId: 'valley', segmentIndex: 2, trackId: 'valley', progressStartRatio: 0.6, progressEndRatio: 1, distanceStartRatio: 0.6, distanceEndRatio: 1 };
+    const points = [
+      { distance: 0, elevation: 100, progress: 0, segmentIndex: 0, segmentType: 'track' as const },
+      { distance: 100, elevation: 200, progress: 0.4, segmentIndex: 0, segmentType: 'track' as const },
+      { distance: 100, elevation: 500, progress: 0.6, segmentIndex: 2, segmentType: 'track' as const },
+      { distance: 200, elevation: 900, progress: 1, segmentIndex: 2, segmentType: 'track' as const },
+    ];
+    useAppStore.setState((state) => { state.settings.elevationProfilePerRoute = true; state.playback.progress = 0.2; });
+    mockedJourney.current = { ...mockedJourney.current, elevationData: points, segmentTimings: [first, connection, second], currentSegment: { segment: first, localProgress: 0.5 } };
+    const { rerender } = render(<MapElevationProfile />);
+    const svg = document.getElementById('elevationProfileSvg')!;
+    expect(svg.getAttribute('viewBox')!.split(' ').map(Number)[0]).toBe(0);
+    expect(svg.getAttribute('viewBox')!.split(' ').map(Number)[2]).toBe(320);
+    expect(svg).toHaveAttribute('data-export-elevation-dynamic-profile', 'true');
+    act(() => useAppStore.getState().setPlayback({ progress: 0.5 }));
+    mockedJourney.current = { ...mockedJourney.current, currentSegment: { segment: connection, localProgress: 0.5 }, isInTransport: true };
+    rerender(<MapElevationProfile />);
+    expect(svg.getAttribute('viewBox')!.split(' ').map(Number)[0]).toBe(0);
+    expect(Number(svg.getAttribute('data-export-elevation-marker-x'))).toBe(320);
+    act(() => useAppStore.getState().setPlayback({ progress: 0.8 }));
+    mockedJourney.current = { ...mockedJourney.current, currentSegment: { segment: second, localProgress: 0.5 }, isInTransport: false };
+    rerender(<MapElevationProfile />);
+    expect(svg.getAttribute('viewBox')!.split(' ').map(Number)[0]).toBe(480);
+    expect(svg.getAttribute('viewBox')!.split(' ').map(Number)[2]).toBe(320);
+  });
+
   it('starts with the full route, focuses a detected climb, and restores static mode', async () => {
     render(<MapElevationProfile />);
 

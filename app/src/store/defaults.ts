@@ -70,6 +70,7 @@ export function createDefaultSettings(): AppSettings {
     paceMode: 'per-km' as const,
     showElevationProfile: true,
     dynamicElevationProfile: false,
+    elevationProfilePerRoute: false,
     elevationSectionOverrides: [],
     customElevationSections: [],
     hiddenElevationSectionIds: [],

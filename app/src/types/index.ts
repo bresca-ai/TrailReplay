@@ -457,6 +457,7 @@ export interface AppSettings {
   showElevationProfile: boolean;
   /** Automatically focus the elevation chart on significant climbs and descents. */
   dynamicElevationProfile: boolean;
+  elevationProfilePerRoute: boolean;
   /** Route-specific boundary adjustments for automatically detected elevation sections. */
   elevationSectionOverrides: ElevationSectionOverride[];
   /** User-authored zoom sections added from the paused elevation editor. */

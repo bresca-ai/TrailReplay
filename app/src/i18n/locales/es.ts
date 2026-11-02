@@ -488,6 +488,7 @@ export const es = {
     paceModeCumulative: 'Global',
     paceModePerKm: 'Por km',
     showElevationProfile: 'Perfil de elevación',
+    elevationProfilePerRoute: 'Perfil por ruta', elevationProfilePerRouteHint: 'Muestra cada ruta por separado durante la reproducción.',
     dynamicElevationProfile: 'Tramos dinámicos',
     dynamicElevationProfileHint: 'Enfoca automáticamente las subidas y bajadas sostenidas más destacadas durante la reproducción.',
     dynamicElevationProfileGuideTitle: 'Cómo funciona',
