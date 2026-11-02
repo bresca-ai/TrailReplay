@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { expect, it, vi } from 'vitest';
 import { useLocationChapters } from './useLocationChapters';
@@ -23,7 +23,7 @@ it('shows the current country and styles its outline during playback', async () 
   rerender({ time: 5000 });
   expect(result.current.label).toBe('');
 });
-it('makes the opening overview optional without moving the playback camera', async () => {
+it('makes the opening overview and playback zoom optional', async () => {
   const feature = { type: 'Feature' as const, properties: { id: 'test', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
   vi.mocked(loadRouteBoundaries).mockResolvedValue([feature]);
   const layers = new Map<string, unknown>(); let sourceExists = false;
@@ -39,10 +39,12 @@ it('makes the opening overview optional without moving the playback camera', asy
   expect(locationChapterIntroCameraRef.current).toEqual({ center: [1, 1], zoom: 5, pitch: 0, bearing: 0 });
   expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 5, pitch: 0, bearing: 0 });
   rerender({ time: 1200, zoom: true });
-  expect(jumpTo).not.toHaveBeenCalled();
+  expect(jumpTo).toHaveBeenCalled();
+  jumpTo.mockClear();
   rerender({ time: 1200, zoom: false });
   expect(result.current.introCamera).toBeUndefined();
   expect(locationChapterIntroCameraRef.current).toBeUndefined();
+  expect(jumpTo).not.toHaveBeenCalled();
   unmount(); expect(locationChapterIntroCameraRef.current).toBeUndefined();
 });
 it('waits briefly before switching chapters at a border', async () => {
@@ -51,7 +53,7 @@ it('waits briefly before switching chapters at a border', async () => {
   const layers = new Map<string, unknown>(); let sourceExists = false; const source = { setData: vi.fn() }, jumpTo = vi.fn();
   const map = { isStyleLoaded: () => true, getSource: () => sourceExists ? source : undefined, addSource: () => { sourceExists = true; }, removeSource: () => { sourceExists = false; },
     getLayer: (id: string) => layers.get(id), addLayer: (layer: {id:string}) => layers.set(layer.id, layer), removeLayer: (id:string) => layers.delete(id),
-    on: vi.fn(), off: vi.fn(), setPaintProperty: vi.fn(), cameraForBounds: () => ({ center: [1, 1], zoom: 5 }), jumpTo } as unknown as MapLibreMap;
+    on: vi.fn(), off: vi.fn(), setPaintProperty: vi.fn(), cameraForBounds: () => ({ center: [1, 1], zoom: 5 }), getCenter: () => ({ lng: .5, lat: .5 }), getZoom: () => 12, getPitch: () => 40, jumpTo } as unknown as MapLibreMap;
   const settings = { level: 'region' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: false, zoomToPlace: true, durationSeconds: 4 };
   const ref = { current: map }, coords = [[.5, .5], [1.5, .5]];
   const { result, rerender } = renderHook(({ time, lon }) => useLocationChapters(ref, true, settings, coords, { lon, lat: .5 }, time, 'playing'), { initialProps: { time: 0, lon: .5 } });
@@ -59,7 +61,7 @@ it('waits briefly before switching chapters at a border', async () => {
   rerender({ time: 1000, lon: 1.5 }); expect(result.current.label).toBe('one');
   rerender({ time: 1600, lon: 1.5 }); expect(source.setData).toHaveBeenCalledWith(second);
   rerender({ time: 2200, lon: 1.5 }); expect(result.current.label).toBe('two');
-  expect(jumpTo).not.toHaveBeenCalled();
+  expect(jumpTo).toHaveBeenCalled();
 });
 it('installs and displays the chapter when tiles keep the style loading', async () => {
   const feature = { type: 'Feature' as const, properties: { id: 'es', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
@@ -98,6 +100,25 @@ it('shows the first boundary during the opening fly-in without a second zoom aft
   rerender({ time: 500, phase: 'playing' }); expect(result.current.label).toBe('🇪🇸 Catalonia');
   expect(jumpTo).not.toHaveBeenCalled();
   rerender({ time: 2000, phase: 'playing' }); expect(result.current.label).toBe('');
+});
+it('reveals the country before the region as the intro camera zooms in', async () => {
+  const make = (id: string, extent: number) => ({ type: 'Feature' as const, properties: { id, name: id, iso2: 'ES', iso3: 'ESP', credit: id }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [extent, 0], [extent, extent], [0, extent], [0, 0]]] } });
+  const country = make('Spain', 3), region = make('Catalonia', 1);
+  vi.mocked(loadRouteBoundaries).mockImplementation(async (_points, level) => level === 'country' ? [country] : [region]);
+  const layers = new Map<string, unknown>(), listeners = new Map<string, () => void>();
+  const source = { setData: vi.fn() }; let sourceExists = false, zoom = 4;
+  const map = { getSource: () => sourceExists ? source : undefined, addSource: () => { sourceExists = true; }, removeSource: () => { sourceExists = false; },
+    getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), removeLayer: (id: string) => layers.delete(id),
+    on: (event: string, handler: () => void) => listeners.set(event, handler), off: (event: string) => listeners.delete(event), setPaintProperty: vi.fn(),
+    cameraForBounds: (bounds: { getEast: () => number }) => ({ center: [.5, .5], zoom: bounds.getEast() > 2 ? 4 : 7 }), getZoom: () => zoom } as unknown as MapLibreMap;
+  const settings = { level: 'region' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: false, zoomToPlace: true, introCountryFirst: true, durationSeconds: 4.5 };
+  const coords = [[.5, .5]], ref = { current: map };
+  const { result } = renderHook(() => useLocationChapters(ref, true, settings, coords, { lon: .5, lat: .5 }, 0, 'intro'));
+  await waitFor(() => expect(result.current.label).toBe('Spain'));
+  expect(result.current.introCamera?.zoom).toBe(4);
+  act(() => { zoom = 6; listeners.get('move')?.(); });
+  expect(result.current.label).toBe('Catalonia');
+  expect(source.setData).toHaveBeenCalledWith(region);
 });
 it('prepares the first region during preloading and reveals the next one during playback', async () => {
   const make = (id: string, x: number) => ({ type: 'Feature' as const, properties: { id, name: id, iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]] } });

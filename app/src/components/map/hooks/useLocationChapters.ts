@@ -27,35 +27,58 @@ function cameraForPlace(map: MapLibreMap, feature: LocationFeature, point: Posit
   return undefined;
 }
 export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loaded: boolean, settings: LocationChapterSettings | undefined,
-  coordinates: number[][], current: { lon: number; lat: number } | null, time: number, phase: string) {
+  coordinates: number[][], current: { lon: number; lat: number } | null, time: number, phase: string, cameraCanFollow = true) {
   const [features, setFeatures] = useState<LocationFeature[]>([]), [error, setError] = useState(false), [label, setLabel] = useState(''), [credit, setCredit] = useState(''), [loading, setLoading] = useState(false);
+  const [introCountries, setIntroCountries] = useState<LocationFeature[]>([]);
+  const [introRegion, setIntroRegion] = useState(false);
+  const [introProgress, setIntroProgress] = useState(0);
   const [layerRevision, setLayerRevision] = useState(0);
-  const previous = useRef<{ id: string; start: number; feature: LocationFeature; startedInIntro: boolean } | null>(null);
+  const previous = useRef<{ id: string; start: number; feature: LocationFeature; startedInIntro: boolean; target?: PlaceCamera } | null>(null);
   const candidate = useRef<{ id: string; since: number } | null>(null);
   const mode = settings?.level ?? 'off';
-  const [introResult, setIntroResult] = useState<{ features: LocationFeature[]; coordinates: number[][]; mode: string; enabled: boolean; camera?: PlaceCamera }>();
-  const introCurrent = introResult?.features === features && introResult.coordinates === coordinates && introResult.mode === mode && introResult.enabled === Boolean(settings?.zoomToPlace);
+  const countryFirst = mode === 'region' && Boolean(settings?.introCountryFirst);
+  const [introResult, setIntroResult] = useState<{ features: LocationFeature[]; countries: LocationFeature[]; coordinates: number[][]; mode: string; enabled: boolean; countryFirst: boolean; camera?: PlaceCamera }>();
+  const introCurrent = introResult?.features === features && introResult.countries === introCountries && introResult.coordinates === coordinates && introResult.mode === mode && introResult.countryFirst === countryFirst && introResult.enabled === Boolean(settings?.zoomToPlace);
   const introCamera = introCurrent ? introResult?.camera : undefined;
   useEffect(() => {
     const map = mapRef.current, first = coordinates[0];
     const enabled = Boolean(settings?.zoomToPlace);
-    const feature = loaded && map && first && enabled && mode !== 'off' ? features.find(item => containsPosition(item, first)) : undefined;
+    const overviewFeatures = countryFirst && introCountries.length ? introCountries : features;
+    const feature = loaded && map && first && enabled && mode !== 'off' ? overviewFeatures.find(item => containsPosition(item, first)) : undefined;
     const camera = map && first && feature ? cameraForPlace(map, feature, first) : undefined;
-    setIntroResult({ features, coordinates, mode, enabled, camera });
+    setIntroResult({ features, countries: introCountries, coordinates, mode, enabled, countryFirst, camera });
     locationChapterIntroCameraRef.current = camera;
     return () => { if (locationChapterIntroCameraRef.current === camera) locationChapterIntroCameraRef.current = undefined; };
-  }, [coordinates, features, loaded, mapRef, mode, settings?.zoomToPlace]);
+  }, [coordinates, countryFirst, features, introCountries, loaded, mapRef, mode, settings?.zoomToPlace]);
   useEffect(() => {
     let cancelled = false;
-    setFeatures([]); setError(false); previous.current = null; candidate.current = null; setLabel(''); setCredit('');
+    setFeatures([]); setIntroCountries([]); setError(false); previous.current = null; candidate.current = null; setLabel(''); setCredit('');
     if (mode === 'off' || !coordinates.length) { setLoading(false); return; }
     setLoading(true);
     const stride = Math.max(1, Math.floor(coordinates.length / 5000));
     const samples = coordinates.filter((_, i) => i % stride === 0 || i === coordinates.length - 1) as Position[];
-    loadRouteBoundaries(samples, mode).then(items => { if (!cancelled) { setFeatures(items); setError(items.length === 0); setLoading(false); } })
+    Promise.all([loadRouteBoundaries(samples, mode), countryFirst ? loadRouteBoundaries([samples[0]], 'country').catch(() => []) : Promise.resolve([])]).then(([items, countries]) => { if (!cancelled) { setFeatures(items); setIntroCountries(countries); setError(items.length === 0); setLoading(false); } })
       .catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
     return () => { cancelled = true; };
-  }, [coordinates, mode]);
+  }, [coordinates, countryFirst, mode]);
+  useEffect(() => {
+    const map = mapRef.current, first = coordinates[0];
+    if (!map || !loaded || !countryFirst || !first || (phase !== 'intro' && phase !== 'preloading')) { setIntroRegion(false); setIntroProgress(0); return; }
+    const country = introCountries.find(item => containsPosition(item, first));
+    const region = features.find(item => containsPosition(item, first));
+    if (!country || !region) return;
+    const countryCamera = cameraForPlace(map, country, first);
+    const regionCamera = cameraForPlace(map, region, first);
+    if (!countryCamera || !regionCamera) return;
+    const span = Math.max(0.6, regionCamera.zoom - countryCamera.zoom);
+    const update = () => {
+      const progress = Math.max(0, Math.min(1, (map.getZoom() - countryCamera.zoom) / span));
+      setIntroProgress(progress);
+      if (progress >= 0.5) setIntroRegion(true);
+    };
+    if (phase === 'intro') map.on('move', update);
+    return () => { if (phase === 'intro') map.off('move', update); };
+  }, [coordinates, countryFirst, features, introCountries, loaded, mapRef, phase]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || mode === 'off') return;
@@ -81,11 +104,12 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !map.getSource(SOURCE)) return;
+    const introFeatures = countryFirst && !introRegion && introCountries.length ? introCountries : features;
     let active = mode !== 'off' && current && (phase === 'playing' || phase === 'intro' || phase === 'preloading')
-      ? features.find(feature => containsPosition(feature, [current.lon, current.lat])) : undefined;
+      ? (phase === 'playing' ? features : introFeatures).find(feature => containsPosition(feature, [current.lon, current.lat])) : undefined;
     if (previous.current && time < previous.current.start) { previous.current = null; candidate.current = null; }
     // Ignore brief boundary jitter; the first location is immediate.
-    if (previous.current && phase === 'playing' && previous.current.id !== active?.properties.id) {
+    if (previous.current && phase === 'playing' && previous.current.id !== active?.properties.id && !(previous.current.startedInIntro && time < 500)) {
       const nextId = active?.properties.id ?? '';
       if (candidate.current?.id !== nextId || time < candidate.current.since) candidate.current = { id: nextId, since: time };
       if (time - candidate.current.since < 500) active = previous.current.feature;
@@ -93,14 +117,26 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     } else candidate.current = null;
     if (!active) { if (previous.current) (map.getSource(SOURCE) as GeoJSONSource).setData(empty); previous.current = null; setLabel(''); setCredit(''); return; }
     if (previous.current?.id !== active.properties.id || time < previous.current.start) {
-      previous.current = { id: active.properties.id, start: time, feature: active, startedInIntro: phase === 'intro' || phase === 'preloading' };
+      const target = phase === 'playing' && settings?.zoomToPlace ? cameraForPlace(map, active, [current!.lon, current!.lat]) : undefined;
+      previous.current = { id: active.properties.id, start: time, feature: active, startedInIntro: phase === 'intro' || phase === 'preloading', target };
       (map.getSource(SOURCE) as GeoJSONSource).setData(active);
     }
     const age = Math.max(0, time - previous.current.start) + (previous.current.startedInIntro && phase === 'playing' ? INTRO_DURATION : 0);
     const duration = Math.max(2000, Math.min(8000, (settings?.durationSeconds ?? 4.5) * 1000));
     // Route time is frozen at zero throughout the opening camera fly-in.
     // Show the starting place there, then finish its fade on the route clock.
-    const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? 1 : Math.min(1, age / 500, Math.max(0, (duration - age) / 800));
+    const introOpacity = countryFirst && introCountries.length ? (introRegion
+      ? Math.min(1, Math.max(0, (introProgress - 0.45) / 0.15))
+      : Math.min(1, (introProgress + 0.15) / 0.2, Math.max(0, (0.55 - introProgress) / 0.12))) : 1;
+    const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? introOpacity : Math.min(1, age / 500, Math.max(0, (duration - age) / 800));
+    const target = previous.current.target;
+    if (settings?.zoomToPlace && !previous.current.startedInIntro && cameraCanFollow && target && phase === 'playing' && age > 0 && age < duration) {
+      const smooth = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
+      const weight = Math.min(smooth(age / (duration * .3)), smooth((duration - age) / (duration * .3)));
+      const center = map.getCenter();
+      const deltaLng = ((target.center[0] - center.lng + 540) % 360) - 180;
+      map.jumpTo({ center: [center.lng + deltaLng * weight, center.lat + (target.center[1] - center.lat) * weight], zoom: map.getZoom() + (Math.min(map.getZoom(), target.zoom) - map.getZoom()) * weight, pitch: map.getPitch() * (1 - weight) });
+    }
     if (map.getLayer(LINE) && map.getLayer(GLOW) && map.getLayer(FILL)) {
       map.setPaintProperty(GLOW, 'line-color', settings?.color ?? '#ffbd66');
       map.setPaintProperty(GLOW, 'line-width', (settings?.width ?? 3) + 8);
@@ -114,7 +150,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     setCredit(opacity > 0 ? active.properties.credit : '');
     const flag = settings?.showFlag ? countryEmoji(active.properties.iso2) : '';
     setLabel(opacity > 0 && (settings?.showName || flag) ? `${flag} ${settings?.showName ? active.properties.name : ''}`.trim() : '');
-  }, [current, features, layerRevision, loaded, mapRef, mode, phase, settings, time]);
+  }, [cameraCanFollow, countryFirst, current, features, introCountries, introProgress, introRegion, layerRevision, loaded, mapRef, mode, phase, settings, time]);
   const preparingCamera = !error && loaded && mode !== 'off' && Boolean(settings?.zoomToPlace) && features.length > 0 && !introCurrent;
   return { label, error, credit, loading: loading || preparingCamera, introCamera };
 }
