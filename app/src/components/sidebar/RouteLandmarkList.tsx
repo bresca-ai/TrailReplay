@@ -53,7 +53,7 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-2.5">
+    <div className="space-y-3 border-l-2 border-[var(--trail-orange)]/50 pl-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.editLandmark')}</span>
         <button
@@ -188,7 +188,7 @@ export function RouteLandmarkList() {
   ).length;
 
   return (
-    <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
+    <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.onMap')}</p>
         <span className="text-[11px] text-[var(--evergreen-60)]">{ordered.length}</span>
