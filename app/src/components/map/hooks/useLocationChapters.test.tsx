@@ -39,8 +39,13 @@ it('makes the opening overview and playback zoom optional', async () => {
   expect(locationChapterIntroCameraRef.current).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
   expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
   rerender({ time: 1200, zoom: true, introZoom: undefined });
-  expect(result.current.cameraCueRef.current).toMatchObject({ startTime: 0, duration: 4000, target: { zoom: 4.5 } });
+  expect(result.current.cameraCueRef.current).toMatchObject({ startTime: 0, duration: 10000, target: { zoom: 4.5 } });
   expect(jumpTo).not.toHaveBeenCalled();
+  rerender({ time: 5000, zoom: true, introZoom: undefined });
+  expect(result.current.label).toBe('🇪🇸 Spain');
+  rerender({ time: 10000, zoom: true, introZoom: undefined });
+  expect(result.current.label).toBe('');
+  expect(result.current.cameraCueRef.current).toBeNull();
   rerender({ time: 1200, zoom: false, introZoom: undefined });
   expect(result.current.introCamera).toBeUndefined();
   expect(locationChapterIntroCameraRef.current).toBeUndefined();

@@ -6,7 +6,7 @@ import type { FeatureCollection, Position } from 'geojson';
 import { containsPosition, countryEmoji, levelCode, loadRouteBoundaries, type LocationFeature } from '@/utils/locationBoundaries';
 import type { LocationChapterSettings } from '@/types';
 import { INTRO_DURATION } from '@/components/playback/PlaybackProvider';
-import { getIntroLevels, getMinimumStaySeconds, introStage, locationChapterIntroCameraRef, locationChapterIntroProgressRef, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
+import { getIntroLevels, getMinimumStaySeconds, getZoomDurationSeconds, introStage, locationChapterIntroCameraRef, locationChapterIntroProgressRef, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import type { LocationLevel } from '@/utils/locationBoundaries';
 const SOURCE = 'location-chapter', FILL = 'location-chapter-fill', GLOW = 'location-chapter-glow', LINE = 'location-chapter-line';
 const TRACE_SOURCE = 'location-chapter-trace', TRACE = 'location-chapter-trace-line';
@@ -140,7 +140,10 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
       (map.getSource(TRACE_SOURCE) as GeoJSONSource | undefined)?.setData({ type: 'Feature', properties: {}, geometry: { type: 'MultiLineString', coordinates: polygons.map(polygon => polygon[0]).filter(Boolean) } });
     }
     const age = Math.max(0, time - previous.current.start) + (previous.current.startedInIntro && phase === 'playing' ? INTRO_DURATION : 0);
-    const duration = Math.max(2000, Math.min(8000, (settings?.durationSeconds ?? 4.5) * 1000));
+    const revealDuration = Math.max(2000, Math.min(8000, (settings?.durationSeconds ?? 4.5) * 1000));
+    const zoomDuration = settings ? getZoomDurationSeconds(settings) * 1000 : revealDuration;
+    const canZoom = Boolean(settings?.zoomToPlace && !previous.current.startedInIntro && cameraCanFollow && previous.current.target && phase === 'playing');
+    const duration = canZoom ? Math.max(revealDuration, zoomDuration) : revealDuration;
     // Route time is frozen at zero throughout the opening camera fly-in.
     // Show the starting place there, then finish its fade on the route clock.
     const introOpacity = introStages.length > 1 ? Math.min(1, stage.local / .12, (1 - stage.local) / .12) : 1;
@@ -149,8 +152,8 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     const traceProgress = phase === 'intro' ? stage.local / .7 : age / Math.min(3000, duration * .7);
     const baseLineOpacity = settings?.traceBorder !== false && traceProgress < 1 ? opacity * .3 : opacity;
     const target = previous.current.target;
-    cameraCueRef.current = settings?.zoomToPlace && !previous.current.startedInIntro && cameraCanFollow && target && phase === 'playing' && age < duration
-      ? { target, startTime: previous.current.start, duration } : null;
+    cameraCueRef.current = canZoom && target && age < zoomDuration
+      ? { target, startTime: previous.current.start, duration: zoomDuration } : null;
     if (map.getLayer(LINE) && map.getLayer(GLOW) && map.getLayer(FILL)) {
       map.setPaintProperty(GLOW, 'line-color', settings?.color ?? '#ffbd66');
       map.setPaintProperty(GLOW, 'line-width', (settings?.width ?? 3) + 8);

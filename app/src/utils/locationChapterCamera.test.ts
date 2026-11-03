@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyLocationChapterCamera, getIntroDuration, getIntroLevels, introStage, locationIntroEasing } from './locationChapterCamera';
+import { applyLocationChapterCamera, getIntroDuration, getIntroLevels, getZoomDurationSeconds, introStage, locationIntroEasing } from './locationChapterCamera';
 import { createDefaultSettings } from '@/store/defaults';
 
 describe('location introduction timing', () => {
@@ -28,6 +28,14 @@ describe('location introduction timing', () => {
     expect(introStage(.4, 3).index).toBe(1);
     expect(introStage(.7, 3).index).toBe(2);
   });
+});
+
+it('uses slower country camera moves and allows a custom duration', () => {
+  const settings = createDefaultSettings().locationChapters;
+  expect(getZoomDurationSeconds({ ...settings, level: 'country' })).toBe(10);
+  expect(getZoomDurationSeconds({ ...settings, level: 'region' })).toBe(7);
+  expect(getZoomDurationSeconds({ ...settings, level: 'adm3' })).toBe(5);
+  expect(getZoomDurationSeconds({ ...settings, level: 'country', zoomDurationSeconds: 14 })).toBe(14);
 });
 
 it('blends a place overview into the playback pose and returns to it smoothly', () => {

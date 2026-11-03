@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import type { LocationChapterSettings } from '@/types';
 import { useI18n } from '@/i18n/useI18n';
 import { LOCATION_LEVELS, levelCode, type LocationLevel } from '@/utils/locationBoundaries';
-import { getIntroDuration, getIntroLevels, getMinimumStaySeconds } from '@/utils/locationChapterCamera';
+import { getIntroDuration, getIntroLevels, getMinimumStaySeconds, getZoomDurationSeconds } from '@/utils/locationChapterCamera';
 
 const defaults: LocationChapterSettings = { level: 'off', color: '#ffbd66', width: 3, fill: true, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 };
 
@@ -20,12 +20,12 @@ function ToggleRow({ label, checked, onChange }: { label: string; checked: boole
   );
 }
 
-function RangeSetting({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (value: number) => void }) {
+function RangeSetting({ label, value, min, max, step, unit, onChange }: { label: string; value: number; min: number; max: number; step: number; unit?: string; onChange: (value: number) => void }) {
   return (
     <label className="block space-y-1.5 py-1">
       <span className="flex items-center justify-between gap-3 text-sm text-[var(--evergreen)]">
         <span className="leading-snug">{label}</span>
-        <span aria-hidden="true" className="shrink-0 rounded-md bg-[var(--evergreen)]/5 px-2 py-1 text-xs font-semibold tabular-nums">{value}</span>
+        <span aria-hidden="true" className="shrink-0 rounded-md bg-[var(--evergreen)]/5 px-2 py-1 text-xs font-semibold tabular-nums">{value}{unit && ` ${unit}`}</span>
       </span>
       <input aria-label={label} type="range" min={min} max={max} step={step} value={value} onChange={event => onChange(Number(event.target.value))}
         className="block h-5 w-full cursor-pointer accent-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]" />
@@ -57,8 +57,13 @@ export function LocationChapterControls() {
         <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.playbackLevelHint')}</p>
         {settings.level !== 'off' && <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-2">
           <ToggleRow label={t('locationChapters.playbackZoom')} checked={settings.zoomToPlace} onChange={checked => update({ zoomToPlace: checked, introZoomToPlace: settings.introZoomToPlace ?? settings.zoomToPlace })} />
-          <RangeSetting label={t('locationChapters.revealDuration')} value={settings.durationSeconds} min={2} max={8} step={.5} onChange={value => update({ durationSeconds: value })} />
-          <RangeSetting label={t('locationChapters.minimumStay')} value={getMinimumStaySeconds(settings)} min={0} max={2} step={.1} onChange={value => update({ minimumStaySeconds: value })} />
+          {settings.zoomToPlace && <>
+            <RangeSetting label={t('locationChapters.zoomDuration')} value={getZoomDurationSeconds(settings)} min={4} max={20} step={.5} unit="s" onChange={value => update({ zoomDurationSeconds: value })} />
+            <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.zoomDurationHint')}</p>
+          </>}
+          <RangeSetting label={t('locationChapters.revealDuration')} value={settings.durationSeconds} min={2} max={8} step={.5} unit="s" onChange={value => update({ durationSeconds: value })} />
+          <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.revealDurationHint')}</p>
+          <RangeSetting label={t('locationChapters.minimumStay')} value={getMinimumStaySeconds(settings)} min={0} max={2} step={.1} unit="s" onChange={value => update({ minimumStaySeconds: value })} />
           <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.minimumStayHint')}</p>
         </div>}
       </fieldset>
@@ -82,7 +87,7 @@ export function LocationChapterControls() {
           </div>
           {selectedIntroLevels.length > 0 && <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-2">
             <ToggleRow label={t('locationChapters.introZoom')} checked={settings.introZoomToPlace ?? settings.zoomToPlace} onChange={checked => update({ introZoomToPlace: checked })} />
-            <RangeSetting label={t('locationChapters.introDuration')} value={getIntroDuration(settings) / 1000} min={5} max={30} step={1} onChange={value => update({ introDurationSeconds: value })} />
+            <RangeSetting label={t('locationChapters.introDuration')} value={getIntroDuration(settings) / 1000} min={5} max={30} step={1} unit="s" onChange={value => update({ introDurationSeconds: value })} />
           </div>}
         </fieldset>
 

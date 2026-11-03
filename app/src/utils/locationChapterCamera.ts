@@ -13,7 +13,9 @@ export function applyLocationChapterCamera<T extends ReplayCameraPose>(pose: T, 
   if (!cue || time <= cue.startTime || time >= cue.startTime + cue.duration) return pose;
   const age = time - cue.startTime;
   const smooth = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
-  const weight = Math.min(smooth(age / (cue.duration * .3)), smooth((cue.duration - age) / (cue.duration * .3)));
+  // Give each camera move more time than the central hold, especially when
+  // travelling from a street-scale view to an entire country.
+  const weight = Math.min(smooth(age / (cue.duration * .36)), smooth((cue.duration - age) / (cue.duration * .36)));
   const deltaLng = ((cue.target.center[0] - pose.center[0] + 540) % 360) - 180;
   return { ...pose, center: [pose.center[0] + deltaLng * weight, pose.center[1] + (cue.target.center[1] - pose.center[1]) * weight],
     zoom: pose.zoom + (Math.min(pose.zoom, cue.target.zoom) - pose.zoom) * weight,
@@ -30,6 +32,12 @@ export function getMinimumStaySeconds(settings: LocationChapterSettings): number
   const value = settings.minimumStaySeconds;
   if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.min(2, value));
   return settings.level === 'country' || settings.level === 'region' ? .5 : 0;
+}
+
+export function getZoomDurationSeconds(settings: LocationChapterSettings): number {
+  const value = settings.zoomDurationSeconds;
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(4, Math.min(20, value));
+  return settings.level === 'country' ? 10 : settings.level === 'region' ? 7 : 5;
 }
 
 export const DEFAULT_INTRO_DURATION = 2500;

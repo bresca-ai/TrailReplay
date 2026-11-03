@@ -441,6 +441,7 @@ export interface LocationChapterSettings {
   showName: boolean;
   showFlag: boolean;
   zoomToPlace: boolean;
+  zoomDurationSeconds?: number;
   introZoomToPlace?: boolean;
   introCountryFirst?: boolean;
   introLevels?: Array<'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5'>;

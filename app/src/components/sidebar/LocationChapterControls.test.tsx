@@ -26,6 +26,10 @@ it('lets users choose a local level and any combination of opening levels', () =
   expect(screen.getByLabelText('Minimum time inside (seconds)')).toHaveValue('0');
   fireEvent.change(screen.getByLabelText('Boundary level while moving'), { target: { value: 'country' } });
   expect(useAppStore.getState().settings.locationChapters.introLevels).toEqual(expect.arrayContaining(['country', 'region']));
+  expect(screen.getByLabelText('Camera move duration (seconds)')).toHaveValue('10');
+  fireEvent.change(screen.getByLabelText('Camera move duration (seconds)'), { target: { value: '14' } });
+  expect(useAppStore.getState().settings.locationChapters.zoomDurationSeconds).toBe(14);
   fireEvent.click(screen.getByLabelText('Zoom out when entering a place'));
+  expect(screen.queryByLabelText('Camera move duration (seconds)')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Fit places during the opening zoom')).toBeChecked();
 });
