@@ -288,24 +288,31 @@ export function SettingsPanel() {
 
       {/* Map Style */}
       <div>
-        <h3 className="text-sm font-bold text-[var(--evergreen)] mb-3 uppercase tracking-wide flex items-center gap-2">
-          <MapIcon className="w-4 h-4" />
-          {t('settings.title')}
-        </h3>
-        <div className="flex items-center gap-1">
-          <button type="button" aria-label={t('settings.previousMapStyles')} disabled={mapStyleStart === 0} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.max(0, mapStyleStart - 1) })}
-            className="flex h-10 w-7 shrink-0 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
-          <div className="grid min-w-0 flex-1 grid-cols-3 gap-2">
-          {MAP_STYLES.slice(mapStyleStart, mapStyleStart + 3).map((style) => (
-            <button key={style.id} type="button" onClick={() => selectMapStyle(style.id)} aria-pressed={displayedMapStyle === style.id}
-              className={`min-w-0 rounded-lg border-2 p-1 text-center text-xs font-medium text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${displayedMapStyle === style.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
-              <img src={`/media/images/map-previews/${style.id === 'satellite' || style.id === 'esri-clarity' || style.id === 'wayback' ? 'satellite.jpg' : style.id === 'mapbox-streets' ? 'street.png' : `${style.id}.png`}`} alt="" className="h-14 w-full rounded object-cover" />
-              <span className="block py-1 break-words">{t(style.nameKey)}</span>
-            </button>
-          ))}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--evergreen)]">
+            <MapIcon className="w-4 h-4" />
+            {t('settings.title')}
+          </h3>
+          <div className="flex items-center gap-1">
+            <button type="button" aria-label={t('settings.previousMapStyles')} disabled={mapStyleStart === 0} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.max(0, mapStyleStart - 1) })}
+              className="flex h-9 w-9 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
+            <button type="button" aria-label={t('settings.nextMapStyles')} disabled={mapStyleStart >= MAP_STYLES.length - 3} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.min(MAP_STYLES.length - 3, mapStyleStart + 1) })}
+              className="flex h-9 w-9 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
           </div>
-          <button type="button" aria-label={t('settings.nextMapStyles')} disabled={mapStyleStart >= MAP_STYLES.length - 3} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.min(MAP_STYLES.length - 3, mapStyleStart + 1) })}
-            className="flex h-10 w-7 shrink-0 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
+        </div>
+        <div className="overflow-hidden">
+          <div className="flex gap-2 transition-transform duration-300 ease-out motion-reduce:transition-none"
+            style={{ transform: `translateX(calc(-${mapStyleStart * 100 / 3}% - ${mapStyleStart / 6}rem))` }}>
+            {MAP_STYLES.map((style, index) => {
+              const visible = index >= mapStyleStart && index < mapStyleStart + 3;
+              return <button key={style.id} type="button" onClick={() => selectMapStyle(style.id)} aria-pressed={displayedMapStyle === style.id}
+                aria-hidden={!visible || undefined} tabIndex={visible ? 0 : -1} style={{ flex: '0 0 calc((100% - 1rem) / 3)' }}
+                className={`min-w-0 rounded-lg border-2 p-1 text-center text-xs font-medium text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)] ${displayedMapStyle === style.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
+                <img src={`/media/images/map-previews/${style.id === 'satellite' || style.id === 'esri-clarity' || style.id === 'wayback' ? 'satellite.jpg' : style.id === 'mapbox-streets' ? 'street.png' : `${style.id}.png`}`} alt="" className="h-14 w-full rounded object-cover" />
+                <span className="block py-1 break-words">{t(style.nameKey)}</span>
+              </button>;
+            })}
+          </div>
         </div>
         <p className="mt-1 text-[10px] text-[var(--evergreen-60)]">© Esri · © <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a className="underline" href="https://opentopomap.org/about" target="_blank" rel="noreferrer">OpenTopoMap</a> (CC-BY-SA)</p>
 

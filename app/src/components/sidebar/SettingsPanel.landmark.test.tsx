@@ -56,8 +56,12 @@ it('browses all map styles in the same picker and keeps the selected style visib
   const { unmount } = render(<SettingsPanel />);
   expect(screen.queryByText('More map styles')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Previous map styles' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Satellite' })).toHaveAttribute('aria-pressed', 'true');
+  const satellite = screen.getByRole('button', { name: 'Satellite' });
+  expect(satellite).toHaveAttribute('aria-pressed', 'true');
+  expect(satellite.parentElement).toHaveClass('transition-transform', 'motion-reduce:transition-none');
   fireEvent.click(screen.getByRole('button', { name: 'Next map styles' }));
+  expect(satellite).toHaveAttribute('tabindex', '-1');
+  expect(satellite.parentElement?.style.transform).toContain('33.333');
   expect(screen.getByRole('button', { name: 'Esri Clarity' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Esri Clarity' }));
   expect(useAppStore.getState().settings.mapStyle).toBe('esri-clarity');
