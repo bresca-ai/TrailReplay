@@ -28,6 +28,7 @@ import {
 import { ANNOTATION_LAYER_IDS } from '@/components/map/hooks/useTextAnnotationsLayer';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import { landmarkSymbol } from '@/components/map/landmarkSymbols';
+import { landmarkPinColors } from '@/components/map/landmarkPinColors';
 import { annotationMapGlyph, annotationPinheadId, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { pinheadIconPath, usePinheadIcons } from '@/components/annotations/pinheadIcons';
 
@@ -118,10 +119,10 @@ function minimalLabelImage(landmark: RouteLandmark): ImageData | null {
   const glyph = annotationMapGlyph(symbol);
   const pinheadId = annotationPinheadId(symbol);
   const path = glyph ? PINHEAD_PATHS[glyph] : pinheadId ? pinheadIconPath(pinheadId) ?? PINHEAD_PATHS[glyphForLandmark(landmark)] : null;
-  const natural = ['summit', 'high-point', 'highest-point', 'lake', 'water', 'waterfall', 'viewpoint', 'pass', 'camp'].includes(landmark.type);
+  const colors = landmarkPinColors(landmark);
   context.font = font; context.textAlign = 'right'; context.textBaseline = 'middle';
   context.lineJoin = 'round'; context.strokeStyle = 'rgba(5, 10, 9, 0.9)'; context.lineWidth = 3;
-  context.fillStyle = natural ? '#bfe2bd' : '#ffffff';
+  context.fillStyle = colors.label;
   lines.forEach((value, index) => {
     const y = height / 2 - 2 + (index - (lines.length - 1) / 2) * 14;
     context.strokeText(value, width - 31, y, textWidth);
@@ -133,7 +134,7 @@ function minimalLabelImage(landmark: RouteLandmark): ImageData | null {
   context.translate(width - 16, height / 2);
   context.shadowColor = 'rgba(0,0,0,0.55)'; context.shadowBlur = 3;
   const pin = new Path2D('M 0 12 C -2 9 -10 3 -10 -3 A 10 10 0 1 1 10 -3 C 10 3 2 9 0 12 Z');
-  context.fillStyle = landmark.color ?? (natural ? '#1a9f6c' : '#788f9a');
+  context.fillStyle = colors.pin;
   context.strokeStyle = '#ffffff'; context.lineWidth = 2;
   context.fill(pin); context.stroke(pin);
   context.shadowBlur = 0; context.fillStyle = '#ffffff';
