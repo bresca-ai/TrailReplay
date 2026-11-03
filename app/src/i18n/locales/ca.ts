@@ -830,6 +830,12 @@ export const ca = {
     parseGpxFailed: 'No s\'han pogut analitzar els fitxers GPX',
   },
   routeLandmarks: {
+    styleTitle: "Estil dels llocs",
+    styleClassic: "Clàssic",
+    styleMinimal: "Minimalista",
+    shareStyleFeedback: "Comparteix la teva preferència a GitHub",
+    shareStyleFeedbackHint: "Obre un esborrany amb l’estil seleccionat. El pots editar abans de publicar-lo.",
+
     priorityHint: 'Mou els llocs importants amunt. Tindran prioritat quan se superposin llocs o etiquetes.', moveUp: 'Puja {name}', moveDown: 'Baixa {name}', dragPriority: 'Arrossega per canviar la prioritat',
     title: 'Punts d’interès de la ruta', description: 'Tria els detalls del paisatge que vols mostrar a la reproducció. El marcador de la ruta manté la prioritat visual.',
     routeMoments: 'Moments de la ruta', routeMomentsDescription: 'Punt més alt, ascens i descens principals, meitat i final. Desactivats per defecte.',

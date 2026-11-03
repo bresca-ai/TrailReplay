@@ -839,6 +839,12 @@ export const en = {
     parseGpxFailed: 'Failed to parse GPX files',
   },
   routeLandmarks: {
+    styleTitle: "Place style",
+    styleClassic: "Classic",
+    styleMinimal: "Minimal",
+    shareStyleFeedback: "Share your preference on GitHub",
+    shareStyleFeedbackHint: "Opens a discussion draft with your selected style. You can edit it before posting.",
+
     priorityHint: 'Move important landmarks to the top. They take priority when places or labels overlap.', moveUp: 'Move {name} up', moveDown: 'Move {name} down', dragPriority: 'Drag to change priority',
     title: 'Route landmarks', description: 'Choose the landscape details you want on the replay. Your route marker remains the visual priority.',
     routeMoments: 'Route moments', routeMomentsDescription: 'Highest point, major climb/descent, halfway and finish. Off by default.',

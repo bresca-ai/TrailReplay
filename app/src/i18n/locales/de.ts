@@ -830,6 +830,12 @@ export const de = {
     parseGpxFailed: 'GPX-Dateien konnten nicht analysiert werden',
   },
   routeLandmarks: {
+    styleTitle: "Ortsstil",
+    styleClassic: "Klassisch",
+    styleMinimal: "Minimalistisch",
+    shareStyleFeedback: "Teile deine Präferenz auf GitHub",
+    shareStyleFeedbackHint: "Öffnet einen Entwurf mit dem gewählten Stil. Du kannst ihn vor dem Veröffentlichen bearbeiten.",
+
     priorityHint: 'Schiebe wichtige Orte nach oben. Sie haben Vorrang, wenn Orte oder Beschriftungen überlappen.', moveUp: '{name} nach oben', moveDown: '{name} nach unten', dragPriority: 'Ziehen, um die Priorität zu ändern',
     title: 'Wegpunkte der Route', description: 'Wähle die Landschaftsdetails für die Wiedergabe aus. Der Routenmarker bleibt visuell im Vordergrund.',
     routeMoments: 'Routenmomente', routeMomentsDescription: 'Höchster Punkt, größter Anstieg/Abstieg, Hälfte und Ziel. Standardmäßig deaktiviert.',

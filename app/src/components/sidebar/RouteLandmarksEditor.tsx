@@ -24,6 +24,7 @@ export function RouteLandmarksEditor() {
   const setNearbyPlacesEnabled = useAppStore((state) => state.setNearbyPlacesEnabled);
   const setNearbyPlaceTypes = useAppStore((state) => state.setNearbyPlaceTypes);
   const landmarkScale = useAppStore((state) => state.settings.landmarkScale);
+  const landmarkStyle = useAppStore((state) => state.settings.landmarkStyle ?? 'classic');
   const labelFade = useAppStore((state) => state.settings.landmarkLabelFade);
   const setSettings = useAppStore((state) => state.setSettings);
 
@@ -53,6 +54,20 @@ export function RouteLandmarksEditor() {
     {nearbyPlacesCoverage?.complete && <p className="text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.completeCoverage')} · {nearbyPlacesCoverage.source === 'landmark-database' ? t('routeLandmarks.landmarkDatabase') : nearbyPlacesCoverage.cacheHits === nearbyPlacesCoverage.tiles ? t('routeLandmarks.sharedCache') : t(nearbyPlacesCoverage.fetchedTiles === 1 ? 'routeLandmarks.areaAdded' : 'routeLandmarks.areasAdded', { count: nearbyPlacesCoverage.fetchedTiles })}</p>}
     <RouteLandmarkList />
     <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
+      <fieldset>
+        <legend className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.styleTitle')}</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {(['classic', 'minimal'] as const).map((style) => <button key={style} type="button"
+            aria-pressed={landmarkStyle === style} onClick={() => { setSettings({ landmarkStyle: style }); trackEvent('settings_changed', { setting_name: 'landmark_style', setting_value: style }); }}
+            className={`rounded-lg border px-2 py-2 text-xs font-medium ${landmarkStyle === style ? 'border-[var(--trail-orange)] bg-[var(--trail-orange)]/10 text-[var(--evergreen)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)]'}`}>
+            {t(`routeLandmarks.style${style === 'classic' ? 'Classic' : 'Minimal'}`)}
+          </button>)}
+        </div>
+      </fieldset>
+      <a className="inline-block text-xs underline text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]"
+        href={`https://github.com/bresca-ai/TrailReplay/discussions/new?${new URLSearchParams({ category: 'general', title: 'Landmark style feedback', body: `I prefer the ${landmarkStyle} landmark style.\n\nMy feedback: ` })}`}
+        target="_blank" rel="noreferrer">{t('routeLandmarks.shareStyleFeedback')}</a>
+      <p className="text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.shareStyleFeedbackHint')}</p>
       <div className="flex items-baseline justify-between"><span className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.landmarkSize')}</span><span className="text-[11px] text-[var(--evergreen-60)]">{Math.round(clampLandmarkScale(landmarkScale) * 100)}%</span></div>
       <input type="range" min={MIN_LANDMARK_SCALE} max={MAX_LANDMARK_SCALE} step={0.1} value={clampLandmarkScale(landmarkScale)} onChange={(event) => { const scale = Number(event.target.value); setSettings({ landmarkScale: scale }); trackEvent('settings_changed', { setting_name: 'landmark_scale', setting_value: scale }); }} className="w-full accent-[var(--trail-orange)]" />
       <label className="flex items-start justify-between gap-3"><span><span className="block text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.fadeLabels')}</span><span className="block pt-0.5 text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.fadeLabelsDescription')}</span></span><input type="checkbox" checked={labelFade} onChange={(event) => { const enabled = event.target.checked; setSettings({ landmarkLabelFade: enabled }); trackEvent('feature_enabled', { feature_name: 'landmark_label_fade', feature_state: enabled ? 'enabled' : 'disabled', feature_context: 'landmarks' }); }} /></label>

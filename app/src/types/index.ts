@@ -477,6 +477,8 @@ export interface AppSettings {
   hiddenElevationSectionIds: string[];
   /** Multiplier applied to landmark pins and their labels together. */
   landmarkScale: number;
+  /** Classic colored markers or a compact, typography-led map label. */
+  landmarkStyle: 'classic' | 'minimal';
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
   inactiveAnnotationsOpacity: number;
