@@ -5,6 +5,7 @@ import { DEFAULT_SKY_COLOR } from '@/components/map/mapSky';
 import { MAP_STYLE } from '@/components/map/mapStyle';
 import { drawExportFrame } from './drawExportFrame';
 import { createDefaultVideoExportSettings } from '@/store/defaults';
+import { useAppStore } from '@/store/useAppStore';
 
 function frameOptions() {
   const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn() };
@@ -98,10 +99,15 @@ it('paints location names, flags and source credits into cropped video frames', 
   const label = document.createElement('div'); label.className = 'tr-location-chapter'; label.textContent = '🇪🇸 Spain'; container.appendChild(label);
   const credit = document.createElement('div'); credit.className = 'tr-location-credit'; credit.textContent = 'geoBoundaries · source · CC BY 4.0'; container.appendChild(credit);
   const { options } = frameOptions();
-  const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(), fillText: vi.fn(), measureText: (value: string) => ({ width: value.length * 10 }) };
+  const context = { font: '', fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), stroke: vi.fn(), fillText: vi.fn(), measureText: (value: string) => ({ width: value.length * 10 }) };
+  const fonts: string[] = [];
+  context.fillText.mockImplementation(() => fonts.push(context.font));
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  useAppStore.getState().setTrailStyle({ overlayFont: 'editorial' });
   drawExportFrame(options);
-  // Keep the chapter below the statistics card at the top of the video.
-  expect(context.fillText).toHaveBeenCalledWith('🇪🇸 Spain', 540, expect.closeTo(1920 * 0.34 + 28), expect.any(Number));
+  expect(context.fillText).toHaveBeenCalledWith('🇪🇸', expect.any(Number), expect.any(Number));
+  expect(context.fillText).toHaveBeenCalledWith('Spain', expect.any(Number), expect.any(Number), expect.any(Number));
+  expect(fonts[context.fillText.mock.calls.findIndex(call => call[0] === 'Spain')]).toContain('Source Serif 4');
   expect(context.fillText.mock.calls.some(call => String(call[0]).includes('geoBoundaries'))).toBe(true);
+  useAppStore.getState().reset();
 });

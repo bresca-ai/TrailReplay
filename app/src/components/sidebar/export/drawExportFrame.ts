@@ -20,6 +20,55 @@ import { markerIconContrastFilter } from '@/utils/activityIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 import { drawComparisonLeaderboard } from './drawComparisonLeaderboard';
+import { splitLocationChapterLabel } from '@/utils/locationChapterLabel';
+import type { OverlayFont } from '@/types';
+
+function drawLocationChapterLabel(context: CanvasRenderingContext2D, label: HTMLElement, width: number, height: number, font: OverlayFont) {
+  const parsed = splitLocationChapterLabel(label.textContent ?? '');
+  const flag = label.dataset.locationFlag ?? parsed.flag;
+  const name = label.dataset.locationName ?? parsed.name;
+  if (!flag && !name) return;
+  const scale = width / 1080;
+  const padding = Math.max(12, 16 * scale), flagBox = flag ? Math.max(32, 36 * scale) : 0;
+  const gap = flag && name ? Math.max(8, 10 * scale) : 0;
+  const fontSize = Math.max(20, 30 * scale), lineHeight = fontSize * 1.2;
+  const maxCardWidth = width - Math.max(24, 40 * scale);
+  const maxTextWidth = Math.max(1, maxCardWidth - padding * 2 - flagBox - gap);
+  context.save();
+  context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
+  const lines: string[] = [];
+  let line = '';
+  for (const word of name.split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && context.measureText(next).width > maxTextWidth) { lines.push(line); line = word; } else line = next;
+  }
+  if (line) lines.push(line);
+  const textWidth = Math.min(maxTextWidth, Math.max(0, ...lines.map(item => context.measureText(item).width)));
+  const cardWidth = padding * 2 + flagBox + gap + textWidth;
+  const cardHeight = Math.max(56 * scale, flagBox + padding, lines.length * lineHeight + padding);
+  const x = (width - cardWidth) / 2, y = height * .34, radius = Math.min(14 * scale, cardHeight / 2);
+  context.beginPath(); context.roundRect(x, y, cardWidth, cardHeight, radius);
+  context.fillStyle = 'rgba(9,14,19,.9)'; context.fill();
+  context.strokeStyle = 'rgba(255,255,255,.15)'; context.lineWidth = Math.max(1, scale); context.stroke();
+  context.fillStyle = label.dataset.locationAccent || '#ffbd66';
+  context.beginPath(); context.roundRect(x + 2 * scale, y + 8 * scale, Math.max(2, 3 * scale), cardHeight - 16 * scale, 2 * scale); context.fill();
+  const centerY = y + cardHeight / 2;
+  if (flag) {
+    const flagX = x + padding;
+    context.beginPath(); context.roundRect(flagX, centerY - flagBox / 2, flagBox, flagBox, Math.max(5, 8 * scale));
+    context.fillStyle = 'rgba(255,255,255,.1)'; context.fill();
+    context.font = `${Math.max(18, 26 * scale)}px system-ui, sans-serif`;
+    context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
+    context.fillText(flag, flagX + flagBox / 2, centerY);
+  }
+  if (lines.length) {
+    context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
+    context.textAlign = 'left'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
+    const textX = x + padding + flagBox + gap;
+    lines.forEach((item, index) => context.fillText(item, textX, centerY + (index - (lines.length - 1) / 2) * lineHeight, maxTextWidth));
+  }
+  context.restore();
+}
 
 function extractCssUrl(value: string): string | null {
   const match = value.match(/url\((['"]?)(.*?)\1\)/);
@@ -187,18 +236,10 @@ export function drawExportFrame({
 
     // HTML chapter labels are not part of the map canvas. Position them within
     // the output frame so portrait crops cannot remove the required credit.
-    const chapterLabel = container.querySelector('.tr-location-chapter')?.textContent;
+    const chapterLabel = container.querySelector('.tr-location-chapter') as HTMLElement | null;
     const chapterCredit = container.querySelector('.tr-location-credit')?.textContent;
     const scale = recordW / 1080;
-    if (chapterLabel) {
-      context.save(); context.font = `700 ${Math.max(18, 30 * scale)}px sans-serif`;
-      context.textAlign = 'center'; context.textBaseline = 'middle';
-      const width = Math.min(recordW - 40 * scale, context.measureText(chapterLabel).width + 40 * scale);
-      const height = 56 * scale, y = recordH * 0.34;
-      context.fillStyle = 'rgba(0,0,0,.75)'; context.fillRect((recordW - width) / 2, y, width, height);
-      context.fillStyle = '#fff'; context.fillText(chapterLabel, recordW / 2, y + height / 2, width - 16 * scale);
-      context.restore();
-    }
+    if (chapterLabel) drawLocationChapterLabel(context, chapterLabel, recordW, recordH, useAppStore.getState().settings.trailStyle.overlayFont);
     if (chapterCredit) {
       context.save(); context.font = `${Math.max(12, 15 * scale)}px sans-serif`; context.textBaseline = 'bottom';
       const maxWidth = recordW - 24 * scale, lines: string[] = []; let line = '';

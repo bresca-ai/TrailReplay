@@ -2,6 +2,7 @@ import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { VIDEO_LOGO_URL } from './videoExportBrand';
 import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { getIntroDuration } from '@/utils/locationChapterCamera';
+import { overlayCanvasFontFamily } from '@/utils/typography';
 import { useAppStore } from '@/store/useAppStore';
 import {
   getBlobSizeBucket,
@@ -616,6 +617,10 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
+      const chapterFont = useAppStore.getState().settings.trailStyle.overlayFont;
+      if (useAppStore.getState().settings.locationChapters?.level !== 'off') {
+        await document.fonts.load(`700 24px ${overlayCanvasFontFamily(chapterFont)}`).catch(() => []);
+      }
       await document.fonts.ready;
       // Load saved symbols before rendering the first video frame.
       const exportState = useAppStore.getState();
