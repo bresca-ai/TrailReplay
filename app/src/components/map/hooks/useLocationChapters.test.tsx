@@ -34,18 +34,21 @@ it('makes the opening overview and playback zoom optional', async () => {
     getCenter: () => ({ lng: .5, lat: .5 }), getZoom: () => 12, getPitch: () => 40, jumpTo } as unknown as MapLibreMap;
   const settings = { level: 'country' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4 };
   const ref = { current: map }, coords = [[.5, .5]], point = { lon: .5, lat: .5 };
-  const { result, rerender, unmount } = renderHook(({ time, zoom }) => useLocationChapters(ref, true, { ...settings, zoomToPlace: zoom }, coords, point, time, 'playing'), { initialProps: { time: 0, zoom: true } });
+  const { result, rerender, unmount } = renderHook(({ time, zoom, introZoom }: { time: number; zoom: boolean; introZoom?: boolean }) => useLocationChapters(ref, true, { ...settings, zoomToPlace: zoom, introZoomToPlace: introZoom }, coords, point, time, 'playing'), { initialProps: { time: 0, zoom: true, introZoom: undefined as boolean | undefined } });
   await waitFor(() => expect(source.setData).toHaveBeenCalledWith(feature));
   expect(locationChapterIntroCameraRef.current).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
   expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
-  rerender({ time: 1200, zoom: true });
+  rerender({ time: 1200, zoom: true, introZoom: undefined });
   expect(result.current.cameraCueRef.current).toMatchObject({ startTime: 0, duration: 4000, target: { zoom: 4.5 } });
   expect(jumpTo).not.toHaveBeenCalled();
-  rerender({ time: 1200, zoom: false });
+  rerender({ time: 1200, zoom: false, introZoom: undefined });
   expect(result.current.introCamera).toBeUndefined();
   expect(locationChapterIntroCameraRef.current).toBeUndefined();
   expect(result.current.cameraCueRef.current).toBeNull();
   expect(jumpTo).not.toHaveBeenCalled();
+  rerender({ time: 1200, zoom: false, introZoom: true });
+  expect(result.current.introCamera?.zoom).toBe(4.5);
+  expect(result.current.cameraCueRef.current).toBeNull();
   unmount(); expect(locationChapterIntroCameraRef.current).toBeUndefined();
 });
 it('waits briefly before switching chapters at a border', async () => {
@@ -64,6 +67,27 @@ it('waits briefly before switching chapters at a border', async () => {
   rerender({ time: 2200, lon: 1.5 }); expect(result.current.label).toBe('two');
   expect(result.current.cameraCueRef.current).toMatchObject({ startTime: 1600, target: { zoom: 4.5 } });
   expect(jumpTo).not.toHaveBeenCalled();
+});
+it('reveals brief municipality crossings immediately and allows the filter to be increased', async () => {
+  const make = (id: string, x: number) => ({ type: 'Feature' as const, properties: { id, name: id, iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]] } });
+  const first = make('Figueres', 0), second = make('Vilabertran', 1), third = make('Peralada', 2);
+  vi.mocked(loadRouteBoundaries).mockResolvedValue([first, second, third]);
+  const layers = new Map<string, unknown>(); let sourceExists = false; const source = { setData: vi.fn() };
+  const map = { getSource: () => sourceExists ? source : undefined, addSource: () => { sourceExists = true; }, removeSource: () => { sourceExists = false; },
+    getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), removeLayer: (id: string) => layers.delete(id),
+    on: vi.fn(), off: vi.fn(), setPaintProperty: vi.fn(), cameraForBounds: () => undefined } as unknown as MapLibreMap;
+  const settings = { level: 'adm3' as const, color: '#ff0000', width: 4, fill: true, showName: true, showFlag: false, zoomToPlace: false, durationSeconds: 4 };
+  const ref = { current: map }, coords = [[.5, .5], [1.5, .5], [2.5, .5]];
+  const { result, rerender } = renderHook(({ time, lon, minimumStaySeconds }: { time: number; lon: number; minimumStaySeconds?: number }) => useLocationChapters(ref, true, { ...settings, minimumStaySeconds }, coords, { lon, lat: .5 }, time, 'playing'), { initialProps: { time: 0, lon: .5, minimumStaySeconds: undefined as number | undefined } });
+  await waitFor(() => expect(source.setData).toHaveBeenCalledWith(first));
+  rerender({ time: 1000, lon: 1.5, minimumStaySeconds: undefined });
+  expect(source.setData).toHaveBeenCalledWith(second);
+  rerender({ time: 1100, lon: 1.5, minimumStaySeconds: undefined });
+  expect(result.current.label).toBe('Vilabertran');
+  rerender({ time: 1200, lon: 2.5, minimumStaySeconds: .5 });
+  expect(source.setData).not.toHaveBeenCalledWith(third);
+  rerender({ time: 1750, lon: 2.5, minimumStaySeconds: .5 });
+  expect(source.setData).toHaveBeenCalledWith(third);
 });
 it('installs and displays the chapter when tiles keep the style loading', async () => {
   const feature = { type: 'Feature' as const, properties: { id: 'es', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };

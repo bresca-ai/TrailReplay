@@ -148,6 +148,13 @@ it('uses one camera update per frame and returns to the same follow camera after
   a.rerender(p(4200)); b.rerender(q(4200));
   expect(map.readPose().zoom).toBeCloseTo(control.readPose().zoom, 6);
   expect(map.readPose().pitch).toBeCloseTo(control.readPose().pitch, 6);
+  cue.current = { target: { center: [2.05, 41.05], zoom: 6, pitch: 0, bearing: 0 }, startTime: 4200, duration: 4000 };
+  a.rerender(p(4300)); a.rerender(p(5500));
+  const beforeSwitch = { ...map.readPose(), center: [...map.readPose().center] };
+  cue.current = { target: { center: [2.09, 41.09], zoom: 8, pitch: 0, bearing: 0 }, startTime: 5501, duration: 4000 };
+  a.rerender(p(5501));
+  expect(map.readPose().zoom).toBeCloseTo(beforeSwitch.zoom, 6);
+  expect(map.readPose().center[0]).toBeCloseTo(beforeSwitch.center[0], 6);
 });
 it('starts the intro at the selected place before flying to the route', () => {
   const jumpTo = vi.fn(), flyTo = vi.fn(), easeTo = vi.fn(), once = vi.fn();

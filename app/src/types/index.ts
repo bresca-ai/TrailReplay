@@ -441,10 +441,12 @@ export interface LocationChapterSettings {
   showName: boolean;
   showFlag: boolean;
   zoomToPlace: boolean;
+  introZoomToPlace?: boolean;
   introCountryFirst?: boolean;
   introLevels?: Array<'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5'>;
   introDurationSeconds?: number;
   traceBorder?: boolean;
+  minimumStaySeconds?: number;
   durationSeconds: number;
 }
 

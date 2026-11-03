@@ -26,6 +26,12 @@ export function getIntroLevels(settings?: LocationChapterSettings): LocationLeve
   return LOCATION_LEVELS.filter(level => selected.includes(level));
 }
 
+export function getMinimumStaySeconds(settings: LocationChapterSettings): number {
+  const value = settings.minimumStaySeconds;
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.min(2, value));
+  return settings.level === 'country' || settings.level === 'region' ? .5 : 0;
+}
+
 export const DEFAULT_INTRO_DURATION = 2500;
 export function getIntroDuration(settings?: LocationChapterSettings): number {
   if (!settings || settings.level === 'off') return DEFAULT_INTRO_DURATION;

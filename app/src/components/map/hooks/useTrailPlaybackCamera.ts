@@ -255,6 +255,10 @@ export function useTrailPlaybackCamera({
   const trailRevisionRef = useRef(0);
   const transitionStartRef = useRef<{ segmentIndex: number | undefined; pose: TransitionCameraPose } | null>(null);
   const chapterBasePoseRef = useRef<TransitionCameraPose | null>(null);
+  const chapterRenderedPoseRef = useRef<TransitionCameraPose | null>(null);
+  const chapterRenderedTimeRef = useRef<number | null>(null);
+  const lastChapterStartRef = useRef<number | null>(null);
+  const chapterHandoffRef = useRef<{ from: TransitionCameraPose; start: number } | null>(null);
 
   // The height filter samples this planned anchor path, not raw switchbacks.
   // Prepare it only when authoring inputs change, never on the playback clock.
@@ -310,6 +314,31 @@ export function useTrailPlaybackCamera({
 
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded || !currentPosition) return;
+
+    const composeChapterPose = <T extends TransitionCameraPose>(base: T, cue: LocationChapterCameraCue | null): T => {
+      if (chapterRenderedTimeRef.current !== null && currentTimeMs < chapterRenderedTimeRef.current) {
+        chapterHandoffRef.current = null;
+        lastChapterStartRef.current = null;
+      }
+      chapterRenderedTimeRef.current = currentTimeMs;
+      const cueStart = cue?.startTime ?? null;
+      if (cueStart !== lastChapterStartRef.current && lastChapterStartRef.current !== null && chapterRenderedPoseRef.current) {
+        chapterHandoffRef.current = { from: chapterRenderedPoseRef.current, start: currentTimeMs };
+      }
+      lastChapterStartRef.current = cueStart;
+      let result = applyLocationChapterCamera(base, cue, currentTimeMs);
+      const handoff = chapterHandoffRef.current;
+      if (handoff) {
+        const x = Math.max(0, Math.min(1, (currentTimeMs - handoff.start) / 350));
+        const weight = x * x * (3 - 2 * x);
+        const deltaLng = ((result.center[0] - handoff.from.center[0] + 540) % 360) - 180;
+        result = { ...result, center: [handoff.from.center[0] + deltaLng * weight, handoff.from.center[1] + (result.center[1] - handoff.from.center[1]) * weight],
+          zoom: handoff.from.zoom + (result.zoom - handoff.from.zoom) * weight, pitch: handoff.from.pitch + (result.pitch - handoff.from.pitch) * weight };
+        if (x >= 1) chapterHandoffRef.current = null;
+      }
+      chapterRenderedPoseRef.current = result;
+      return result;
+    };
 
     const isCameraTransition = currentSegment?.segment.transportMode === 'camera';
     const shouldShowPlaybackAdornment = !isCameraTransition && shouldRenderPlaybackAdornment({
@@ -510,8 +539,8 @@ export function useTrailPlaybackCamera({
         const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(mapRef.current.getMaxZoom(), zoom));
         const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, wideZoom, pitch);
         const cue = animationPhase === 'playing' ? locationChapterCameraCue?.current ?? null : null;
-        mapRef.current.jumpTo(applyLocationChapterCamera(pose, cue, currentTimeMs));
-        chapterBasePoseRef.current = cue ? pose : null;
+        mapRef.current.jumpTo(composeChapterPose(pose, cue));
+        chapterBasePoseRef.current = cue || chapterHandoffRef.current ? pose : null;
         smoothedCenterRef.current = pose.center;
         smoothBearingRef.current = pose.bearing;
         targetBearingRef.current = pose.bearing;
@@ -777,8 +806,8 @@ export function useTrailPlaybackCamera({
         pitch: usesRawPose ? targetPose.pitch : newPitch,
         bearing: usesRawPose ? targetPose.bearing : smoothBearingRef.current,
       };
-      mapRef.current.jumpTo(applyLocationChapterCamera(playbackPose, cue, currentTimeMs));
-      chapterBasePoseRef.current = cue ? playbackPose : null;
+      mapRef.current.jumpTo(composeChapterPose(playbackPose, cue));
+      chapterBasePoseRef.current = cue || chapterHandoffRef.current ? playbackPose : null;
     } else {
       if (!isCameraTransition) transitionStartRef.current = null;
       // Playback is paused/idle or a new export is starting: don't let a gap
@@ -787,6 +816,10 @@ export function useTrailPlaybackCamera({
       lastCameraFrameTimeRef.current = null;
       smoothedZoomTargetRef.current = null;
       chapterBasePoseRef.current = null;
+      chapterRenderedPoseRef.current = null;
+      chapterRenderedTimeRef.current = null;
+      lastChapterStartRef.current = null;
+      chapterHandoffRef.current = null;
     }
 
     setCameraPosition({

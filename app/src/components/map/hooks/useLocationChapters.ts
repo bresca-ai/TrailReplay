@@ -6,7 +6,7 @@ import type { FeatureCollection, Position } from 'geojson';
 import { containsPosition, countryEmoji, levelCode, loadRouteBoundaries, type LocationFeature } from '@/utils/locationBoundaries';
 import type { LocationChapterSettings } from '@/types';
 import { INTRO_DURATION } from '@/components/playback/PlaybackProvider';
-import { getIntroLevels, introStage, locationChapterIntroCameraRef, locationChapterIntroProgressRef, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
+import { getIntroLevels, getMinimumStaySeconds, introStage, locationChapterIntroCameraRef, locationChapterIntroProgressRef, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import type { LocationLevel } from '@/utils/locationBoundaries';
 const SOURCE = 'location-chapter', FILL = 'location-chapter-fill', GLOW = 'location-chapter-glow', LINE = 'location-chapter-line';
 const TRACE_SOURCE = 'location-chapter-trace', TRACE = 'location-chapter-trace-line';
@@ -41,15 +41,16 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
   const cameraCueRef = useRef<LocationChapterCameraCue | null>(null);
   const candidate = useRef<{ id: string; since: number } | null>(null);
   const mode = settings?.level ?? 'off';
+  const introZoom = Boolean(settings?.introZoomToPlace ?? settings?.zoomToPlace);
   const introKey = getIntroLevels(settings).join(',');
   const [introResult, setIntroResult] = useState<{ features: LocationFeature[]; layers: typeof introLayers; coordinates: number[][]; mode: string; enabled: boolean; stages: Array<{ feature: LocationFeature; camera?: PlaceCamera }> }>();
-  const introCurrent = introResult?.features === features && introResult.layers === introLayers && introResult.coordinates === coordinates && introResult.mode === mode && introResult.enabled === Boolean(settings?.zoomToPlace);
+  const introCurrent = introResult?.features === features && introResult.layers === introLayers && introResult.coordinates === coordinates && introResult.mode === mode && introResult.enabled === introZoom;
   const introStages = introCurrent ? introResult?.stages ?? emptyStages : emptyStages;
   const introCamera = introStages[0]?.camera;
   const introRegionCamera = introStages[1]?.camera;
   useEffect(() => {
     const map = mapRef.current, first = coordinates[0];
-    const enabled = Boolean(settings?.zoomToPlace);
+    const enabled = introZoom;
     const stages = loaded && first ? introLayers.flatMap(({ features: items }) => {
       const feature = items.find(item => containsPosition(item, first));
       return feature ? [{ feature, camera: enabled && map ? cameraForPlace(map, feature, first) : undefined }] : [];
@@ -58,7 +59,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     const camera = stages[0]?.camera;
     locationChapterIntroCameraRef.current = camera;
     return () => { if (locationChapterIntroCameraRef.current === camera) locationChapterIntroCameraRef.current = undefined; };
-  }, [coordinates, features, introLayers, loaded, mapRef, mode, settings?.zoomToPlace]);
+  }, [coordinates, features, introLayers, introZoom, loaded, mapRef, mode]);
   useEffect(() => {
     let cancelled = false;
     setFeatures([]); setIntroLayers([]); setMissing([]); setError(false); previous.current = null; cameraCueRef.current = null; candidate.current = null; setLabel(''); setCredit('');
@@ -121,11 +122,13 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     let active = mode !== 'off' && current && (phase === 'playing' || phase === 'intro' || phase === 'preloading')
       ? phase === 'playing' ? previous.current && features.includes(previous.current.feature) && containsPosition(previous.current.feature, [current.lon, current.lat]) ? previous.current.feature : features.find(feature => containsPosition(feature, [current.lon, current.lat])) : introStages[stage.index]?.feature : undefined;
     if (previous.current && time < previous.current.start) { previous.current = null; candidate.current = null; }
-    // Ignore brief boundary jitter; the first location is immediate.
+    // Larger areas default to a small jitter filter. Local areas default to
+    // immediate entry so a short passage in a compressed video is not lost.
     if (previous.current && phase === 'playing' && previous.current.id !== active?.properties.id && !(previous.current.startedInIntro && time < 500)) {
       const nextId = active?.properties.id ?? '';
       if (candidate.current?.id !== nextId || time < candidate.current.since) candidate.current = { id: nextId, since: time };
-      if (time - candidate.current.since < 500) active = previous.current.feature;
+      const delay = settings ? getMinimumStaySeconds(settings) * 1000 : 500;
+      if (time - candidate.current.since < delay) active = previous.current.feature;
       else candidate.current = null;
     } else candidate.current = null;
     if (!active) { if (previous.current) { (map.getSource(SOURCE) as GeoJSONSource).setData(empty); (map.getSource(TRACE_SOURCE) as GeoJSONSource | undefined)?.setData(empty); } previous.current = null; cameraCueRef.current = null; setLabel(''); setCredit(''); return; }
@@ -141,7 +144,8 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     // Route time is frozen at zero throughout the opening camera fly-in.
     // Show the starting place there, then finish its fade on the route clock.
     const introOpacity = introStages.length > 1 ? Math.min(1, stage.local / .12, (1 - stage.local) / .12) : 1;
-    const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? introOpacity : Math.min(1, age / 500, Math.max(0, (duration - age) / 800));
+    const fadeIn = mode === 'country' || mode === 'region' ? 500 : 150;
+    const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? introOpacity : Math.min(1, age / fadeIn, Math.max(0, (duration - age) / 800));
     const traceProgress = phase === 'intro' ? stage.local / .7 : age / Math.min(3000, duration * .7);
     const baseLineOpacity = settings?.traceBorder !== false && traceProgress < 1 ? opacity * .3 : opacity;
     const target = previous.current.target;
