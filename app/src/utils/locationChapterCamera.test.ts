@@ -28,6 +28,14 @@ describe('location introduction timing', () => {
     expect(introStage(.4, 3).index).toBe(1);
     expect(introStage(.7, 3).index).toBe(2);
   });
+
+  it('supports an opening without travel reveals while preserving older off settings', () => {
+    const saved = { ...settings, level: 'off' as const, introLevels: ['country' as const, 'region' as const] };
+    expect(getIntroLevels(saved)).toEqual([]);
+    expect(getIntroDuration(saved)).toBe(2500);
+    expect(getIntroLevels({ ...saved, introWhenPlaybackOff: true })).toEqual(['country', 'region']);
+    expect(getIntroDuration({ ...saved, introWhenPlaybackOff: true })).toBe(10000);
+  });
 });
 
 it('uses slower country camera moves and allows a custom duration', () => {

@@ -23,8 +23,8 @@ export function applyLocationChapterCamera<T extends ReplayCameraPose>(pose: T, 
 }
 
 export function getIntroLevels(settings?: LocationChapterSettings): LocationLevel[] {
-  if (!settings || settings.level === 'off') return [];
-  const selected = settings.introLevels ?? (settings.level === 'region' && settings.introCountryFirst ? ['country', 'region'] : [settings.level]);
+  if (!settings || (settings.level === 'off' && !settings.introWhenPlaybackOff)) return [];
+  const selected = settings.introLevels ?? (settings.level === 'off' ? [] : settings.level === 'region' && settings.introCountryFirst ? ['country', 'region'] : [settings.level]);
   return LOCATION_LEVELS.filter(level => selected.includes(level));
 }
 
@@ -42,7 +42,7 @@ export function getZoomDurationSeconds(settings: LocationChapterSettings): numbe
 
 export const DEFAULT_INTRO_DURATION = 2500;
 export function getIntroDuration(settings?: LocationChapterSettings): number {
-  if (!settings || settings.level === 'off') return DEFAULT_INTRO_DURATION;
+  if (!settings) return DEFAULT_INTRO_DURATION;
   if (getIntroLevels(settings).length === 0) return DEFAULT_INTRO_DURATION;
   const seconds = settings.introDurationSeconds ?? Math.max(7, 7 + (getIntroLevels(settings).length - 1) * 3);
   return Math.max(5, Math.min(30, seconds)) * 1000;

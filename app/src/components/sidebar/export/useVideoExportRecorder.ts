@@ -1,7 +1,7 @@
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { VIDEO_LOGO_URL } from './videoExportBrand';
 import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
-import { getIntroDuration } from '@/utils/locationChapterCamera';
+import { getIntroDuration, getIntroLevels } from '@/utils/locationChapterCamera';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import { useAppStore } from '@/store/useAppStore';
 import {
@@ -547,7 +547,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
   const handleStartExport = useCallback(async () => {
     const chapterStatus = document.querySelector('[data-location-chapters-status]')?.getAttribute('data-location-chapters-status');
-    if ((useAppStore.getState().settings.locationChapters?.level ?? 'off') !== 'off' && chapterStatus !== 'ready') {
+    const chapterSettings = useAppStore.getState().settings.locationChapters;
+    if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0) && chapterStatus !== 'ready') {
       alert(t('locationChapters.notReady'));
       return;
     }
@@ -618,7 +619,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
       const chapterFont = useAppStore.getState().settings.trailStyle.overlayFont;
-      if (useAppStore.getState().settings.locationChapters?.level !== 'off') {
+      const chapterSettings = useAppStore.getState().settings.locationChapters;
+      if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0)) {
         await document.fonts.load(`700 24px ${overlayCanvasFontFamily(chapterFont)}`).catch(() => []);
       }
       await document.fonts.ready;

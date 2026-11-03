@@ -44,6 +44,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
   const mode = settings?.level ?? 'off';
   const introZoom = Boolean(settings?.introZoomToPlace ?? settings?.zoomToPlace);
   const introKey = getIntroLevels(settings).join(',');
+  const enabled = mode !== 'off' || introKey.length > 0;
   const [introResult, setIntroResult] = useState<{ features: LocationFeature[]; layers: typeof introLayers; coordinates: number[][]; mode: string; enabled: boolean; stages: IntroStage[] }>();
   const introCurrent = introResult?.features === features && introResult.layers === introLayers && introResult.coordinates === coordinates && introResult.mode === mode && introResult.enabled === introZoom;
   const introStages = introCurrent ? introResult?.stages ?? emptyStages : emptyStages;
@@ -66,14 +67,14 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
   useEffect(() => {
     let cancelled = false;
     setFeatures([]); setIntroLayers([]); setMissing([]); setError(false); previous.current = null; cameraCueRef.current = null; candidate.current = null; setLabel(''); setCredit('');
-    if (mode === 'off' || !coordinates.length) { setLoading(false); return; }
+    if (!enabled || !coordinates.length) { setLoading(false); return; }
     setLoading(true);
     const stride = Math.max(1, Math.floor(coordinates.length / 5000));
     const samples = coordinates.filter((_, i) => i % stride === 0 || i === coordinates.length - 1) as Position[];
     const selected = introKey ? introKey.split(',') as LocationLevel[] : [];
     const missingSet = new Set<string>();
     const load = (points: Position[], level: LocationLevel) => loadRouteBoundaries(points, level, countries => { countries.forEach(country => missingSet.add(`${country} (${levelCode(level)})`)); });
-    Promise.all([load(samples, mode), ...selected.map(level => level === mode ? Promise.resolve(null) : load([samples[0]], level).catch(() => { missingSet.add(levelCode(level)); return []; }))]).then(([items, ...layers]) => {
+    Promise.all([mode === 'off' ? Promise.resolve(null) : load(samples, mode), ...selected.map(level => level === mode ? Promise.resolve(null) : load([samples[0]], level).catch(() => { missingSet.add(levelCode(level)); return []; }))]).then(([items, ...layers]) => {
       if (!cancelled) {
         const routeFeatures = items ?? [];
         const openingLayers = selected.map((level, index) => ({ level, features: layers[index] ?? routeFeatures }));
@@ -82,21 +83,21 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
         }
         setFeatures(routeFeatures);
         setIntroLayers(openingLayers);
-        setMissing([...missingSet]); setError(routeFeatures.length === 0); setLoading(false);
+        setMissing([...missingSet]); setError(mode === 'off' ? !openingLayers.some(layer => layer.features.some(feature => containsPosition(feature, samples[0]))) : routeFeatures.length === 0); setLoading(false);
       }
     }).catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
     return () => { cancelled = true; };
-  }, [coordinates, introKey, mode]);
+  }, [coordinates, enabled, introKey, mode]);
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !loaded || mode === 'off' || (phase !== 'intro' && phase !== 'preloading')) { setIntroProgress(0); return; }
+    if (!map || !loaded || !enabled || (phase !== 'intro' && phase !== 'preloading')) { setIntroProgress(0); return; }
     const update = () => setIntroProgress(locationChapterIntroProgressRef.current);
     if (phase === 'intro') map.on('move', update);
     return () => { if (phase === 'intro') map.off('move', update); };
-  }, [loaded, mapRef, mode, phase]);
+  }, [enabled, loaded, mapRef, phase]);
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !loaded || mode === 'off') return;
+    if (!map || !loaded || !enabled) return;
     let installing = false;
     const ensure = () => {
       if (installing || (map.getSource(SOURCE) && map.getSource(TRACE_SOURCE) && map.getLayer(FILL) && map.getLayer(GLOW) && map.getLayer(LINE) && map.getLayer(TRACE))) return;
@@ -117,24 +118,33 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     };
     map.on('styledata', ensure); map.on('sourcedata', ensure); map.on('idle', ensure); ensure();
     return () => { map.off('styledata', ensure); map.off('sourcedata', ensure); map.off('idle', ensure); if (map.getLayer(TRACE)) map.removeLayer(TRACE); if (map.getLayer(LINE)) map.removeLayer(LINE); if (map.getLayer(GLOW)) map.removeLayer(GLOW); if (map.getLayer(FILL)) map.removeLayer(FILL); if (map.getSource(TRACE_SOURCE)) map.removeSource(TRACE_SOURCE); if (map.getSource(SOURCE)) map.removeSource(SOURCE); };
-  }, [loaded, mapRef, mode]);
+  }, [enabled, loaded, mapRef, mode]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !map.getSource(SOURCE)) { cameraCueRef.current = null; return; }
     const stage = introStage(introProgress, introStages.length);
-    let active = mode !== 'off' && current && (phase === 'playing' || phase === 'intro' || phase === 'preloading')
-      ? phase === 'playing' ? previous.current && features.includes(previous.current.feature) && containsPosition(previous.current.feature, [current.lon, current.lat]) ? previous.current.feature : features.find(feature => containsPosition(feature, [current.lon, current.lat])) : introStages[stage.index]?.feature : undefined;
+    let active = enabled && current && (phase === 'playing' || phase === 'intro' || phase === 'preloading')
+      ? phase === 'playing' ? mode !== 'off' ? previous.current && features.includes(previous.current.feature) && containsPosition(previous.current.feature, [current.lon, current.lat]) ? previous.current.feature : features.find(feature => containsPosition(feature, [current.lon, current.lat])) : undefined : introStages[stage.index]?.feature : undefined;
     if (previous.current && time < previous.current.start) { previous.current = null; candidate.current = null; }
     // Larger areas default to a small jitter filter. Local areas default to
     // immediate entry so a short passage in a compressed video is not lost.
-    if (previous.current && phase === 'playing' && previous.current.id !== active?.properties.id && !(previous.current.startedInIntro && time < 500)) {
+    if (mode !== 'off' && previous.current && phase === 'playing' && previous.current.id !== active?.properties.id && !(previous.current.startedInIntro && time < 500)) {
       const nextId = active?.properties.id ?? '';
       if (candidate.current?.id !== nextId || time < candidate.current.since) candidate.current = { id: nextId, since: time };
       const delay = settings ? getMinimumStaySeconds(settings) * 1000 : 500;
       if (time - candidate.current.since < delay) active = previous.current.feature;
       else candidate.current = null;
     } else candidate.current = null;
-    if (!active) { if (previous.current) { (map.getSource(SOURCE) as GeoJSONSource).setData(empty); (map.getSource(TRACE_SOURCE) as GeoJSONSource | undefined)?.setData(empty); } previous.current = null; cameraCueRef.current = null; setLabel(''); setCredit(''); return; }
+    if (!active) {
+      if (previous.current) {
+        (map.getSource(SOURCE) as GeoJSONSource).setData(empty);
+        (map.getSource(TRACE_SOURCE) as GeoJSONSource | undefined)?.setData(empty);
+        // GeoJSON updates are asynchronous; hide the old outline immediately.
+        for (const layer of [LINE, GLOW, TRACE]) if (map.getLayer(layer)) map.setPaintProperty(layer, 'line-opacity', 0);
+        if (map.getLayer(FILL)) map.setPaintProperty(FILL, 'fill-opacity', 0);
+      }
+      previous.current = null; cameraCueRef.current = null; setLabel(''); setCredit(''); return;
+    }
     const activeLevel = phase === 'playing' && active === previous.current?.feature ? previous.current.level
       : phase === 'playing' ? mode : introStages[stage.index]?.level ?? mode;
     if (previous.current?.id !== active.properties.id || previous.current?.level !== activeLevel || time < previous.current.start) {
@@ -188,7 +198,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     setCredit(opacity > 0 ? active.properties.credit : '');
     const flag = settings?.showFlag && previous.current.level === 'country' ? countryEmoji(active.properties.iso2) : '';
     setLabel(opacity > 0 && (settings?.showName || flag) ? `${flag} ${settings?.showName ? active.properties.name : ''}`.trim() : '');
-  }, [cameraCanFollow, current, features, introProgress, introStages, layerRevision, loaded, mapRef, mode, phase, settings, time]);
-  const preparingCamera = loaded && mode !== 'off' && (features.length > 0 || introLayers.some(layer => layer.features.length > 0)) && !introCurrent;
+  }, [cameraCanFollow, current, enabled, features, introProgress, introStages, layerRevision, loaded, mapRef, mode, phase, settings, time]);
+  const preparingCamera = loaded && enabled && (features.length > 0 || introLayers.some(layer => layer.features.length > 0)) && !introCurrent;
   return { label, error, credit, missing, loading: loading || preparingCamera, introCamera, introRegionCamera, introStages, cameraCueRef, features };
 }

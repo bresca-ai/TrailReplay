@@ -41,6 +41,19 @@ it('lets users choose a local level and any combination of opening levels', () =
   expect(screen.queryByLabelText('Camera move duration (seconds)')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Fit places during the opening zoom')).toBeChecked();
 });
+it('allows opening levels while travel reveals are off and preserves them when switching travel off', () => {
+  render(<LocationChapterControls />);
+  expect(screen.getByLabelText('Boundary level while moving')).toHaveValue('off');
+  fireEvent.click(screen.getByLabelText('Countries (ADM0)'));
+  expect(useAppStore.getState().settings.locationChapters).toMatchObject({ level: 'off', introLevels: ['country'], introWhenPlaybackOff: true });
+  expect(screen.getByLabelText('Opening duration (seconds)')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Boundary level while moving'), { target: { value: 'region' } });
+  fireEvent.change(screen.getByLabelText('Boundary level while moving'), { target: { value: 'off' } });
+  expect(screen.getByLabelText('Countries (ADM0)')).toBeChecked();
+  expect(useAppStore.getState().settings.locationChapters).toMatchObject({ level: 'off', introLevels: ['country'], introWhenPlaybackOff: true });
+  fireEvent.click(screen.getByLabelText('Countries (ADM0)'));
+  expect(screen.queryByLabelText('Opening duration (seconds)')).not.toBeInTheDocument();
+});
 it('shows start names and offers only levels with a known place for the opening', () => {
   vi.mocked(useStartLocationLevels).mockReturnValueOnce({ hasStart: true, retry: vi.fn(), results: {
     country: { status: 'available', name: 'Spain' }, region: { status: 'available', name: 'Catalonia' },

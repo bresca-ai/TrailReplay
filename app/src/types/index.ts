@@ -445,6 +445,8 @@ export interface LocationChapterSettings {
   introZoomToPlace?: boolean;
   introCountryFirst?: boolean;
   introLevels?: Array<'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5'>;
+  /** Explicitly keeps opening reveals enabled when travel reveals are off. */
+  introWhenPlaybackOff?: boolean;
   introDurationSeconds?: number;
   traceBorder?: boolean;
   minimumStaySeconds?: number;

@@ -14,6 +14,7 @@ import { MapNavigationGuide } from './MapNavigationGuide';
 import { CinematicCameraEditor } from './CinematicCameraEditor';
 import { LocationChapterControls } from './LocationChapterControls';
 import { levelCode } from '@/utils/locationBoundaries';
+import { getIntroLevels } from '@/utils/locationChapterCamera';
 import {
   Map as MapIcon,
   Video,
@@ -365,7 +366,7 @@ export function SettingsPanel() {
       </details>
 
       <details className="rounded-lg border border-[var(--evergreen)]/20">
-        <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('locationChapters.title')} <span className="font-normal text-[var(--evergreen-60)]"> · {settings.locationChapters?.level && settings.locationChapters.level !== 'off' ? levelCode(settings.locationChapters.level) : t('locationChapters.off')}</span></summary>
+        <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('locationChapters.title')} <span className="font-normal text-[var(--evergreen-60)]"> · {settings.locationChapters?.level && settings.locationChapters.level !== 'off' ? levelCode(settings.locationChapters.level) : getIntroLevels(settings.locationChapters).length ? t('locationChapters.openingOnly') : t('locationChapters.off')}</span></summary>
         <div className="px-3 pb-3"><LocationChapterControls /></div>
       </details>
 

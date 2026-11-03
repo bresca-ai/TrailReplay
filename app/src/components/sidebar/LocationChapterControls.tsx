@@ -52,12 +52,15 @@ export function LocationChapterControls() {
   return (
     <section className="space-y-4" aria-label={t('locationChapters.title')}>
       <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.description')}</p>
-      {settings.level === 'off' && hasStart && <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.privacy')}</p>}
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><Route className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.playbackTitle')}</span></legend>
         <label className="block text-xs font-semibold text-[var(--evergreen)]">{t('locationChapters.playbackLevel')}
-          <select aria-label={t('locationChapters.playbackLevel')} className="mt-1.5 min-h-11 w-full rounded-lg border border-[var(--evergreen)]/25 bg-white px-3 text-sm text-[var(--evergreen)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]" value={settings.level} onChange={event => update({ level: event.target.value as LocationChapterSettings['level'], ...(settings.level !== 'off' && !settings.introLevels ? { introLevels: getIntroLevels(settings) } : {}) })}>
+          <select aria-label={t('locationChapters.playbackLevel')} className="mt-1.5 min-h-11 w-full rounded-lg border border-[var(--evergreen)]/25 bg-white px-3 text-sm text-[var(--evergreen)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]" value={settings.level} onChange={event => {
+            const level = event.target.value as LocationChapterSettings['level'];
+            update({ level, ...(settings.level !== 'off' && !settings.introLevels ? { introLevels: selectedIntroLevels } : {}),
+              ...(level === 'off' && settings.level !== 'off' ? { introWhenPlaybackOff: true } : {}) });
+          }}>
             <option value="off">{t('locationChapters.off')}</option>
             {LOCATION_LEVELS.map(level => {
               const result = startPlaces[level];
@@ -86,7 +89,7 @@ export function LocationChapterControls() {
         </div>}
       </fieldset>
 
-      {settings.level !== 'off' && <>
+      <>
         <fieldset className="space-y-3 border-t border-[var(--evergreen)]/10 pt-4">
           <legend className="text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><MapPinned className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.introLevels')}</span></legend>
           <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.introLevelsHint')}</p>
@@ -95,7 +98,7 @@ export function LocationChapterControls() {
               const checked = selectedIntroLevels.includes(level);
               const accessibleLabel = `${levelLabel(level)} (${levelCode(level)})`;
               return <label key={level} className="relative block cursor-pointer">
-                <input type="checkbox" aria-label={accessibleLabel} className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" checked={checked} onChange={event => update({ introLevels: event.target.checked ? [...selectedIntroLevels, level] : selectedIntroLevels.filter(item => item !== level) })} />
+                <input type="checkbox" aria-label={accessibleLabel} className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" checked={checked} onChange={event => update({ introLevels: event.target.checked ? [...selectedIntroLevels, level] : selectedIntroLevels.filter(item => item !== level), ...(settings.level === 'off' ? { introWhenPlaybackOff: true } : {}) })} />
                 <span className="flex min-h-12 items-center gap-3 py-2 text-xs font-medium text-[var(--evergreen)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--trail-orange)]">
                   <span aria-hidden="true" className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${checked ? 'border-[var(--trail-orange)] text-[var(--trail-orange)]' : 'border-[var(--evergreen)]/35'}`}>{checked && <Check className="h-3 w-3" />}</span>
                   <span className="min-w-0 flex-1"><span className="block">{startPlaces[level].name}</span><span className="mt-0.5 block text-[var(--evergreen-60)]">{level === 'country' || level === 'region' ? `${levelLabel(level)} · ${levelCode(level)}` : levelCode(level)}</span></span>
@@ -112,7 +115,7 @@ export function LocationChapterControls() {
           </div>}
         </fieldset>
 
-        <details className="group border-t border-[var(--evergreen)]/10">
+        {(settings.level !== 'off' || selectedIntroLevels.length > 0) && <details className="group border-t border-[var(--evergreen)]/10">
           <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-sm font-bold text-[var(--evergreen)] [&::-webkit-details-marker]:hidden">
             <Palette className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />
             <span className="flex-1">{t('locationChapters.appearanceTitle')}</span>
@@ -125,11 +128,11 @@ export function LocationChapterControls() {
             {([['fill', 'fill'], ['showName', 'showName'], ['showFlag', 'showFlag']] as const).map(([key, label]) => <ToggleRow key={key} label={t(`locationChapters.${label}`)} checked={settings[key]} onChange={checked => update({ [key]: checked })} />)}
             <ToggleRow label={t('locationChapters.traceBorder')} checked={settings.traceBorder !== false} onChange={checked => update({ traceBorder: checked })} />
           </div>
-        </details>
+        </details>}
         <div className="space-y-2 text-xs leading-relaxed text-[var(--evergreen-60)]">
           <p>{t('locationChapters.coverage')}</p><p>{t('locationChapters.privacy')}</p><p>{t('locationChapters.credit')}</p>
         </div>
-      </>}
+      </>
     </section>
   );
 }

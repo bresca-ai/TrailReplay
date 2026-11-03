@@ -215,6 +215,31 @@ it('prepares the first region during preloading and reveals the next one during 
   rerender({ time: 2600, lon: 1.5, phase: 'playing' }); expect(source.setData).toHaveBeenCalledWith(second);
   rerender({ time: 3200, lon: 1.5, phase: 'playing' }); expect(result.current.label).toBe('Occitanie');
 });
+it('renders opening-only boundaries and removes them as playback begins', async () => {
+  const feature = { type: 'Feature' as const, properties: { id: 'es', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' },
+    geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
+  vi.mocked(loadRouteBoundaries).mockResolvedValue([feature]);
+  const layers = new Map<string, unknown>(); let sourceExists = false;
+  const source = { setData: vi.fn() };
+  const map = { getSource: () => sourceExists ? source : undefined, addSource: () => { sourceExists = true; }, removeSource: () => { sourceExists = false; },
+    getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), removeLayer: (id: string) => layers.delete(id),
+    on: vi.fn(), off: vi.fn(), setPaintProperty: vi.fn(), cameraForBounds: () => ({ center: [1, 1], zoom: 5 }) } as unknown as MapLibreMap;
+  const settings = { level: 'off' as const, introWhenPlaybackOff: true, introLevels: ['country' as const], color: '#ff0000', width: 3, fill: false,
+    showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 };
+  const ref = { current: map }, coords = [[.5, .5], [1, 1]], point = { lon: .5, lat: .5 };
+  const { result, rerender } = renderHook(({ phase, time }) => useLocationChapters(ref, true, settings, coords, point, time, phase),
+    { initialProps: { phase: 'preloading', time: 0 } });
+  await waitFor(() => expect(result.current.introCamera).toBeDefined());
+  expect(result.current.error).toBe(false);
+  expect(result.current.features).toEqual([]);
+  rerender({ phase: 'intro', time: 0 });
+  expect(result.current.label).toBe('🇪🇸 Spain');
+  expect(source.setData).toHaveBeenCalledWith(feature);
+  rerender({ phase: 'playing', time: 0 });
+  expect(result.current.label).toBe('');
+  expect(result.current.cameraCueRef.current).toBeNull();
+  expect(source.setData).toHaveBeenCalledWith({ type: 'FeatureCollection', features: [] });
+});
 it('skips an unavailable opening level and reports it while retaining the others', async () => {
   const make = (id: string) => ({ type: 'Feature' as const, properties: { id, name: id, iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] } });
   const country = make('Spain'), town = make('Figueres');
