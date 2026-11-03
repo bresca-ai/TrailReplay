@@ -45,7 +45,7 @@ function landmarkLabel(landmark: RouteLandmark) {
 function labelImageId(landmark: RouteLandmark, overlayFont: OverlayFont, fontReady = false, style: AppSettings['landmarkStyle'] = 'classic') {
   const symbol = landmarkSymbol(landmark);
   const pinheadId = annotationPinheadId(symbol);
-  const text = `${landmarkLabel(landmark)}|${style}|${symbol}|${pinheadId ? pinheadIconPath(pinheadId) ?? '' : ''}`;
+  const text = `${landmarkLabel(landmark)}|${style}|${symbol}|${pinheadId ? pinheadIconPath(pinheadId) ?? '' : ''}|${landmark.color ?? ''}|${landmark.type}|${landmark.source}`;
   let hash = 0;
   for (let index = 0; index < text.length; index++) hash = (Math.imul(hash, 31) + text.charCodeAt(index)) >>> 0;
   return `${LANDMARK_LABEL_IMAGE_PREFIX}${style}-${overlayFont}-${landmark.id}-${hash.toString(36)}${fontReady ? '-ready' : ''}`;
@@ -99,51 +99,47 @@ function minimalLabelImage(landmark: RouteLandmark): ImageData | null {
   if (!context) return null;
   const font = '500 11px Inter, sans-serif';
   context.font = font;
+  const hasElevation = Boolean(landmark.elevation && ['highest-point', 'high-point', 'summit'].includes(landmark.type));
+  const title = hasElevation ? `${landmark.title} | ${Math.round(landmark.elevation!).toLocaleString()} m` : landmark.title;
   const lines: string[] = [];
   let line = '';
-  for (const word of landmark.title.split(/\s+/).filter(Boolean)) {
+  for (const word of title.split(/\s+/).filter(Boolean)) {
     const candidate = line ? `${line} ${word}` : word;
-    if (line && context.measureText(candidate).width > 120) { lines.push(line); line = word; }
+    if (line && context.measureText(candidate).width > 145) { lines.push(line); line = word; }
     else line = candidate;
   }
   if (line) lines.push(line);
-  const hasElevation = Boolean(landmark.elevation && ['highest-point', 'high-point', 'summit'].includes(landmark.type));
-  const width = Math.ceil(Math.min(132, Math.max(26, ...lines.map((value) => context.measureText(value).width + 12))));
-  const height = 19 + Math.max(1, lines.length) * 14 + (hasElevation ? 12 : 0) + 4;
+  const textWidth = Math.min(145, Math.max(1, ...lines.map((value) => context.measureText(value).width)));
+  const width = Math.ceil(textWidth + 27);
+  const height = Math.max(24, Math.max(1, lines.length) * 14 + 6);
   canvas.width = width * 2; canvas.height = height * 2;
   context.scale(2, 2);
   const symbol = landmarkSymbol(landmark);
   const glyph = annotationMapGlyph(symbol);
   const pinheadId = annotationPinheadId(symbol);
   const path = glyph ? PINHEAD_PATHS[glyph] : pinheadId ? pinheadIconPath(pinheadId) ?? PINHEAD_PATHS[glyphForLandmark(landmark)] : null;
+  const natural = ['summit', 'high-point', 'highest-point', 'lake', 'water', 'waterfall', 'viewpoint', 'pass', 'camp'].includes(landmark.type);
+  context.font = font; context.textAlign = 'right'; context.textBaseline = 'middle';
+  context.lineJoin = 'round'; context.strokeStyle = 'rgba(5, 10, 9, 0.9)'; context.lineWidth = 3;
+  context.fillStyle = natural ? '#bfe2bd' : '#ffffff';
+  lines.forEach((value, index) => {
+    const y = height / 2 + (index - (lines.length - 1) / 2) * 14;
+    context.strokeText(value, width - 24, y, textWidth);
+    context.fillText(value, width - 24, y, textWidth);
+  });
   context.save();
-  context.shadowColor = 'rgba(0,0,0,0.9)'; context.shadowBlur = 3;
-  context.fillStyle = '#f7f2e8';
+  context.shadowColor = 'rgba(0,0,0,0.9)'; context.shadowBlur = 4;
+  context.fillStyle = landmark.color ?? colorForLandmark(landmark);
   if (path) {
-    context.translate((width - 13) / 2, 3);
-    context.scale(13 / 15, 13 / 15);
+    context.translate(width - 19, (height - 15) / 2);
     context.fill(new Path2D(path));
   } else {
     // User-selected emoji remain recognizable in their native colours.
-    context.font = '13px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+    context.font = '15px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
     context.textAlign = 'center'; context.textBaseline = 'middle';
-    context.fillText(symbol, width / 2, 10, 15);
+    context.fillText(symbol, width - 11.5, height / 2, 15);
   }
   context.restore();
-  context.font = font; context.textAlign = 'center'; context.textBaseline = 'middle';
-  context.lineJoin = 'round'; context.strokeStyle = 'rgba(0,0,0,0.8)'; context.lineWidth = 2.5; context.fillStyle = '#f7f2e8';
-  lines.forEach((value, index) => {
-    const y = 19 + index * 14 + 6;
-    context.strokeText(value, width / 2, y, width - 8);
-    context.fillText(value, width / 2, y, width - 8);
-  });
-  if (hasElevation) {
-    const elevation = `${Math.round(landmark.elevation!).toLocaleString()} m`;
-    const y = 19 + Math.max(1, lines.length) * 14 + 5;
-    context.font = '400 9px Inter, sans-serif'; context.fillStyle = '#e4e1d9';
-    context.strokeText(elevation, width / 2, y, width - 8);
-    context.fillText(elevation, width / 2, y, width - 8);
-  }
   return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
@@ -335,7 +331,8 @@ export function useRouteLandmarksLayer({
     }
     if (map.getLayer(LABEL)) {
       map.setLayoutProperty(LABEL, 'icon-size', landmarkLabelIconSizeExpression(scale));
-      map.setLayoutProperty(LABEL, 'icon-offset', landmarkStyle === 'minimal' ? [0, -7] : [0, 18]);
+      map.setLayoutProperty(LABEL, 'icon-anchor', landmarkStyle === 'minimal' ? 'right' : 'top');
+      map.setLayoutProperty(LABEL, 'icon-offset', landmarkStyle === 'minimal' ? [11.5, 0] : [0, 18]);
       map.setPaintProperty(LABEL, 'icon-opacity', landmarkTextOpacityExpression(labelFade));
     }
   }, [isMapLoaded, labelFade, mapRef, scale, landmarkStyle]);
