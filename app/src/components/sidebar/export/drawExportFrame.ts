@@ -29,12 +29,13 @@ function drawLocationChapterLabel(context: CanvasRenderingContext2D, label: HTML
   const name = label.dataset.locationName ?? parsed.name;
   if (!flag && !name) return;
   const scale = width / 1080;
-  const padding = Math.max(12, 16 * scale), flagBox = flag ? Math.max(32, 36 * scale) : 0;
+  const flagSize = Math.max(22, 36 * scale);
   const gap = flag && name ? Math.max(8, 10 * scale) : 0;
-  const fontSize = Math.max(20, 30 * scale), lineHeight = fontSize * 1.2;
-  const maxCardWidth = width - Math.max(24, 40 * scale);
-  const maxTextWidth = Math.max(1, maxCardWidth - padding * 2 - flagBox - gap);
+  const fontSize = Math.max(20, 32 * scale), lineHeight = fontSize * 1.25;
   context.save();
+  context.font = `${flagSize}px system-ui, sans-serif`;
+  const flagWidth = flag ? context.measureText(flag).width : 0;
+  const maxTextWidth = Math.max(1, width * .9 - flagWidth - gap);
   context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
   const lines: string[] = [];
   let line = '';
@@ -44,27 +45,19 @@ function drawLocationChapterLabel(context: CanvasRenderingContext2D, label: HTML
   }
   if (line) lines.push(line);
   const textWidth = Math.min(maxTextWidth, Math.max(0, ...lines.map(item => context.measureText(item).width)));
-  const cardWidth = padding * 2 + flagBox + gap + textWidth;
-  const cardHeight = Math.max(56 * scale, flagBox + padding, lines.length * lineHeight + padding);
-  const x = (width - cardWidth) / 2, y = height * .34, radius = Math.min(14 * scale, cardHeight / 2);
-  context.beginPath(); context.roundRect(x, y, cardWidth, cardHeight, radius);
-  context.fillStyle = 'rgba(9,14,19,.9)'; context.fill();
-  context.strokeStyle = 'rgba(255,255,255,.15)'; context.lineWidth = Math.max(1, scale); context.stroke();
-  context.fillStyle = label.dataset.locationAccent || '#ffbd66';
-  context.beginPath(); context.roundRect(x + 2 * scale, y + 8 * scale, Math.max(2, 3 * scale), cardHeight - 16 * scale, 2 * scale); context.fill();
-  const centerY = y + cardHeight / 2;
+  const contentWidth = flagWidth + gap + textWidth;
+  const x = (width - contentWidth) / 2;
+  const centerY = height * .34 + Math.max(flagSize, lines.length * lineHeight) / 2;
+  context.shadowColor = 'rgba(0,0,0,.95)'; context.shadowBlur = Math.max(6, 12 * scale);
   if (flag) {
-    const flagX = x + padding;
-    context.beginPath(); context.roundRect(flagX, centerY - flagBox / 2, flagBox, flagBox, Math.max(5, 8 * scale));
-    context.fillStyle = 'rgba(255,255,255,.1)'; context.fill();
-    context.font = `${Math.max(18, 26 * scale)}px system-ui, sans-serif`;
+    context.font = `${flagSize}px system-ui, sans-serif`;
     context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
-    context.fillText(flag, flagX + flagBox / 2, centerY);
+    context.fillText(flag, x + flagWidth / 2, centerY);
   }
   if (lines.length) {
     context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
-    context.textAlign = 'left'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
-    const textX = x + padding + flagBox + gap;
+    context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
+    const textX = x + flagWidth + gap + textWidth / 2;
     lines.forEach((item, index) => context.fillText(item, textX, centerY + (index - (lines.length - 1) / 2) * lineHeight, maxTextWidth));
   }
   context.restore();

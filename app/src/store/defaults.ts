@@ -27,7 +27,7 @@ export function createDefaultSettings(): AppSettings {
     mapFilter: 'none',
     show3DTerrain: true,
     recordedElevationPrototype: false,
-    locationChapters: { level: 'off', color: '#ffbd66', width: 3, fill: true, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 },
+    locationChapters: { level: 'off', color: '#ffbd66', width: 3, fill: false, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 },
     showHeartRate: false,
     showPictures: true,
     cameraMode: 'follow-behind',

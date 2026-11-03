@@ -7,6 +7,7 @@ it('uses the chosen overlay font and preserves flag and name independently', () 
   const { rerender } = render(<LocationChapterLabel label="🇪🇸 Catalunya" accent="#ff0000" font="editorial" />);
   const label = screen.getByRole('status', { name: '🇪🇸 Catalunya' });
   expect(label.style.fontFamily).toContain('Source Serif 4');
+  expect(label.style.borderLeft).toBe('');
   expect(label).toHaveAttribute('data-location-flag', '🇪🇸');
   expect(label).toHaveAttribute('data-location-name', 'Catalunya');
   expect(label).toHaveAttribute('data-location-accent', '#ff0000');

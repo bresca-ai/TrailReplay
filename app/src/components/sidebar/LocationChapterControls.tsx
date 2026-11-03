@@ -7,7 +7,7 @@ import { getIntroDuration, getIntroLevels, getMinimumStaySeconds, getZoomDuratio
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useStartLocationLevels } from '@/hooks/useStartLocationLevels';
 
-const defaults: LocationChapterSettings = { level: 'off', color: '#ffbd66', width: 3, fill: true, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 };
+const defaults: LocationChapterSettings = { level: 'off', color: '#ffbd66', width: 3, fill: false, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 };
 
 function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
   return (
@@ -90,15 +90,15 @@ export function LocationChapterControls() {
         <fieldset className="space-y-3 border-t border-[var(--evergreen)]/10 pt-4">
           <legend className="text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><MapPinned className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.introLevels')}</span></legend>
           <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.introLevelsHint')}</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="divide-y divide-[var(--evergreen)]/10 border-y border-[var(--evergreen)]/10">
             {availableIntroLevels.map(level => {
               const checked = selectedIntroLevels.includes(level);
               const accessibleLabel = `${levelLabel(level)} (${levelCode(level)})`;
               return <label key={level} className="relative block cursor-pointer">
                 <input type="checkbox" aria-label={accessibleLabel} className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" checked={checked} onChange={event => update({ introLevels: event.target.checked ? [...selectedIntroLevels, level] : selectedIntroLevels.filter(item => item !== level) })} />
-                <span className="flex min-h-14 items-start justify-between gap-1 rounded-lg border border-[var(--evergreen)]/20 bg-white px-2.5 py-2 text-xs font-medium text-[var(--evergreen)] transition-colors peer-checked:border-[var(--trail-orange)] peer-checked:bg-[var(--trail-orange)]/10 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--trail-orange)]">
-                  <span className="min-w-0"><span className="block">{level === 'country' || level === 'region' ? `${levelLabel(level)} · ${levelCode(level)}` : levelCode(level)}</span><span className="mt-1 block break-words text-[var(--evergreen-60)]">{startPlaces[level].name}</span></span>
-                  {checked && <Check className="h-3.5 w-3.5 shrink-0 text-[var(--trail-orange)]" aria-hidden="true" />}
+                <span className="flex min-h-12 items-center gap-3 py-2 text-xs font-medium text-[var(--evergreen)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--trail-orange)]">
+                  <span aria-hidden="true" className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${checked ? 'border-[var(--trail-orange)] text-[var(--trail-orange)]' : 'border-[var(--evergreen)]/35'}`}>{checked && <Check className="h-3 w-3" />}</span>
+                  <span className="min-w-0 flex-1"><span className="block">{startPlaces[level].name}</span><span className="mt-0.5 block text-[var(--evergreen-60)]">{level === 'country' || level === 'region' ? `${levelLabel(level)} · ${levelCode(level)}` : levelCode(level)}</span></span>
                 </span>
               </label>;
             })}

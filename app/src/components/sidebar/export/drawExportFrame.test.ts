@@ -107,6 +107,7 @@ it('paints location names, flags and source credits into cropped video frames', 
   drawExportFrame(options);
   expect(context.fillText).toHaveBeenCalledWith('🇪🇸', expect.any(Number), expect.any(Number));
   expect(context.fillText).toHaveBeenCalledWith('Spain', expect.any(Number), expect.any(Number), expect.any(Number));
+  expect(context.roundRect).not.toHaveBeenCalled();
   expect(fonts[context.fillText.mock.calls.findIndex(call => call[0] === 'Spain')]).toContain('Source Serif 4');
   expect(context.fillText.mock.calls.some(call => String(call[0]).includes('geoBoundaries'))).toBe(true);
   useAppStore.getState().reset();
