@@ -10,6 +10,7 @@ export function levelCode(level: LocationLevel): string {
 type CountryFeature = Feature<LocationGeometry, { name: string; iso2: string; iso3: string }>;
 const API = 'https://www.geoboundaries.org/api/current/gbOpen';
 const cachedLayers = new Map<string, Promise<LocationFeature[]>>();
+const cachedCountryLevels = new Map<string, Promise<Set<string>>>();
 let countriesPromise: Promise<CountryFeature[]> | undefined;
 
 const ringBounds = new WeakMap<Position[], [number, number, number, number]>();
@@ -55,6 +56,23 @@ export function loadCountryIndex(): Promise<CountryFeature[]> {
     .catch(error => { countriesPromise = undefined; throw error; });
   return countriesPromise;
 }
+/** The country catalog is CORS-accessible even when an individual missing
+ * level's 404 is not. Keep failures retryable instead of guessing coverage. */
+function loadCountryLevels(iso: string): Promise<Set<string>> {
+  if (!/^[A-Z]{3}$/.test(iso)) return Promise.reject(new Error('Country is unavailable'));
+  let pending = cachedCountryLevels.get(iso);
+  if (!pending) {
+    pending = json(`${API}/${iso}/ALL/`).then(data => {
+      if (!Array.isArray(data) || !data.every(item => item && typeof item === 'object'
+        && item.boundaryISO === iso && typeof item.boundaryType === 'string' && /^ADM\d+$/.test(item.boundaryType))) {
+        throw new Error('Invalid boundary catalog');
+      }
+      return new Set(data.map(item => item.boundaryType as string));
+    }).catch(error => { cachedCountryLevels.delete(iso); throw error; });
+    cachedCountryLevels.set(iso, pending);
+  }
+  return pending;
+}
 /** GeoBoundaries supplies metadata and a versioned file URL, not a spatial API. */
 export function loadBoundaryLayer(country: CountryFeature, level: LocationLevel): Promise<LocationFeature[]> {
   const iso = country.properties.iso3;
@@ -86,6 +104,8 @@ export function loadBoundaryLayer(country: CountryFeature, level: LocationLevel)
 export async function loadLocationAtPosition(point: Position, level: LocationLevel): Promise<LocationFeature | undefined> {
   const country = (await loadCountryIndex()).find(item => containsPosition(item, point));
   if (!country) return undefined;
+  const levels = await loadCountryLevels(country.properties.iso3);
+  if (!levels.has(levelCode(level))) return undefined;
   try {
     return (await loadBoundaryLayer(country, level)).find(item => containsPosition(item, point));
   } catch (error) {
