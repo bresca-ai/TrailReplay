@@ -109,6 +109,46 @@ describe('camera transition handoff', () => {
     expect(Math.abs(pose.pitch - arrival.pitch)).toBeLessThan(0.1);
   });
 });
+it('uses one camera update per frame and returns to the same follow camera after a region reveal', () => {
+  function makeMap() {
+    let pose = { center: [2, 41] as [number, number], zoom: 14, pitch: 30, bearing: 0 };
+    const jumpTo = vi.fn((next: typeof pose) => { pose = { ...pose, ...next }; });
+    return { getCenter: () => ({ lng: pose.center[0], lat: pose.center[1] }), getZoom: () => pose.zoom, getPitch: () => pose.pitch,
+      getBearing: () => pose.bearing, getSource: () => undefined, queryTerrainElevation: () => null,
+      getCenterClampedToGround: () => true, setCenterClampedToGround: vi.fn(), on: vi.fn(), off: vi.fn(), jumpTo, readPose: () => pose };
+  }
+  const map = makeMap(), control = makeMap();
+  const cue = { current: null as null | { target: { center: [number, number]; zoom: number; pitch: number; bearing: number }; startTime: number; duration: number } };
+  const common = { activeTrack: null, activeTextAnnotationId: null, allCoordinates: [[2, 41], [2.1, 41.1]], cameraCoordinates: [[2, 41], [2.1, 41.1]],
+    animationPhase: 'playing', cameraMode: 'follow-behind', cameraStability: 0.5, currentTimeMs: 0, completedCoordinates: [], computedJourney: null,
+    currentIcon: '', currentPosition: { lat: 41, lon: 2, elevation: 0 }, currentSegment: null, currentTrackColor: null, currentTrackName: null,
+    elevationData: [], followBehindZoomLevel: 1, isInTransport: false, isMapLoaded: true, markerRef: { current: null }, playbackProgress: 0,
+    segmentTimings: [], setCameraPosition: vi.fn(), totalDurationMs: 10000, isExporting: false, isPlaying: true,
+    trailStyle: { colorMode: 'fixed', colorZones: [], currentIcon: '', markerColor: '#000', markerSize: 1, markerType: 'dot', overlayFont: 'inter', showCircle: false, showMarker: false, showTrackLabels: false, trailColor: '#000' } };
+  type Props = Parameters<typeof useTrailPlaybackCamera>[0];
+  const input = (time: number, target: ReturnType<typeof makeMap>, cameraCue: typeof cue | undefined) => ({ ...common, currentTimeMs: time, playbackProgress: time / 10000,
+    currentPosition: { lat: 41 + time / 1000000, lon: 2 + time / 1000000, elevation: 0 }, mapRef: { current: target }, locationChapterCameraCue: cameraCue,
+    smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 } } as unknown as Props);
+  const refs = { smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 } };
+  const controlRefs = { smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 } };
+  const p = (time: number) => ({ ...input(time, map, cue), ...refs });
+  const q = (time: number) => ({ ...input(time, control, undefined), ...controlRefs });
+  const a = renderHook((value) => useTrailPlaybackCamera(value), { initialProps: p(0) });
+  const b = renderHook((value) => useTrailPlaybackCamera(value), { initialProps: q(0) });
+  cue.current = { target: { center: [2.05, 41.05], zoom: 6, pitch: 0, bearing: 0 }, startTime: 100, duration: 4000 };
+  let previousZoom = map.readPose().zoom;
+  for (let time = 100; time <= 4100; time += 100) {
+    const before = map.jumpTo.mock.calls.length;
+    a.rerender(p(time)); b.rerender(q(time));
+    expect(map.jumpTo.mock.calls.length - before).toBe(1);
+    expect(Math.abs(map.readPose().zoom - previousZoom)).toBeLessThan(1.2);
+    previousZoom = map.readPose().zoom;
+  }
+  cue.current = null;
+  a.rerender(p(4200)); b.rerender(q(4200));
+  expect(map.readPose().zoom).toBeCloseTo(control.readPose().zoom, 6);
+  expect(map.readPose().pitch).toBeCloseTo(control.readPose().pitch, 6);
+});
 it('starts the intro at the selected place before flying to the route', () => {
   const jumpTo = vi.fn(), flyTo = vi.fn(), easeTo = vi.fn(), once = vi.fn();
   const map = { getCenter: () => ({ lng: 2, lat: 41 }), getZoom: () => 12, getPitch: () => 0, getBearing: () => 0,

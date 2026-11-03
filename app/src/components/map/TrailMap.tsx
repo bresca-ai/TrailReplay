@@ -307,6 +307,7 @@ export function TrailMap(_props: TrailMapProps) {
     introRegionOverride: locationChapter.introRegionCamera,
     introStageOverrides,
     locationChapters: settings.locationChapters,
+    locationChapterCameraCue: locationChapter.cameraCueRef,
     activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
     allCoordinates,
     cameraCoordinates: cameraPathCoordinates,

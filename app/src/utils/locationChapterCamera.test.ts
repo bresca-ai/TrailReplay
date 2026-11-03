@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getIntroDuration, getIntroLevels, introStage, locationIntroEasing } from './locationChapterCamera';
+import { applyLocationChapterCamera, getIntroDuration, getIntroLevels, introStage, locationIntroEasing } from './locationChapterCamera';
 import { createDefaultSettings } from '@/store/defaults';
 
 describe('location introduction timing', () => {
@@ -28,4 +28,16 @@ describe('location introduction timing', () => {
     expect(introStage(.4, 3).index).toBe(1);
     expect(introStage(.7, 3).index).toBe(2);
   });
+});
+
+it('blends a place overview into the playback pose and returns to it smoothly', () => {
+  const pose = { center: [179, 41] as [number, number], zoom: 14, pitch: 50, bearing: 30 };
+  const cue = { target: { center: [-179, 42] as [number, number], zoom: 6, pitch: 0, bearing: 0 }, startTime: 1000, duration: 4000 };
+  expect(applyLocationChapterCamera(pose, cue, 1000)).toEqual(pose);
+  const middle = applyLocationChapterCamera(pose, cue, 3000);
+  expect(middle.zoom).toBe(6);
+  expect(middle.center[0]).toBe(181);
+  expect(middle.pitch).toBe(0);
+  expect(applyLocationChapterCamera(pose, cue, 5000)).toEqual(pose);
+  expect(applyLocationChapterCamera(pose, null, 3000)).toEqual(pose);
 });

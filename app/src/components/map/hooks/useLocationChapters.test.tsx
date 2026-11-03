@@ -39,11 +39,12 @@ it('makes the opening overview and playback zoom optional', async () => {
   expect(locationChapterIntroCameraRef.current).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
   expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
   rerender({ time: 1200, zoom: true });
-  expect(jumpTo).toHaveBeenCalled();
-  jumpTo.mockClear();
+  expect(result.current.cameraCueRef.current).toMatchObject({ startTime: 0, duration: 4000, target: { zoom: 4.5 } });
+  expect(jumpTo).not.toHaveBeenCalled();
   rerender({ time: 1200, zoom: false });
   expect(result.current.introCamera).toBeUndefined();
   expect(locationChapterIntroCameraRef.current).toBeUndefined();
+  expect(result.current.cameraCueRef.current).toBeNull();
   expect(jumpTo).not.toHaveBeenCalled();
   unmount(); expect(locationChapterIntroCameraRef.current).toBeUndefined();
 });
@@ -61,7 +62,8 @@ it('waits briefly before switching chapters at a border', async () => {
   rerender({ time: 1000, lon: 1.5 }); expect(result.current.label).toBe('one');
   rerender({ time: 1600, lon: 1.5 }); expect(source.setData).toHaveBeenCalledWith(second);
   rerender({ time: 2200, lon: 1.5 }); expect(result.current.label).toBe('two');
-  expect(jumpTo).toHaveBeenCalled();
+  expect(result.current.cameraCueRef.current).toMatchObject({ startTime: 1600, target: { zoom: 4.5 } });
+  expect(jumpTo).not.toHaveBeenCalled();
 });
 it('installs and displays the chapter when tiles keep the style loading', async () => {
   const feature = { type: 'Feature' as const, properties: { id: 'es', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
