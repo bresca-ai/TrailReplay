@@ -9,7 +9,8 @@ it('switches styles and prepares explicit feedback for the selected style', () =
   useAppStore.getState().reset();
   useAppStore.getState().setSettings({ language: 'en' });
   render(<RouteLandmarksEditor />);
-  expect(screen.getByRole('button', { name: 'Classic' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Minimal' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Classic' }));
   fireEvent.click(screen.getByRole('button', { name: 'Minimal' }));
   expect(useAppStore.getState().settings.landmarkStyle).toBe('minimal');
   expect(screen.getByRole('button', { name: 'Minimal' })).toHaveAttribute('aria-pressed', 'true');

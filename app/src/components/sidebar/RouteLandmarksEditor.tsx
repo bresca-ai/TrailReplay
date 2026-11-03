@@ -24,7 +24,7 @@ export function RouteLandmarksEditor() {
   const setNearbyPlacesEnabled = useAppStore((state) => state.setNearbyPlacesEnabled);
   const setNearbyPlaceTypes = useAppStore((state) => state.setNearbyPlaceTypes);
   const landmarkScale = useAppStore((state) => state.settings.landmarkScale);
-  const landmarkStyle = useAppStore((state) => state.settings.landmarkStyle ?? 'classic');
+  const landmarkStyle = useAppStore((state) => state.settings.landmarkStyle ?? 'minimal');
   const labelFade = useAppStore((state) => state.settings.landmarkLabelFade);
   const setSettings = useAppStore((state) => state.setSettings);
 

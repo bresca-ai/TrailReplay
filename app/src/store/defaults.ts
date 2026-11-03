@@ -76,7 +76,7 @@ export function createDefaultSettings(): AppSettings {
     customElevationSections: [],
     hiddenElevationSectionIds: [],
     landmarkScale: 1,
-    landmarkStyle: 'classic',
+    landmarkStyle: 'minimal',
     landmarkLabelFade: true,
     inactiveAnnotationsOpacity: 1.0,
   };
