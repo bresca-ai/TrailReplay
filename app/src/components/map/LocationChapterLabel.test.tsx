@@ -11,6 +11,7 @@ it('uses the chosen overlay font and preserves flag and name independently', () 
   expect(label).toHaveAttribute('data-location-flag', '🇪🇸');
   expect(label).toHaveAttribute('data-location-name', 'Catalunya');
   expect(label).toHaveAttribute('data-location-accent', '#ff0000');
+  expect(label.lastElementChild).toHaveStyle({ backgroundColor: '#ff0000' });
   rerender(<LocationChapterLabel label="Catalunya" accent="#123456" font="modern" />);
   expect(screen.getByRole('status', { name: 'Catalunya' }).style.fontFamily).toContain('Inter');
   expect(label).toHaveAttribute('data-location-flag', '');

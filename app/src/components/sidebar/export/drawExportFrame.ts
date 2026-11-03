@@ -29,13 +29,11 @@ function drawLocationChapterLabel(context: CanvasRenderingContext2D, label: HTML
   const name = label.dataset.locationName ?? parsed.name;
   if (!flag && !name) return;
   const scale = width / 1080;
-  const flagSize = Math.max(22, 36 * scale);
-  const gap = flag && name ? Math.max(8, 10 * scale) : 0;
-  const fontSize = Math.max(20, 32 * scale), lineHeight = fontSize * 1.25;
+  const flagSize = Math.max(22, 34 * scale);
+  const fontSize = Math.max(24, 42 * scale), lineHeight = fontSize * 1.12;
+  const gap = Math.max(6, 10 * scale);
+  const maxTextWidth = width * .88;
   context.save();
-  context.font = `${flagSize}px system-ui, sans-serif`;
-  const flagWidth = flag ? context.measureText(flag).width : 0;
-  const maxTextWidth = Math.max(1, width * .9 - flagWidth - gap);
   context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
   const lines: string[] = [];
   let line = '';
@@ -44,22 +42,22 @@ function drawLocationChapterLabel(context: CanvasRenderingContext2D, label: HTML
     if (line && context.measureText(next).width > maxTextWidth) { lines.push(line); line = word; } else line = next;
   }
   if (line) lines.push(line);
-  const textWidth = Math.min(maxTextWidth, Math.max(0, ...lines.map(item => context.measureText(item).width)));
-  const contentWidth = flagWidth + gap + textWidth;
-  const x = (width - contentWidth) / 2;
-  const centerY = height * .34 + Math.max(flagSize, lines.length * lineHeight) / 2;
   context.shadowColor = 'rgba(0,0,0,.95)'; context.shadowBlur = Math.max(6, 12 * scale);
+  context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
+  let y = height * .34;
   if (flag) {
     context.font = `${flagSize}px system-ui, sans-serif`;
-    context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
-    context.fillText(flag, x + flagWidth / 2, centerY);
+    context.fillText(flag, width / 2, y + flagSize / 2);
+    y += flagSize + gap;
   }
   if (lines.length) {
     context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
-    context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
-    const textX = x + flagWidth + gap + textWidth / 2;
-    lines.forEach((item, index) => context.fillText(item, textX, centerY + (index - (lines.length - 1) / 2) * lineHeight, maxTextWidth));
+    lines.forEach((item, index) => context.fillText(item, width / 2, y + (index + .5) * lineHeight, maxTextWidth));
+    y += lines.length * lineHeight;
   }
+  const ruleWidth = Math.max(26, 48 * scale), ruleHeight = Math.max(2, 2 * scale);
+  context.fillStyle = label.dataset.locationAccent || '#ffbd66';
+  context.fillRect((width - ruleWidth) / 2, y + gap, ruleWidth, ruleHeight);
   context.restore();
 }
 
