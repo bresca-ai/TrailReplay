@@ -253,6 +253,8 @@ export interface CameraSettings {
     | 'medium'
     | 'far';
   followBehindZoomLevel: number;
+  /** Null retains the distance-dependent default tilt. */
+  followBehindPitch: number | null;
   /** 0 = maximally stable/smooth camera, 1 = maximally reactive/tight tracking. */
   cameraStability: number;
 }
@@ -461,6 +463,7 @@ export interface AppSettings {
   mapFilter: MapFilter;
   mapOverlays: MapOverlays;
   show3DTerrain: boolean;
+  terrainExaggeration: number;
   recordedElevationPrototype: boolean;
   showHeartRate: boolean;
   showPictures: boolean;
@@ -495,6 +498,8 @@ export interface AppSettings {
   hiddenElevationSectionIds: string[];
   /** Multiplier applied to landmark pins and their labels together. */
   landmarkScale: number;
+  /** Classic colored markers or a compact, typography-led map label. */
+  landmarkStyle: 'classic' | 'minimal';
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
   inactiveAnnotationsOpacity: number;

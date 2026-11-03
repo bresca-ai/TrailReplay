@@ -51,6 +51,7 @@ interface UseReplayTileWarmupParams {
   elevationData: Array<{ elevation: number; progress?: number }>;
   enabled: boolean;
   followBehindZoomLevel: number;
+  followBehindPitch?: number | null;
   isMapLoaded: boolean;
   isPlaying: boolean;
   visibleMapRef: React.MutableRefObject<maplibregl.Map | null>;
@@ -260,6 +261,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
               coordinates: current.allCoordinates,
               elevationData: current.elevationData,
               followBehindZoomLevel: current.followBehindZoomLevel,
+              followBehindPitch: current.followBehindPitch,
               progress: Math.min(1, current.playbackProgress + offset),
             }))
             .filter((pose): pose is ReplayCameraPose => pose !== null)
@@ -271,6 +273,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
               coordinates: current.allCoordinates,
               elevationData: current.elevationData,
               followBehindZoomLevel: current.followBehindZoomLevel,
+              followBehindPitch: current.followBehindPitch,
             },
             sampleCount,
             totalDurationMs: current.totalDurationMs || 60000,
@@ -286,6 +289,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           coordinates: current.allCoordinates,
           elevationData: current.elevationData,
           followBehindZoomLevel: current.followBehindZoomLevel,
+          followBehindPitch: current.followBehindPitch,
           progress: 1,
         });
         const bounds = new maplibregl.LngLatBounds();

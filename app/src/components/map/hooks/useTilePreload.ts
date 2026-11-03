@@ -31,6 +31,7 @@ interface UseTilePreloadParams {
   cinematicKeyframes?: PreparedCinematicKeyframe[];
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
+  followBehindPitch?: number | null;
   isMapLoaded: boolean;
   isPlaying: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
@@ -57,6 +58,7 @@ export function useTilePreload({
   cinematicKeyframes,
   elevationData,
   followBehindZoomLevel,
+  followBehindPitch,
   isMapLoaded,
   isPlaying,
   mapRef,
@@ -100,6 +102,7 @@ export function useTilePreload({
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
+      followBehindPitch,
       progress: 0,
     });
     if (!introPose) {
@@ -120,6 +123,7 @@ export function useTilePreload({
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
+      followBehindPitch,
       progress: 1,
     });
     const openingPoses = getOpeningReplayWarmupPoses({
@@ -128,6 +132,7 @@ export function useTilePreload({
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
+      followBehindPitch,
       totalDurationMs: totalDurationMs || 60000,
       windowMs: OPENING_WINDOW_MS,
       sampleCount: OPENING_SAMPLE_COUNT,
@@ -225,6 +230,7 @@ export function useTilePreload({
     cinematicKeyframes,
     elevationData,
     followBehindZoomLevel,
+    followBehindPitch,
     isMapLoaded,
     isPlaying,
     introStartOverride,

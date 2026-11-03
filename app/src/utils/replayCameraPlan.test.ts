@@ -30,6 +30,15 @@ describe('replay camera plan', () => {
     expect(getPlaybackCameraPose({ ...options, cameraMode: 'overview' })).toBeNull();
   });
 
+  it('uses the selected tilt for intro and playback while leaving other modes unchanged', () => {
+    const tilted = { ...options, cameraMode: 'follow-behind' as const, followBehindPitch: 70 };
+    expect(getIntroCameraPose(tilted)?.pitch).toBe(70);
+    expect(getPlaybackCameraPose(tilted)?.pitch).toBe(70);
+    expect(getPlaybackCameraPose({ ...tilted, cameraMode: 'follow' })?.pitch).toBe(0);
+    expect(getPlaybackCameraPose({ ...tilted, followBehindPitch: null })?.pitch).toBe(56);
+    expect(getPlaybackCameraPose({ ...tilted, followBehindPitch: 100 })?.pitch).toBe(80);
+  });
+
   it('creates evenly spaced opening coverage based on replay duration', () => {
     expect(getOpeningPreloadProgresses(60_000, 12_000, 4)).toEqual([
       0,

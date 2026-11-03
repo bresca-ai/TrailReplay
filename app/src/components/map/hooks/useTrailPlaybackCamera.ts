@@ -93,6 +93,7 @@ interface UseTrailPlaybackCameraParams {
   elevationData: Array<{ elevation: number; progress?: number }>;
   exportFrame?: CropPreviewMetrics | null;
   followBehindZoomLevel: number;
+  followBehindPitch?: number | null;
   isInTransport: boolean;
   isMapLoaded: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
@@ -233,6 +234,7 @@ export function useTrailPlaybackCamera({
   elevationData,
   exportFrame,
   followBehindZoomLevel,
+  followBehindPitch,
   isExporting,
   isPlaying,
   sharedComparisonColors,
@@ -272,7 +274,7 @@ export function useTrailPlaybackCamera({
         progress, routeHeadingDeg: null,
       }) ?? getPlaybackCameraPose({
         cameraMode: 'follow-behind', coordinates: cameraCoordinates, elevationData,
-        followBehindZoomLevel, progress,
+        followBehindZoomLevel, followBehindPitch, progress,
       });
       const position: [number, number] = [coordinate[0], coordinate[1]];
       return getSmoothedCameraAnchor({
@@ -280,7 +282,7 @@ export function useTrailPlaybackCamera({
         markerPosition: position, zoom: pose?.zoom ?? 14,
       });
     });
-  }, [cameraMode, cameraCoordinates, cameraStability, totalDurationMs, cinematicKeyframes, elevationData, followBehindZoomLevel]);
+  }, [cameraMode, cameraCoordinates, cameraStability, totalDurationMs, cinematicKeyframes, elevationData, followBehindZoomLevel, followBehindPitch]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -525,7 +527,7 @@ export function useTrailPlaybackCamera({
         const start = transitionStartRef.current.pose;
         const endProgress = segment.progressEndRatio ?? 1;
         const followMode = cameraMode === 'overview' ? 'follow' : cameraMode === 'cinematic' ? 'follow-behind' : cameraMode;
-        const fallback = getPlaybackCameraPose({ cameraMode: followMode, coordinates: cameraCoordinates, elevationData, followBehindZoomLevel, progress: endProgress });
+        const fallback = getPlaybackCameraPose({ cameraMode: followMode, coordinates: cameraCoordinates, elevationData, followBehindZoomLevel, followBehindPitch, progress: endProgress });
         const anchorWindow = cinematicAnchorSmoothingHalfWindow(cameraStability, totalDurationMs / 1000);
         const heading = cameraMode === 'cinematic' ? getSmoothedRouteHeadingDeg({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, baselineHalfWidth: cinematicHeadingBaselineHalfWidth(anchorWindow) }) ?? getRouteBearingAtProgress(cameraCoordinates, endProgress) : 0;
         const cinematic = cameraMode === 'cinematic' ? getCinematicCameraPose({ keyframes: cinematicKeyframes ?? [], coordinates: cameraCoordinates, progress: endProgress, routeHeadingDeg: heading }) : null;
@@ -591,6 +593,7 @@ export function useTrailPlaybackCamera({
           coordinates: cameraCoordinates,
           elevationData,
           followBehindZoomLevel,
+          followBehindPitch,
           progress: playbackProgress,
         });
         return followBehindPose && { ...followBehindPose, bearing: cinematicHeadingDeg };
@@ -608,6 +611,7 @@ export function useTrailPlaybackCamera({
             coordinates: cameraCoordinates,
             elevationData,
             followBehindZoomLevel,
+            followBehindPitch,
             progress: playbackProgress,
           });
       if (!targetPose) return;
@@ -850,6 +854,7 @@ export function useTrailPlaybackCamera({
     currentTrackName,
     elevationData,
     followBehindZoomLevel,
+    followBehindPitch,
     isInTransport,
     isMapLoaded,
     locationChapterCameraCue,
@@ -893,6 +898,7 @@ export function useTrailPlaybackCamera({
           coordinates: cameraCoordinates,
           elevationData,
           followBehindZoomLevel,
+          followBehindPitch,
           progress: 0,
         })
       : getIntroCameraPose({
@@ -900,6 +906,7 @@ export function useTrailPlaybackCamera({
           coordinates: cameraCoordinates,
           elevationData,
           followBehindZoomLevel,
+          followBehindPitch,
           progress: 0,
         });
 
@@ -977,6 +984,7 @@ export function useTrailPlaybackCamera({
     elevationData,
     exportFrame,
     followBehindZoomLevel,
+    followBehindPitch,
     isExporting,
     isMapLoaded,
     mapRef,

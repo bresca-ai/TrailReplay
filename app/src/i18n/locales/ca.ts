@@ -148,6 +148,10 @@ export const ca = {
     terrainTitle: 'Terreny',
     displayOptions: 'Opcions de visualització',
     routeElevationMode: 'Elevació de la ruta', followTerrainElevation: 'Seguir el terreny', followRouteElevation: 'Seguir elevació de ruta', routeElevationHint: 'Utilitza l’altitud registrada al fitxer. Si falta, pot aparèixer al nivell del mar.',
+    terrainExaggeration: "Exageració del terreny",
+    terrainExaggerationRecordedHint: "L’exageració del terreny es fixa a 1× quan se segueix l’elevació registrada.",
+    followTilt: "Inclinació de càmera",
+    resetTilt: "Restableix la inclinació",
     show3dTerrain: 'Terreny 3D',
     showHeartRate: 'Colors de pols',
     showPictures: 'Mostrar imatges',
@@ -828,6 +832,12 @@ export const ca = {
     parseGpxFailed: 'No s\'han pogut analitzar els fitxers GPX',
   },
   routeLandmarks: {
+    styleTitle: "Estil dels llocs",
+    styleClassic: "Clàssic",
+    styleMinimal: "Minimalista",
+    shareStyleFeedback: "Comparteix la teva preferència a GitHub",
+    shareStyleFeedbackHint: "Obre un esborrany amb l’estil seleccionat. El pots editar abans de publicar-lo.",
+
     priorityHint: 'Mou els llocs importants amunt. Tindran prioritat quan se superposin llocs o etiquetes.', moveUp: 'Puja {name}', moveDown: 'Baixa {name}', dragPriority: 'Arrossega per canviar la prioritat',
     title: 'Punts d’interès de la ruta', description: 'Tria els detalls del paisatge que vols mostrar a la reproducció. El marcador de la ruta manté la prioritat visual.',
     routeMoments: 'Moments de la ruta', routeMomentsDescription: 'Punt més alt, ascens i descens principals, meitat i final. Desactivats per defecte.',

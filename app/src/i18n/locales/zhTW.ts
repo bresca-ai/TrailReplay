@@ -70,6 +70,10 @@ export const zhTW = {
     mapCameraTitle: '設定地圖與鏡頭', mapCameraHint: '地圖是影片的背景，請選擇地圖樣式、地形，以及跟隨路線的觀看角度。',
     title: '地圖設定', overlaysTitle: '疊加圖層', noOverlays: '無啟用圖層', moreMapStyles: '更多地圖樣式', mapControlsHelp: '地圖操作', cameraTitle: '鏡頭控制', terrainTitle: '地形', displayOptions: '顯示選項',
     routeElevationMode: '路線高度', followTerrainElevation: '跟隨地形', followRouteElevation: '跟隨路線高度', routeElevationHint: '使用檔案中記錄的高度。缺少高度的點可能顯示在海平面。',
+    terrainExaggeration: "地形誇張倍率",
+    terrainExaggerationRecordedHint: "使用記錄的海拔時，地形誇張倍率固定為 1×。",
+    followTilt: "相機傾角",
+    resetTilt: "重設傾角",
     show3dTerrain: '3D 地形', showHeartRate: '心率分色', showPictures: '顯示照片', heartRateZones: '心率區間', heartRateZone: '區間 {index}',
     mapFilterTitle: '地圖濾鏡', mapFilterHint: '僅調整底圖影像，保留路線原有的顏色。',
     mapFilters: { none: '原始', muted: '柔和', mono: '黑白', noir: '高對比黑白' },
@@ -217,6 +221,12 @@ export const zhTW = {
   map: { loading: '正在載入地圖…', preparingReplay: '正在準備重播…', zoomButtonsHint: '動畫播放時，可使用 ＋／− 按鈕調整縮放。' },
   errors: { noValidGpx: '找不到有效的 GPX、KML 或 FIT 檔案', parseGpxFailed: '無法解析 GPX 檔案' },
   routeLandmarks: {
+    styleTitle: "地點樣式",
+    styleClassic: "經典",
+    styleMinimal: "簡約",
+    shareStyleFeedback: "在 GitHub 分享你的偏好",
+    shareStyleFeedbackHint: "開啟包含所選樣式的討論草稿，發布前可以編輯。",
+
     priorityHint: '將重要地點移到上方。地點或標籤重疊時會優先顯示。', moveUp: '將 {name} 上移', moveDown: '將 {name} 下移', dragPriority: '拖曳以變更優先順序',
     title: '路線地標', description: '選擇要在重播中呈現的景觀資訊，路線移動標記仍會保持醒目。', routeMoments: '旅程重點', routeMomentsDescription: '最高點、主要爬升與下降、半程點及終點，預設關閉。', nearbyPlaces: '附近地點', nearbyPlacesDescription: '從 OpenStreetMap 尋找路線附近有名稱的山峰、山口、湖泊、山屋與城鎮。',
     findingNearbyPlaces: '正在尋找路線附近的地點…', showPlaceTypes: '顯示地點類型', namedPlaceLoaded: '已載入 {count} 個具名地點。', namedPlacesLoaded: '已載入 {count} 個具名地點。', nearbyPlacesLoadHint: '開啟路線時會載入附近地點。', completeCoverage: '已完整涵蓋路線周邊範圍', landmarkDatabase: 'TrailReplay 地標資料庫', sharedCache: '共用快取', areaAdded: '已將 {count} 個區域加入共用快取', areasAdded: '已將 {count} 個區域加入共用快取',

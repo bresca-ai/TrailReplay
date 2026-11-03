@@ -192,6 +192,7 @@ describe('hydrateProject', () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
     sourceStore.getState().setCameraSettings({ cameraStability: 0.9 });
+    sourceStore.getState().setSettings({ landmarkStyle: 'minimal' });
     sourceStore.getState().setRouteTimingMode('uniform');
 
     const blob = await buildReplayArchive(sourceStore.getState());
@@ -202,6 +203,7 @@ describe('hydrateProject', () => {
 
     const state = targetStore.getState();
     expect(state.cameraSettings.cameraStability).toBe(0.9);
+    expect(state.settings.landmarkStyle).toBe('minimal');
     expect(state.playback.routeTimingMode).toBe('uniform');
   });
 

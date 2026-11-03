@@ -4,6 +4,7 @@ import type { MapStyle, MapFilter, CameraMode, MapOverlays, CameraSettings } fro
 import { useI18n } from '@/i18n/useI18n';
 import {
   FOLLOW_BEHIND_STOP_COUNT,
+  getFollowBehindCameraTarget,
   getFollowBehindLevelForStopIndex,
   getFollowBehindStopIndexForLevel,
   getNearestFollowBehindPreset,
@@ -256,6 +257,15 @@ export function SettingsPanel() {
               <span>{t('settings.followPresets.far')}</span>
               <span>{t('settings.followPresets.veryClose')}</span>
             </div>
+            <div className="mt-4 flex items-center justify-between">
+              <label htmlFor="follow-tilt" className="text-xs text-[var(--evergreen-60)]">{t('settings.followTilt')}</label>
+              <span className="text-xs text-[var(--evergreen-60)]">{cameraSettings.followBehindPitch ?? getFollowBehindCameraTarget(cameraSettings.followBehindZoomLevel, 'playback').pitch}°</span>
+            </div>
+            <input id="follow-tilt" type="range" min={15} max={80} step={1}
+              value={cameraSettings.followBehindPitch ?? getFollowBehindCameraTarget(cameraSettings.followBehindZoomLevel, 'playback').pitch}
+              onChange={(e) => setCameraSettings({ followBehindPitch: Number(e.target.value) })}
+              className="w-full accent-[var(--trail-orange)]" />
+            <button type="button" onClick={() => setCameraSettings({ followBehindPitch: null })} className="text-xs underline text-[var(--evergreen-60)]">{t('settings.resetTilt')}</button>
           </div>
         )}
 
@@ -484,6 +494,17 @@ export function SettingsPanel() {
             className="w-5 h-5 accent-[var(--trail-orange)]"
           />
         </label>
+        <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg">
+          <div className="flex justify-between">
+            <label htmlFor="terrain-exaggeration" className="text-sm text-[var(--evergreen)]">{t('settings.terrainExaggeration')}</label>
+            <span className="text-sm text-[var(--evergreen-60)]">{(settings.terrainExaggeration ?? 1.5).toFixed(1)}×</span>
+          </div>
+          <input id="terrain-exaggeration" type="range" min={0.5} max={3} step={0.1}
+            value={settings.terrainExaggeration ?? 1.5} disabled={!settings.show3DTerrain || settings.recordedElevationPrototype}
+            onChange={(e) => setSettings({ terrainExaggeration: Number(e.target.value) })}
+            className="w-full accent-[var(--trail-orange)] disabled:opacity-50" />
+          {settings.recordedElevationPrototype && <p className="text-xs text-[var(--evergreen-60)]">{t('settings.terrainExaggerationRecordedHint')}</p>}
+        </div>
         <fieldset className="mt-3">
           <legend className="text-sm font-medium text-[var(--evergreen)]">{t('settings.routeElevationMode')}</legend>
           <div className="mt-2 grid grid-cols-2 gap-2">

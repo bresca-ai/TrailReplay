@@ -99,3 +99,27 @@ it('shows places after the intro while map tiles and fonts are still loading', a
   await waitFor(() => expect(source.setData).toHaveBeenCalledTimes(3));
   expect(source.setData.mock.lastCall?.[0].features[0].properties.labelImageId).toMatch(/-ready$/);
 });
+
+it('switches between classic layers and a single compact icon-and-label sprite', async () => {
+  vi.stubGlobal('Path2D', class {});
+  Object.defineProperty(document, 'fonts', { configurable: true, value: { load: vi.fn().mockResolvedValue([]) } });
+  const context = { clearRect: vi.fn(), scale: vi.fn(), translate: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), fill: vi.fn(), fillText: vi.fn(), strokeText: vi.fn(), measureText: () => ({ width: 40 }), getImageData: () => ({}) };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  const images = new Set<string>(); const layers = new Map<string, unknown>(); const source = { setData: vi.fn() };
+  const map = { isStyleLoaded: () => true, on: vi.fn(), off: vi.fn(), hasImage: (id: string) => images.has(id), addImage: (id: string) => images.add(id), getSource: () => source, addSource: vi.fn(), getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), setLayoutProperty: vi.fn(), setPaintProperty: vi.fn() };
+  const landmark: RouteLandmark = { id: 'summit', type: 'summit', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: 'Puig Alt', elevation: 2431, importance: 3 };
+  const ref = { current: map as unknown as MapLibreMap }; const landmarks = [landmark];
+  const { rerender } = renderHook(({ style }) => useRouteLandmarksLayer({ isMapLoaded: true, overlayFont: 'modern', landmarks, mapRef: ref, landmarkStyle: style }), { initialProps: { style: 'classic' as 'classic' | 'minimal' } });
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-icon', 'visibility', 'visible');
+  map.setLayoutProperty.mockClear();
+  rerender({ style: 'minimal' });
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-icon', 'visibility', 'none');
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-emoji', 'visibility', 'none');
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'visibility', 'visible');
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'icon-offset', [16, -12]);
+  expect(context.fillText).toHaveBeenCalledWith('Puig Alt | 2,431 m', expect.any(Number), expect.any(Number), expect.any(Number));
+  await waitFor(() => expect(source.setData.mock.lastCall?.[0].features[0].properties.labelImageId).toContain('minimal-'));
+  rerender({ style: 'classic' });
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-icon', 'visibility', 'visible');
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'icon-offset', [0, 18]);
+});

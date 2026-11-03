@@ -1,7 +1,7 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { FeatureCollection, Point } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
-import type { OverlayFont } from '@/types';
+import type { AppSettings, OverlayFont } from '@/types';
 import type { RouteLandmark } from '@/types/landmarks';
 import {
   landmarkIconSizeExpression,
@@ -28,6 +28,7 @@ import {
 import { ANNOTATION_LAYER_IDS } from '@/components/map/hooks/useTextAnnotationsLayer';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import { landmarkSymbol } from '@/components/map/landmarkSymbols';
+import { landmarkPinColors } from '@/components/map/landmarkPinColors';
 import { annotationMapGlyph, annotationPinheadId, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { pinheadIconPath, usePinheadIcons } from '@/components/annotations/pinheadIcons';
 
@@ -42,11 +43,13 @@ function landmarkLabel(landmark: RouteLandmark) {
     : landmark.title;
 }
 
-function labelImageId(landmark: RouteLandmark, overlayFont: OverlayFont, fontReady = false) {
-  const text = landmarkLabel(landmark);
+function labelImageId(landmark: RouteLandmark, overlayFont: OverlayFont, fontReady = false, style: AppSettings['landmarkStyle'] = 'classic') {
+  const symbol = landmarkSymbol(landmark);
+  const pinheadId = annotationPinheadId(symbol);
+  const text = `${landmarkLabel(landmark)}|${style}|${symbol}|${pinheadId ? pinheadIconPath(pinheadId) ?? '' : ''}|${landmark.color ?? ''}|${landmark.type}|${landmark.source}`;
   let hash = 0;
   for (let index = 0; index < text.length; index++) hash = (Math.imul(hash, 31) + text.charCodeAt(index)) >>> 0;
-  return `${LANDMARK_LABEL_IMAGE_PREFIX}${overlayFont}-${landmark.id}-${hash.toString(36)}${fontReady ? '-ready' : ''}`;
+  return `${LANDMARK_LABEL_IMAGE_PREFIX}${style}-${overlayFont}-${landmark.id}-${hash.toString(36)}${fontReady ? '-ready' : ''}`;
 }
 
 function labelImage(text: string, overlayFont: OverlayFont): ImageData | null {
@@ -90,13 +93,72 @@ function labelImage(text: string, overlayFont: OverlayFont): ImageData | null {
   return context.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-function data(landmarks: RouteLandmark[], selectedId: string | null, overlayFont: OverlayFont, fontReady = false): FeatureCollection<Point> {
+/** Draw the icon and text as one collision unit so they never become detached. */
+function minimalLabelImage(landmark: RouteLandmark): ImageData | null {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+  const font = '500 11px Inter, sans-serif';
+  context.font = font;
+  const hasElevation = Boolean(landmark.elevation && ['highest-point', 'high-point', 'summit'].includes(landmark.type));
+  const title = hasElevation ? `${landmark.title} | ${Math.round(landmark.elevation!).toLocaleString()} m` : landmark.title;
+  const lines: string[] = [];
+  let line = '';
+  for (const word of title.split(/\s+/).filter(Boolean)) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && context.measureText(candidate).width > 145) { lines.push(line); line = word; }
+    else line = candidate;
+  }
+  if (line) lines.push(line);
+  const textWidth = Math.min(145, Math.max(1, ...lines.map((value) => context.measureText(value).width)));
+  const width = Math.ceil(textWidth + 37);
+  const height = Math.max(34, Math.max(1, lines.length) * 14 + 10);
+  canvas.width = width * 2; canvas.height = height * 2;
+  context.scale(2, 2);
+  const symbol = landmarkSymbol(landmark);
+  const glyph = annotationMapGlyph(symbol);
+  const pinheadId = annotationPinheadId(symbol);
+  const path = glyph ? PINHEAD_PATHS[glyph] : pinheadId ? pinheadIconPath(pinheadId) ?? PINHEAD_PATHS[glyphForLandmark(landmark)] : null;
+  const colors = landmarkPinColors(landmark);
+  context.font = font; context.textAlign = 'right'; context.textBaseline = 'middle';
+  context.lineJoin = 'round'; context.strokeStyle = 'rgba(5, 10, 9, 0.9)'; context.lineWidth = 3;
+  context.fillStyle = colors.label;
+  lines.forEach((value, index) => {
+    const y = height / 2 - 2 + (index - (lines.length - 1) / 2) * 14;
+    context.strokeText(value, width - 31, y, textWidth);
+    context.fillText(value, width - 31, y, textWidth);
+  });
+  // The tip marks the geographic coordinate; the white keyline keeps the
+  // colored pin distinct from both dark forest and light rock.
+  context.save();
+  context.translate(width - 16, height / 2);
+  context.shadowColor = 'rgba(0,0,0,0.55)'; context.shadowBlur = 3;
+  const pin = new Path2D('M 0 12 C -2 9 -10 3 -10 -3 A 10 10 0 1 1 10 -3 C 10 3 2 9 0 12 Z');
+  context.fillStyle = colors.pin;
+  context.strokeStyle = '#ffffff'; context.lineWidth = 2;
+  context.fill(pin); context.stroke(pin);
+  context.shadowBlur = 0; context.fillStyle = '#ffffff';
+  if (path) {
+    context.translate(-5, -8);
+    context.scale(10 / 15, 10 / 15);
+    context.fill(new Path2D(path));
+  } else {
+    // User-selected emoji retain their native colours inside the pin.
+    context.font = '11px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+    context.textAlign = 'center'; context.textBaseline = 'middle';
+    context.fillText(symbol, 0, -3, 11);
+  }
+  context.restore();
+  return context.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+function data(landmarks: RouteLandmark[], selectedId: string | null, overlayFont: OverlayFont, fontReady = false, style: AppSettings['landmarkStyle'] = 'classic'): FeatureCollection<Point> {
   return { type: 'FeatureCollection', features: landmarks.map((landmark, index) => ({
     type: 'Feature', geometry: { type: 'Point', coordinates: [landmark.lon, landmark.lat] },
     properties: {
       landmarkId: landmark.id,
       title: landmarkLabel(landmark),
-      labelImageId: labelImageId(landmark, overlayFont, fontReady),
+      labelImageId: labelImageId(landmark, overlayFont, fontReady, style),
       importance: landmark.importance,
       labelPriority: index,
       icon: landmarkImageKey(landmark),
@@ -144,6 +206,7 @@ function emojiImage(symbol: string) {
 interface UseRouteLandmarksLayerParams {
   isMapLoaded: boolean;
   labelFade?: boolean;
+  landmarkStyle?: AppSettings['landmarkStyle'];
   /** One control sizes both the pin and its label. */
   scale?: number;
   overlayFont: OverlayFont;
@@ -165,6 +228,7 @@ export function shouldShowRouteLandmarks(
 export function useRouteLandmarksLayer({
   isMapLoaded,
   labelFade = true,
+  landmarkStyle = 'classic',
   scale = 1,
   overlayFont,
   landmarks,
@@ -209,32 +273,32 @@ export function useRouteLandmarksLayer({
       // Keep the source populated during the intro. Toggling layer visibility
       // avoids waiting for source tiles to become idle during playback.
       for (const landmark of landmarks) {
-        const imageId = labelImageId(landmark, overlayFont);
+        const imageId = labelImageId(landmark, overlayFont, false, landmarkStyle);
         if (!map.hasImage(imageId)) {
-          const image = labelImage(landmarkLabel(landmark), overlayFont);
+          const image = landmarkStyle === 'minimal' ? minimalLabelImage(landmark) : labelImage(landmarkLabel(landmark), overlayFont);
           if (image) map.addImage(imageId, image, { pixelRatio: 2 });
         }
       }
-      (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(data(landmarks, selectedLandmarkId, overlayFont));
+      (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(data(landmarks, selectedLandmarkId, overlayFont, false, landmarkStyle));
       for (const layer of [ICON, LANDMARK_EMOJI_LAYER_ID, LABEL]) {
-        if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visibleRef.current ? 'visible' : 'none');
+        if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visibleRef.current && (landmarkStyle === 'classic' || layer === LABEL) ? 'visible' : 'none');
       }
       // Draw immediately using the fallback font, then refresh the sprites
       // once the selected font loads. Tile loading must not block either step.
       const updateLabels = async () => {
-        try { await document.fonts.load(`700 12px ${overlayCanvasFontFamily(overlayFont)}`); } catch { /* Keep the fallback font. */ }
+        try { await document.fonts.load(landmarkStyle === 'minimal' ? '500 11px Inter' : `700 12px ${overlayCanvasFontFamily(overlayFont)}`); } catch { /* Keep the fallback font. */ }
         if (cancelled) return;
         if (!map.getSource(SOURCE) || !map.getLayer(LABEL)) {
           pending = true;
           return;
         }
         for (const landmark of landmarks) {
-          const imageId = labelImageId(landmark, overlayFont, true);
+          const imageId = labelImageId(landmark, overlayFont, true, landmarkStyle);
           if (map.hasImage(imageId)) continue;
-          const image = labelImage(landmarkLabel(landmark), overlayFont);
+          const image = landmarkStyle === 'minimal' ? minimalLabelImage(landmark) : labelImage(landmarkLabel(landmark), overlayFont);
           if (image) map.addImage(imageId, image, { pixelRatio: 2 });
         }
-        (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(data(landmarks, selectedLandmarkId, overlayFont, true));
+        (map.getSource(SOURCE) as maplibregl.GeoJSONSource | undefined)?.setData(data(landmarks, selectedLandmarkId, overlayFont, true, landmarkStyle));
       };
       void updateLabels();
     };
@@ -254,15 +318,15 @@ export function useRouteLandmarksLayer({
       map.off('sourcedata', retry);
       map.off('idle', retry);
     };
-  }, [isMapLoaded, labelFade, landmarks, mapRef, overlayFont, pinheadIcons, scale, selectedLandmarkId]);
+  }, [isMapLoaded, labelFade, landmarks, mapRef, overlayFont, pinheadIcons, scale, selectedLandmarkId, landmarkStyle]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;
     for (const layer of [ICON, LANDMARK_EMOJI_LAYER_ID, LABEL]) {
-      if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visible ? 'visible' : 'none');
+      if (map.getLayer(layer)) map.setLayoutProperty(layer, 'visibility', visible && (landmarkStyle === 'classic' || layer === LABEL) ? 'visible' : 'none');
     }
-  }, [isMapLoaded, mapRef, visible]);
+  }, [isMapLoaded, mapRef, visible, landmarkStyle]);
 
   // The layers are only added once, so size and fade changes have to be pushed
   // onto the existing layers rather than waiting for a re-add.
@@ -276,9 +340,11 @@ export function useRouteLandmarksLayer({
     }
     if (map.getLayer(LABEL)) {
       map.setLayoutProperty(LABEL, 'icon-size', landmarkLabelIconSizeExpression(scale));
+      map.setLayoutProperty(LABEL, 'icon-anchor', landmarkStyle === 'minimal' ? 'right' : 'top');
+      map.setLayoutProperty(LABEL, 'icon-offset', landmarkStyle === 'minimal' ? [16, -12] : [0, 18]);
       map.setPaintProperty(LABEL, 'icon-opacity', landmarkTextOpacityExpression(labelFade));
     }
-  }, [isMapLoaded, labelFade, mapRef, scale]);
+  }, [isMapLoaded, labelFade, mapRef, scale, landmarkStyle]);
 
   useEffect(() => {
     const map = mapRef.current;
