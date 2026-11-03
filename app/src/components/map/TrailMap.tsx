@@ -38,6 +38,7 @@ import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
 import { useTilePreloadDiagnostics } from './hooks/useTilePreloadDiagnostics';
 import { useTrackTrimPreview } from './hooks/useTrackTrimPreview';
 import { useLocationChapters } from './hooks/useLocationChapters';
+import { useLocationStartCue } from './hooks/useLocationStartCue';
 import { useMapControlLabels } from './hooks/useMapControlLabels';
 import type { CropPreviewMetrics } from '@/utils/crop';
 
@@ -300,6 +301,7 @@ export function TrailMap(_props: TrailMapProps) {
   useRecordedElevationLayer(map, isMapLoaded, recordedElevationEnabled, recordedPoints, currentPosition, completedCoordinates, markerRef, recordedStyle, trailStyle.ghostTrailOpacity);
 
   const locationChapter = useLocationChapters(map, isMapLoaded, settings.locationChapters, allCoordinates, currentPosition, playback.currentTime, animationPhase, cameraMode !== 'overview' && !routeComparisonActive);
+  useLocationStartCue(map, isMapLoaded, animationPhase, allCoordinates[0], settings.locationChapters?.color ?? '#ffbd66', locationChapter.introStages.length > 0);
   const introStageOverrides = useMemo(() => locationChapter.introStages.flatMap(stage => stage.camera ? [stage.camera] : []), [locationChapter.introStages]);
 
   useTrailPlaybackCamera({
