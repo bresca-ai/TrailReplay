@@ -103,7 +103,7 @@ it('shows places after the intro while map tiles and fonts are still loading', a
 it('switches between classic layers and a single compact icon-and-label sprite', async () => {
   vi.stubGlobal('Path2D', class {});
   Object.defineProperty(document, 'fonts', { configurable: true, value: { load: vi.fn().mockResolvedValue([]) } });
-  const context = { clearRect: vi.fn(), scale: vi.fn(), translate: vi.fn(), save: vi.fn(), restore: vi.fn(), fill: vi.fn(), fillText: vi.fn(), strokeText: vi.fn(), measureText: () => ({ width: 40 }), getImageData: () => ({}) };
+  const context = { clearRect: vi.fn(), scale: vi.fn(), translate: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), fill: vi.fn(), fillText: vi.fn(), strokeText: vi.fn(), measureText: () => ({ width: 40 }), getImageData: () => ({}) };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as unknown as CanvasRenderingContext2D);
   const images = new Set<string>(); const layers = new Map<string, unknown>(); const source = { setData: vi.fn() };
   const map = { isStyleLoaded: () => true, on: vi.fn(), off: vi.fn(), hasImage: (id: string) => images.has(id), addImage: (id: string) => images.add(id), getSource: () => source, addSource: vi.fn(), getLayer: (id: string) => layers.get(id), addLayer: (layer: { id: string }) => layers.set(layer.id, layer), setLayoutProperty: vi.fn(), setPaintProperty: vi.fn() };
@@ -116,7 +116,7 @@ it('switches between classic layers and a single compact icon-and-label sprite',
   expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-icon', 'visibility', 'none');
   expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-emoji', 'visibility', 'none');
   expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'visibility', 'visible');
-  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'icon-offset', [11.5, 0]);
+  expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'icon-offset', [16, -12]);
   expect(context.fillText).toHaveBeenCalledWith('Puig Alt | 2,431 m', expect.any(Number), expect.any(Number), expect.any(Number));
   await waitFor(() => expect(source.setData.mock.lastCall?.[0].features[0].properties.labelImageId).toContain('minimal-'));
   rerender({ style: 'classic' });

@@ -110,8 +110,8 @@ function minimalLabelImage(landmark: RouteLandmark): ImageData | null {
   }
   if (line) lines.push(line);
   const textWidth = Math.min(145, Math.max(1, ...lines.map((value) => context.measureText(value).width)));
-  const width = Math.ceil(textWidth + 27);
-  const height = Math.max(24, Math.max(1, lines.length) * 14 + 6);
+  const width = Math.ceil(textWidth + 37);
+  const height = Math.max(34, Math.max(1, lines.length) * 14 + 10);
   canvas.width = width * 2; canvas.height = height * 2;
   context.scale(2, 2);
   const symbol = landmarkSymbol(landmark);
@@ -123,21 +123,29 @@ function minimalLabelImage(landmark: RouteLandmark): ImageData | null {
   context.lineJoin = 'round'; context.strokeStyle = 'rgba(5, 10, 9, 0.9)'; context.lineWidth = 3;
   context.fillStyle = natural ? '#bfe2bd' : '#ffffff';
   lines.forEach((value, index) => {
-    const y = height / 2 + (index - (lines.length - 1) / 2) * 14;
-    context.strokeText(value, width - 24, y, textWidth);
-    context.fillText(value, width - 24, y, textWidth);
+    const y = height / 2 - 2 + (index - (lines.length - 1) / 2) * 14;
+    context.strokeText(value, width - 31, y, textWidth);
+    context.fillText(value, width - 31, y, textWidth);
   });
+  // The tip marks the geographic coordinate; the white keyline keeps the
+  // colored pin distinct from both dark forest and light rock.
   context.save();
-  context.shadowColor = 'rgba(0,0,0,0.9)'; context.shadowBlur = 4;
-  context.fillStyle = landmark.color ?? colorForLandmark(landmark);
+  context.translate(width - 16, height / 2);
+  context.shadowColor = 'rgba(0,0,0,0.55)'; context.shadowBlur = 3;
+  const pin = new Path2D('M 0 12 C -2 9 -10 3 -10 -3 A 10 10 0 1 1 10 -3 C 10 3 2 9 0 12 Z');
+  context.fillStyle = landmark.color ?? (natural ? '#1a9f6c' : '#788f9a');
+  context.strokeStyle = '#ffffff'; context.lineWidth = 2;
+  context.fill(pin); context.stroke(pin);
+  context.shadowBlur = 0; context.fillStyle = '#ffffff';
   if (path) {
-    context.translate(width - 19, (height - 15) / 2);
+    context.translate(-5, -8);
+    context.scale(10 / 15, 10 / 15);
     context.fill(new Path2D(path));
   } else {
-    // User-selected emoji remain recognizable in their native colours.
-    context.font = '15px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+    // User-selected emoji retain their native colours inside the pin.
+    context.font = '11px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
     context.textAlign = 'center'; context.textBaseline = 'middle';
-    context.fillText(symbol, width - 11.5, height / 2, 15);
+    context.fillText(symbol, 0, -3, 11);
   }
   context.restore();
   return context.getImageData(0, 0, canvas.width, canvas.height);
@@ -332,7 +340,7 @@ export function useRouteLandmarksLayer({
     if (map.getLayer(LABEL)) {
       map.setLayoutProperty(LABEL, 'icon-size', landmarkLabelIconSizeExpression(scale));
       map.setLayoutProperty(LABEL, 'icon-anchor', landmarkStyle === 'minimal' ? 'right' : 'top');
-      map.setLayoutProperty(LABEL, 'icon-offset', landmarkStyle === 'minimal' ? [11.5, 0] : [0, 18]);
+      map.setLayoutProperty(LABEL, 'icon-offset', landmarkStyle === 'minimal' ? [16, -12] : [0, 18]);
       map.setPaintProperty(LABEL, 'icon-opacity', landmarkTextOpacityExpression(labelFade));
     }
   }, [isMapLoaded, labelFade, mapRef, scale, landmarkStyle]);
