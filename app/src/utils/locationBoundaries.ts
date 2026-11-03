@@ -13,6 +13,10 @@ const cachedLayers = new Map<string, Promise<LocationFeature[]>>();
 let countriesPromise: Promise<CountryFeature[]> | undefined;
 
 const ringBounds = new WeakMap<Position[], [number, number, number, number]>();
+class BoundaryHttpError extends Error {
+  readonly status: number;
+  constructor(status: number) { super(`Boundary data unavailable (${status})`); this.status = status; }
+}
 function pointInRing([x, y]: Position, ring: Position[]): boolean {
   let bounds = ringBounds.get(ring);
   if (!bounds) {
@@ -41,7 +45,7 @@ async function json(url: string): Promise<unknown> {
   const timer = setTimeout(() => controller.abort(), 30_000);
   try {
     const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok) throw new Error(`Boundary data unavailable (${response.status})`);
+    if (!response.ok) throw new BoundaryHttpError(response.status);
     return await response.json();
   } finally { clearTimeout(timer); }
 }
@@ -77,6 +81,17 @@ export function loadBoundaryLayer(country: CountryFeature, level: LocationLevel)
     cachedLayers.set(key, pending);
   }
   return pending;
+}
+/** Resolve a single route point without treating a transient request failure as missing coverage. */
+export async function loadLocationAtPosition(point: Position, level: LocationLevel): Promise<LocationFeature | undefined> {
+  const country = (await loadCountryIndex()).find(item => containsPosition(item, point));
+  if (!country) return undefined;
+  try {
+    return (await loadBoundaryLayer(country, level)).find(item => containsPosition(item, point));
+  } catch (error) {
+    if (error instanceof BoundaryHttpError && error.status === 404) return undefined;
+    throw error;
+  }
 }
 /** Finds countries from route points and fetches only those country layers.
  * The overview index is generalized; small islands and narrow crossings can be missed. */

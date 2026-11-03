@@ -4,6 +4,8 @@ import type { LocationChapterSettings } from '@/types';
 import { useI18n } from '@/i18n/useI18n';
 import { LOCATION_LEVELS, levelCode, type LocationLevel } from '@/utils/locationBoundaries';
 import { getIntroDuration, getIntroLevels, getMinimumStaySeconds, getZoomDurationSeconds } from '@/utils/locationChapterCamera';
+import { useComputedJourney } from '@/hooks/useComputedJourney';
+import { useStartLocationLevels } from '@/hooks/useStartLocationLevels';
 
 const defaults: LocationChapterSettings = { level: 'off', color: '#ffbd66', width: 3, fill: true, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 };
 
@@ -35,26 +37,42 @@ function RangeSetting({ label, value, min, max, step, unit, onChange }: { label:
 
 export function LocationChapterControls() {
   const { t } = useI18n();
+  const { allCoordinates } = useComputedJourney();
+  const { results: startPlaces, hasStart, retry } = useStartLocationLevels(allCoordinates[0]);
   const saved = useAppStore(state => state.settings.locationChapters);
   const setSettings = useAppStore(state => state.setSettings);
   const settings = { ...defaults, ...saved };
   const update = (next: Partial<LocationChapterSettings>) => setSettings({ locationChapters: { ...settings, ...next } });
   const selectedIntroLevels = getIntroLevels(settings);
+  const availableIntroLevels = LOCATION_LEVELS.filter(level => startPlaces[level].status === 'available');
+  const checkingStart = hasStart && LOCATION_LEVELS.some(level => startPlaces[level].status === 'pending');
+  const startErrors = hasStart && LOCATION_LEVELS.some(level => startPlaces[level].status === 'error');
   const levelLabel = (level: LocationLevel) => level === 'country' ? t('locationChapters.country') : level === 'region' ? t('locationChapters.region') : t('locationChapters.adminLevel');
 
   return (
     <section className="space-y-4" aria-label={t('locationChapters.title')}>
       <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.description')}</p>
+      {settings.level === 'off' && hasStart && <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.privacy')}</p>}
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><Route className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.playbackTitle')}</span></legend>
         <label className="block text-xs font-semibold text-[var(--evergreen)]">{t('locationChapters.playbackLevel')}
           <select aria-label={t('locationChapters.playbackLevel')} className="mt-1.5 min-h-11 w-full rounded-lg border border-[var(--evergreen)]/25 bg-white px-3 text-sm text-[var(--evergreen)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]" value={settings.level} onChange={event => update({ level: event.target.value as LocationChapterSettings['level'], ...(settings.level !== 'off' && !settings.introLevels ? { introLevels: getIntroLevels(settings) } : {}) })}>
             <option value="off">{t('locationChapters.off')}</option>
-            {LOCATION_LEVELS.map(level => <option key={level} value={level}>{level === 'country' || level === 'region' ? `${levelLabel(level)} (${levelCode(level)})` : `${levelCode(level)} · ${levelLabel(level)}`}</option>)}
+            {LOCATION_LEVELS.map(level => {
+              const result = startPlaces[level];
+              const place = !hasStart ? '' : result.status === 'available' ? result.name : result.status === 'pending' ? t('locationChapters.startChecking') : result.status === 'error' ? t('locationChapters.startFailed') : t('locationChapters.startMissing');
+              const label = level === 'country' || level === 'region' ? `${levelLabel(level)} (${levelCode(level)})` : `${levelCode(level)} · ${levelLabel(level)}`;
+              return <option key={level} value={level}>{label}{place ? ` — ${place}` : ''}</option>;
+            })}
           </select>
         </label>
         <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.playbackLevelHint')}</p>
+        <div aria-live="polite" className="space-y-1 text-xs leading-relaxed text-[var(--evergreen-60)]">
+          {!hasStart && <p>{t('locationChapters.startNoRoute')}</p>}
+          {checkingStart && <p>{t('locationChapters.startLoading')}</p>}
+          {startErrors && <p>{t('locationChapters.startError')} {!checkingStart && <button type="button" className="font-semibold underline" onClick={retry}>{t('locationChapters.startRetry')}</button>}</p>}
+        </div>
         {settings.level !== 'off' && <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-2">
           <ToggleRow label={t('locationChapters.playbackZoom')} checked={settings.zoomToPlace} onChange={checked => update({ zoomToPlace: checked, introZoomToPlace: settings.introZoomToPlace ?? settings.zoomToPlace })} />
           {settings.zoomToPlace && <>
@@ -73,19 +91,22 @@ export function LocationChapterControls() {
           <legend className="text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><MapPinned className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.introLevels')}</span></legend>
           <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.introLevelsHint')}</p>
           <div className="grid grid-cols-2 gap-2">
-            {LOCATION_LEVELS.map(level => {
+            {availableIntroLevels.map(level => {
               const checked = selectedIntroLevels.includes(level);
               const accessibleLabel = `${levelLabel(level)} (${levelCode(level)})`;
               return <label key={level} className="relative block cursor-pointer">
                 <input type="checkbox" aria-label={accessibleLabel} className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" checked={checked} onChange={event => update({ introLevels: event.target.checked ? [...selectedIntroLevels, level] : selectedIntroLevels.filter(item => item !== level) })} />
-                <span className="flex min-h-11 items-center justify-between gap-1 rounded-lg border border-[var(--evergreen)]/20 bg-white px-2.5 py-2 text-xs font-medium text-[var(--evergreen)] transition-colors peer-checked:border-[var(--trail-orange)] peer-checked:bg-[var(--trail-orange)]/10 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--trail-orange)]">
-                  <span>{level === 'country' || level === 'region' ? levelLabel(level) : levelCode(level)}</span>
-                  <span className="flex items-center gap-1">{(level === 'country' || level === 'region') && <span className="text-[10px] text-[var(--evergreen-60)]">{levelCode(level)}</span>}{checked && <Check className="h-3.5 w-3.5 shrink-0 text-[var(--trail-orange)]" aria-hidden="true" />}</span>
+                <span className="flex min-h-14 items-start justify-between gap-1 rounded-lg border border-[var(--evergreen)]/20 bg-white px-2.5 py-2 text-xs font-medium text-[var(--evergreen)] transition-colors peer-checked:border-[var(--trail-orange)] peer-checked:bg-[var(--trail-orange)]/10 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--trail-orange)]">
+                  <span className="min-w-0"><span className="block">{level === 'country' || level === 'region' ? `${levelLabel(level)} · ${levelCode(level)}` : levelCode(level)}</span><span className="mt-1 block break-words text-[var(--evergreen-60)]">{startPlaces[level].name}</span></span>
+                  {checked && <Check className="h-3.5 w-3.5 shrink-0 text-[var(--trail-orange)]" aria-hidden="true" />}
                 </span>
               </label>;
             })}
           </div>
-          {selectedIntroLevels.length > 0 && <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-2">
+          <div aria-live="polite" className="space-y-1 text-xs leading-relaxed text-[var(--evergreen-60)]">
+            {hasStart && !checkingStart && !startErrors && availableIntroLevels.length === 0 && <p>{t('locationChapters.startNone')}</p>}
+          </div>
+          {availableIntroLevels.some(level => selectedIntroLevels.includes(level)) && <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-2">
             <ToggleRow label={t('locationChapters.introZoom')} checked={settings.introZoomToPlace ?? settings.zoomToPlace} onChange={checked => update({ introZoomToPlace: checked })} />
             <RangeSetting label={t('locationChapters.introDuration')} value={getIntroDuration(settings) / 1000} min={5} max={30} step={1} unit="s" onChange={value => update({ introDurationSeconds: value })} />
           </div>}

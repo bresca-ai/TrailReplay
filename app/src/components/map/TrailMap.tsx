@@ -5,6 +5,7 @@ import type { PaintedTrailMarker } from '@/utils/paintedTrailMarker';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
+import { useStartLocationLevels } from '@/hooks/useStartLocationLevels';
 import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
 import { useSuggestedFollowBehindDistance } from '@/components/map/hooks/useSuggestedFollowBehindDistance';
 import { MapElevationProfile } from './MapElevationProfile';
@@ -123,6 +124,7 @@ export function TrailMap(_props: TrailMapProps) {
     totalDistance,
     routeProgress,
   } = useComputedJourney();
+  useStartLocationLevels(allCoordinates[0]);
 
   // Derive the current track name for the label
   const currentTrackName = currentSegment?.segment.type === 'track' && currentSegment.segment.trackId

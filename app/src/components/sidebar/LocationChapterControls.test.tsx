@@ -1,7 +1,15 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { LocationChapterControls } from './LocationChapterControls';
+import { useStartLocationLevels } from '@/hooks/useStartLocationLevels';
+
+vi.mock('@/hooks/useComputedJourney', () => ({ useComputedJourney: () => ({ allCoordinates: [[2, 41]] }) }));
+vi.mock('@/hooks/useStartLocationLevels', () => ({ useStartLocationLevels: vi.fn(() => ({ hasStart: true, retry: vi.fn(), results: {
+  country: { status: 'available', name: 'Spain' }, region: { status: 'available', name: 'Catalonia' },
+  adm2: { status: 'available', name: 'Girona' }, adm3: { status: 'available', name: 'Figueres' },
+  adm4: { status: 'available', name: 'District' }, adm5: { status: 'available', name: 'Local' },
+} })) }));
 
 afterEach(() => { cleanup(); useAppStore.getState().reset(); });
 it('lets users choose regional chapters and customize the border and labels', () => {
@@ -32,4 +40,20 @@ it('lets users choose a local level and any combination of opening levels', () =
   fireEvent.click(screen.getByLabelText('Zoom out when entering a place'));
   expect(screen.queryByLabelText('Camera move duration (seconds)')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Fit places during the opening zoom')).toBeChecked();
+});
+it('shows start names and offers only levels with a known place for the opening', () => {
+  vi.mocked(useStartLocationLevels).mockReturnValueOnce({ hasStart: true, retry: vi.fn(), results: {
+    country: { status: 'available', name: 'Spain' }, region: { status: 'available', name: 'Catalonia' },
+    adm2: { status: 'unavailable' }, adm3: { status: 'error' }, adm4: { status: 'pending' }, adm5: { status: 'unavailable' },
+  } });
+  useAppStore.getState().setSettings({ locationChapters: { ...useAppStore.getState().settings.locationChapters, level: 'region' } });
+  render(<LocationChapterControls />);
+  expect(screen.getByRole('option', { name: 'Countries (ADM0) — Spain' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'ADM2 · Administrative level — Not at start' })).toBeInTheDocument();
+  expect(screen.getByText('Catalonia')).toBeInTheDocument();
+  expect(screen.getByLabelText('Countries (ADM0)')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Administrative level (ADM2)')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Administrative level (ADM3)')).not.toBeInTheDocument();
+  expect(screen.getByText('Checking places at the route start…')).toBeInTheDocument();
+  expect(screen.getByText(/Some levels could not be checked/)).toBeInTheDocument();
 });

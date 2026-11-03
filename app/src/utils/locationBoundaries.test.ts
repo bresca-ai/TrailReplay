@@ -59,3 +59,18 @@ it('loads available local levels even when another country has no data', async (
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/ESP/ADM3/'), expect.anything());
   } finally { vi.unstubAllGlobals(); }
 });
+
+it('treats a missing start level differently from a temporary provider failure', async () => {
+  const { vi } = await import('vitest');
+  vi.resetModules();
+  const { loadLocationAtPosition } = await import('./locationBoundaries');
+  const country = { ...feature, properties: { name: 'Spain', iso2: 'ES', iso3: 'ESP' } };
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('location-countries.geojson')) return { ok: true, json: async () => ({ type: 'FeatureCollection', features: [country] }) };
+    return { ok: false, status: url.includes('/ADM4/') ? 404 : 503 };
+  }));
+  try {
+    await expect(loadLocationAtPosition([.5, .5], 'adm4')).resolves.toBeUndefined();
+    await expect(loadLocationAtPosition([.5, .5], 'adm5')).rejects.toThrow('503');
+  } finally { vi.unstubAllGlobals(); }
+});
