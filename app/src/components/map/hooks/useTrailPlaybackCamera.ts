@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
-import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { getIntroDuration, locationChapterIntroProgressRef, locationIntroEasing } from '@/utils/locationChapterCamera';
 import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
-import type { OverlayFont, TrailColorZone } from '@/types';
+import type { LocationChapterSettings, OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { overlayFontFamily } from '@/utils/typography';
@@ -48,6 +49,8 @@ import {
 
 interface UseTrailPlaybackCameraParams {
   introStartOverride?: TransitionCameraPose;
+  introRegionOverride?: TransitionCameraPose;
+  locationChapters?: LocationChapterSettings;
   activeTrack: { color: string; points: Array<{ heartRate: number | null }> } | null | undefined;
   activeTextAnnotationId: string | null;
   allCoordinates: number[][];
@@ -205,6 +208,8 @@ export function updatePlaybackMarkerElement(
 export function useTrailPlaybackCamera({
   activeTrack,
   introStartOverride,
+  introRegionOverride,
+  locationChapters,
   activeTextAnnotationId,
   allCoordinates,
   cameraCoordinates,
@@ -854,23 +859,40 @@ export function useTrailPlaybackCamera({
         });
 
     if (animationPhase === 'intro' && introPose) {
+      locationChapterIntroProgressRef.current = 0;
       const introStartPose = introStartOverride ?? getDeterministicIntroStartPose({
         coordinates: allCoordinates,
         introTo: introPose,
       });
-      mapRef.current.stop();
-      if (introStartPose) mapRef.current.jumpTo(introStartPose);
-      mapRef.current.flyTo({
-        ...introPose,
-        duration: INTRO_DURATION,
-        // Ease both ends: linger just long enough on the country-scale start
-        // marker to establish location, then settle into the first playback
-        // pose without the old ease-out's apparent pause.
-        easing: (value) => value * value * (3 - 2 * value),
-      });
+      const map = mapRef.current;
+      const duration = getIntroDuration(locationChapters);
+      map.stop();
+      if (introStartPose) map.jumpTo(introStartPose);
+      let finishRegion: (() => void) | undefined;
+      if (introRegionOverride && locationChapters?.level === 'region' && locationChapters.introCountryFirst) {
+        finishRegion = () => {
+          map.flyTo({ ...introPose, duration: duration * .25, easing: (value) => {
+            locationChapterIntroProgressRef.current = .75 + value * .25;
+            return value * value * (3 - 2 * value);
+          } });
+        };
+        map.once('moveend', finishRegion);
+        map.easeTo({ ...introRegionOverride, duration: duration * .75, easing: (value) => {
+          const progress = value * .75;
+          locationChapterIntroProgressRef.current = progress;
+          return Math.min(1, locationIntroEasing(progress, true) * 2);
+        } });
+      } else {
+        map.flyTo({ ...introPose, duration, easing: (value) => {
+          locationChapterIntroProgressRef.current = value;
+          return locationChapters?.level && locationChapters.level !== 'off'
+            ? locationIntroEasing(value, false) : value * value * (3 - 2 * value);
+        } });
+      }
 
       smoothBearingRef.current = introPose.bearing;
       targetBearingRef.current = introPose.bearing;
+      return () => { if (finishRegion) map.off('moveend', finishRegion); };
     } else if (animationPhase === 'outro' && cameraMode !== 'overview' && allCoordinates.length > 0) {
       const bounds = new maplibregl.LngLatBounds();
       allCoordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
@@ -896,6 +918,8 @@ export function useTrailPlaybackCamera({
     animationPhase,
     cameraMode,
     introStartOverride,
+    introRegionOverride,
+    locationChapters,
     cameraCoordinates,
     cinematicKeyframes,
     elevationData,

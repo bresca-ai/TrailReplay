@@ -303,6 +303,8 @@ export function TrailMap(_props: TrailMapProps) {
   useTrailPlaybackCamera({
     activeTrack,
     introStartOverride: locationChapter.introCamera,
+    introRegionOverride: locationChapter.introRegionCamera,
+    locationChapters: settings.locationChapters,
     activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
     allCoordinates,
     cameraCoordinates: cameraPathCoordinates,

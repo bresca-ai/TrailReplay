@@ -3,7 +3,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { expect, it, vi } from 'vitest';
 import { useLocationChapters } from './useLocationChapters';
 import { loadRouteBoundaries } from '@/utils/locationBoundaries';
-import { locationChapterIntroCameraRef } from '@/utils/locationChapterCamera';
+import { locationChapterIntroCameraRef, locationChapterIntroProgressRef } from '@/utils/locationChapterCamera';
 vi.mock('@/utils/locationBoundaries', async importOriginal => ({ ...(await importOriginal<typeof import('@/utils/locationBoundaries')>()), loadRouteBoundaries: vi.fn() }));
 it('shows the current country and styles its outline during playback', async () => {
   const feature = { type: 'Feature' as const, properties: { id: 'test', name: 'Spain', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
@@ -36,8 +36,8 @@ it('makes the opening overview and playback zoom optional', async () => {
   const ref = { current: map }, coords = [[.5, .5]], point = { lon: .5, lat: .5 };
   const { result, rerender, unmount } = renderHook(({ time, zoom }) => useLocationChapters(ref, true, { ...settings, zoomToPlace: zoom }, coords, point, time, 'playing'), { initialProps: { time: 0, zoom: true } });
   await waitFor(() => expect(source.setData).toHaveBeenCalledWith(feature));
-  expect(locationChapterIntroCameraRef.current).toEqual({ center: [1, 1], zoom: 5, pitch: 0, bearing: 0 });
-  expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 5, pitch: 0, bearing: 0 });
+  expect(locationChapterIntroCameraRef.current).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
+  expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
   rerender({ time: 1200, zoom: true });
   expect(jumpTo).toHaveBeenCalled();
   jumpTo.mockClear();
@@ -82,7 +82,7 @@ it('installs and displays the chapter when tiles keep the style loading', async 
   act(() => listeners.get('sourcedata')?.());
   await waitFor(() => expect(source.setData).toHaveBeenCalledWith(feature));
   rerender({ time: 1000 });
-  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-line', 'line-opacity', 1);
+  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-line', 'line-opacity', .3);
 });
 it('shows the first boundary during the opening fly-in without a second zoom after it', async () => {
   const feature = { type: 'Feature' as const, properties: { id: 'es', name: 'Catalonia', iso2: 'ES', iso3: 'ESP', credit: 'source' }, geometry: { type: 'Polygon' as const, coordinates: [[[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]]] } };
@@ -96,7 +96,8 @@ it('shows the first boundary during the opening fly-in without a second zoom aft
   const ref = { current: map }, coords = [[.5, .5]], point = { lon: .5, lat: .5 };
   const { result, rerender } = renderHook(({ time, phase }: {time: number; phase: string}) => useLocationChapters(ref, true, settings, coords, point, time, phase), { initialProps: { time: 0, phase: 'intro' } });
   await waitFor(() => expect(result.current.label).toBe('🇪🇸 Catalonia'));
-  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-line', 'line-opacity', 1);
+  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-line', 'line-opacity', .3);
+  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-trace-line', 'line-opacity', 1);
   rerender({ time: 500, phase: 'playing' }); expect(result.current.label).toBe('🇪🇸 Catalonia');
   expect(jumpTo).not.toHaveBeenCalled();
   rerender({ time: 2000, phase: 'playing' }); expect(result.current.label).toBe('');
@@ -115,8 +116,9 @@ it('reveals the country before the region as the intro camera zooms in', async (
   const coords = [[.5, .5]], ref = { current: map };
   const { result } = renderHook(() => useLocationChapters(ref, true, settings, coords, { lon: .5, lat: .5 }, 0, 'intro'));
   await waitFor(() => expect(result.current.label).toBe('Spain'));
-  expect(result.current.introCamera?.zoom).toBe(4);
-  act(() => { zoom = 6; listeners.get('move')?.(); });
+  expect(result.current.introCamera?.zoom).toBe(3.5);
+  expect(result.current.introRegionCamera?.zoom).toBe(6.5);
+  act(() => { zoom = 6; locationChapterIntroProgressRef.current = .7; listeners.get('move')?.(); });
   expect(result.current.label).toBe('Catalonia');
   expect(source.setData).toHaveBeenCalledWith(region);
 });

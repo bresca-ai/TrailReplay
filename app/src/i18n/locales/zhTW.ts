@@ -3,7 +3,7 @@ import type { en } from './en';
 import type { LocaleMessages } from '../languages';
 
 export const zhTW = {
-  locationChapters: { playHint: '按下播放以預覽沿途的地點動畫。', coverage: '邊界涵蓋範圍不一，可能略過小地點或短暫的跨界。', loading: '正在載入地理邊界…', privacy: '邊界請求會向 geoBoundaries 和 GitHub 透露路線經過的國家；路線點保留在瀏覽器中。', notReady: '請等待邊界載入，或在匯出前關閉地點章節。', title: '地點章節', description: '突顯旅途中經過的地點。', level: '邊界層級', off: '關閉', country: '國家', region: '地區', color: '邊界顏色', width: '邊界寬度', fill: '突顯區域', showName: '顯示地名', showFlag: '顯示國旗', zoom: '縮小以顯示每個地點', introCountryFirst: '開始縮放時先顯示國家，再顯示地區', duration: '持續時間（秒）', unavailable: '此路線的邊界資料無法使用。', credit: '邊界：geoBoundaries 及原始資料提供者。國家查詢：Natural Earth。' },
+  locationChapters: { playHint: '按下播放以預覽沿途的地點動畫。', coverage: '邊界涵蓋範圍不一，可能略過小地點或短暫的跨界。', loading: '正在載入地理邊界…', privacy: '邊界請求會向 geoBoundaries 和 GitHub 透露路線經過的國家；路線點保留在瀏覽器中。', notReady: '請等待邊界載入，或在匯出前關閉地點章節。', title: '地點章節', description: '突顯旅途中經過的地點。', level: '邊界層級', off: '關閉', country: '國家', region: '地區', color: '邊界顏色', width: '邊界寬度', fill: '突顯區域', showName: '顯示地名', showFlag: '顯示國旗', zoom: '縮小以顯示每個地點', introCountryFirst: '開始縮放時先顯示國家，再顯示地區', traceBorder: '描繪邊界', introDuration: '開場時間（秒）', duration: '持續時間（秒）', unavailable: '此路線的邊界資料無法使用。', credit: '邊界：geoBoundaries 及原始資料提供者。國家查詢：Natural Earth。' },
   app: {
     title: 'Trail Replay', subtitle: 'GPX 與 KML 軌跡視覺化',
     welcomeTitle: '歡迎使用 TrailReplay',

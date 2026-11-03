@@ -442,6 +442,8 @@ export interface LocationChapterSettings {
   showFlag: boolean;
   zoomToPlace: boolean;
   introCountryFirst?: boolean;
+  introDurationSeconds?: number;
+  traceBorder?: boolean;
   durationSeconds: number;
 }
 
