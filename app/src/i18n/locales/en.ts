@@ -155,6 +155,10 @@ export const en = {
     terrainTitle: 'Terrain',
     displayOptions: 'Display Options',
     routeElevationMode: 'Route elevation', followTerrainElevation: 'Follow terrain', followRouteElevation: 'Follow route elevation', routeElevationHint: 'Uses the elevation recorded in the file. Missing elevations may appear at sea level.',
+    terrainExaggeration: "Terrain exaggeration",
+    terrainExaggerationRecordedHint: "Terrain exaggeration is fixed at 1× when following recorded elevation.",
+    followTilt: "Camera tilt",
+    resetTilt: "Reset tilt",
     show3dTerrain: '3D Terrain',
     showHeartRate: 'Heart Rate Colors',
     showPictures: 'Show Pictures',
@@ -835,6 +839,12 @@ export const en = {
     parseGpxFailed: 'Failed to parse GPX files',
   },
   routeLandmarks: {
+    styleTitle: "Place style",
+    styleClassic: "Classic",
+    styleMinimal: "Minimal",
+    shareStyleFeedback: "Share your preference on GitHub",
+    shareStyleFeedbackHint: "Opens a discussion draft with your selected style. You can edit it before posting.",
+
     priorityHint: 'Move important landmarks to the top. They take priority when places or labels overlap.', moveUp: 'Move {name} up', moveDown: 'Move {name} down', dragPriority: 'Drag to change priority',
     title: 'Route landmarks', description: 'Choose the landscape details you want on the replay. Your route marker remains the visual priority.',
     routeMoments: 'Route moments', routeMomentsDescription: 'Highest point, major climb/descent, halfway and finish. Off by default.',

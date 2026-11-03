@@ -146,6 +146,10 @@ export const de = {
     terrainTitle: 'Terrain',
     displayOptions: 'Anzeigeoptionen',
     routeElevationMode: 'Routenhöhe', followTerrainElevation: 'Gelände folgen', followRouteElevation: 'Routenhöhe folgen', routeElevationHint: 'Verwendet die in der Datei aufgezeichnete Höhe. Fehlende Höhen können auf Meereshöhe erscheinen.',
+    terrainExaggeration: "Geländeüberhöhung",
+    terrainExaggerationRecordedHint: "Bei aufgezeichneter Höhe ist die Geländeüberhöhung auf 1× festgelegt.",
+    followTilt: "Kameraneigung",
+    resetTilt: "Neigung zurücksetzen",
     show3dTerrain: '3D-Gelände',
     showHeartRate: 'Herzfrequenzfarben',
     showPictures: 'Bilder anzeigen',
@@ -826,6 +830,12 @@ export const de = {
     parseGpxFailed: 'GPX-Dateien konnten nicht analysiert werden',
   },
   routeLandmarks: {
+    styleTitle: "Ortsstil",
+    styleClassic: "Klassisch",
+    styleMinimal: "Minimalistisch",
+    shareStyleFeedback: "Teile deine Präferenz auf GitHub",
+    shareStyleFeedbackHint: "Öffnet einen Entwurf mit dem gewählten Stil. Du kannst ihn vor dem Veröffentlichen bearbeiten.",
+
     priorityHint: 'Schiebe wichtige Orte nach oben. Sie haben Vorrang, wenn Orte oder Beschriftungen überlappen.', moveUp: '{name} nach oben', moveDown: '{name} nach unten', dragPriority: 'Ziehen, um die Priorität zu ändern',
     title: 'Wegpunkte der Route', description: 'Wähle die Landschaftsdetails für die Wiedergabe aus. Der Routenmarker bleibt visuell im Vordergrund.',
     routeMoments: 'Routenmomente', routeMomentsDescription: 'Höchster Punkt, größter Anstieg/Abstieg, Hälfte und Ziel. Standardmäßig deaktiviert.',

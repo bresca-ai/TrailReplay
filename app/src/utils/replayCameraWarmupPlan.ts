@@ -15,6 +15,7 @@ interface ReplayPoseOptions {
   coordinates: number[][];
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
+  followBehindPitch?: number | null;
   progress: number;
 }
 
@@ -110,6 +111,7 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
       coordinates: options.coordinates,
       elevationData: options.elevationData,
       followBehindZoomLevel: options.followBehindZoomLevel,
+      followBehindPitch: options.followBehindPitch,
       progress: options.progress,
     });
   }
@@ -119,6 +121,7 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
     coordinates: options.coordinates,
     elevationData: options.elevationData,
     followBehindZoomLevel: options.followBehindZoomLevel,
+    followBehindPitch: options.followBehindPitch,
     progress: options.progress,
   });
 }

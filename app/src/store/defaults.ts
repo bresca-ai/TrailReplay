@@ -26,6 +26,7 @@ export function createDefaultSettings(): AppSettings {
     mapStyle: 'satellite',
     mapFilter: 'none',
     show3DTerrain: true,
+    terrainExaggeration: 1.5,
     recordedElevationPrototype: false,
     showHeartRate: false,
     showPictures: true,
@@ -75,6 +76,7 @@ export function createDefaultSettings(): AppSettings {
     customElevationSections: [],
     hiddenElevationSectionIds: [],
     landmarkScale: 1,
+    landmarkStyle: 'minimal',
     landmarkLabelFade: true,
     inactiveAnnotationsOpacity: 1.0,
   };
@@ -88,6 +90,7 @@ export function createDefaultCameraSettings(): CameraSettings {
     bearing: 0,
     followBehindPreset: DEFAULT_FOLLOW_BEHIND_PRESET,
     followBehindZoomLevel: getFollowBehindZoomLevelForPreset(DEFAULT_FOLLOW_BEHIND_PRESET),
+    followBehindPitch: null,
     cameraStability: 0.5,
   };
 }

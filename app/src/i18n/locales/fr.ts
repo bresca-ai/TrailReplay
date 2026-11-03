@@ -146,6 +146,10 @@ export const fr = {
     terrainTitle: 'Terrain',
     displayOptions: 'Options d\'affichage',
     routeElevationMode: 'Altitude du parcours', followTerrainElevation: 'Suivre le terrain', followRouteElevation: 'Suivre l’altitude du parcours', routeElevationHint: 'Utilise l’altitude enregistrée dans le fichier. Une altitude manquante peut apparaître au niveau de la mer.',
+    terrainExaggeration: "Exagération du relief",
+    terrainExaggerationRecordedHint: "L’exagération du relief est fixée à 1× avec l’altitude enregistrée.",
+    followTilt: "Inclinaison de la caméra",
+    resetTilt: "Réinitialiser l’inclinaison",
     show3dTerrain: 'Terrain 3D',
     showHeartRate: 'Couleurs de fréquence cardiaque',
     showPictures: 'Afficher les photos',
@@ -826,6 +830,12 @@ export const fr = {
     parseGpxFailed: 'Impossible d\'analyser les fichiers GPX',
   },
   routeLandmarks: {
+    styleTitle: "Style des lieux",
+    styleClassic: "Classique",
+    styleMinimal: "Minimaliste",
+    shareStyleFeedback: "Partagez votre préférence sur GitHub",
+    shareStyleFeedbackHint: "Ouvre un brouillon avec le style sélectionné. Vous pouvez le modifier avant publication.",
+
     priorityHint: 'Placez les lieux importants en haut. Ils sont prioritaires lorsque les lieux ou les étiquettes se chevauchent.', moveUp: 'Monter {name}', moveDown: 'Descendre {name}', dragPriority: 'Faites glisser pour changer la priorité',
     title: 'Points d’intérêt du parcours', description: 'Choisissez les détails du paysage à afficher dans le replay. Le marqueur du parcours reste la priorité visuelle.',
     routeMoments: 'Moments du parcours', routeMomentsDescription: 'Point culminant, montée et descente principales, mi-parcours et arrivée. Désactivés par défaut.',

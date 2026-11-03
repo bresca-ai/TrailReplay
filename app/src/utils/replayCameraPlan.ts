@@ -18,6 +18,7 @@ interface CameraPlanOptions {
   coordinates: number[][];
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
+  followBehindPitch?: number | null;
   progress: number;
 }
 
@@ -209,7 +210,7 @@ export function getIntroCameraPose(options: CameraPlanOptions): ReplayCameraPose
   return {
     center,
     zoom: Math.max(TERRAIN_CAMERA_SETTINGS.MIN_ZOOM, preset.zoom - zoomAdjust),
-    pitch: Math.max(TERRAIN_CAMERA_SETTINGS.MIN_PITCH, preset.pitch - pitchAdjust),
+    pitch: Math.max(TERRAIN_CAMERA_SETTINGS.MIN_PITCH, clamp(options.followBehindPitch ?? preset.pitch, 15, 80) - pitchAdjust),
     bearing: getRouteBearingAtProgress(options.coordinates, options.progress),
   };
 }
@@ -241,7 +242,7 @@ export function getPlaybackCameraPose(options: CameraPlanOptions): ReplayCameraP
     // user-selected close preset must remain genuinely close. The adjustments
     // only ever widen/flatten the view and cannot overshoot the safe minima.
     zoom: Math.max(TERRAIN_CAMERA_SETTINGS.MIN_ZOOM, preset.zoom - zoomAdjust),
-    pitch: Math.max(TERRAIN_CAMERA_SETTINGS.MIN_PITCH, preset.pitch - pitchAdjust),
+    pitch: Math.max(TERRAIN_CAMERA_SETTINGS.MIN_PITCH, clamp(options.followBehindPitch ?? preset.pitch, 15, 80) - pitchAdjust),
     bearing: getRouteBearingAtProgress(options.coordinates, options.progress),
   };
 }
