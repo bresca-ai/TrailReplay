@@ -434,7 +434,7 @@ export type StatId =
   | 'altitude';
 
 export interface LocationChapterSettings {
-  level: 'off' | 'country' | 'region';
+  level: 'off' | 'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5';
   color: string;
   width: number;
   fill: boolean;
@@ -442,6 +442,7 @@ export interface LocationChapterSettings {
   showFlag: boolean;
   zoomToPlace: boolean;
   introCountryFirst?: boolean;
+  introLevels?: Array<'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5'>;
   introDurationSeconds?: number;
   traceBorder?: boolean;
   durationSeconds: number;

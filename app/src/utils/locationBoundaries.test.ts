@@ -37,3 +37,25 @@ it('loads the requested country layer from the pinned media URL and reuses it', 
     expect(fetchMock).toHaveBeenCalledTimes(3);
   } finally { vi.unstubAllGlobals(); }
 });
+
+it('loads available local levels even when another country has no data', async () => {
+  const { vi } = await import('vitest');
+  vi.resetModules();
+  const { loadRouteBoundaries } = await import('./locationBoundaries');
+  const country = (name: string, iso3: string, x: number) => ({ type: 'Feature', properties: { name, iso2: 'ES', iso3 }, geometry: { type: 'Polygon', coordinates: [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]] } });
+  const fetchMock = vi.fn(async (url: string) => {
+    if (url.endsWith('location-countries.geojson')) return { ok: true, json: async () => ({ type: 'FeatureCollection', features: [country('Spain', 'ESP', 0), country('France', 'FRA', 1)] }) };
+    if (url.startsWith('https://media.githubusercontent.com/')) return { ok: true, json: async () => ({ type: 'FeatureCollection', features: [{ ...feature, properties: { shapeName: 'Town', shapeID: 'town' } }] }) };
+    if (url.includes('/FRA/ADM3/')) return { ok: false, status: 404 };
+    if (url.includes('/ESP/ADM3/')) return { ok: true, json: async () => ({ simplifiedGeometryGeoJSON: 'https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/ESP/ADM3/example.geojson', boundarySource: 'source', boundaryLicense: 'CC BY 4.0' }) };
+    throw new Error(`Unexpected URL ${url}`);
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  try {
+    const missing = vi.fn();
+    const result = await loadRouteBoundaries([[.5, .5], [1.5, .5]], 'adm3', missing);
+    expect(result.map(item => item.properties.name)).toEqual(['Town']);
+    expect(missing).toHaveBeenCalledWith(['France']);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/ESP/ADM3/'), expect.anything());
+  } finally { vi.unstubAllGlobals(); }
+});

@@ -50,6 +50,7 @@ import {
 interface UseTrailPlaybackCameraParams {
   introStartOverride?: TransitionCameraPose;
   introRegionOverride?: TransitionCameraPose;
+  introStageOverrides?: TransitionCameraPose[];
   locationChapters?: LocationChapterSettings;
   activeTrack: { color: string; points: Array<{ heartRate: number | null }> } | null | undefined;
   activeTextAnnotationId: string | null;
@@ -209,6 +210,7 @@ export function useTrailPlaybackCamera({
   activeTrack,
   introStartOverride,
   introRegionOverride,
+  introStageOverrides,
   locationChapters,
   activeTextAnnotationId,
   allCoordinates,
@@ -868,31 +870,37 @@ export function useTrailPlaybackCamera({
       const duration = getIntroDuration(locationChapters);
       map.stop();
       if (introStartPose) map.jumpTo(introStartPose);
-      let finishRegion: (() => void) | undefined;
-      if (introRegionOverride && locationChapters?.level === 'region' && locationChapters.introCountryFirst) {
-        finishRegion = () => {
-          map.flyTo({ ...introPose, duration: duration * .25, easing: (value) => {
-            locationChapterIntroProgressRef.current = .75 + value * .25;
-            return value * value * (3 - 2 * value);
+      const stages = introStageOverrides?.length ? introStageOverrides : introRegionOverride && introStartPose ? [introStartPose, introRegionOverride] : [];
+      let cancelled = false;
+      let pending: (() => void) | undefined;
+      const smooth = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
+      const playStage = (index: number) => {
+        if (cancelled) return;
+        const count = Math.max(1, stages.length);
+        const slot = .8 / count;
+        const start = index * slot;
+        if (index < stages.length - 1) {
+          pending = () => { pending = undefined; playStage(index + 1); };
+          map.once('moveend', pending);
+          map.easeTo({ ...stages[index + 1], duration: duration * slot, easing: (value) => {
+            locationChapterIntroProgressRef.current = start + value * slot;
+            return smooth((value - .65) / .35);
           } });
-        };
-        map.once('moveend', finishRegion);
-        map.easeTo({ ...introRegionOverride, duration: duration * .75, easing: (value) => {
-          const progress = value * .75;
-          locationChapterIntroProgressRef.current = progress;
-          return Math.min(1, locationIntroEasing(progress, true) * 2);
-        } });
-      } else {
-        map.flyTo({ ...introPose, duration, easing: (value) => {
-          locationChapterIntroProgressRef.current = value;
-          return locationChapters?.level && locationChapters.level !== 'off'
-            ? locationIntroEasing(value, false) : value * value * (3 - 2 * value);
-        } });
-      }
+        } else {
+          const length = 1 - start;
+          map.flyTo({ ...introPose, duration: duration * length, easing: (value) => {
+            const progress = start + value * length;
+            locationChapterIntroProgressRef.current = progress;
+            return stages.length ? smooth((progress - .8) / .2)
+              : locationChapters?.level && locationChapters.level !== 'off' ? locationIntroEasing(value, false) : smooth(value);
+          } });
+        }
+      };
+      playStage(0);
 
       smoothBearingRef.current = introPose.bearing;
       targetBearingRef.current = introPose.bearing;
-      return () => { if (finishRegion) map.off('moveend', finishRegion); };
+      return () => { cancelled = true; if (pending) map.off('moveend', pending); };
     } else if (animationPhase === 'outro' && cameraMode !== 'overview' && allCoordinates.length > 0) {
       const bounds = new maplibregl.LngLatBounds();
       allCoordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
@@ -919,6 +927,7 @@ export function useTrailPlaybackCamera({
     cameraMode,
     introStartOverride,
     introRegionOverride,
+    introStageOverrides,
     locationChapters,
     cameraCoordinates,
     cinematicKeyframes,

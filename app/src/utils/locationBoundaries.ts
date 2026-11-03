@@ -2,7 +2,11 @@ import type { Feature, FeatureCollection, MultiPolygon, Polygon, Position } from
 
 export type LocationGeometry = Polygon | MultiPolygon;
 export type LocationFeature = Feature<LocationGeometry, { name: string; iso2?: string; iso3: string; id: string; credit: string }>;
-export type LocationLevel = 'country' | 'region';
+export const LOCATION_LEVELS = ['country', 'region', 'adm2', 'adm3', 'adm4', 'adm5'] as const;
+export type LocationLevel = typeof LOCATION_LEVELS[number];
+export function levelCode(level: LocationLevel): string {
+  return level === 'country' ? 'ADM0' : level === 'region' ? 'ADM1' : level.toUpperCase();
+}
 type CountryFeature = Feature<LocationGeometry, { name: string; iso2: string; iso3: string }>;
 const API = 'https://www.geoboundaries.org/api/current/gbOpen';
 const cachedLayers = new Map<string, Promise<LocationFeature[]>>();
@@ -55,7 +59,7 @@ export function loadBoundaryLayer(country: CountryFeature, level: LocationLevel)
   let pending = cachedLayers.get(key);
   if (!pending) {
     pending = (async () => {
-      const metadata = await json(`${API}/${iso}/${level === 'country' ? 'ADM0' : 'ADM1'}/`) as Record<string, unknown>;
+      const metadata = await json(`${API}/${iso}/${levelCode(level)}/`) as Record<string, unknown>;
       const url = new URL(String(metadata.simplifiedGeometryGeoJSON));
       if (url.protocol !== 'https:' || url.hostname !== 'github.com' || !url.pathname.startsWith('/wmgeolab/geoBoundaries/')) throw new Error('Invalid boundary source');
       // GitHub's redirect lacks CORS headers. The equivalent media URL serves
@@ -76,7 +80,7 @@ export function loadBoundaryLayer(country: CountryFeature, level: LocationLevel)
 }
 /** Finds countries from route points and fetches only those country layers.
  * The overview index is generalized; small islands and narrow crossings can be missed. */
-export async function loadRouteBoundaries(points: Position[], level: LocationLevel): Promise<LocationFeature[]> {
+export async function loadRouteBoundaries(points: Position[], level: LocationLevel, onMissing?: (countries: string[]) => void): Promise<LocationFeature[]> {
   const countries = await loadCountryIndex();
   const found = new Map<string, CountryFeature>();
   for (const point of points) {
@@ -85,10 +89,12 @@ export async function loadRouteBoundaries(points: Position[], level: LocationLev
   }
   const queue = [...found.values()];
   const layers: LocationFeature[][] = Array.from({ length: queue.length });
+  const missing: string[] = [];
   let next = 0;
   // Avoid flooding the public service when a long trip crosses many countries.
   await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
-    while (next < queue.length) { const index = next++; layers[index] = await loadBoundaryLayer(queue[index], level); }
+    while (next < queue.length) { const index = next++; try { layers[index] = await loadBoundaryLayer(queue[index], level); } catch { missing.push(queue[index].properties.name); layers[index] = []; } }
   }));
+  onMissing?.(missing);
   return layers.flat();
 }

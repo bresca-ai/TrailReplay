@@ -299,11 +299,13 @@ export function TrailMap(_props: TrailMapProps) {
   useRecordedElevationLayer(map, isMapLoaded, recordedElevationEnabled, recordedPoints, currentPosition, completedCoordinates, markerRef, recordedStyle, trailStyle.ghostTrailOpacity);
 
   const locationChapter = useLocationChapters(map, isMapLoaded, settings.locationChapters, allCoordinates, currentPosition, playback.currentTime, animationPhase, cameraMode !== 'overview' && !routeComparisonActive);
+  const introStageOverrides = useMemo(() => locationChapter.introStages.flatMap(stage => stage.camera ? [stage.camera] : []), [locationChapter.introStages]);
 
   useTrailPlaybackCamera({
     activeTrack,
     introStartOverride: locationChapter.introCamera,
     introRegionOverride: locationChapter.introRegionCamera,
+    introStageOverrides,
     locationChapters: settings.locationChapters,
     activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
     allCoordinates,
@@ -532,11 +534,12 @@ export function TrailMap(_props: TrailMapProps) {
     <div className="w-full h-full relative">
       <div ref={mapContainer} className="w-full h-full" />
 
-      <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : locationChapter.error ? "error" : "ready"} />
+      <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : "ready"} />
       {locationChapter.label && <div className="tr-location-chapter absolute left-1/2 top-[34%] z-20 max-w-[90%] -translate-x-1/2 rounded-full bg-black/75 px-5 py-2 text-center text-lg font-bold text-white" role="status">{locationChapter.label}</div>}
       {locationChapter.credit && <div className="tr-location-credit absolute bottom-1 left-1 z-20 bg-black/75 px-1 text-[10px] text-white">{locationChapter.credit}</div>}
       {locationChapter.loading && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.loading')}</div>}
-      {locationChapter.error && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.unavailable')}</div>}
+      {locationChapter.error && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.unavailable')}{locationChapter.missing.length > 0 && ` ${locationChapter.missing.join(', ')}`}</div>}
+      {!locationChapter.error && locationChapter.missing.length > 0 && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 max-w-[80%] rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.partialCoverage')}: {locationChapter.missing.join(', ')}</div>}
       {!isMapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--canvas)]">
           <div className="flex items-center gap-3">

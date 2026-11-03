@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { LngLatBounds, LngLat, type Map as MapLibreMap, type GeoJSONSource } from 'maplibre-gl';
 import type { FeatureCollection, Position } from 'geojson';
-import { containsPosition, countryEmoji, loadRouteBoundaries, type LocationFeature } from '@/utils/locationBoundaries';
+import { containsPosition, countryEmoji, levelCode, loadRouteBoundaries, type LocationFeature } from '@/utils/locationBoundaries';
 import type { LocationChapterSettings } from '@/types';
 import { INTRO_DURATION } from '@/components/playback/PlaybackProvider';
-import { locationChapterIntroCameraRef, locationChapterIntroProgressRef } from '@/utils/locationChapterCamera';
+import { getIntroLevels, introStage, locationChapterIntroCameraRef, locationChapterIntroProgressRef } from '@/utils/locationChapterCamera';
+import type { LocationLevel } from '@/utils/locationBoundaries';
 const SOURCE = 'location-chapter', FILL = 'location-chapter-fill', GLOW = 'location-chapter-glow', LINE = 'location-chapter-line';
 const TRACE_SOURCE = 'location-chapter-trace', TRACE = 'location-chapter-trace-line';
 const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
 type PlaceCamera = { center: [number, number]; zoom: number; pitch: number; bearing: number };
+const emptyStages: Array<{ feature: LocationFeature; camera?: PlaceCamera }> = [];
 function cameraForPlace(map: MapLibreMap, feature: LocationFeature, point: Position): PlaceCamera | undefined {
   const bounds = new LngLatBounds();
   const polygons = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
@@ -19,7 +21,7 @@ function cameraForPlace(map: MapLibreMap, feature: LocationFeature, point: Posit
   if (localPolygon) for (const ring of localPolygon) for (const coordinate of ring) bounds.extend([coordinate[0], coordinate[1]]);
   if (bounds.isEmpty() || bounds.getEast() - bounds.getWest() >= 180) return undefined;
   try {
-    const camera = map.cameraForBounds(bounds, { padding: 40, maxZoom: 8, pitch: 0, bearing: 0 });
+    const camera = map.cameraForBounds(bounds, { padding: 40, maxZoom: 13, pitch: 0, bearing: 0 });
     if (camera?.center && typeof camera.zoom === 'number') {
       const center = LngLat.convert(camera.center);
       // Leave room for video crops and overlays as well as the live map viewport.
@@ -31,52 +33,62 @@ function cameraForPlace(map: MapLibreMap, feature: LocationFeature, point: Posit
 export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loaded: boolean, settings: LocationChapterSettings | undefined,
   coordinates: number[][], current: { lon: number; lat: number } | null, time: number, phase: string, cameraCanFollow = true) {
   const [features, setFeatures] = useState<LocationFeature[]>([]), [error, setError] = useState(false), [label, setLabel] = useState(''), [credit, setCredit] = useState(''), [loading, setLoading] = useState(false);
-  const [introCountries, setIntroCountries] = useState<LocationFeature[]>([]);
-  const [introRegion, setIntroRegion] = useState(false);
+  const [introLayers, setIntroLayers] = useState<Array<{ level: LocationLevel; features: LocationFeature[] }>>([]);
+  const [missing, setMissing] = useState<string[]>([]);
   const [introProgress, setIntroProgress] = useState(0);
   const [layerRevision, setLayerRevision] = useState(0);
   const previous = useRef<{ id: string; start: number; feature: LocationFeature; startedInIntro: boolean; target?: PlaceCamera } | null>(null);
   const candidate = useRef<{ id: string; since: number } | null>(null);
   const mode = settings?.level ?? 'off';
-  const countryFirst = mode === 'region' && Boolean(settings?.introCountryFirst);
-  const [introResult, setIntroResult] = useState<{ features: LocationFeature[]; countries: LocationFeature[]; coordinates: number[][]; mode: string; enabled: boolean; countryFirst: boolean; camera?: PlaceCamera; regionCamera?: PlaceCamera }>();
-  const introCurrent = introResult?.features === features && introResult.countries === introCountries && introResult.coordinates === coordinates && introResult.mode === mode && introResult.countryFirst === countryFirst && introResult.enabled === Boolean(settings?.zoomToPlace);
-  const introCamera = introCurrent ? introResult?.camera : undefined;
-  const introRegionCamera = introCurrent ? introResult?.regionCamera : undefined;
+  const introKey = getIntroLevels(settings).join(',');
+  const [introResult, setIntroResult] = useState<{ features: LocationFeature[]; layers: typeof introLayers; coordinates: number[][]; mode: string; enabled: boolean; stages: Array<{ feature: LocationFeature; camera?: PlaceCamera }> }>();
+  const introCurrent = introResult?.features === features && introResult.layers === introLayers && introResult.coordinates === coordinates && introResult.mode === mode && introResult.enabled === Boolean(settings?.zoomToPlace);
+  const introStages = introCurrent ? introResult?.stages ?? emptyStages : emptyStages;
+  const introCamera = introStages[0]?.camera;
+  const introRegionCamera = introStages[1]?.camera;
   useEffect(() => {
     const map = mapRef.current, first = coordinates[0];
     const enabled = Boolean(settings?.zoomToPlace);
-    const overviewFeatures = countryFirst && introCountries.length ? introCountries : features;
-    const feature = loaded && map && first && enabled && mode !== 'off' ? overviewFeatures.find(item => containsPosition(item, first)) : undefined;
-    const camera = map && first && feature ? cameraForPlace(map, feature, first) : undefined;
-    const region = countryFirst && first ? features.find(item => containsPosition(item, first)) : undefined;
-    const regionCamera = enabled && map && first && region ? cameraForPlace(map, region, first) : undefined;
-    setIntroResult({ features, countries: introCountries, coordinates, mode, enabled, countryFirst, camera, regionCamera });
+    const stages = loaded && first ? introLayers.flatMap(({ features: items }) => {
+      const feature = items.find(item => containsPosition(item, first));
+      return feature ? [{ feature, camera: enabled && map ? cameraForPlace(map, feature, first) : undefined }] : [];
+    }) : [];
+    setIntroResult({ features, layers: introLayers, coordinates, mode, enabled, stages });
+    const camera = stages[0]?.camera;
     locationChapterIntroCameraRef.current = camera;
     return () => { if (locationChapterIntroCameraRef.current === camera) locationChapterIntroCameraRef.current = undefined; };
-  }, [coordinates, countryFirst, features, introCountries, loaded, mapRef, mode, settings?.zoomToPlace]);
+  }, [coordinates, features, introLayers, loaded, mapRef, mode, settings?.zoomToPlace]);
   useEffect(() => {
     let cancelled = false;
-    setFeatures([]); setIntroCountries([]); setError(false); previous.current = null; candidate.current = null; setLabel(''); setCredit('');
+    setFeatures([]); setIntroLayers([]); setMissing([]); setError(false); previous.current = null; candidate.current = null; setLabel(''); setCredit('');
     if (mode === 'off' || !coordinates.length) { setLoading(false); return; }
     setLoading(true);
     const stride = Math.max(1, Math.floor(coordinates.length / 5000));
     const samples = coordinates.filter((_, i) => i % stride === 0 || i === coordinates.length - 1) as Position[];
-    Promise.all([loadRouteBoundaries(samples, mode), countryFirst ? loadRouteBoundaries([samples[0]], 'country').catch(() => []) : Promise.resolve([])]).then(([items, countries]) => { if (!cancelled) { setFeatures(items); setIntroCountries(countries); setError(items.length === 0); setLoading(false); } })
-      .catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
+    const selected = introKey ? introKey.split(',') as LocationLevel[] : [];
+    const missingSet = new Set<string>();
+    const load = (points: Position[], level: LocationLevel) => loadRouteBoundaries(points, level, countries => { countries.forEach(country => missingSet.add(`${country} (${levelCode(level)})`)); });
+    Promise.all([load(samples, mode), ...selected.map(level => level === mode ? Promise.resolve(null) : load([samples[0]], level).catch(() => { missingSet.add(levelCode(level)); return []; }))]).then(([items, ...layers]) => {
+      if (!cancelled) {
+        const routeFeatures = items ?? [];
+        const openingLayers = selected.map((level, index) => ({ level, features: layers[index] ?? routeFeatures }));
+        for (const layer of openingLayers) {
+          if (!layer.features.some(feature => containsPosition(feature, samples[0]))) missingSet.add(levelCode(layer.level));
+        }
+        setFeatures(routeFeatures);
+        setIntroLayers(openingLayers);
+        setMissing([...missingSet]); setError(routeFeatures.length === 0); setLoading(false);
+      }
+    }).catch(() => { if (!cancelled) { setError(true); setLoading(false); } });
     return () => { cancelled = true; };
-  }, [coordinates, countryFirst, mode]);
+  }, [coordinates, introKey, mode]);
   useEffect(() => {
-    const map = mapRef.current, first = coordinates[0];
-    if (!map || !loaded || mode === 'off' || !first || (phase !== 'intro' && phase !== 'preloading')) { setIntroRegion(false); setIntroProgress(0); return; }
-    const update = () => {
-      const progress = locationChapterIntroProgressRef.current;
-      setIntroProgress(progress);
-      if (countryFirst && progress >= 0.5) setIntroRegion(true);
-    };
+    const map = mapRef.current;
+    if (!map || !loaded || mode === 'off' || (phase !== 'intro' && phase !== 'preloading')) { setIntroProgress(0); return; }
+    const update = () => setIntroProgress(locationChapterIntroProgressRef.current);
     if (phase === 'intro') map.on('move', update);
     return () => { if (phase === 'intro') map.off('move', update); };
-  }, [coordinates, countryFirst, loaded, mapRef, mode, phase]);
+  }, [loaded, mapRef, mode, phase]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || mode === 'off') return;
@@ -104,9 +116,9 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !map.getSource(SOURCE)) return;
-    const introFeatures = countryFirst && !introRegion && introCountries.length ? introCountries : features;
+    const stage = introStage(introProgress, introStages.length);
     let active = mode !== 'off' && current && (phase === 'playing' || phase === 'intro' || phase === 'preloading')
-      ? (phase === 'playing' ? features : introFeatures).find(feature => containsPosition(feature, [current.lon, current.lat])) : undefined;
+      ? phase === 'playing' ? previous.current && features.includes(previous.current.feature) && containsPosition(previous.current.feature, [current.lon, current.lat]) ? previous.current.feature : features.find(feature => containsPosition(feature, [current.lon, current.lat])) : introStages[stage.index]?.feature : undefined;
     if (previous.current && time < previous.current.start) { previous.current = null; candidate.current = null; }
     // Ignore brief boundary jitter; the first location is immediate.
     if (previous.current && phase === 'playing' && previous.current.id !== active?.properties.id && !(previous.current.startedInIntro && time < 500)) {
@@ -127,11 +139,9 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     const duration = Math.max(2000, Math.min(8000, (settings?.durationSeconds ?? 4.5) * 1000));
     // Route time is frozen at zero throughout the opening camera fly-in.
     // Show the starting place there, then finish its fade on the route clock.
-    const introOpacity = countryFirst && introCountries.length ? (introRegion
-      ? Math.min(1, Math.max(0, (introProgress - 0.49) / 0.06))
-      : Math.min(1, Math.max(0, (0.5 - introProgress) / 0.06))) : 1;
+    const introOpacity = introStages.length > 1 ? Math.min(1, stage.local / .12, (1 - stage.local) / .12) : 1;
     const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? introOpacity : Math.min(1, age / 500, Math.max(0, (duration - age) / 800));
-    const traceProgress = phase === 'intro' ? (countryFirst ? (introRegion ? (introProgress - .5) / .25 : introProgress / .35) : introProgress / .4) : age / Math.min(3000, duration * .7);
+    const traceProgress = phase === 'intro' ? stage.local / .7 : age / Math.min(3000, duration * .7);
     const baseLineOpacity = settings?.traceBorder !== false && traceProgress < 1 ? opacity * .3 : opacity;
     const target = previous.current.target;
     if (settings?.zoomToPlace && !previous.current.startedInIntro && cameraCanFollow && target && phase === 'playing' && age > 0 && age < duration) {
@@ -160,7 +170,7 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     setCredit(opacity > 0 ? active.properties.credit : '');
     const flag = settings?.showFlag ? countryEmoji(active.properties.iso2) : '';
     setLabel(opacity > 0 && (settings?.showName || flag) ? `${flag} ${settings?.showName ? active.properties.name : ''}`.trim() : '');
-  }, [cameraCanFollow, countryFirst, current, features, introCountries, introProgress, introRegion, layerRevision, loaded, mapRef, mode, phase, settings, time]);
-  const preparingCamera = !error && loaded && mode !== 'off' && Boolean(settings?.zoomToPlace) && features.length > 0 && !introCurrent;
-  return { label, error, credit, loading: loading || preparingCamera, introCamera, introRegionCamera };
+  }, [cameraCanFollow, current, features, introProgress, introStages, layerRevision, loaded, mapRef, mode, phase, settings, time]);
+  const preparingCamera = loaded && mode !== 'off' && (features.length > 0 || introLayers.some(layer => layer.features.length > 0)) && !introCurrent;
+  return { label, error, credit, missing, loading: loading || preparingCamera, introCamera, introRegionCamera, introStages };
 }

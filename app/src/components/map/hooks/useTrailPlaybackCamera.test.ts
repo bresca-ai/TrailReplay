@@ -128,8 +128,8 @@ it('starts the intro at the selected place before flying to the route', () => {
   expect(flyTo).toHaveBeenCalledWith(expect.objectContaining({ center: [2, 41], zoom: 14 }));
   const introRegionOverride = { center: [2.5, 41.5] as [number, number], zoom: 8, pitch: 0, bearing: 0 };
   rerender({ ...props, introRegionOverride, locationChapters: { level: 'region', introCountryFirst: true, introDurationSeconds: 10 } as NonNullable<typeof props.locationChapters> });
-  expect(easeTo).toHaveBeenCalledWith(expect.objectContaining({ ...introRegionOverride, duration: 7500 }));
+  expect(easeTo).toHaveBeenCalledWith(expect.objectContaining({ ...introRegionOverride, duration: 4000 }));
   expect(once).toHaveBeenCalledWith('moveend', expect.any(Function));
   once.mock.calls[0][1]();
-  expect(flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [2, 41], duration: 2500 }));
+  expect(flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [2, 41], duration: 6000 }));
 });
