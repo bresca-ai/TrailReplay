@@ -19,6 +19,8 @@ import {
   Video,
   Mountain,
   Palette,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 const MAP_STYLES: { id: MapStyle; nameKey: string }[] = [
@@ -119,6 +121,10 @@ export function SettingsPanel() {
   }, [landmarkEditorRequested, clearLandmarkEditorRequest]);
   const settings = useAppStore((state) => state.settings);
   const displayedMapStyle = settings.mapStyle === 'outdoor' ? 'topo' : settings.mapStyle;
+  const [mapStyleWindow, setMapStyleWindow] = useState(() => ({ style: displayedMapStyle, start: Math.max(0, MAP_STYLES.findIndex(style => style.id === displayedMapStyle) - 2) }));
+  const selectedStyleIndex = MAP_STYLES.findIndex(style => style.id === displayedMapStyle);
+  const mapStyleStart = mapStyleWindow.style === displayedMapStyle || selectedStyleIndex < 0 ? mapStyleWindow.start
+    : selectedStyleIndex < mapStyleWindow.start ? selectedStyleIndex : selectedStyleIndex >= mapStyleWindow.start + 3 ? selectedStyleIndex - 2 : mapStyleWindow.start;
   const cameraSettings = useAppStore((state) => state.cameraSettings);
   const setSettings = useAppStore((state) => state.setSettings);
   const setCameraSettings = useAppStore((state) => state.setCameraSettings);
@@ -286,22 +292,22 @@ export function SettingsPanel() {
           <MapIcon className="w-4 h-4" />
           {t('settings.title')}
         </h3>
-        <div className="grid grid-cols-3 gap-2">
-          {MAP_STYLES.slice(0, 3).map((style) => (
+        <div className="flex items-center gap-1">
+          <button type="button" aria-label={t('settings.previousMapStyles')} disabled={mapStyleStart === 0} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.max(0, mapStyleStart - 1) })}
+            className="flex h-10 w-7 shrink-0 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
+          <div className="grid min-w-0 flex-1 grid-cols-3 gap-2">
+          {MAP_STYLES.slice(mapStyleStart, mapStyleStart + 3).map((style) => (
             <button key={style.id} type="button" onClick={() => selectMapStyle(style.id)} aria-pressed={displayedMapStyle === style.id}
               className={`min-w-0 rounded-lg border-2 p-1 text-center text-xs font-medium text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${displayedMapStyle === style.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
-              <img src={`/media/images/map-previews/${style.id === 'satellite' ? 'satellite.jpg' : `${style.id}.png`}`} alt="" className="h-14 w-full rounded object-cover" />
+              <img src={`/media/images/map-previews/${style.id === 'satellite' || style.id === 'esri-clarity' || style.id === 'wayback' ? 'satellite.jpg' : style.id === 'mapbox-streets' ? 'street.png' : `${style.id}.png`}`} alt="" className="h-14 w-full rounded object-cover" />
               <span className="block py-1 break-words">{t(style.nameKey)}</span>
             </button>
           ))}
+          </div>
+          <button type="button" aria-label={t('settings.nextMapStyles')} disabled={mapStyleStart >= MAP_STYLES.length - 3} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.min(MAP_STYLES.length - 3, mapStyleStart + 1) })}
+            className="flex h-10 w-7 shrink-0 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
         </div>
         <p className="mt-1 text-[10px] text-[var(--evergreen-60)]">© Esri · © <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a className="underline" href="https://opentopomap.org/about" target="_blank" rel="noreferrer">OpenTopoMap</a> (CC-BY-SA)</p>
-        <details className="mt-2 rounded-lg border border-[var(--evergreen)]/20">
-          <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-[var(--evergreen)]">{t('settings.moreMapStyles')}{MAP_STYLES.slice(3).some((style) => style.id === settings.mapStyle) && <span className="font-normal text-[var(--evergreen-60)]"> · {t(MAP_STYLES.find((style) => style.id === settings.mapStyle)!.nameKey)}</span>}</summary>
-          <div className="grid grid-cols-2 gap-2 p-2 pt-0">
-            {MAP_STYLES.slice(3).map((style) => <button key={style.id} type="button" onClick={() => selectMapStyle(style.id)} aria-pressed={displayedMapStyle === style.id} className={`rounded-lg border-2 p-2 text-left text-sm text-[var(--evergreen)] ${displayedMapStyle === style.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>{t(style.nameKey)}</button>)}
-          </div>
-        </details>
 
         {/* Wayback options — date selector */}
         {settings.mapStyle === 'wayback' && (

@@ -38,7 +38,7 @@ it('places the collapsible location chapters between landmarks and overlays', ()
   useAppStore.getState().setSettings({ language: 'en' });
   render(<SettingsPanel />);
   const landmarks = screen.getByText('Route landmarks', { selector: 'summary' }).parentElement;
-  const summary = screen.getByText(/Location chapters/, { selector: 'summary' });
+  const summary = screen.getByText(/Place & border animations/, { selector: 'summary' });
   const chapters = summary.parentElement as HTMLDetailsElement;
   const overlays = screen.getByText(/Overlays/, { selector: 'summary' }).parentElement;
   expect(chapters.previousElementSibling).toBe(landmarks);
@@ -47,5 +47,24 @@ it('places the collapsible location chapters between landmarks and overlays', ()
   fireEvent.click(summary);
   expect(chapters.open).toBe(true);
   expect(screen.getByLabelText('Boundary level while moving')).toBeInTheDocument();
+  cleanup();
+});
+
+it('browses all map styles in the same picker and keeps the selected style visible', () => {
+  useAppStore.getState().reset();
+  useAppStore.getState().setSettings({ language: 'en' });
+  const { unmount } = render(<SettingsPanel />);
+  expect(screen.queryByText('More map styles')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Previous map styles' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Satellite' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Next map styles' }));
+  expect(screen.getByRole('button', { name: 'Esri Clarity' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Esri Clarity' }));
+  expect(useAppStore.getState().settings.mapStyle).toBe('esri-clarity');
+  fireEvent.click(screen.getByRole('button', { name: 'Next map styles' }));
+  expect(screen.getByRole('button', { name: 'Wayback' })).toBeInTheDocument();
+  unmount();
+  render(<SettingsPanel />);
+  expect(screen.getByRole('button', { name: 'Esri Clarity' })).toHaveAttribute('aria-pressed', 'true');
   cleanup();
 });
