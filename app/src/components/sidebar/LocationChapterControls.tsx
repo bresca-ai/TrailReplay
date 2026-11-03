@@ -43,20 +43,11 @@ export function LocationChapterControls() {
   const levelLabel = (level: LocationLevel) => level === 'country' ? t('locationChapters.country') : level === 'region' ? t('locationChapters.region') : t('locationChapters.adminLevel');
 
   return (
-    <section className="space-y-4 border-t border-[var(--evergreen)]/15 pt-5" aria-label={t('locationChapters.title')}>
-      <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--trail-orange)]/10 text-[var(--trail-orange)]"><MapPinned className="h-4 w-4" aria-hidden="true" /></span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-            <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--evergreen)]">{t('locationChapters.title')}</h3>
-            <span className="rounded-full bg-[var(--evergreen)]/5 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--evergreen-60)]">{settings.level === 'off' ? t('locationChapters.off') : levelCode(settings.level)}</span>
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.description')}</p>
-        </div>
-      </div>
+    <section className="space-y-4" aria-label={t('locationChapters.title')}>
+      <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.description')}</p>
 
-      <fieldset className="space-y-3 rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/[0.025] p-3">
-        <legend className="px-1 text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><Route className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.playbackTitle')}</span></legend>
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><Route className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.playbackTitle')}</span></legend>
         <label className="block text-xs font-semibold text-[var(--evergreen)]">{t('locationChapters.playbackLevel')}
           <select aria-label={t('locationChapters.playbackLevel')} className="mt-1.5 min-h-11 w-full rounded-lg border border-[var(--evergreen)]/25 bg-white px-3 text-sm text-[var(--evergreen)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]" value={settings.level} onChange={event => update({ level: event.target.value as LocationChapterSettings['level'], ...(settings.level !== 'off' && !settings.introLevels ? { introLevels: getIntroLevels(settings) } : {}) })}>
             <option value="off">{t('locationChapters.off')}</option>
@@ -73,8 +64,8 @@ export function LocationChapterControls() {
       </fieldset>
 
       {settings.level !== 'off' && <>
-        <fieldset className="space-y-3 rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/[0.025] p-3">
-          <legend className="px-1 text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><MapPinned className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.introLevels')}</span></legend>
+        <fieldset className="space-y-3 border-t border-[var(--evergreen)]/10 pt-4">
+          <legend className="text-sm font-bold text-[var(--evergreen)]"><span className="inline-flex items-center gap-1.5"><MapPinned className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />{t('locationChapters.introLevels')}</span></legend>
           <p className="text-xs leading-relaxed text-[var(--evergreen-60)]">{t('locationChapters.introLevelsHint')}</p>
           <div className="grid grid-cols-2 gap-2">
             {LOCATION_LEVELS.map(level => {
@@ -95,14 +86,14 @@ export function LocationChapterControls() {
           </div>}
         </fieldset>
 
-        <details className="group rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/[0.025]">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-3 text-sm font-bold text-[var(--evergreen)] [&::-webkit-details-marker]:hidden">
+        <details className="group border-t border-[var(--evergreen)]/10">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-sm font-bold text-[var(--evergreen)] [&::-webkit-details-marker]:hidden">
             <Palette className="h-4 w-4 text-[var(--trail-orange)]" aria-hidden="true" />
             <span className="flex-1">{t('locationChapters.appearanceTitle')}</span>
             <span aria-hidden="true" className="h-4 w-4 rounded-full border border-[var(--evergreen)]/20" style={{ backgroundColor: settings.color }} />
             <ChevronDown className="h-4 w-4 text-[var(--evergreen-60)] transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
-          <div className="space-y-2 border-t border-[var(--evergreen)]/10 px-3 pb-3 pt-2">
+          <div className="space-y-2 border-t border-[var(--evergreen)]/10 pb-3 pt-2">
             <label className="flex min-h-10 items-center justify-between gap-3 text-sm text-[var(--evergreen)]">{t('locationChapters.color')}<input aria-label={t('locationChapters.color')} type="color" value={settings.color} onChange={event => update({ color: event.target.value })} className="h-9 w-12 cursor-pointer rounded-md border border-[var(--evergreen)]/20 bg-white p-1" /></label>
             <RangeSetting label={t('locationChapters.width')} value={settings.width} min={1} max={8} step={1} onChange={value => update({ width: value })} />
             {([['fill', 'fill'], ['showName', 'showName'], ['showFlag', 'showFlag']] as const).map(([key, label]) => <ToggleRow key={key} label={t(`locationChapters.${label}`)} checked={settings[key]} onChange={checked => update({ [key]: checked })} />)}

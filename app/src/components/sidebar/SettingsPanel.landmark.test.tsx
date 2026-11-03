@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { SettingsPanel } from './SettingsPanel';
@@ -32,3 +32,20 @@ it('reveals the landmark editor from map selection, including a repeated selecti
 });
 
 afterEach(() => vi.restoreAllMocks());
+
+it('places the collapsible location chapters between landmarks and overlays', () => {
+  useAppStore.getState().reset();
+  useAppStore.getState().setSettings({ language: 'en' });
+  render(<SettingsPanel />);
+  const landmarks = screen.getByText('Route landmarks', { selector: 'summary' }).parentElement;
+  const summary = screen.getByText(/Location chapters/, { selector: 'summary' });
+  const chapters = summary.parentElement as HTMLDetailsElement;
+  const overlays = screen.getByText(/Overlays/, { selector: 'summary' }).parentElement;
+  expect(chapters.previousElementSibling).toBe(landmarks);
+  expect(chapters.nextElementSibling).toBe(overlays);
+  expect(chapters.open).toBe(false);
+  fireEvent.click(summary);
+  expect(chapters.open).toBe(true);
+  expect(screen.getByLabelText('Boundary level while moving')).toBeInTheDocument();
+  cleanup();
+});

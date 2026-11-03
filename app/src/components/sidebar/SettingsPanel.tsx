@@ -13,6 +13,7 @@ import { RouteLandmarksEditor } from './RouteLandmarksEditor';
 import { MapNavigationGuide } from './MapNavigationGuide';
 import { CinematicCameraEditor } from './CinematicCameraEditor';
 import { LocationChapterControls } from './LocationChapterControls';
+import { levelCode } from '@/utils/locationBoundaries';
 import {
   Map as MapIcon,
   Video,
@@ -350,6 +351,11 @@ export function SettingsPanel() {
         <div className="px-3 pb-3"><RouteLandmarksEditor /></div>
       </details>
 
+      <details className="rounded-lg border border-[var(--evergreen)]/20">
+        <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('locationChapters.title')} <span className="font-normal text-[var(--evergreen-60)]"> · {settings.locationChapters?.level && settings.locationChapters.level !== 'off' ? levelCode(settings.locationChapters.level) : t('locationChapters.off')}</span></summary>
+        <div className="px-3 pb-3"><LocationChapterControls /></div>
+      </details>
+
       {/* Map Overlays */}
       <details className="rounded-lg border border-[var(--evergreen)]/20">
         <summary className="cursor-pointer px-3 py-3 text-sm font-bold text-[var(--evergreen)]">{t('settings.overlaysTitle')} <span className="font-normal text-[var(--evergreen-60)]"> · {MAP_OVERLAYS.filter((overlay) => settings.mapOverlays?.[overlay.id as keyof MapOverlays]).map((overlay) => t(overlay.nameKey)).join(', ') || t('settings.noOverlays')}</span></summary>
@@ -504,7 +510,6 @@ export function SettingsPanel() {
           ))}
         </div>
       </div>
-      <LocationChapterControls />
     </div>
   );
 }
