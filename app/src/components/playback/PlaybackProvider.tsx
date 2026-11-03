@@ -2,13 +2,14 @@ import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
+import { DEFAULT_INTRO_DURATION, getIntroDuration } from '@/utils/locationChapterCamera';
 
 interface PlaybackProviderProps {
   children: React.ReactNode;
 }
 
 // Animation timing constants
-const INTRO_DURATION = 2500; // Country context, then a smooth move into the route start
+const INTRO_DURATION = DEFAULT_INTRO_DURATION;
 const OUTRO_DELAY = 0; // Start the final fly-out as soon as the route ends
 const OUTRO_DURATION = 3000; // 3 seconds for zoom-out
 const AUTO_RESET_DELAY = 3000; // 3 seconds after outro before auto-reset
@@ -24,6 +25,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
   const cinematicPlayed = useAppStore((state) => state.cinematicPlayed);
   const animationPhase = useAppStore((state) => state.animationPhase);
   const isDeterministicExport = useAppStore((state) => state.isDeterministicExport);
+  const introDuration = useAppStore((state) => getIntroDuration(state.settings.locationChapters));
   const setPlayback = useAppStore((state) => state.setPlayback);
   const pause = useAppStore((state) => state.pause);
   const setCinematicPlayed = useAppStore((state) => state.setCinematicPlayed);
@@ -104,7 +106,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
     introTimeoutRef.current = setTimeout(() => {
       setCinematicPlayed(true);
       setAnimationPhase('playing');
-    }, INTRO_DURATION);
+    }, introDuration);
 
     return () => {
       if (introTimeoutRef.current) {
@@ -112,7 +114,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
         introTimeoutRef.current = null;
       }
     };
-  }, [animationPhase, isDeterministicExport, setCinematicPlayed, setAnimationPhase]);
+  }, [animationPhase, introDuration, isDeterministicExport, setCinematicPlayed, setAnimationPhase]);
 
   // Animation loop - only run when in 'playing' phase
   useEffect(() => {

@@ -435,7 +435,28 @@ export type StatId =
   | 'speed'
   | 'altitude';
 
+export interface LocationChapterSettings {
+  level: 'off' | 'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5';
+  color: string;
+  width: number;
+  fill: boolean;
+  showName: boolean;
+  showFlag: boolean;
+  zoomToPlace: boolean;
+  zoomDurationSeconds?: number;
+  introZoomToPlace?: boolean;
+  introCountryFirst?: boolean;
+  introLevels?: Array<'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5'>;
+  /** Explicitly keeps opening reveals enabled when travel reveals are off. */
+  introWhenPlaybackOff?: boolean;
+  introDurationSeconds?: number;
+  traceBorder?: boolean;
+  minimumStaySeconds?: number;
+  durationSeconds: number;
+}
+
 export interface AppSettings {
+  locationChapters: LocationChapterSettings;
   unitSystem: UnitSystem;
   language: LanguageCode;
   mapStyle: MapStyle;

@@ -5,10 +5,12 @@ import type { PaintedTrailMarker } from '@/utils/paintedTrailMarker';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
+import { useStartLocationLevels } from '@/hooks/useStartLocationLevels';
 import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
 import { useSuggestedFollowBehindDistance } from '@/components/map/hooks/useSuggestedFollowBehindDistance';
 import { MapElevationProfile } from './MapElevationProfile';
 import { ComparisonLeaderboard } from './ComparisonLeaderboard';
+import { LocationChapterLabel } from './LocationChapterLabel';
 import { COMPARISON_MARKER_SIZE } from '@/utils/comparisonMarker';
 import { useI18n } from '@/i18n/useI18n';
 import { areFollowingSamePath } from '@/utils/routeComparisonSharedPath';
@@ -36,6 +38,8 @@ import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
 import { useTilePreloadDiagnostics } from './hooks/useTilePreloadDiagnostics';
 import { useTrackTrimPreview } from './hooks/useTrackTrimPreview';
+import { useLocationChapters } from './hooks/useLocationChapters';
+import { useLocationStartCue } from './hooks/useLocationStartCue';
 import { useMapControlLabels } from './hooks/useMapControlLabels';
 import type { CropPreviewMetrics } from '@/utils/crop';
 
@@ -120,6 +124,7 @@ export function TrailMap(_props: TrailMapProps) {
     totalDistance,
     routeProgress,
   } = useComputedJourney();
+  useStartLocationLevels(allCoordinates[0]);
 
   // Derive the current track name for the label
   const currentTrackName = currentSegment?.segment.type === 'track' && currentSegment.segment.trackId
@@ -298,8 +303,17 @@ export function TrailMap(_props: TrailMapProps) {
   const recordedStyle = useMemo(() => ({ colorMode: trailStyle.colorMode, trailColor: trailStyle.trailColor, colorZones: trailStyle.colorZones, segmentTimings: computedJourney?.segmentTimings ?? [] }), [trailStyle.colorMode, trailStyle.trailColor, trailStyle.colorZones, computedJourney]);
   useRecordedElevationLayer(map, isMapLoaded, recordedElevationEnabled, recordedPoints, currentPosition, completedCoordinates, markerRef, recordedStyle, trailStyle.ghostTrailOpacity);
 
+  const locationChapter = useLocationChapters(map, isMapLoaded, settings.locationChapters, allCoordinates, currentPosition, playback.currentTime, animationPhase, cameraMode !== 'overview' && !routeComparisonActive);
+  useLocationStartCue(map, isMapLoaded, animationPhase, allCoordinates[0], settings.locationChapters?.color ?? '#ffbd66', locationChapter.introStages.length > 0);
+  const introStageOverrides = useMemo(() => locationChapter.introStages.flatMap(stage => stage.camera ? [stage.camera] : []), [locationChapter.introStages]);
+
   useTrailPlaybackCamera({
     activeTrack,
+    introStartOverride: locationChapter.introCamera,
+    introRegionOverride: locationChapter.introRegionCamera,
+    introStageOverrides,
+    locationChapters: settings.locationChapters,
+    locationChapterCameraCue: locationChapter.cameraCueRef,
     activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
     allCoordinates,
     cameraCoordinates: cameraPathCoordinates,
@@ -388,6 +402,9 @@ export function TrailMap(_props: TrailMapProps) {
     smoothBearingRef,
     targetBearingRef,
     totalDurationMs: playback.totalDuration,
+    locationBoundariesLoading: locationChapter.loading,
+    introStartOverride: locationChapter.introCamera,
+    introStageOverrides,
   });
 
   const tileDiagnostics = useTilePreloadDiagnostics({
@@ -418,6 +435,8 @@ export function TrailMap(_props: TrailMapProps) {
     playbackProgress: playback.progress,
     playbackSpeed: playback.speed,
     totalDurationMs: playback.totalDuration,
+    locationFeatures: locationChapter.features,
+    zoomToPlace: Boolean(settings.locationChapters?.zoomToPlace),
   });
 
   useEffect(() => {
@@ -528,6 +547,12 @@ export function TrailMap(_props: TrailMapProps) {
     <div className="w-full h-full relative">
       <div ref={mapContainer} className="w-full h-full" />
 
+      <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : "ready"} />
+      {locationChapter.label && <LocationChapterLabel label={locationChapter.label} accent={settings.locationChapters?.color ?? '#ffbd66'} font={trailStyle.overlayFont} />}
+      {locationChapter.credit && <div className="tr-location-credit absolute bottom-1 left-1 z-20 bg-black/75 px-1 text-[10px] text-white">{locationChapter.credit}</div>}
+      {locationChapter.loading && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.loading')}</div>}
+      {locationChapter.error && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.unavailable')}{locationChapter.missing.length > 0 && ` ${locationChapter.missing.join(', ')}`}</div>}
+      {!locationChapter.error && locationChapter.missing.length > 0 && !isExporting && <div role="status" className="absolute left-4 top-4 z-20 max-w-[80%] rounded bg-black/75 px-3 py-2 text-xs text-white">{t('locationChapters.partialCoverage')}: {locationChapter.missing.join(', ')}</div>}
       {!isMapLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--canvas)]">
           <div className="flex items-center gap-3">

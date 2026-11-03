@@ -3,6 +3,7 @@ import type { en } from './en';
 import type { LocaleMessages } from '../languages';
 
 export const zhTW = {
+  locationChapters: { openingOnly: "僅開場", startChecking: "查詢中…", startMissing: "起點無資料", startFailed: "查詢失敗", startNoRoute: "新增路線以查看起點的地點。", startLoading: "正在查詢路線起點的地點…", startNone: "找不到起點的行政區邊界。", startError: "部分層級無法查詢。", startRetry: "重試", zoomDuration: "鏡頭移動時間（秒）", zoomDurationHint: "縮小、停留及返回的總時間。數值越大，移動越慢。", revealDurationHint: "邊界及名稱的顯示時間。開啟縮放時，會在鏡頭移動期間顯示，除非進入下一個地點。", playbackTitle: "播放途中", playbackLevel: "移動時的邊界層級", playbackLevelHint: "選擇沿途要顯示的地點。西班牙的 ADM3 是市鎮；開場層級另外設定。", offAll: "關閉所有地點動畫", playbackZoom: "進入地點時縮小地圖", minimumStay: "停留最短時間（秒）", minimumStayHint: "以影片時間計算。短暫經過市鎮可設為 0；提高數值可減少邊界抖動。", appearanceTitle: "邊界及名稱樣式", introZoom: "開場縮放時框住地點", revealDuration: "顯示時間（秒）", adminLevel: "行政層級", introLevels: "開場邊界層級", introLevelsHint: "選擇要顯示的層級，將依國家至地方的順序播放。地方層級依國家而異，可能包含鄉鎮；無資料的層級會略過。", partialCoverage: "部分邊界無法載入", playHint: '按下播放以預覽沿途的地點動畫。', coverage: '邊界涵蓋範圍不一，可能略過小地點或短暫的跨界。 詳細層級可能需要下載每個國家的大型資料。', loading: '正在載入地理邊界…', privacy: '邊界請求會向 geoBoundaries 和 GitHub 透露路線經過的國家；路線點保留在瀏覽器中。', notReady: '請等待邊界載入，或在匯出前關閉地點章節。', title: "地點與邊界動畫", description: '突顯旅途中經過的地點。', level: '邊界層級', off: '關閉', country: '國家', region: '地區', color: '邊界顏色', width: '邊界寬度', fill: '突顯區域', showName: '顯示地名', showFlag: '顯示國旗', zoom: '縮小以顯示每個地點', introCountryFirst: '開始縮放時先顯示國家，再顯示地區', traceBorder: '描繪邊界', introDuration: '開場時間（秒）', duration: '持續時間（秒）', unavailable: '此路線的邊界資料無法使用。', credit: '邊界：geoBoundaries 及原始資料提供者。國家查詢：Natural Earth。' },
   app: {
     title: 'Trail Replay', subtitle: 'GPX 與 KML 軌跡視覺化',
     welcomeTitle: '歡迎使用 TrailReplay',
@@ -65,6 +66,7 @@ export const zhTW = {
     dependencies: '這份重播已有媒體、標註、比較軌跡、鏡頭關鍵影格、交通路段、已編輯的爬升／下降區段或分段顏色。你可以預覽並下載裁切後的 GPX；若要直接套用，請在加入上述內容前先裁切軌跡。',
   },
   settings: {
+    previousMapStyles: "上一組地圖樣式", nextMapStyles: "下一組地圖樣式",
     mapCameraTitle: '設定地圖與鏡頭', mapCameraHint: '地圖是影片的背景，請選擇地圖樣式、地形，以及跟隨路線的觀看角度。',
     title: '地圖設定', overlaysTitle: '疊加圖層', noOverlays: '無啟用圖層', moreMapStyles: '更多地圖樣式', mapControlsHelp: '地圖操作', cameraTitle: '鏡頭控制', terrainTitle: '地形', displayOptions: '顯示選項',
     routeElevationMode: '路線高度', followTerrainElevation: '跟隨地形', followRouteElevation: '跟隨路線高度', routeElevationHint: '使用檔案中記錄的高度。缺少高度的點可能顯示在海平面。',

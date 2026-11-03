@@ -11,6 +11,7 @@ import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
 import {
   getOpeningPreloadProgresses,
   getPredictivePlaybackPoses,
+  getRouteCoordinateAtProgress,
   type ReplayCameraMode,
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
@@ -27,6 +28,8 @@ import {
   preloadTileImage,
   TileRequestScheduler,
 } from '@/utils/tileRequestScheduler';
+import { containsPosition, type LocationFeature } from '@/utils/locationBoundaries';
+import { cameraForPlace } from './useLocationChapters';
 
 const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // Discovery only needs MapLibre to submit its tile requests. Waiting for idle
@@ -57,6 +60,8 @@ interface UseReplayTileWarmupParams {
   playbackSpeed: number;
   totalDurationMs: number;
   diagnostics: TilePreloadObserver;
+  locationFeatures?: LocationFeature[];
+  zoomToPlace?: boolean;
 }
 
 /**
@@ -300,7 +305,27 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           });
         }
       }
-      const poses = deduplicateCameraPoses([...playbackPoses, ...outroPoses]);
+      // Route-only prediction misses the wide country/region views entirely.
+      // Discover the next places and sample the zoom path on the hidden map,
+      // keeping the visible camera untouched.
+      const placePoses: ReplayCameraPose[] = [];
+      if (current.zoomToPlace && current.locationFeatures?.length) {
+        const end = Math.min(1, current.playbackProgress + horizonMs / Math.max(1, current.totalDurationMs));
+        const seen = new Set<string>();
+        for (let i = 0; i <= 48 && seen.size < 3; i++) {
+          const progress = current.playbackProgress + (end - current.playbackProgress) * i / 48;
+          const point = getRouteCoordinateAtProgress(current.allCoordinates, progress);
+          if (!point) continue;
+          const feature = current.locationFeatures.find(item => containsPosition(item, point));
+          if (!feature || seen.has(feature.properties.id)) continue;
+          seen.add(feature.properties.id);
+          const target = cameraForPlace(map, feature, point);
+          const from = getReplayWarmupPose({ cameraMode: current.cameraMode, cinematicKeyframes: current.cinematicKeyframes,
+            coordinates: current.allCoordinates, elevationData: current.elevationData, followBehindZoomLevel: current.followBehindZoomLevel, progress });
+          if (target && from) placePoses.push(...sampleCameraTransition(from, target, 12));
+        }
+      }
+      const poses = deduplicateCameraPoses([...placePoses, ...playbackPoses, ...outroPoses]);
 
       try {
         for (const [poseIndex, pose] of poses.entries()) {

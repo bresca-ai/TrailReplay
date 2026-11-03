@@ -1,6 +1,9 @@
 import { help } from './enHelp';
 
 export const en = {
+  locationChapters: { openingOnly: "Opening only", startChecking: "Checking…", startMissing: "Not at start", startFailed: "Lookup failed", startNoRoute: "Add a route to see places at its start.", startLoading: "Checking places at the route start…", startNone: "No boundary levels found at the route start.", startError: "Some levels could not be checked.", startRetry: "Retry", zoomDuration: "Camera move duration (seconds)", zoomDurationHint: "Total time to zoom out, hold and return. Higher values make the movement slower.", revealDurationHint: "How long the border and name appear. With zoom on, they stay through the camera move unless another place is entered.", playbackTitle: "During the replay", playbackLevel: "Boundary level while moving", playbackLevelHint: "Choose the places revealed as the marker travels. In Spain, ADM3 shows municipalities. Opening selections are separate.", offAll: "Off — all location animations", playbackZoom: "Zoom out when entering a place", minimumStay: "Minimum time inside (seconds)", minimumStayHint: "Measured in video time. Use 0 for brief town crossings; increase it to reduce border jitter.", appearanceTitle: "Border and label style", introZoom: "Fit places during the opening zoom", revealDuration: "Reveal duration (seconds)", adminLevel: "Administrative level", introLevels: "Opening boundary levels", introLevelsHint: "Select any levels; they play from country to local. Local levels vary by country and may include towns. Unavailable levels are skipped.", partialCoverage: "Some boundaries could not be loaded", playHint: 'Press play to preview place reveals along your route.', coverage: 'Boundary coverage varies; small places or brief crossings may be missed. Detailed levels can require large downloads for each country.', loading: 'Loading location boundaries…', privacy: 'Boundary requests disclose the countries along your route to geoBoundaries and GitHub; route points stay in your browser.', notReady: 'Wait for location boundaries to load, or turn off place and border animations before exporting.',
+    title: "Place & border animations", description: 'Highlight places as your trip crosses them.', level: 'Boundary level', off: 'Off', country: 'Countries', region: 'Regions', color: 'Border color', width: 'Border width', fill: 'Highlight area', showName: 'Show place name', showFlag: 'Show country flag', zoom: 'Zoom out to show each place', introCountryFirst: 'Show country, then region during the opening zoom', traceBorder: 'Trace the border', introDuration: 'Opening duration (seconds)', duration: 'Duration (seconds)', unavailable: 'Location boundaries unavailable for this route.', credit: 'Boundaries: geoBoundaries and original data providers. Country lookup: Natural Earth.',
+  },
   app: {
     title: 'Trail Replay',
     subtitle: 'GPX & KML VISUALIZATION',
@@ -144,6 +147,7 @@ export const en = {
     dependencies: 'This replay has media, annotations, comparison routes, camera keyframes, transport segments, edited elevation sections or color zones. You can preview and download a trimmed GPX. To apply it here, trim before adding that content.',
   },
   settings: {
+    previousMapStyles: "Previous map styles", nextMapStyles: "Next map styles",
     mapCameraTitle: 'Choose the world and camera',
     mapCameraHint: 'The map is the landscape of your video. Choose its look, terrain and the viewpoint that follows your route.',
     title: 'Map Settings',

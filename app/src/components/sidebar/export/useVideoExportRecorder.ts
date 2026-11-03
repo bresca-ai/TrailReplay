@@ -1,6 +1,8 @@
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { VIDEO_LOGO_URL } from './videoExportBrand';
-import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { getIntroDuration, getIntroLevels } from '@/utils/locationChapterCamera';
+import { overlayCanvasFontFamily } from '@/utils/typography';
 import { useAppStore } from '@/store/useAppStore';
 import {
   getBlobSizeBucket,
@@ -239,6 +241,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const { fps } = videoExportSettings;
     const frameDurationMs = 1000 / fps;
     const store = useAppStore.getState();
+    const introDuration = getIntroDuration(store.settings.locationChapters);
     const routeDurationMs = store.playback.totalDuration;
     const annotations = resolveSharedRouteMoments(store.textAnnotations, store.journeySegments, store.tracks, store.playback.routeTimingMode);
     const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations);
@@ -267,14 +270,14 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     store.setAnimationPhase('intro');
     setExportStage(t('export.recordingIntro'));
     await waitForMapFrame();
-    await captureDeterministicPhase(INTRO_DURATION, coverDurationMs, true);
+    await captureDeterministicPhase(introDuration, coverDurationMs, true);
 
     if (!isRecordingRef.current || recordingCancelledRef.current) return;
 
     store.setCinematicPlayed(true);
     store.setAnimationPhase('playing');
     setExportStage(describeRecordingStage(0, frameCount));
-    let encodedDurationMs = coverDurationMs + INTRO_DURATION;
+    let encodedDurationMs = coverDurationMs + introDuration;
     // Mirrors App.tsx's live-playback picture trigger (`getTriggeredPlaybackPictures`),
     // but drives its own hold here so the export can freeze the route
     // position for the picture's full `displayDuration` instead of just
@@ -543,6 +546,12 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
 
   const handleStartExport = useCallback(async () => {
+    const chapterStatus = document.querySelector('[data-location-chapters-status]')?.getAttribute('data-location-chapters-status');
+    const chapterSettings = useAppStore.getState().settings.locationChapters;
+    if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0) && chapterStatus !== 'ready') {
+      alert(t('locationChapters.notReady'));
+      return;
+    }
     const mapCanvas = document.querySelector('.maplibregl-canvas') as HTMLCanvasElement | null;
     if (!mapCanvas) {
       alert(t('export.noCanvas'));
@@ -609,6 +618,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
+      const chapterFont = useAppStore.getState().settings.trailStyle.overlayFont;
+      const chapterSettings = useAppStore.getState().settings.locationChapters;
+      if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0)) {
+        await document.fonts.load(`700 24px ${overlayCanvasFontFamily(chapterFont)}`).catch(() => []);
+      }
       await document.fonts.ready;
       // Load saved symbols before rendering the first video frame.
       const exportState = useAppStore.getState();

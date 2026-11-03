@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
-import { INTRO_DURATION, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { applyLocationChapterCamera, getIntroDuration, locationChapterIntroProgressRef, locationIntroEasing, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
-import type { OverlayFont, TrailColorZone } from '@/types';
+import type { LocationChapterSettings, OverlayFont, TrailColorZone } from '@/types';
 import { getExportFrameFitPadding } from '@/utils/crop';
 import type { CropPreviewMetrics } from '@/utils/crop';
 import { overlayFontFamily } from '@/utils/typography';
@@ -47,6 +48,11 @@ import {
 } from '@/utils/cinematicCameraAnchor';
 
 interface UseTrailPlaybackCameraParams {
+  introStartOverride?: TransitionCameraPose;
+  introRegionOverride?: TransitionCameraPose;
+  introStageOverrides?: TransitionCameraPose[];
+  locationChapters?: LocationChapterSettings;
+  locationChapterCameraCue?: React.RefObject<LocationChapterCameraCue | null>;
   activeTrack: { color: string; points: Array<{ heartRate: number | null }> } | null | undefined;
   activeTextAnnotationId: string | null;
   allCoordinates: number[][];
@@ -204,6 +210,11 @@ export function updatePlaybackMarkerElement(
 
 export function useTrailPlaybackCamera({
   activeTrack,
+  introStartOverride,
+  introRegionOverride,
+  introStageOverrides,
+  locationChapters,
+  locationChapterCameraCue,
   activeTextAnnotationId,
   allCoordinates,
   cameraCoordinates,
@@ -245,6 +256,11 @@ export function useTrailPlaybackCamera({
   const smoothedZoomTargetRef = useRef<number | null>(null);
   const trailRevisionRef = useRef(0);
   const transitionStartRef = useRef<{ segmentIndex: number | undefined; pose: TransitionCameraPose } | null>(null);
+  const chapterBasePoseRef = useRef<TransitionCameraPose | null>(null);
+  const chapterRenderedPoseRef = useRef<TransitionCameraPose | null>(null);
+  const chapterRenderedTimeRef = useRef<number | null>(null);
+  const lastChapterStartRef = useRef<number | null>(null);
+  const chapterHandoffRef = useRef<{ from: TransitionCameraPose; start: number } | null>(null);
 
   // The height filter samples this planned anchor path, not raw switchbacks.
   // Prepare it only when authoring inputs change, never on the playback clock.
@@ -300,6 +316,31 @@ export function useTrailPlaybackCamera({
 
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded || !currentPosition) return;
+
+    const composeChapterPose = <T extends TransitionCameraPose>(base: T, cue: LocationChapterCameraCue | null): T => {
+      if (chapterRenderedTimeRef.current !== null && currentTimeMs < chapterRenderedTimeRef.current) {
+        chapterHandoffRef.current = null;
+        lastChapterStartRef.current = null;
+      }
+      chapterRenderedTimeRef.current = currentTimeMs;
+      const cueStart = cue?.startTime ?? null;
+      if (cueStart !== lastChapterStartRef.current && lastChapterStartRef.current !== null && chapterRenderedPoseRef.current) {
+        chapterHandoffRef.current = { from: chapterRenderedPoseRef.current, start: currentTimeMs };
+      }
+      lastChapterStartRef.current = cueStart;
+      let result = applyLocationChapterCamera(base, cue, currentTimeMs);
+      const handoff = chapterHandoffRef.current;
+      if (handoff) {
+        const x = Math.max(0, Math.min(1, (currentTimeMs - handoff.start) / 350));
+        const weight = x * x * (3 - 2 * x);
+        const deltaLng = ((result.center[0] - handoff.from.center[0] + 540) % 360) - 180;
+        result = { ...result, center: [handoff.from.center[0] + deltaLng * weight, handoff.from.center[1] + (result.center[1] - handoff.from.center[1]) * weight],
+          zoom: handoff.from.zoom + (result.zoom - handoff.from.zoom) * weight, pitch: handoff.from.pitch + (result.pitch - handoff.from.pitch) * weight };
+        if (x >= 1) chapterHandoffRef.current = null;
+      }
+      chapterRenderedPoseRef.current = result;
+      return result;
+    };
 
     const isCameraTransition = currentSegment?.segment.transportMode === 'camera';
     const shouldShowPlaybackAdornment = !isCameraTransition && shouldRenderPlaybackAdornment({
@@ -480,7 +521,7 @@ export function useTrailPlaybackCamera({
           const center = mapRef.current.getCenter();
           transitionStartRef.current = {
             segmentIndex: segment.segmentIndex,
-            pose: { center: [center.lng, center.lat], zoom: mapRef.current.getZoom(), pitch: mapRef.current.getPitch(), bearing: mapRef.current.getBearing() },
+            pose: chapterBasePoseRef.current ?? { center: [center.lng, center.lat], zoom: mapRef.current.getZoom(), pitch: mapRef.current.getPitch(), bearing: mapRef.current.getBearing() },
           };
         }
         const start = transitionStartRef.current.pose;
@@ -499,7 +540,9 @@ export function useTrailPlaybackCamera({
         const { zoom, pitch } = transitionSettings(segment);
         const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(mapRef.current.getMaxZoom(), zoom));
         const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, wideZoom, pitch);
-        mapRef.current.jumpTo(pose);
+        const cue = animationPhase === 'playing' ? locationChapterCameraCue?.current ?? null : null;
+        mapRef.current.jumpTo(composeChapterPose(pose, cue));
+        chapterBasePoseRef.current = cue || chapterHandoffRef.current ? pose : null;
         smoothedCenterRef.current = pose.center;
         smoothBearingRef.current = pose.bearing;
         targetBearingRef.current = pose.bearing;
@@ -614,7 +657,8 @@ export function useTrailPlaybackCamera({
         frameTimeMultiplier,
       );
 
-      const currentZoom = mapRef.current.getZoom();
+      const cue = locationChapterCameraCue?.current ?? null;
+      const currentZoom = chapterBasePoseRef.current?.zoom ?? mapRef.current.getZoom();
       const stabilizedZoomTarget = smoothedZoomTargetRef.current === null || deltaMs === null
         ? targetPose.zoom
         : smoothZoomTarget(
@@ -632,7 +676,7 @@ export function useTrailPlaybackCamera({
         reactivity,
         frameTimeMultiplier,
       );
-      const newPitch = smoothPitch(mapRef.current.getPitch(), targetPose.pitch, undefined, undefined, reactivity, frameTimeMultiplier);
+      const newPitch = smoothPitch(chapterBasePoseRef.current?.pitch ?? mapRef.current.getPitch(), targetPose.pitch, undefined, undefined, reactivity, frameTimeMultiplier);
 
       // Chase the marker's exact position the same way live playback used to
       // get "for free" from re-triggering `map.easeTo({ center, duration: 100 })`
@@ -758,14 +802,16 @@ export function useTrailPlaybackCamera({
       // export was visibly twitchier, since it was missing that lag. Now that
       // `smoothedCenter` reproduces the same lag deterministically, both
       // paths apply identical values the same way.
-      mapRef.current.jumpTo({
+      const playbackPose = {
         ...targetPose,
         ...centerElevation,
         center: smoothedCenter,
         zoom: usesRawPose ? targetPose.zoom : newZoom,
         pitch: usesRawPose ? targetPose.pitch : newPitch,
         bearing: usesRawPose ? targetPose.bearing : smoothBearingRef.current,
-      });
+      };
+      mapRef.current.jumpTo(composeChapterPose(playbackPose, cue));
+      chapterBasePoseRef.current = cue || chapterHandoffRef.current ? playbackPose : null;
     } else {
       if (!isCameraTransition) transitionStartRef.current = null;
       // Playback is paused/idle or a new export is starting: don't let a gap
@@ -773,6 +819,11 @@ export function useTrailPlaybackCamera({
       // delta once playback resumes.
       lastCameraFrameTimeRef.current = null;
       smoothedZoomTargetRef.current = null;
+      chapterBasePoseRef.current = null;
+      chapterRenderedPoseRef.current = null;
+      chapterRenderedTimeRef.current = null;
+      lastChapterStartRef.current = null;
+      chapterHandoffRef.current = null;
     }
 
     setCameraPosition({
@@ -806,6 +857,7 @@ export function useTrailPlaybackCamera({
     followBehindPitch,
     isInTransport,
     isMapLoaded,
+    locationChapterCameraCue,
     mapRef,
     markerRef,
     playbackProgress,
@@ -859,23 +911,46 @@ export function useTrailPlaybackCamera({
         });
 
     if (animationPhase === 'intro' && introPose) {
-      const introStartPose = getDeterministicIntroStartPose({
+      locationChapterIntroProgressRef.current = 0;
+      const introStartPose = introStartOverride ?? getDeterministicIntroStartPose({
         coordinates: allCoordinates,
         introTo: introPose,
       });
-      mapRef.current.stop();
-      if (introStartPose) mapRef.current.jumpTo(introStartPose);
-      mapRef.current.flyTo({
-        ...introPose,
-        duration: INTRO_DURATION,
-        // Ease both ends: linger just long enough on the country-scale start
-        // marker to establish location, then settle into the first playback
-        // pose without the old ease-out's apparent pause.
-        easing: (value) => value * value * (3 - 2 * value),
-      });
+      const map = mapRef.current;
+      const duration = getIntroDuration(locationChapters);
+      map.stop();
+      if (introStartPose) map.jumpTo(introStartPose);
+      const stages = introStageOverrides?.length ? introStageOverrides : introRegionOverride && introStartPose ? [introStartPose, introRegionOverride] : [];
+      let cancelled = false;
+      let pending: (() => void) | undefined;
+      const smooth = (value: number) => { const x = Math.max(0, Math.min(1, value)); return x * x * (3 - 2 * x); };
+      const playStage = (index: number) => {
+        if (cancelled) return;
+        const count = Math.max(1, stages.length);
+        const slot = .8 / count;
+        const start = index * slot;
+        if (index < stages.length - 1) {
+          pending = () => { pending = undefined; playStage(index + 1); };
+          map.once('moveend', pending);
+          map.easeTo({ ...stages[index + 1], duration: duration * slot, easing: (value) => {
+            locationChapterIntroProgressRef.current = start + value * slot;
+            return smooth((value - .65) / .35);
+          } });
+        } else {
+          const length = 1 - start;
+          map.flyTo({ ...introPose, duration: duration * length, easing: (value) => {
+            const progress = start + value * length;
+            locationChapterIntroProgressRef.current = progress;
+            return stages.length ? smooth((progress - .8) / .2)
+              : locationChapters?.level && locationChapters.level !== 'off' ? locationIntroEasing(value, false) : smooth(value);
+          } });
+        }
+      };
+      playStage(0);
 
       smoothBearingRef.current = introPose.bearing;
       targetBearingRef.current = introPose.bearing;
+      return () => { cancelled = true; if (pending) map.off('moveend', pending); };
     } else if (animationPhase === 'outro' && cameraMode !== 'overview' && allCoordinates.length > 0) {
       const bounds = new maplibregl.LngLatBounds();
       allCoordinates.forEach((coordinate) => bounds.extend(coordinate as [number, number]));
@@ -900,6 +975,10 @@ export function useTrailPlaybackCamera({
     allCoordinates,
     animationPhase,
     cameraMode,
+    introStartOverride,
+    introRegionOverride,
+    introStageOverrides,
+    locationChapters,
     cameraCoordinates,
     cinematicKeyframes,
     elevationData,

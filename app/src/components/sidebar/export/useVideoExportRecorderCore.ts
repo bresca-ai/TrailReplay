@@ -14,6 +14,7 @@ import {
   type JourneyPoint,
 } from '@/utils/journeyUtils';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { locationChapterIntroCameraRef, locationChapterIntroStagesRef } from '@/utils/locationChapterCamera';
 import {
   deduplicateCameraPoses,
   getDeterministicIntroStartPose,
@@ -49,6 +50,7 @@ import type { StudioDeliveryJob, StudioDeliveryRequest } from './studioDelivery'
 import { useExportOverlayCapture } from './useExportOverlayCapture';
 
 const EXPORT_TILE_PRELOAD_TIMEOUT_MS = 6000;
+const EXPORT_TILE_POSE_TIMEOUT_MS = 350;
 const EXPORT_OPENING_WINDOW_MS = 20000;
 const EXPORT_OPENING_SAMPLE_COUNT = 8;
 // A studio frame stops waiting after this long so one unreachable tile cannot
@@ -605,13 +607,14 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       progress: 0,
     });
     if (!introPose) return;
-    const introStartPose = getDeterministicIntroStartPose({
+    const introStartPose = locationChapterIntroCameraRef.current ?? getDeterministicIntroStartPose({
       coordinates: cameraPathCoordinates,
       introTo: introPose,
     });
     if (!introStartPose) return;
+    const stages = locationChapterIntroStagesRef.current.length ? [...locationChapterIntroStagesRef.current, introPose] : [introStartPose, introPose];
     const poses = deduplicateCameraPoses([
-      ...sampleCameraTransition(introStartPose, introPose),
+      ...stages.slice(1).flatMap((pose, index) => sampleCameraTransition(stages[index], pose)),
       ...getOpeningPreloadProgresses(
         routeDurationMs,
         EXPORT_OPENING_WINDOW_MS,
@@ -639,7 +642,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
           resolve();
         };
         map.once('idle', finish);
-        window.setTimeout(finish, Math.max(0, deadline - Date.now()));
+        window.setTimeout(finish, Math.max(0, Math.min(EXPORT_TILE_POSE_TIMEOUT_MS, deadline - Date.now())));
       });
     }
 
