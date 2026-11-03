@@ -601,6 +601,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       coordinates: cameraPathCoordinates,
       elevationData,
       followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
+      followBehindPitch: cameraSettings.followBehindPitch,
       progress: 0,
     });
     if (!introPose) return;
@@ -620,6 +621,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         coordinates: cameraPathCoordinates,
         elevationData,
         followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
+        followBehindPitch: cameraSettings.followBehindPitch,
         progress,
       })),
     ].filter((pose): pose is ReplayCameraPose => pose !== null));
@@ -643,7 +645,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     map.jumpTo(introStartPose);
     await waitForMapFrame();
-  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.mode, elevationData, waitForMapFrame]);
+  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.followBehindPitch, cameraSettings.mode, elevationData, waitForMapFrame]);
 
   const captureDeterministicPhase = useCallback(async (
     durationMs: number,

@@ -318,6 +318,7 @@ export function TrailMap(_props: TrailMapProps) {
     elevationData,
     exportFrame: _props.exportFrame ?? null,
     followBehindZoomLevel,
+    followBehindPitch: cameraSettings.followBehindPitch,
     isExporting,
     isPlaying: playback.isPlaying,
     sharedComparisonColors: sharedRouteComparisons.map((track) => track.color),
@@ -378,6 +379,7 @@ export function TrailMap(_props: TrailMapProps) {
     cinematicKeyframes,
     elevationData,
     followBehindZoomLevel,
+    followBehindPitch: cameraSettings.followBehindPitch,
     isMapLoaded,
     isPlaying: playback.isPlaying,
     mapRef: map,
@@ -408,6 +410,7 @@ export function TrailMap(_props: TrailMapProps) {
     // the recording map own tile loading until the export completes.
     enabled: !isExporting,
     followBehindZoomLevel,
+    followBehindPitch: cameraSettings.followBehindPitch,
     isMapLoaded,
     isPlaying: playback.isPlaying,
     mapStyle: settings.mapStyle,

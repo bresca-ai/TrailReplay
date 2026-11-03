@@ -253,6 +253,8 @@ export interface CameraSettings {
     | 'medium'
     | 'far';
   followBehindZoomLevel: number;
+  /** Null retains the distance-dependent default tilt. */
+  followBehindPitch: number | null;
   /** 0 = maximally stable/smooth camera, 1 = maximally reactive/tight tracking. */
   cameraStability: number;
 }
@@ -440,6 +442,7 @@ export interface AppSettings {
   mapFilter: MapFilter;
   mapOverlays: MapOverlays;
   show3DTerrain: boolean;
+  terrainExaggeration: number;
   recordedElevationPrototype: boolean;
   showHeartRate: boolean;
   showPictures: boolean;
