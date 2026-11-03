@@ -40,9 +40,12 @@ it('makes the opening overview and playback zoom optional', async () => {
   expect(result.current.introCamera).toEqual({ center: [1, 1], zoom: 4.5, pitch: 0, bearing: 0 });
   rerender({ time: 1200, zoom: true, introZoom: undefined });
   expect(result.current.cameraCueRef.current).toMatchObject({ startTime: 0, duration: 10000, target: { zoom: 4.5 } });
+  expect(map.setPaintProperty).toHaveBeenLastCalledWith('location-chapter-trace-line', 'line-opacity', 1);
+  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-trace-line', 'line-gradient', ['step', ['line-progress'], '#ff0000', .0001, 'rgba(0,0,0,0)']);
   expect(jumpTo).not.toHaveBeenCalled();
   rerender({ time: 5000, zoom: true, introZoom: undefined });
   expect(result.current.label).toBe('🇪🇸 Spain');
+  expect(map.setPaintProperty).toHaveBeenCalledWith('location-chapter-trace-line', 'line-gradient', ['step', ['line-progress'], '#ff0000', .5, 'rgba(0,0,0,0)']);
   rerender({ time: 10000, zoom: true, introZoom: undefined });
   expect(result.current.label).toBe('');
   expect(result.current.cameraCueRef.current).toBeNull();

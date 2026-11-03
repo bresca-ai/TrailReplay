@@ -397,6 +397,7 @@ export function TrailMap(_props: TrailMapProps) {
     totalDurationMs: playback.totalDuration,
     locationBoundariesLoading: locationChapter.loading,
     introStartOverride: locationChapter.introCamera,
+    introStageOverrides,
   });
 
   const tileDiagnostics = useTilePreloadDiagnostics({
@@ -426,6 +427,8 @@ export function TrailMap(_props: TrailMapProps) {
     playbackProgress: playback.progress,
     playbackSpeed: playback.speed,
     totalDurationMs: playback.totalDuration,
+    locationFeatures: locationChapter.features,
+    zoomToPlace: Boolean(settings.locationChapters?.zoomToPlace),
   });
 
   useEffect(() => {

@@ -6,14 +6,14 @@ import type { FeatureCollection, Position } from 'geojson';
 import { containsPosition, countryEmoji, levelCode, loadRouteBoundaries, type LocationFeature } from '@/utils/locationBoundaries';
 import type { LocationChapterSettings } from '@/types';
 import { INTRO_DURATION } from '@/components/playback/PlaybackProvider';
-import { getIntroLevels, getMinimumStaySeconds, getZoomDurationSeconds, introStage, locationChapterIntroCameraRef, locationChapterIntroProgressRef, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
+import { getIntroLevels, getMinimumStaySeconds, getZoomDurationSeconds, introStage, locationChapterIntroCameraRef, locationChapterIntroStagesRef, locationChapterIntroProgressRef, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import type { LocationLevel } from '@/utils/locationBoundaries';
 const SOURCE = 'location-chapter', FILL = 'location-chapter-fill', GLOW = 'location-chapter-glow', LINE = 'location-chapter-line';
 const TRACE_SOURCE = 'location-chapter-trace', TRACE = 'location-chapter-trace-line';
 const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
 type PlaceCamera = { center: [number, number]; zoom: number; pitch: number; bearing: number };
 const emptyStages: Array<{ feature: LocationFeature; camera?: PlaceCamera }> = [];
-function cameraForPlace(map: MapLibreMap, feature: LocationFeature, point: Position): PlaceCamera | undefined {
+export function cameraForPlace(map: MapLibreMap, feature: LocationFeature, point: Position): PlaceCamera | undefined {
   const bounds = new LngLatBounds();
   const polygons = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates;
   // Distant islands should not shrink the part of the place containing the trip.
@@ -58,7 +58,9 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     setIntroResult({ features, layers: introLayers, coordinates, mode, enabled, stages });
     const camera = stages[0]?.camera;
     locationChapterIntroCameraRef.current = camera;
-    return () => { if (locationChapterIntroCameraRef.current === camera) locationChapterIntroCameraRef.current = undefined; };
+    const stageCameras = stages.flatMap(stage => stage.camera ? [stage.camera] : []);
+    locationChapterIntroStagesRef.current = stageCameras;
+    return () => { if (locationChapterIntroCameraRef.current === camera) locationChapterIntroCameraRef.current = undefined; if (locationChapterIntroStagesRef.current === stageCameras) locationChapterIntroStagesRef.current = []; };
   }, [coordinates, features, introLayers, introZoom, loaded, mapRef, mode]);
   useEffect(() => {
     let cancelled = false;
@@ -149,7 +151,11 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     const introOpacity = introStages.length > 1 ? Math.min(1, stage.local / .12, (1 - stage.local) / .12) : 1;
     const fadeIn = mode === 'country' || mode === 'region' ? 500 : 150;
     const opacity = phase === 'preloading' ? 0 : phase === 'intro' ? introOpacity : Math.min(1, age / fadeIn, Math.max(0, (duration - age) / 800));
-    const traceProgress = phase === 'intro' ? stage.local / .7 : age / Math.min(3000, duration * .7);
+    // For a place overview, let the camera arrive before drawing the border;
+    // otherwise the trace has already finished while the viewer is zooming out.
+    const traceProgress = phase === 'intro' ? stage.local / .7 : canZoom
+      ? (age - zoomDuration * .3) / Math.max(1, zoomDuration * .4)
+      : age / Math.min(3000, duration * .7);
     const baseLineOpacity = settings?.traceBorder !== false && traceProgress < 1 ? opacity * .3 : opacity;
     const target = previous.current.target;
     cameraCueRef.current = canZoom && target && age < zoomDuration
@@ -175,5 +181,5 @@ export function useLocationChapters(mapRef: RefObject<MapLibreMap | null>, loade
     setLabel(opacity > 0 && (settings?.showName || flag) ? `${flag} ${settings?.showName ? active.properties.name : ''}`.trim() : '');
   }, [cameraCanFollow, current, features, introProgress, introStages, layerRevision, loaded, mapRef, mode, phase, settings, time]);
   const preparingCamera = loaded && mode !== 'off' && (features.length > 0 || introLayers.some(layer => layer.features.length > 0)) && !introCurrent;
-  return { label, error, credit, missing, loading: loading || preparingCamera, introCamera, introRegionCamera, introStages, cameraCueRef };
+  return { label, error, credit, missing, loading: loading || preparingCamera, introCamera, introRegionCamera, introStages, cameraCueRef, features };
 }

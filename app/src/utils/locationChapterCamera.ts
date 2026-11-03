@@ -69,3 +69,4 @@ export function locationIntroEasing(time: number, countryFirst: boolean): number
 
 /** Session-local opening pose shared by the live map and video tile warm-up. */
 export const locationChapterIntroCameraRef: { current: ReplayCameraPose | undefined } = { current: undefined };
+export const locationChapterIntroStagesRef: { current: ReplayCameraPose[] } = { current: [] };

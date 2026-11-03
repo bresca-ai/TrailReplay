@@ -11,11 +11,13 @@ import {
   getOpeningReplayWarmupPoses,
   getReplayWarmupPose,
   getTransitionWarmupPoses,
+  sampleCameraTransition,
 } from '@/utils/replayCameraWarmupPlan';
 
 // Never hold the replay behind the preparation screen indefinitely. The opening
 // sequence gets the whole budget; each camera sample may finish sooner on idle.
 const PRELOAD_TIMEOUT_MS = 6000;
+const POSE_TIMEOUT_MS = 350;
 const RESTORED_VIEW_TIMEOUT_MS = 3000;
 const OPENING_WINDOW_MS = 12000;
 const OPENING_SAMPLE_COUNT = 5;
@@ -38,6 +40,7 @@ interface UseTilePreloadParams {
   totalDurationMs: number;
   locationBoundariesLoading?: boolean;
   introStartOverride?: ReplayCameraPose;
+  introStageOverrides?: ReplayCameraPose[];
 }
 
 /**
@@ -63,6 +66,7 @@ export function useTilePreload({
   totalDurationMs,
   locationBoundariesLoading = false,
   introStartOverride,
+  introStageOverrides,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
 
@@ -149,8 +153,9 @@ export function useTilePreload({
     // Opening is immediately visible, so spend the real idle-wait budget there
     // first. Once the deadline expires, remaining poses are still visited with
     // zero-delay discovery; the predictive map refreshes outro coverage later.
+    const openingStages = introStageOverrides?.length ? [...introStageOverrides, introPose] : [];
     const poses = deduplicateCameraPoses([
-      ...transitions.intro,
+      ...(openingStages.length > 1 ? openingStages.slice(1).flatMap((pose, index) => sampleCameraTransition(openingStages[index], pose)) : transitions.intro),
       ...openingPoses,
       ...transitions.outro,
     ]);
@@ -194,7 +199,9 @@ export function useTilePreload({
 
       map.jumpTo(pose);
       map.once('idle', finish);
-      activeTimeout = setTimeout(finish, Math.max(0, deadline - Date.now()));
+      // Do not let one slow viewport consume the whole budget: the rest of
+      // the zoom path still needs to submit tile requests before playback.
+      activeTimeout = setTimeout(finish, Math.max(0, Math.min(POSE_TIMEOUT_MS, deadline - Date.now())));
     });
 
     void (async () => {
@@ -221,6 +228,7 @@ export function useTilePreload({
     isMapLoaded,
     isPlaying,
     introStartOverride,
+    introStageOverrides,
     locationBoundariesLoading,
     mapRef,
     setAnimationPhase,
