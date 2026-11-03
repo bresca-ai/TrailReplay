@@ -8,6 +8,7 @@ it('lets users choose regional chapters and customize the border and labels', ()
   render(<LocationChapterControls />);
   fireEvent.change(screen.getByLabelText('Boundary level while moving'), { target: { value: 'region' } });
   expect(useAppStore.getState().settings.locationChapters.level).toBe('region');
+  fireEvent.click(screen.getByText('Border and label style'));
   fireEvent.change(screen.getByLabelText('Border color'), { target: { value: '#123456' } });
   fireEvent.change(screen.getByLabelText('Border width'), { target: { value: '5' } });
   fireEvent.click(screen.getByLabelText('Show country flag'));

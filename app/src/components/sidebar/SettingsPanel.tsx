@@ -200,7 +200,6 @@ export function SettingsPanel() {
 
   return (
     <div className="space-y-6">
-      <LocationChapterControls />
       {/* Camera Mode */}
       <div>
         <h3 className="text-sm font-bold text-[var(--evergreen)] mb-3 uppercase tracking-wide flex items-center gap-2">
@@ -505,6 +504,7 @@ export function SettingsPanel() {
           ))}
         </div>
       </div>
+      <LocationChapterControls />
     </div>
   );
 }
