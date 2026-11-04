@@ -189,7 +189,7 @@ export interface AppState {
   setCinematicPlayed: (played: boolean) => void;
   setAnimationPhase: (phase: 'idle' | 'preloading' | 'intro' | 'playing' | 'outro' | 'ended') => void;
   setExportPictureHoldElapsedMs: (elapsedMs: number | null) => void;
-  resetPlayback: () => void;
+  resetPlayback: (options?: { preserveSpeed?: boolean }) => void;
   setSettings: (settings: Partial<AppSettings>) => void;
   setCameraSettings: (settings: Partial<CameraSettings>) => void;
   setCameraMode: (mode: CameraMode) => void;
