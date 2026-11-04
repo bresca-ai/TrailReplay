@@ -1,4 +1,4 @@
-import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
+import { ArrayBufferTarget, Muxer, StreamTarget } from 'mp4-muxer';
 
 export interface Mp4CanvasEncoderOptions {
   width: number;
@@ -7,11 +7,13 @@ export interface Mp4CanvasEncoderOptions {
   bitrate: number;
   /** Upper bound used to reserve Fast Start metadata without retaining media. */
   expectedFrameCount?: number;
+  fileHandle?: FileSystemFileHandle;
 }
 
 export interface Mp4CanvasEncoder {
   /** The exact WebCodecs configuration selected after capability probing. */
   readonly config: Readonly<VideoEncoderConfig>;
+  readonly diskBacked: boolean;
   /**
    * Encode the current contents of the canvas at the given presentation time
    * (microseconds on the output timeline). Deterministic exports pass the fixed
@@ -111,25 +113,52 @@ export async function createMp4CanvasEncoder(
   const fastStart = Number.isSafeInteger(expectedFrameCount) && expectedFrameCount! > 0
     ? { expectedVideoChunks: expectedFrameCount }
     : false;
-  const muxer = new Muxer({
-    target: new ArrayBufferTarget(),
-    video: {
-      codec: 'avc',
-      width: options.width,
-      height: options.height,
-      // No frameRate: timestamps are real elapsed time (variable spacing), so we
-      // don't want the muxer snapping them to a fixed fps grid.
+  const stream = options.fileHandle ? await options.fileHandle.createWritable() : null;
+  let writes = Promise.resolve();
+  let writeError: unknown = null;
+  const target = stream ? new StreamTarget({
+    chunked: true,
+    chunkSize: 4 * 1024 * 1024,
+    onData(data, position) {
+      // The muxer callback is synchronous. Serialize writes and wait for them
+      // before accepting another frame so a slow disk cannot grow the queue.
+      const bytes = new Uint8Array(data);
+      writes = writes.then(async () => {
+        if (writeError) return;
+        try { await stream.write({ type: 'write', position, data: bytes }); }
+        catch (error) { writeError = error; }
+      });
     },
-    // Never use `in-memory`: it retains every media chunk and previously caused
-    // severe memory pressure on long exports. When the caller can provide a
-    // safe chunk-count upper bound, mp4-muxer reserves only lightweight moov
-    // metadata at the front; otherwise this remains a regular, seekable MP4
-    // with moov at the end.
-    fastStart,
-    // Deterministic exports own their media clock and must begin at zero. Strict
-    // mode catches timeline regressions instead of hiding them in the muxer.
-    firstTimestampBehavior: 'strict',
-  });
+  }) : new ArrayBufferTarget();
+  const drainWrites = async () => {
+    await writes;
+    if (writeError) throw writeError;
+  };
+  let muxer: Muxer<ArrayBufferTarget | StreamTarget>;
+  try {
+    muxer = new Muxer({
+      target,
+      video: {
+        codec: 'avc',
+        width: options.width,
+        height: options.height,
+        // No frameRate: timestamps are real elapsed time (variable spacing), so we
+        // don't want the muxer snapping them to a fixed fps grid.
+      },
+      // Never use `in-memory`: it retains every media chunk and previously caused
+      // severe memory pressure on long exports. When the caller can provide a
+      // safe chunk-count upper bound, mp4-muxer reserves only lightweight moov
+      // metadata at the front; otherwise this remains a regular, seekable MP4
+      // with moov at the end.
+      fastStart,
+      // Deterministic exports own their media clock and must begin at zero. Strict
+      // mode catches timeline regressions instead of hiding them in the muxer.
+      firstTimestampBehavior: 'strict',
+    });
+  } catch (error) {
+    if (stream) await stream.abort().catch(() => undefined);
+    throw error;
+  }
 
   let encoderError: Error | null = null;
   let submittedFrameCount = 0;
@@ -147,7 +176,13 @@ export async function createMp4CanvasEncoder(
       encoderError = error instanceof Error ? error : new Error(String(error));
     },
   });
-  encoder.configure(config);
+  try {
+    encoder.configure(config);
+  } catch (error) {
+    if (encoder.state !== 'closed') encoder.close();
+    if (stream) await stream.abort().catch(() => undefined);
+    throw error;
+  }
 
   const frameDurationMicros = Math.round(1_000_000 / options.fps);
   const keyFrameIntervalMicros = 2_000_000; // Force a keyframe at least every 2s.
@@ -169,6 +204,7 @@ export async function createMp4CanvasEncoder(
 
   return {
     config: Object.freeze({ ...config }),
+    diskBacked: stream !== null,
     async encodeCanvas(canvas, timestampMicros, durationMicros = frameDurationMicros) {
       if (finalized) throw new Error('Cannot encode a frame after the MP4 encoder has finished');
       if (encoderError) throw encoderError;
@@ -211,6 +247,7 @@ export async function createMp4CanvasEncoder(
         framesSinceFlush = 0;
         if (encoderError) throw encoderError;
       }
+      await drainWrites();
     },
     pendingFrames() {
       return encoder.encodeQueueSize;
@@ -227,13 +264,22 @@ export async function createMp4CanvasEncoder(
           );
         }
         muxer.finalize();
-        return new Blob([muxer.target.buffer], { type: 'video/mp4' });
+        await drainWrites();
+        if (stream && options.fileHandle) {
+          await stream.close();
+          return await options.fileHandle.getFile();
+        }
+        return new Blob([(target as ArrayBufferTarget).buffer], { type: 'video/mp4' });
+      } catch (error) {
+        if (stream) await stream.abort().catch(() => undefined);
+        throw error;
       } finally {
         if (encoder.state !== 'closed') encoder.close();
       }
     },
     close() {
       finalized = true;
+      if (stream) void writes.then(() => stream.abort()).catch(() => undefined);
       try {
         if (encoder.state !== 'closed') encoder.close();
       } catch {
