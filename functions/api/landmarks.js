@@ -52,7 +52,7 @@ function queryFor(bounds) {
 function routeBounds(points) {
   const lons = points.map((point) => point[0]);
   const lats = points.map((point) => point[1]);
-  return [Math.min(...lats) - ROUTE_PADDING.lat, Math.min(...lons) - ROUTE_PADDING.lon, Math.max(...lats) + ROUTE_PADDING.lat, Math.max(...lons) + ROUTE_PADDING.lon];
+  return [Math.max(-90, Math.min(...lats) - ROUTE_PADDING.lat), Math.max(-180, Math.min(...lons) - ROUTE_PADDING.lon), Math.min(90, Math.max(...lats) + ROUTE_PADDING.lat), Math.min(180, Math.max(...lons) + ROUTE_PADDING.lon)];
 }
 
 function tileIndex(value) {
@@ -71,12 +71,19 @@ function tileBounds(latIndex, lonIndex) {
 
 function tilesForBounds(bounds) {
   const [south, west, north, east] = bounds;
-  const tiles = [];
   // A bound ending exactly on a grid line does not need the next tile.
   const lastLat = tileIndex(north - 1e-9);
   const lastLon = tileIndex(east - 1e-9);
-  for (let lat = tileIndex(south); lat <= lastLat; lat += 1) {
-    for (let lon = tileIndex(west); lon <= lastLon; lon += 1) {
+  const firstLat = tileIndex(south);
+  const firstLon = tileIndex(west);
+  const rows = lastLat - firstLat + 1;
+  const columns = lastLon - firstLon + 1;
+  // Bound allocation and loop work before constructing any tile records.
+  if (![firstLat, firstLon, lastLat, lastLon].every(Number.isSafeInteger)
+    || rows < 1 || columns < 1 || rows * columns > MAX_CACHE_TILES) return null;
+  const tiles = [];
+  for (let lat = firstLat; lat <= lastLat; lat += 1) {
+    for (let lon = firstLon; lon <= lastLon; lon += 1) {
       tiles.push({ lat, lon, key: tileKey(lat, lon), bounds: tileBounds(lat, lon) });
     }
   }
@@ -273,12 +280,12 @@ export async function onRequestPost(context) {
   let body;
   try { body = await context.request.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
   const points = body?.points;
-  if (!Array.isArray(points) || points.length < 2 || points.length > MAX_POINTS || !points.every((point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite))) return json({ error: 'Expected 2–180 valid [longitude, latitude] points' }, 400);
+  if (!Array.isArray(points) || points.length < 2 || points.length > MAX_POINTS || !points.every((point) => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite) && point[0] >= -180 && point[0] <= 180 && point[1] >= -90 && point[1] <= 90)) return json({ error: 'Expected 2–180 valid [longitude, latitude] points' }, 400);
 
   const bounds = routeBounds(points);
   if (bounds[2] - bounds[0] > MAX_SPAN_DEGREES || bounds[3] - bounds[1] > MAX_SPAN_DEGREES) return json({ error: 'Route corridor is too large for nearby-place lookup' }, 400);
   const tiles = tilesForBounds(bounds);
-  if (tiles.length > MAX_CACHE_TILES) return json({ error: 'Route corridor is too large for nearby-place lookup' }, 400);
+  if (!tiles) return json({ error: 'Route corridor is too large for nearby-place lookup' }, 400);
 
   try {
     // The database binding is deployed before its first planet import. Until
