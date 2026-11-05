@@ -160,7 +160,7 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = '';
-                if (file) relinkPictureFile(picture.id, file);
+                if (file) relinkPictureFile(picture.id, [file]);
               }}
             />
           </div>

@@ -657,6 +657,11 @@ export const de = {
     noVideos: 'Keine Videos hochgeladen',
     noVideosHint: 'Füge Videos hinzu, die auf der Karte angezeigt werden sollen',
     relinkFile: 'Datei erneut verknüpfen',
+    relinkFolder: {
+      pictures: '{count} Bild(er) ohne Verknüpfung',
+      videos: '{count} Video(s) ohne Verknüpfung',
+      hint: 'Hier klicken, um alle unverknüpften Medien mit Dateien in einem lokalen Ordner zu verknüpfen.'
+    },
     placeholderFile: 'Datei nicht angehängt (aus einem gespeicherten Projekt wiederhergestellt)',
     previewPicture: 'Vorschaubild',
     trailAlt: 'Pfad',

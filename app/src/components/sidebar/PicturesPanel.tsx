@@ -12,6 +12,32 @@ import { Play, Trash2, Image as ImageIcon, Video, MapPin, Clock, Settings2, Link
 
 const DEFAULT_DISPLAY_DURATION = 3000; // 3 seconds
 
+type RelinkFolderKind = 'pictures' | 'videos';
+
+function RelinkFolderButton(props: {
+  kind: RelinkFolderKind,
+  missing: number,
+  startRelink: (kind: RelinkFolderKind) => void
+}) {
+  const { t } = useI18n();
+
+  return <div className="mt-2 rounded-lg border border-[var(--evergreen)]/15 p-3">
+    <label className="flex items-center justify-between gap-3 cursor-pointer"
+           title={t('media.relinkFolder.hint')}
+    >
+      <span className="text-xs text-[var(--evergreen)]">
+        {t(`media.relinkFolder.${props.kind}`, { count: props.missing })}
+      </span>
+      <button
+        onClick={() => props.startRelink(props.kind)}
+        className="flex items-center justify-center rounded-lg border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] px-3 py-2 hover:bg-[var(--trail-orange)]/20"
+      >
+        <Link2 className="w-4 h-4 text-[var(--trail-orange)]" />
+      </button>
+    </label>
+  </div>;
+}
+
 export function PicturesPanel() {
   const { t } = useI18n();
   const pictures = useAppStore((state) => state.pictures);
@@ -37,28 +63,59 @@ export function PicturesPanel() {
   const [editingPicture, setEditingPicture] = useState<string | null>(null);
   const [durationValue, setDurationValue] = useState(3);
   const [descriptionValue, setDescriptionValue] = useState('');
-  const relinkTargetRef = useRef<{ kind: 'picture' | 'video'; id: string } | null>(null);
-  const relinkInputRef = useRef<HTMLInputElement>(null);
+  const relinkFileTargetRef = useRef<{ kind: 'picture' | 'video'; id: string } | null>(null);
+  const relinkFolderTargetRef = useRef<{ kind: 'pictures' | 'videos' } | null>(null);
+  const relinkFileInputRef = useRef<HTMLInputElement>(null);
+  const relinkFolderInputRef = useRef<HTMLInputElement>(null);
 
-  const startRelink = (kind: 'picture' | 'video', id: string) => {
-    relinkTargetRef.current = { kind, id };
-    relinkInputRef.current?.click();
+  const unlinkedPictures = pictures.filter(picture => picture.isPlaceholder);
+  const unlinkedVideos = videos.filter(video => video.isPlaceholder);
+
+  const startFileRelink = (kind: 'picture' | 'video', id: string) => {
+    relinkFileTargetRef.current = { kind, id };
+    relinkFileInputRef.current?.click();
   };
+
+  const startFolderRelink = (kind: RelinkFolderKind) => {
+    relinkFolderTargetRef.current = { kind };
+    relinkFolderInputRef.current?.click();
+  }
 
   const handleRelinkFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    const target = relinkTargetRef.current;
-    relinkTargetRef.current = null;
+    const target = relinkFileTargetRef.current;
+    relinkFileTargetRef.current = null;
     if (!file || !target) return;
 
     if (target.kind === 'picture') {
-      relinkPictureFile(target.id, file);
+      relinkPictureFile(target.id, [file]);
     } else {
-      relinkVideoFile(target.id, file);
+      relinkVideoFile(target.id, [file]);
     }
   };
-  
+
+  const handleRelinkFolderChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    const kind = relinkFolderTargetRef.current?.kind;
+    relinkFolderTargetRef.current = null;
+
+    if (!kind || !files) return;
+
+    if (kind === 'pictures') {
+      unlinkedPictures.forEach(picture => {
+        relinkPictureFile(picture.id, files);
+      });
+    } else {
+      unlinkedVideos.forEach(video => {
+        relinkVideoFile(video.id, files);
+      });
+    }
+  };
+
   // Both kinds are accepted whichever tab is open, and each file is routed by
   // what it actually is. Sorting a drop by the open tab meant a video dropped
   // on the Pictures tab — or on the Videos tab, which had no handler at all —
@@ -123,14 +180,24 @@ export function PicturesPanel() {
     },
   ];
 
+  // React does not know this attribute, although it is not Chrome-specific anymore
+  const folderAttribute = { webkitdirectory: 'true' };
+
   return (
     <div className="space-y-4">
       <input
-        ref={relinkInputRef}
+        ref={relinkFileInputRef}
         type="file"
         accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.m4v,.webm,.mov,.mkv,.avi"
         onChange={handleRelinkFileChange}
         className="hidden"
+      />
+      <input
+        ref={relinkFolderInputRef}
+        type="file"
+        onChange={handleRelinkFolderChange}
+        className="hidden"
+        {...folderAttribute}
       />
       {/* Tabs */}
       <div className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--evergreen)]/15 p-1">
@@ -215,6 +282,8 @@ export function PicturesPanel() {
             </div>
           ) : (
             <div className="space-y-2">
+              {unlinkedPictures.length > 0 && <RelinkFolderButton kind={'pictures'} missing={unlinkedPictures.length}
+                                                                  startRelink={startFolderRelink} />}
               {pictures.map((picture) => (
                 <div
                   key={picture.id}
@@ -291,7 +360,7 @@ export function PicturesPanel() {
                   <div className={`mt-3 grid gap-2 ${picture.isPlaceholder ? 'grid-cols-4' : 'grid-cols-3'}`}>
                     {picture.isPlaceholder && (
                       <button
-                        onClick={() => startRelink('picture', picture.id)}
+                        onClick={() => startFileRelink('picture', picture.id)}
                         className="flex items-center justify-center rounded-lg border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] px-3 py-2 hover:bg-[var(--trail-orange)]/20"
                         title={t('media.relinkFile')}
                       >
@@ -380,6 +449,9 @@ export function PicturesPanel() {
             </div>
           ) : (
             <div className="space-y-2">
+              {unlinkedVideos.length > 0 &&
+                <RelinkFolderButton kind={'videos'} missing={unlinkedVideos.length} startRelink={startFolderRelink} />}
+
               {videos.map((video) => (
                 <div
                   key={video.id}
@@ -405,7 +477,7 @@ export function PicturesPanel() {
                   <div className="flex items-center gap-1">
                     {video.isPlaceholder && (
                       <button
-                        onClick={() => startRelink('video', video.id)}
+                        onClick={() => startFileRelink('video', video.id)}
                         className="p-1.5 hover:bg-[var(--trail-orange)]/20 text-[var(--trail-orange)] rounded"
                         title={t('media.relinkFile')}
                       >

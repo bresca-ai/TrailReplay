@@ -81,7 +81,7 @@ export function usePhotos() {
         const existing = findPictureByFileName(useAppStore.getState().pictures, file.name);
         if (existing) {
           const asset = await createRenderableImageAsset(file);
-          relinkPictureFile(existing.id, file, asset);
+          relinkPictureFile(existing.id, [file], asset);
           relinkedCount += 1;
           continue;
         }

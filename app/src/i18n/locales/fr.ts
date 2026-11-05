@@ -657,6 +657,11 @@ export const fr = {
     noVideos: 'Aucune vidéo importée',
     noVideosHint: 'Ajoutez des vidéos à afficher sur la carte',
     relinkFile: 'Relier le fichier',
+    relinkFolder: {
+      pictures: '{count} photo(s) non lié(s)',
+      videos: '{count} vidéo(s) non lié(s)',
+      hint: 'Cliquez ici pour associer tous les elements non liés à des fichiers situés dans un dossier local.'
+    },
     placeholderFile: 'Fichier non attaché (restauré depuis un projet enregistré)',
     previewPicture: 'Prévisualiser la photo',
     trailAlt: 'Parcours',
