@@ -18,6 +18,17 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves 3D building and imagery settings when a replay is saved and reopened', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setSettings({ show3DBuildings: true, paint3DBuildings: false });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'buildings.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings).toMatchObject({ show3DBuildings: true, paint3DBuildings: false });
+  });
+
   it('preserves camera transitions and their duration through a saved project', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'first.gpx'));
