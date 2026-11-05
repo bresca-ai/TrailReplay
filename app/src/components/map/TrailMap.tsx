@@ -546,6 +546,7 @@ export function TrailMap(_props: TrailMapProps) {
   return (
     <div className="w-full h-full relative">
       <div ref={mapContainer} className="w-full h-full" />
+      {settings.show3DBuildings && <div className="absolute bottom-1 left-1 z-10 bg-black/70 px-1 text-[10px] text-white">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a></div>}
 
       <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : "ready"} />
       {locationChapter.label && <LocationChapterLabel label={locationChapter.label} accent={settings.locationChapters?.color ?? '#ffbd66'} font={trailStyle.overlayFont} />}

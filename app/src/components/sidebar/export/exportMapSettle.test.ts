@@ -107,6 +107,16 @@ describe('waitForSettledFrame', () => {
     expect(renders).toBe(2);
   });
 
+  it('waits for the current building imagery even after map tiles are ready', async () => {
+    const harness = createHarness([true, true, true, true]);
+    let preparations = 0;
+    harness.options.additionalReady = () => ++preparations >= 3;
+    const result = await waitForSettledFrame(harness.map, harness.options);
+    expect(result.timedOut).toBe(false);
+    expect(preparations).toBeGreaterThanOrEqual(3);
+    expect(harness.renders()).toBeGreaterThanOrEqual(3);
+  });
+
   it('reports a timeout instead of hanging when tiles never arrive', async () => {
     const harness = createHarness([false], 50);
     const result = await waitForSettledFrame(harness.map, harness.options);

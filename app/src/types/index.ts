@@ -465,6 +465,8 @@ export interface AppSettings {
   show3DTerrain: boolean;
   terrainExaggeration: number;
   recordedElevationPrototype: boolean;
+  show3DBuildings?: boolean;
+  paint3DBuildings?: boolean;
   showHeartRate: boolean;
   showPictures: boolean;
   cameraMode: CameraMode;
