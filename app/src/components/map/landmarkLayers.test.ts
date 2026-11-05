@@ -50,3 +50,12 @@ describe('landmark layers', () => {
     expect(layout['icon-allow-overlap']).toBe(true);
   });
 });
+
+it('anchors the compact pin tip at the feature from the first frame', () => {
+  const minimal = landmarkLabelLayer(1, true, 'minimal').layout as Record<string, unknown>;
+  expect(minimal['icon-anchor']).toBe('right');
+  expect(minimal['icon-offset']).toEqual([16, -12]);
+  expect(minimal['icon-rotation-alignment']).toBe('viewport');
+  expect(minimal['icon-pitch-alignment']).toBe('viewport');
+  expect(validate([landmarkLabelLayer(1, true, 'minimal')])).toEqual([]);
+});

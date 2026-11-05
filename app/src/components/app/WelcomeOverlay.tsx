@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import { BookOpen, Upload } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
@@ -11,7 +12,7 @@ export function WelcomeOverlay({
   onExplore,
   onOpenFilePicker,
 }: WelcomeOverlayProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/20">
@@ -37,7 +38,7 @@ export function WelcomeOverlay({
               {t('app.welcomeNotice')}
             </span>
             <a
-              href="/tutorial"
+              href={localizedSitePath('/tutorial', language)}
               onClick={() => trackEvent('help_cta_clicked', {
                 cta_location: 'welcome_overlay',
                 target_page: 'tutorial',
@@ -46,6 +47,12 @@ export function WelcomeOverlay({
             >
               <BookOpen className="h-3.5 w-3.5" />
               {t('app.tutorial')}
+            </a>
+            <a
+              href={localizedSitePath('/gpx-animation', language)}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--evergreen)]/15 bg-white px-3 py-1 font-semibold text-[var(--evergreen)] transition-colors hover:border-[var(--trail-orange)]/40 hover:text-[var(--trail-orange)]"
+            >
+              {t('info.gpxAnimator')}
             </a>
           </div>
         </div>

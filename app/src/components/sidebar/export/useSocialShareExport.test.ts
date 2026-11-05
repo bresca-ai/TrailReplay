@@ -46,7 +46,7 @@ beforeEach(() => {
   mapGlobalRef.current = {
     getCenter: () => ({ lng: 1, lat: 42 }), getZoom: () => 13,
     getPitch: () => 75, getBearing: () => 20,
-    getCanvas: () => ({ width: 1200, height: 800 }),
+    getCanvas: () => ({ width: 1200, height: 800 }), jumpTo: vi.fn(),
   } as unknown as MapLibreMap;
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); mapGlobalRef.current = null; useAppStore.setState(initial, true); });
@@ -76,6 +76,14 @@ describe('cover previews across export tabs', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Back to video export' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Back to video export' }));
     expect(screen.getByRole('img', { name: 'Video cover' })).toHaveAttribute('src', 'data:image/png,La meva portada');
+  });
+
+  it('restores the cover camera when returning to the editor', () => {
+    const map = mapGlobalRef.current!;
+    const { rerender } = renderHook(({ enabled }) => useSocialShareExport(enabled), { initialProps: { enabled: true } });
+    rerender({ enabled: false });
+    rerender({ enabled: true });
+    expect(map.jumpTo).toHaveBeenCalledWith(expect.objectContaining({ center: [1, 42], zoom: 13, pitch: 75, bearing: 20 }));
   });
 
   it('saves the latest edit when switching to Video before its tiles finish loading', async () => {

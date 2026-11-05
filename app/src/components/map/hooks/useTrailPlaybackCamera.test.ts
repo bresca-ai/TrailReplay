@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
 import {
+  useTrailPlaybackCamera,
   resolvePlaybackMarkerColor,
   shouldRenderPlaybackAdornment,
   updatePlaybackMarkerElement,
@@ -67,4 +69,114 @@ describe('playback marker presentation', () => {
     expect(shouldRenderPlaybackAdornment({ ...options, animationPhase: 'preloading' })).toBe(false);
     expect(shouldRenderPlaybackAdornment({ ...options, animationPhase: 'intro' })).toBe(true);
   });
+});
+
+
+describe('camera transition handoff', () => {
+  it('starts at the live camera pose and retains its smoothing state on arrival', () => {
+    let pose = { center: [2, 41] as [number, number], zoom: 14, pitch: 25, bearing: 30 };
+    const map = {
+      getCenter: () => ({ lng: pose.center[0], lat: pose.center[1] }),
+      getZoom: () => pose.zoom, getPitch: () => pose.pitch, getBearing: () => pose.bearing,
+      getMinZoom: () => 0, getMaxZoom: () => 22,
+      getSource: () => undefined, queryTerrainElevation: () => null,
+      getCenterClampedToGround: () => true, setCenterClampedToGround: vi.fn(),
+      jumpTo: (next: typeof pose) => { pose = { ...pose, ...next }; },
+    };
+    const transition = { segmentIndex: 1, startCoordIndex: 1, endCoordIndex: 2, transportMode: 'camera', progressStartRatio: 0.4, progressEndRatio: 0.6, cameraTransitionZoom: 8, cameraTransitionPitch: 35 };
+    const props = {
+      activeTrack: null, activeTextAnnotationId: null, allCoordinates: [[1, 41], [2, 41], [5, 42], [6, 42]],
+      cameraCoordinates: [[1, 41], [2, 41], [5, 42], [6, 42]], animationPhase: 'playing', cameraMode: 'follow', cameraStability: 0.5,
+      currentTimeMs: 4000, completedCoordinates: [], computedJourney: null, currentIcon: '', currentPosition: { lat: 41, lon: 2, elevation: 0 },
+      recordedElevationEnabled: true, currentSegment: { segment: transition, localProgress: 0 }, currentTrackColor: null, currentTrackName: null,
+      elevationData: [], followBehindZoomLevel: 1, isInTransport: true, isMapLoaded: true,
+      mapRef: { current: map }, markerRef: { current: null }, playbackProgress: 0.4,
+      segmentTimings: [{ ...transition, type: 'transport' }], setCameraPosition: vi.fn(), totalDurationMs: 10000,
+      smoothBearingRef: { current: 30 }, targetBearingRef: { current: 30 }, isExporting: false, isPlaying: true,
+      trailStyle: { colorMode: 'fixed', colorZones: [], currentIcon: '', markerColor: '#000', markerSize: 1, markerType: 'icon', overlayFont: 'inter', showCircle: false, showMarker: false, showTrackLabels: false, trailColor: '#000' },
+    } as unknown as Parameters<typeof useTrailPlaybackCamera>[0];
+    const { rerender } = renderHook((input) => useTrailPlaybackCamera(input), { initialProps: props });
+    expect(pose).toEqual({ center: [2, 41], zoom: 14, pitch: 25, bearing: 30 });
+    rerender({ ...props, currentTimeMs: 5000, playbackProgress: 0.5, currentSegment: { segment: transition, localProgress: 0.5 } });
+    expect(pose.zoom).toBe(8);
+    expect(pose.pitch).toBe(35);
+    rerender({ ...props, currentTimeMs: 6000, playbackProgress: 0.6, currentPosition: { lat: 42, lon: 5, elevation: 0 }, currentSegment: { segment: transition, localProgress: 1 } });
+    const arrival = { ...pose, center: [...pose.center] };
+    expect(arrival.center).toEqual([5, 42]);
+    rerender({ ...props, currentTimeMs: 6010, playbackProgress: 0.601, currentPosition: { lat: 42, lon: 5.001, elevation: 0 }, currentSegment: { segment: { segmentIndex: 2, startCoordIndex: 3, endCoordIndex: 3 }, localProgress: 0.001 }, isInTransport: false });
+    expect(Math.abs(pose.zoom - arrival.zoom)).toBeLessThan(0.1);
+    expect(Math.abs(pose.center[0] - arrival.center[0])).toBeLessThan(0.1);
+    expect(Math.abs(pose.pitch - arrival.pitch)).toBeLessThan(0.1);
+  });
+});
+it('uses one camera update per frame and returns to the same follow camera after a region reveal', () => {
+  function makeMap() {
+    let pose = { center: [2, 41] as [number, number], zoom: 14, pitch: 30, bearing: 0 };
+    const jumpTo = vi.fn((next: typeof pose) => { pose = { ...pose, ...next }; });
+    return { getCenter: () => ({ lng: pose.center[0], lat: pose.center[1] }), getZoom: () => pose.zoom, getPitch: () => pose.pitch,
+      getBearing: () => pose.bearing, getSource: () => undefined, queryTerrainElevation: () => null,
+      getCenterClampedToGround: () => true, setCenterClampedToGround: vi.fn(), on: vi.fn(), off: vi.fn(), jumpTo, readPose: () => pose };
+  }
+  const map = makeMap(), control = makeMap();
+  const cue = { current: null as null | { target: { center: [number, number]; zoom: number; pitch: number; bearing: number }; startTime: number; duration: number } };
+  const common = { activeTrack: null, activeTextAnnotationId: null, allCoordinates: [[2, 41], [2.1, 41.1]], cameraCoordinates: [[2, 41], [2.1, 41.1]],
+    animationPhase: 'playing', cameraMode: 'follow-behind', cameraStability: 0.5, currentTimeMs: 0, completedCoordinates: [], computedJourney: null,
+    currentIcon: '', currentPosition: { lat: 41, lon: 2, elevation: 0 }, currentSegment: null, currentTrackColor: null, currentTrackName: null,
+    elevationData: [], followBehindZoomLevel: 1, isInTransport: false, isMapLoaded: true, markerRef: { current: null }, playbackProgress: 0,
+    segmentTimings: [], setCameraPosition: vi.fn(), totalDurationMs: 10000, isExporting: false, isPlaying: true,
+    trailStyle: { colorMode: 'fixed', colorZones: [], currentIcon: '', markerColor: '#000', markerSize: 1, markerType: 'dot', overlayFont: 'inter', showCircle: false, showMarker: false, showTrackLabels: false, trailColor: '#000' } };
+  type Props = Parameters<typeof useTrailPlaybackCamera>[0];
+  const input = (time: number, target: ReturnType<typeof makeMap>, cameraCue: typeof cue | undefined) => ({ ...common, currentTimeMs: time, playbackProgress: time / 10000,
+    currentPosition: { lat: 41 + time / 1000000, lon: 2 + time / 1000000, elevation: 0 }, mapRef: { current: target }, locationChapterCameraCue: cameraCue,
+    smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 } } as unknown as Props);
+  const refs = { smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 } };
+  const controlRefs = { smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 } };
+  const p = (time: number) => ({ ...input(time, map, cue), ...refs });
+  const q = (time: number) => ({ ...input(time, control, undefined), ...controlRefs });
+  const a = renderHook((value) => useTrailPlaybackCamera(value), { initialProps: p(0) });
+  const b = renderHook((value) => useTrailPlaybackCamera(value), { initialProps: q(0) });
+  cue.current = { target: { center: [2.05, 41.05], zoom: 6, pitch: 0, bearing: 0 }, startTime: 100, duration: 4000 };
+  let previousZoom = map.readPose().zoom;
+  for (let time = 100; time <= 4100; time += 100) {
+    const before = map.jumpTo.mock.calls.length;
+    a.rerender(p(time)); b.rerender(q(time));
+    expect(map.jumpTo.mock.calls.length - before).toBe(1);
+    expect(Math.abs(map.readPose().zoom - previousZoom)).toBeLessThan(1.2);
+    previousZoom = map.readPose().zoom;
+  }
+  cue.current = null;
+  a.rerender(p(4200)); b.rerender(q(4200));
+  expect(map.readPose().zoom).toBeCloseTo(control.readPose().zoom, 6);
+  expect(map.readPose().pitch).toBeCloseTo(control.readPose().pitch, 6);
+  cue.current = { target: { center: [2.05, 41.05], zoom: 6, pitch: 0, bearing: 0 }, startTime: 4200, duration: 4000 };
+  a.rerender(p(4300)); a.rerender(p(5500));
+  const beforeSwitch = { ...map.readPose(), center: [...map.readPose().center] };
+  cue.current = { target: { center: [2.09, 41.09], zoom: 8, pitch: 0, bearing: 0 }, startTime: 5501, duration: 4000 };
+  a.rerender(p(5501));
+  expect(map.readPose().zoom).toBeCloseTo(beforeSwitch.zoom, 6);
+  expect(map.readPose().center[0]).toBeCloseTo(beforeSwitch.center[0], 6);
+});
+it('starts the intro at the selected place before flying to the route', () => {
+  const jumpTo = vi.fn(), flyTo = vi.fn(), easeTo = vi.fn(), once = vi.fn();
+  const map = { getCenter: () => ({ lng: 2, lat: 41 }), getZoom: () => 12, getPitch: () => 0, getBearing: () => 0,
+    getSource: () => undefined, on: vi.fn(), off: vi.fn(), stop: vi.fn(), jumpTo, flyTo, easeTo, once };
+  const introStartOverride = { center: [2, 41] as [number, number], zoom: 6, pitch: 0, bearing: 0 };
+  const props = { activeTrack: null, activeTextAnnotationId: null, allCoordinates: [[2, 41], [3, 42]], cameraCoordinates: [[2, 41], [3, 42]],
+    introStartOverride, animationPhase: 'intro', cameraMode: 'follow', cameraStability: 0.5, currentTimeMs: 0,
+    completedCoordinates: [], computedJourney: null, currentIcon: '', currentPosition: null, currentSegment: null,
+    currentTrackColor: null, currentTrackName: null, elevationData: [], followBehindZoomLevel: 33, isInTransport: false,
+    isMapLoaded: true, mapRef: { current: map }, markerRef: { current: null }, playbackProgress: 0, segmentTimings: [],
+    setCameraPosition: vi.fn(), totalDurationMs: 60000, smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 },
+    isExporting: false, isPlaying: true, trailStyle: { colorMode: 'fixed', colorZones: [], currentIcon: '', markerColor: '#000', markerSize: 1,
+      markerType: 'dot', overlayFont: 'inter', showCircle: false, showMarker: false, showTrackLabels: false, trailColor: '#000' },
+  } as unknown as Parameters<typeof useTrailPlaybackCamera>[0];
+  const { rerender } = renderHook((input) => useTrailPlaybackCamera(input), { initialProps: props });
+  expect(jumpTo).toHaveBeenCalledWith(introStartOverride);
+  expect(flyTo).toHaveBeenCalledWith(expect.objectContaining({ center: [2, 41], zoom: 14 }));
+  const introRegionOverride = { center: [2.5, 41.5] as [number, number], zoom: 8, pitch: 0, bearing: 0 };
+  rerender({ ...props, introRegionOverride, locationChapters: { level: 'region', introCountryFirst: true, introDurationSeconds: 10 } as NonNullable<typeof props.locationChapters> });
+  expect(easeTo).toHaveBeenCalledWith(expect.objectContaining({ ...introRegionOverride, duration: 4000 }));
+  expect(once).toHaveBeenCalledWith('moveend', expect.any(Function));
+  once.mock.calls[0][1]();
+  expect(flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [2, 41], duration: 6000 }));
 });

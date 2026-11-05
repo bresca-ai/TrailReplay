@@ -886,7 +886,7 @@ export function useExportOverlayCapture({
       if (currentSegment.type === 'transport') {
         const journeySegment = state.journeySegments[currentSegmentIndex];
         const mode = journeySegment?.type === 'transport' ? journeySegment.mode : 'car';
-        const icon = TRANSPORT_ICONS[mode] || '🚗';
+        const icon = mode === 'camera' ? '' : TRANSPORT_ICONS[mode] || '🚗';
         context.font = `${(isCompact ? 12 : 18) * elementScaleY}px sans-serif`;
         context.textAlign = 'center';
         context.fillText(icon, centerX, baselineY);

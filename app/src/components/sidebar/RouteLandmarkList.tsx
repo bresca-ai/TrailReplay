@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { MapPin, Pencil, Plus, Trash2, Undo2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowDown, ArrowUp, GripVertical, MapPin, Pencil, Plus, Trash2, Undo2, X } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useAllRouteLandmarks } from '@/hooks/useAllRouteLandmarks';
 import {
@@ -53,7 +53,7 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-[var(--trail-orange)]/40 bg-[var(--trail-orange-15)] p-2.5">
+    <div className="space-y-3 border-l-2 border-[var(--trail-orange)]/50 pl-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.editLandmark')}</span>
         <button
@@ -119,7 +119,10 @@ type Coordinates = [number, number];
 
 export function RouteLandmarkList() {
   const { t } = useI18n();
-  const landmarks = useAllRouteLandmarks();
+  const landmarks = useAllRouteLandmarks(true);
+  const priorityIds = useAppStore((state) => state.landmarkPriorityIds);
+  const setPriorityIds = useAppStore((state) => state.setLandmarkPriorityIds);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   usePinheadIcons(needsPinheadIcons(landmarks.map((landmark) => landmark.icon)));
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const selectLandmark = useAppStore((state) => state.selectLandmark);
@@ -168,10 +171,15 @@ export function RouteLandmarkList() {
     }
   }, [isPlacingLandmark, cancelCoordinatesDelayed]);
 
-  const ordered = useMemo(
-    () => [...landmarks].sort((left, right) => (left.progress ?? 1) - (right.progress ?? 1)),
-    [landmarks],
-  );
+  const ordered = landmarks;
+  const moveLandmark = (id: string, targetIndex: number) => {
+    const ids = ordered.map((landmark) => landmark.id);
+    const from = ids.indexOf(id);
+    if (from < 0 || targetIndex < 0 || targetIndex >= ids.length || from === targetIndex) return;
+    ids.splice(targetIndex, 0, ids.splice(from, 1)[0]);
+    const current = new Set(ids);
+    setPriorityIds([...ids, ...priorityIds.filter((entry) => !current.has(entry))]);
+  };
   const selected = ordered.find((landmark) => landmark.id === selectedLandmarkId) ?? null;
   // Only derived landmarks are hidden rather than deleted, so restoring brings
   // back exactly the automatic and OSM entries the user cleared.
@@ -180,7 +188,7 @@ export function RouteLandmarkList() {
   ).length;
 
   return (
-    <div className="space-y-2 rounded-lg bg-[var(--canvas)]/60 p-2.5">
+    <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.onMap')}</p>
         <span className="text-[11px] text-[var(--evergreen-60)]">{ordered.length}</span>
@@ -235,14 +243,22 @@ export function RouteLandmarkList() {
           {t('routeLandmarks.empty')}
         </p>
       ) : (
+        <div>
+        <p className="mb-1.5 text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.priorityHint')}</p>
         <ul className="max-h-64 space-y-1 overflow-y-auto">
-          {ordered.map((landmark) => {
+          {ordered.map((landmark, index) => {
             const isSelected = landmark.id === selectedLandmarkId;
             return (
-              <li key={landmark.id}>
+              <li key={landmark.id} className="flex items-center gap-0.5"
+                onDragOver={(event) => { if (draggedId) event.preventDefault(); }}
+                onDrop={(event) => { event.preventDefault(); if (draggedId) moveLandmark(draggedId, index); setDraggedId(null); }}
+              >
+                <span draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = 'move'; setDraggedId(landmark.id); }}
+                  onDragEnd={() => setDraggedId(null)} title={t('routeLandmarks.dragPriority')}
+                  className="cursor-grab touch-none text-[var(--evergreen-60)]" aria-hidden="true"><GripVertical className="h-4 w-4" /></span>
                 <button
                   onClick={() => selectLandmark(isSelected ? null : landmark.id)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${
+                  className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${
                     isSelected ? 'bg-[var(--trail-orange-15)]' : 'hover:bg-[var(--evergreen)]/5'
                   }`}
                 >
@@ -253,10 +269,17 @@ export function RouteLandmarkList() {
                   <span className="flex-1 truncate text-xs text-[var(--evergreen)]">{landmark.title}</span>
                   <Pencil className="h-3 w-3 flex-shrink-0 text-[var(--evergreen-60)]" />
                 </button>
+                <button type="button" onClick={() => moveLandmark(landmark.id, index - 1)} disabled={index === 0}
+                  aria-label={t('routeLandmarks.moveUp', { name: landmark.title })}
+                  className="rounded p-1 text-[var(--evergreen-60)] hover:text-[var(--evergreen)] disabled:opacity-25"><ArrowUp className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => moveLandmark(landmark.id, index + 1)} disabled={index === ordered.length - 1}
+                  aria-label={t('routeLandmarks.moveDown', { name: landmark.title })}
+                  className="rounded p-1 text-[var(--evergreen-60)] hover:text-[var(--evergreen)] disabled:opacity-25"><ArrowDown className="h-3.5 w-3.5" /></button>
               </li>
             );
           })}
         </ul>
+        </div>
       )}
 
       {restorableCount > 0 && (

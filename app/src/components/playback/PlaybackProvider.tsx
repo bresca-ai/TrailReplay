@@ -1,13 +1,15 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { playbackTimeForRoute, routeTimeForPlayback } from '@/utils/annotationTiming';
+import { DEFAULT_INTRO_DURATION, getIntroDuration } from '@/utils/locationChapterCamera';
 
 interface PlaybackProviderProps {
   children: React.ReactNode;
 }
 
 // Animation timing constants
-const INTRO_DURATION = 2500; // Country context, then a smooth move into the route start
+const INTRO_DURATION = DEFAULT_INTRO_DURATION;
 const OUTRO_DELAY = 0; // Start the final fly-out as soon as the route ends
 const OUTRO_DURATION = 3000; // 3 seconds for zoom-out
 const AUTO_RESET_DELAY = 3000; // 3 seconds after outro before auto-reset
@@ -23,6 +25,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
   const cinematicPlayed = useAppStore((state) => state.cinematicPlayed);
   const animationPhase = useAppStore((state) => state.animationPhase);
   const isDeterministicExport = useAppStore((state) => state.isDeterministicExport);
+  const introDuration = useAppStore((state) => getIntroDuration(state.settings.locationChapters));
   const setPlayback = useAppStore((state) => state.setPlayback);
   const pause = useAppStore((state) => state.pause);
   const setCinematicPlayed = useAppStore((state) => state.setCinematicPlayed);
@@ -103,7 +106,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
     introTimeoutRef.current = setTimeout(() => {
       setCinematicPlayed(true);
       setAnimationPhase('playing');
-    }, INTRO_DURATION);
+    }, introDuration);
 
     return () => {
       if (introTimeoutRef.current) {
@@ -111,7 +114,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
         introTimeoutRef.current = null;
       }
     };
-  }, [animationPhase, isDeterministicExport, setCinematicPlayed, setAnimationPhase]);
+  }, [animationPhase, introDuration, isDeterministicExport, setCinematicPlayed, setAnimationPhase]);
 
   // Animation loop - only run when in 'playing' phase
   useEffect(() => {
@@ -144,7 +147,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       // animation into ~75s of wall-clock (and recording) time.
       const state = useAppStore.getState();
       const { currentTime, speed } = state.playback;
-      const annotations = state.textAnnotations;
+      const annotations = resolveSharedRouteMoments(state.textAnnotations, state.journeySegments, state.tracks, state.playback.routeTimingMode);
       const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations) + deltaTime * speed;
       const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations);
 
@@ -179,6 +182,16 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       }
     };
   }, [playback.isPlaying, animationPhase, calculateTotalDuration, isDeterministicExport, pause, setPlayback, setAnimationPhase, resetPlayback]);
+
+  // A manual restart can interrupt the outro or its delayed reset. Do not let
+  // callbacks from the previous run change the new playback state.
+  useEffect(() => {
+    if (animationPhase === 'outro' || animationPhase === 'ended') return;
+    if (outroTimeoutRef.current) clearTimeout(outroTimeoutRef.current);
+    if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+    outroTimeoutRef.current = null;
+    resetTimeoutRef.current = null;
+  }, [animationPhase]);
 
   // Update total duration when track or journey changes
   useEffect(() => {

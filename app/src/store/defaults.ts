@@ -26,7 +26,9 @@ export function createDefaultSettings(): AppSettings {
     mapStyle: 'satellite',
     mapFilter: 'none',
     show3DTerrain: true,
+    terrainExaggeration: 1.5,
     recordedElevationPrototype: false,
+    locationChapters: { level: 'off', color: '#ffbd66', width: 3, fill: false, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 },
     showHeartRate: false,
     showPictures: true,
     cameraMode: 'follow-behind',
@@ -70,10 +72,12 @@ export function createDefaultSettings(): AppSettings {
     paceMode: 'per-km' as const,
     showElevationProfile: true,
     dynamicElevationProfile: false,
+    elevationProfilePerRoute: false,
     elevationSectionOverrides: [],
     customElevationSections: [],
     hiddenElevationSectionIds: [],
     landmarkScale: 1,
+    landmarkStyle: 'minimal',
     landmarkLabelFade: true,
     inactiveAnnotationsOpacity: 1.0,
   };
@@ -87,6 +91,7 @@ export function createDefaultCameraSettings(): CameraSettings {
     bearing: 0,
     followBehindPreset: DEFAULT_FOLLOW_BEHIND_PRESET,
     followBehindZoomLevel: getFollowBehindZoomLevelForPreset(DEFAULT_FOLLOW_BEHIND_PRESET),
+    followBehindPitch: null,
     cameraStability: 0.5,
   };
 }

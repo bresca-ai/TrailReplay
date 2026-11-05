@@ -42,6 +42,7 @@ export function RouteAnnotationsEditor() {
   const [draftPresentation, setDraftPresentation] = useState<'map-card' | 'side-panel'>('side-panel');
   const [draftLogo, setDraftLogo] = useState(pinheadAnnotationSymbol('jug_and_apple'));
   const [draftHoldSeconds, setDraftHoldSeconds] = useState(6);
+  const [draftShowOnMatchingRoutes, setDraftShowOnMatchingRoutes] = useState(false);
   const [composerOpen, setComposerOpen] = useState(textAnnotations.length === 0);
   const [chosenDistance, setChosenDistance] = useState<number | null>(null);
   const [distanceDraft, setDistanceDraft] = useState<string | null>(null);
@@ -100,6 +101,7 @@ export function RouteAnnotationsEditor() {
     addTextAnnotation({
       id: annotationId,
       progress: placement.progress,
+      showOnMatchingRoutes: draftShowOnMatchingRoutes || undefined,
       routeDistance: placement.routeDistance,
       lat: placement.lat,
       lon: placement.lon,
@@ -123,6 +125,7 @@ export function RouteAnnotationsEditor() {
     setDraftCode('');
     setDraftMeta('');
     setDraftDescription('');
+    setDraftShowOnMatchingRoutes(false);
     setChosenDistance(null);
     setDistanceDraft(null);
     setComposerOpen(false);
@@ -156,7 +159,7 @@ export function RouteAnnotationsEditor() {
                   </summary>
                   <div className="space-y-3 border-t border-[var(--evergreen)]/10 p-3">
                   {isSidePanel && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.eyebrowLabel')}
-                    <input value={content.eyebrow ?? ''} onChange={(e) => updateWording(annotation, { eyebrow: e.target.value })} placeholder={t('annotations.sidePanelEyebrow')} maxLength={36} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                    <input value={annotation.translations?.[language]?.eyebrow ?? annotation.eyebrow ?? ''} onChange={(e) => updateWording(annotation, { eyebrow: e.target.value })} placeholder={t('annotations.sidePanelEyebrow')} maxLength={36} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
                   </label>}
                   {isSidePanel && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.codeLabel')}
                     <input value={content.code ?? ''} onChange={(e) => updateTextAnnotation(annotation.id, { code: e.target.value })} maxLength={12} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
@@ -189,6 +192,10 @@ export function RouteAnnotationsEditor() {
                     className="w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
                     maxLength={600}
                   />}
+                  <label className="flex items-start gap-2 text-xs text-[var(--evergreen)]">
+                    <input type="checkbox" checked={annotation.showOnMatchingRoutes ?? false} onChange={(event) => updateTextAnnotation(annotation.id, { showOnMatchingRoutes: event.target.checked })} className="mt-0.5 accent-[var(--trail-orange)]" />
+                    <span>{t('annotations.showOnMatchingRoutes')}<span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{t('annotations.showOnMatchingRoutesHint')}</span></span>
+                  </label>
                   <div className="flex flex-wrap gap-2 text-xs text-[var(--evergreen)]">
                     <select aria-label={t('annotations.presentationLabel')} value={annotation.presentation ?? 'map-card'} onChange={(e) => {
                       const presentation = e.target.value as 'map-card' | 'side-panel';
@@ -396,6 +403,10 @@ export function RouteAnnotationsEditor() {
           </div>
         </div>
 
+        <label className="flex items-start gap-2 text-xs text-[var(--evergreen)]">
+          <input type="checkbox" checked={draftShowOnMatchingRoutes} onChange={(event) => setDraftShowOnMatchingRoutes(event.target.checked)} className="mt-0.5 accent-[var(--trail-orange)]" />
+          <span>{t('annotations.showOnMatchingRoutes')}<span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{t('annotations.showOnMatchingRoutesHint')}</span></span>
+        </label>
         <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-3">
           <div className="min-w-0">
             <p className="text-xs font-medium text-[var(--evergreen)]">

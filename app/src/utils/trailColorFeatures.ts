@@ -10,6 +10,7 @@ export type ColoredSegmentTiming = {
   startCoordIndex: number;
   endCoordIndex: number;
   color?: string;
+  transportMode?: string;
 };
 
 function pointsMatch(a: number[] | undefined, b: number[] | undefined) {
@@ -48,7 +49,7 @@ export function buildSegmentLineFeatures(params: {
   const features: ColoredLineFeature[] = [];
 
   segmentTimings.forEach((segment) => {
-    if (segment.startCoordIndex > maxCoordIndex) {
+    if (segment.transportMode === 'camera' || segment.startCoordIndex > maxCoordIndex) {
       return;
     }
 
@@ -110,6 +111,7 @@ export function buildColorZoneLineFeatures(params: {
   fallbackColor: string;
   maxCoordIndex?: number;
   partialEndpoint?: [number, number] | null;
+  segmentTimings?: readonly ColoredSegmentTiming[];
 }): ColoredLineFeature[] {
   const {
     coordinates,
@@ -117,6 +119,7 @@ export function buildColorZoneLineFeatures(params: {
     fallbackColor,
     maxCoordIndex = coordinates.length - 1,
     partialEndpoint = null,
+    segmentTimings = [],
   } = params;
 
   if (coordinates.length < 2 || maxCoordIndex < 0) return [];
@@ -151,16 +154,18 @@ export function buildColorZoneLineFeatures(params: {
     intervals.push({ startP: cursor, endP: maxProgress, color: fallbackColor });
   }
 
-  const features: ColoredLineFeature[] = intervals
-    .filter((seg) => seg.endP > seg.startP)
-    .map((seg) => ({
-      type: 'Feature',
-      properties: { color: seg.color },
-      geometry: {
-        type: 'LineString',
-        coordinates: buildIntervalCoords(coordinates, seg.startP * n, seg.endP * n),
-      },
-    }));
+  const ranges = segmentTimings.length > 0
+    ? segmentTimings.filter((segment) => segment.transportMode !== 'camera').map((segment) => [segment.startCoordIndex, segment.endCoordIndex])
+    : [[0, n]];
+  const features: ColoredLineFeature[] = intervals.flatMap((interval) => ranges.flatMap(([from, to]) => {
+    const start = Math.max(from, interval.startP * n);
+    const end = Math.min(to, interval.endP * n);
+    return end > start ? [{
+      type: 'Feature' as const,
+      properties: { color: interval.color },
+      geometry: { type: 'LineString' as const, coordinates: buildIntervalCoords(coordinates, start, end) },
+    }] : [];
+  }));
 
   // Append the interpolated current position to the last feature
   if (partialEndpoint && features.length > 0) {

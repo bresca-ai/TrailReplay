@@ -675,6 +675,7 @@ function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: R
     drawPhotoSlot(ctx, slot, input.slotImages[slot.id], w, h);
   }
 
+  if (settings.showSplitMap !== false) {
   const mapBox = getSplitMapBox(w, h, settings.splitMapFrame);
   ctx.save();
   ctx.shadowColor = 'rgba(11,31,23,0.30)';
@@ -711,6 +712,7 @@ function drawSplit(ctx: CanvasRenderingContext2D, w: number, h: number, input: R
   ctx.beginPath();
   ctx.roundRect(mapBox.x, mapBox.y, mapBox.w, mapBox.h, w * 0.05);
   ctx.stroke();
+  }
 
   for (const slot of (settings.photoSlots ?? []).filter((item) => item.aboveMap)) {
     drawPhotoSlot(ctx, slot, input.slotImages[slot.id], w, h);

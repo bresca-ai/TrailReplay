@@ -14,6 +14,7 @@ import {
   type JourneyPoint,
 } from '@/utils/journeyUtils';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { locationChapterIntroCameraRef, locationChapterIntroStagesRef } from '@/utils/locationChapterCamera';
 import {
   deduplicateCameraPoses,
   getDeterministicIntroStartPose,
@@ -49,6 +50,7 @@ import type { StudioDeliveryJob, StudioDeliveryRequest } from './studioDelivery'
 import { useExportOverlayCapture } from './useExportOverlayCapture';
 
 const EXPORT_TILE_PRELOAD_TIMEOUT_MS = 6000;
+const EXPORT_TILE_POSE_TIMEOUT_MS = 350;
 const EXPORT_OPENING_WINDOW_MS = 20000;
 const EXPORT_OPENING_SAMPLE_COUNT = 8;
 // A studio frame stops waiting after this long so one unreachable tile cannot
@@ -79,6 +81,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const configuredStats = useAppStore((state) => state.settings.visibleStats);
   const showElevationProfile = useAppStore((state) => state.settings.showElevationProfile);
   const dynamicElevationProfile = useAppStore((state) => state.settings.dynamicElevationProfile);
+  const elevationProfilePerRoute = useAppStore((state) => state.settings.elevationProfilePerRoute);
   const mapStyle = useAppStore((state) => state.settings.mapStyle);
   const show3DTerrain = useAppStore((state) => state.settings.show3DTerrain);
   const tracks = useAppStore((state) => state.tracks);
@@ -133,7 +136,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const overlayRefreshIntervalMs = useMemo(() => getOverlayRefreshIntervalMs(videoExportSettings.fps), [videoExportSettings.fps]);
   const getStatsValues = useCallback((progress: number): Partial<Record<StatId, string>> => {
     const state = useAppStore.getState();
-    const routeTimingMode = state.playback.routeTimingMode;
+    const routeTimingMode = computedJourney?.segmentTimings.some((segment) => segment.transportMode === 'camera') ? 'recorded' : state.playback.routeTimingMode;
     let journeyPosition: JourneyPoint | null = null;
     if (computedJourney) {
       journeyPosition = routeTimingMode === 'uniform' && journeyDistanceProfile
@@ -225,7 +228,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         : null;
     }
 
-    const currentSegment = state.playback.routeTimingMode === 'uniform' && journeyDistanceProfile
+    const currentSegment = state.playback.routeTimingMode === 'uniform' && !segmentTimings.some((segment) => segment.transportMode === 'camera') && journeyDistanceProfile
       ? getSegmentAtDistance(
           journeyDistanceProfile,
           journeyDistanceProfile.totalDistance * progress,
@@ -255,7 +258,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     resetOverlayCapture,
     updateOverlayAsync,
   } = useExportOverlayCapture({
-    dynamicElevation: showElevationProfile && dynamicElevationProfile,
+    dynamicElevation: showElevationProfile && (dynamicElevationProfile || elevationProfilePerRoute),
     elevationData,
     getStatsValues,
     includeElevation,
@@ -600,16 +603,18 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       coordinates: cameraPathCoordinates,
       elevationData,
       followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
+      followBehindPitch: cameraSettings.followBehindPitch,
       progress: 0,
     });
     if (!introPose) return;
-    const introStartPose = getDeterministicIntroStartPose({
+    const introStartPose = locationChapterIntroCameraRef.current ?? getDeterministicIntroStartPose({
       coordinates: cameraPathCoordinates,
       introTo: introPose,
     });
     if (!introStartPose) return;
+    const stages = locationChapterIntroStagesRef.current.length ? [...locationChapterIntroStagesRef.current, introPose] : [introStartPose, introPose];
     const poses = deduplicateCameraPoses([
-      ...sampleCameraTransition(introStartPose, introPose),
+      ...stages.slice(1).flatMap((pose, index) => sampleCameraTransition(stages[index], pose)),
       ...getOpeningPreloadProgresses(
         routeDurationMs,
         EXPORT_OPENING_WINDOW_MS,
@@ -619,6 +624,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         coordinates: cameraPathCoordinates,
         elevationData,
         followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
+        followBehindPitch: cameraSettings.followBehindPitch,
         progress,
       })),
     ].filter((pose): pose is ReplayCameraPose => pose !== null));
@@ -636,13 +642,13 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
           resolve();
         };
         map.once('idle', finish);
-        window.setTimeout(finish, Math.max(0, deadline - Date.now()));
+        window.setTimeout(finish, Math.max(0, Math.min(EXPORT_TILE_POSE_TIMEOUT_MS, deadline - Date.now())));
       });
     }
 
     map.jumpTo(introStartPose);
     await waitForMapFrame();
-  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.mode, elevationData, waitForMapFrame]);
+  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.followBehindPitch, cameraSettings.mode, elevationData, waitForMapFrame]);
 
   const captureDeterministicPhase = useCallback(async (
     durationMs: number,

@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import { BookOpen, Download, FileCode2, Globe2, MapPinned } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { HelpLayout } from './HelpLayout';
@@ -6,7 +7,7 @@ import { trackEvent } from '@/utils/analytics';
 import { RouteImportWalkthrough } from './RouteImportWalkthrough';
 
 export function GpxDownloadGuidePage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const gpxTips = getGpxTips(t);
   const otherProviders = getOtherProviders(t);
 
@@ -92,7 +93,7 @@ export function GpxDownloadGuidePage() {
             >
               {t('help.common.openApp')}
             </a>
-            <a href="/tutorial" className="tr-btn tr-btn-secondary inline-flex items-center gap-2">
+            <a href={localizedSitePath('/tutorial', language)} className="tr-btn tr-btn-secondary inline-flex items-center gap-2">
               <Download className="h-4 w-4" />
               {t('help.gpxGuide.openTutorial')}
             </a>
@@ -136,7 +137,7 @@ export function GpxDownloadGuidePage() {
           >
             {t('help.common.openApp')}
           </a>
-          <a href="/tutorial" className="tr-btn tr-btn-secondary inline-flex items-center gap-2">
+          <a href={localizedSitePath('/tutorial', language)} className="tr-btn tr-btn-secondary inline-flex items-center gap-2">
             <Download className="h-4 w-4" />
             {t('help.gpxGuide.openTutorial')}
           </a>

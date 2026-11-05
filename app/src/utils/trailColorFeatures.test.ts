@@ -120,3 +120,20 @@ describe('buildColorZoneLineFeatures', () => {
     expect(features[0].geometry.coordinates).toEqual([[0, 0], [5, 0]]);
   });
 });
+
+
+describe('camera transition geometry', () => {
+  it('does not draw the transition in fixed or zone colors', () => {
+    const coordinates = [[0, 0], [1, 0], [1, 0], [10, 0], [10, 0], [11, 0]];
+    const timings: ColoredSegmentTiming[] = [
+      { segmentIndex: 0, type: 'track', startCoordIndex: 0, endCoordIndex: 1 },
+      { segmentIndex: 1, type: 'transport', transportMode: 'camera', startCoordIndex: 2, endCoordIndex: 3 },
+      { segmentIndex: 2, type: 'track', startCoordIndex: 4, endCoordIndex: 5 },
+    ];
+    const fixed = buildSegmentLineFeatures({ coordinates, segmentTimings: timings, fallbackColor: '#000' });
+    const zones = buildColorZoneLineFeatures({ coordinates, segmentTimings: timings, colorZones: [], fallbackColor: '#000' });
+    for (const features of [fixed, zones]) {
+      expect(features.map((feature) => feature.geometry.coordinates)).toEqual([[[0, 0], [1, 0]], [[10, 0], [11, 0]]]);
+    }
+  });
+});

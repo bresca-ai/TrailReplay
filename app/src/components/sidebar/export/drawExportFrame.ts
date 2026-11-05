@@ -1,3 +1,4 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -19,6 +20,46 @@ import { markerIconContrastFilter } from '@/utils/activityIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 import { drawComparisonLeaderboard } from './drawComparisonLeaderboard';
+import { splitLocationChapterLabel } from '@/utils/locationChapterLabel';
+import type { OverlayFont } from '@/types';
+
+function drawLocationChapterLabel(context: CanvasRenderingContext2D, label: HTMLElement, width: number, height: number, font: OverlayFont) {
+  const parsed = splitLocationChapterLabel(label.textContent ?? '');
+  const flag = label.dataset.locationFlag ?? parsed.flag;
+  const name = label.dataset.locationName ?? parsed.name;
+  if (!flag && !name) return;
+  const scale = width / 1080;
+  const flagSize = Math.max(22, 34 * scale);
+  const fontSize = Math.max(24, 42 * scale), lineHeight = fontSize * 1.12;
+  const gap = Math.max(6, 10 * scale);
+  const maxTextWidth = width * .88;
+  context.save();
+  context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
+  const lines: string[] = [];
+  let line = '';
+  for (const word of name.split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && context.measureText(next).width > maxTextWidth) { lines.push(line); line = word; } else line = next;
+  }
+  if (line) lines.push(line);
+  context.shadowColor = 'rgba(0,0,0,.95)'; context.shadowBlur = Math.max(6, 12 * scale);
+  context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillStyle = '#fff';
+  let y = height * .34;
+  if (flag) {
+    context.font = `${flagSize}px system-ui, sans-serif`;
+    context.fillText(flag, width / 2, y + flagSize / 2);
+    y += flagSize + gap;
+  }
+  if (lines.length) {
+    context.font = `700 ${fontSize}px ${overlayCanvasFontFamily(font)}`;
+    lines.forEach((item, index) => context.fillText(item, width / 2, y + (index + .5) * lineHeight, maxTextWidth));
+    y += lines.length * lineHeight;
+  }
+  const ruleWidth = Math.max(26, 48 * scale), ruleHeight = Math.max(2, 2 * scale);
+  context.fillStyle = label.dataset.locationAccent || '#ffbd66';
+  context.fillRect((width - ruleWidth) / 2, y + gap, ruleWidth, ruleHeight);
+  context.restore();
+}
 
 function extractCssUrl(value: string): string | null {
   const match = value.match(/url\((['"]?)(.*?)\1\)/);
@@ -184,11 +225,31 @@ export function drawExportFrame({
       context.drawImage(cachedOverlayRef.current, 0, 0, recordW, recordH);
     }
 
+    // HTML chapter labels are not part of the map canvas. Position them within
+    // the output frame so portrait crops cannot remove the required credit.
+    const chapterLabel = container.querySelector('.tr-location-chapter') as HTMLElement | null;
+    const chapterCredit = container.querySelector('.tr-location-credit')?.textContent;
+    const scale = recordW / 1080;
+    if (chapterLabel) drawLocationChapterLabel(context, chapterLabel, recordW, recordH, useAppStore.getState().settings.trailStyle.overlayFont);
+    if (chapterCredit) {
+      context.save(); context.font = `${Math.max(12, 15 * scale)}px sans-serif`; context.textBaseline = 'bottom';
+      const maxWidth = recordW - 24 * scale, lines: string[] = []; let line = '';
+      for (const word of chapterCredit.split(/\s+/)) {
+        const next = line ? `${line} ${word}` : word;
+        if (line && context.measureText(next).width > maxWidth) { lines.push(line); line = word; } else line = next;
+      }
+      if (line) lines.push(line);
+      const lineHeight = Math.max(14, 19 * scale), height = (lines.length + .5) * lineHeight;
+      context.fillStyle = 'rgba(0,0,0,.75)'; context.fillRect(0, recordH - height, recordW, height);
+      context.fillStyle = '#fff'; lines.forEach((text, i) => context.fillText(text, 8 * scale, recordH - (lines.length - i - .3) * lineHeight, maxWidth));
+      context.restore();
+    }
+
     // DOM overlays are not part of MapLibre's canvas. Paint the side panel
     // explicitly for video frames, including the slowed section of the route.
     const currentState = useAppStore.getState();
     const activeId = getActivePlaybackAnnotationId({
-      annotations: currentState.textAnnotations,
+      annotations: resolveSharedRouteMoments(currentState.textAnnotations, currentState.journeySegments, currentState.tracks, currentState.playback.routeTimingMode),
       currentTime: currentState.playback.currentTime,
       totalDuration: currentState.playback.totalDuration,
       phase: currentState.animationPhase,

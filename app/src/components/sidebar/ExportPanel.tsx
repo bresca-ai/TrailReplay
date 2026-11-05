@@ -87,7 +87,7 @@ export function ExportPanel() {
     return size.width === videoExportSettings.resolution.width && size.height === videoExportSettings.resolution.height;
   })?.value;
   // One renderer owns the preview across both tabs, including in-flight edits.
-  const socialExport = useSocialShareExport(exportMode === 'image' || (coverMode && !coverPreviewUrl));
+  const socialExport = useSocialShareExport(exportMode === 'image' || (coverMode && !coverPreviewUrl), exportMode === 'image');
   const coverAspectRatio = videoExportSettings.aspectRatio;
   const receiveCoverPoster = useCallback((url: string) => setCoverPreviewUrl(url), [setCoverPreviewUrl]);
   const openCoverEditor = () => {

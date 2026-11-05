@@ -1,3 +1,5 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
+import { ExportAwareSidebar } from '@/components/sidebar/ExportAwareSidebar';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -130,6 +132,7 @@ function App() {
   const exportVideoHoldTimeSeconds = useAppStore((state) => state.exportVideoHoldTimeSeconds);
   const pendingPicturePlacements = useAppStore((state) => state.pendingPicturePlacements);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
+  const journeySegments = useAppStore((state) => state.journeySegments);
   const playback = useAppStore((state) => state.playback);
   const settings = useAppStore((state) => state.settings);
   const { visibleStats: availableStats } = useAvailableStats();
@@ -538,11 +541,11 @@ function App() {
   const { activePicture, activeVideo, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
 
   const activeTextAnnotationId = useMemo(() => getActivePlaybackAnnotationId({
-    annotations: textAnnotations,
+    annotations: resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode),
     currentTime: playback.currentTime,
     totalDuration: playback.totalDuration,
     phase: animationPhase,
-  }), [animationPhase, playback.currentTime, playback.totalDuration, textAnnotations]);
+  }), [animationPhase, playback.currentTime, playback.totalDuration, playback.routeTimingMode, textAnnotations, journeySegments, tracks]);
   const activeSideAnnotation = textAnnotations.find((annotation) =>
     annotation.id === activeTextAnnotationId && annotation.presentation === 'side-panel');
   const localizedSideAnnotation = activeSideAnnotation ? localizedAnnotation(activeSideAnnotation, language) : null;
@@ -627,13 +630,11 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 flex overflow-hidden">
           {/* Sidebar */}
-          {showSidebar && (
-            <div className="w-80 h-full flex-shrink-0 border-r-2 border-[var(--evergreen)] overflow-hidden">
-              <Suspense fallback={<SidebarFallback />}>
-                <Sidebar />
-              </Suspense>
-            </div>
-          )}
+          <ExportAwareSidebar open={showSidebar} exporting={isExporting}>
+            <Suspense fallback={<SidebarFallback />}>
+              <Sidebar />
+            </Suspense>
+          </ExportAwareSidebar>
           
           {/* Map Area */}
           <div className="flex-1 flex flex-col relative">

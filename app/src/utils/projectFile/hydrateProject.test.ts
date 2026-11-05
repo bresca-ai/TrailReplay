@@ -18,6 +18,19 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves camera transitions and their duration through a saved project', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'first.gpx'));
+    source.getState().addTrack(parseGPX(sampleGpx, 'second.gpx'));
+    const segments = source.getState().journeySegments;
+    source.getState().reorderJourneySegments([segments[0], { id: 'camera', type: 'transport', mode: 'camera', from: { lat: 42.101, lon: 1.201 }, to: { lat: 42.1, lon: 1.2 }, duration: 7000, distance: 0, cameraTransitionZoom: 6, cameraTransitionPitch: 45 }, segments[1]]);
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'camera.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().journeySegments[1]).toMatchObject({ mode: 'camera', duration: 7000, distance: 0, cameraTransitionZoom: 6, cameraTransitionPitch: 45 });
+  });
+
   it('preserves comparison mode, existing activity icons, and the original sequence through a saved project', async () => {
     const source = createAppStore();
     const first = parseGPX(sampleGpx, 'first.gpx');
@@ -52,7 +65,7 @@ describe('hydrateProject', () => {
     source.getState().setSettings({ language: 'zh-TW' });
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
     source.getState().addTextAnnotation({
-      id: 'aid-station', lat: 42.1, lon: 1.2, progress: 0.5, title: 'Aid station',
+      id: 'aid-station', lat: 42.1, lon: 1.2, progress: 0.5, title: 'Aid station', showOnMatchingRoutes: true,
       color: '#C1652F', displayDuration: 3000,
       translations: { 'zh-TW': { title: '第一補給站', subtitle: '飲水與點心' } },
     });
@@ -62,6 +75,7 @@ describe('hydrateProject', () => {
     hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
     expect(target.getState().settings.language).toBe('zh-TW');
     expect(target.getState().journey?.name).toBe('我的旅程');
+    expect(target.getState().textAnnotations[0].showOnMatchingRoutes).toBe(true);
     expect(target.getState().textAnnotations[0].translations?.['zh-TW']).toEqual({ title: '第一補給站', subtitle: '飲水與點心' });
   });
 
@@ -178,6 +192,7 @@ describe('hydrateProject', () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
     sourceStore.getState().setCameraSettings({ cameraStability: 0.9 });
+    sourceStore.getState().setSettings({ landmarkStyle: 'minimal' });
     sourceStore.getState().setRouteTimingMode('uniform');
 
     const blob = await buildReplayArchive(sourceStore.getState());
@@ -188,6 +203,7 @@ describe('hydrateProject', () => {
 
     const state = targetStore.getState();
     expect(state.cameraSettings.cameraStability).toBe(0.9);
+    expect(state.settings.landmarkStyle).toBe('minimal');
     expect(state.playback.routeTimingMode).toBe('uniform');
   });
 
@@ -251,10 +267,15 @@ describe('hydrateProject', () => {
     for (const [id, icon] of [['bike', 'pinhead:bicycle'], ['tent', 'emoji:🏕️'], ['legacy', 'camp']]) {
       source.getState().addLandmark({ id, icon, type: 'custom', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: id, importance: 3 });
     }
+    source.getState().setLandmarkPriorityIds(['tent', 'bike']);
     const blob = await buildReplayArchive(source.getState());
     const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
     const restored = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().landmarkPriorityIds).toEqual(['tent', 'bike']);
+    delete parsed.project!.landmarkPriorityIds;
+    hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
+    expect(restored.getState().landmarkPriorityIds).toEqual([]);
     expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
   });
 
@@ -263,6 +284,7 @@ describe('hydrateProject', () => {
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
     sourceStore.getState().setSettings({
       dynamicElevationProfile: true,
+      elevationProfilePerRoute: true,
       elevationSectionOverrides: [{
         sectionId: 'elevation-0-climb-1',
         segmentIndex: 0,
@@ -287,6 +309,7 @@ describe('hydrateProject', () => {
     const restoredStore = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, restoredStore.getState());
     expect(restoredStore.getState().settings.dynamicElevationProfile).toBe(true);
+    expect(restoredStore.getState().settings.elevationProfilePerRoute).toBe(true);
     expect(restoredStore.getState().settings.elevationSectionOverrides).toHaveLength(1);
     expect(restoredStore.getState().settings.customElevationSections).toHaveLength(1);
     expect(restoredStore.getState().settings.hiddenElevationSectionIds).toEqual([
@@ -294,12 +317,14 @@ describe('hydrateProject', () => {
     ]);
 
     delete (parsed.project!.settings as Record<string, unknown>).dynamicElevationProfile;
+    delete (parsed.project!.settings as Record<string, unknown>).elevationProfilePerRoute;
     delete (parsed.project!.settings as Record<string, unknown>).elevationSectionOverrides;
     delete (parsed.project!.settings as Record<string, unknown>).customElevationSections;
     delete (parsed.project!.settings as Record<string, unknown>).hiddenElevationSectionIds;
     const legacyStore = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, legacyStore.getState());
     expect(legacyStore.getState().settings.dynamicElevationProfile).toBe(false);
+    expect(legacyStore.getState().settings.elevationProfilePerRoute).toBe(false);
     expect(legacyStore.getState().settings.elevationSectionOverrides).toEqual([]);
     expect(legacyStore.getState().settings.customElevationSections).toEqual([]);
     expect(legacyStore.getState().settings.hiddenElevationSectionIds).toEqual([]);

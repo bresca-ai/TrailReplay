@@ -1,3 +1,4 @@
+import { localizedSitePath } from '@/seo/seoLocale';
 import { useState } from 'react';
 import {
   BookOpen,
@@ -67,7 +68,7 @@ function Recipe({ code }: { code: string }) {
 }
 
 export function AgentsPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const steps = getAgentSteps(t);
   const examples = getAgentExamples(t);
   const resources = getAgentResources(t);
@@ -262,7 +263,7 @@ export function AgentsPage() {
         </p>
 
         <a
-          href="/gpx-download-guide"
+          href={localizedSitePath('/gpx-download-guide', language)}
           onClick={() => trackEvent('agents_resource_clicked', { resource: '/gpx-download-guide' })}
           className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--trail-orange)] hover:underline"
         >

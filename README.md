@@ -2,8 +2,6 @@
   <img src="./docs/branding-assets/SVG/logohorizontalfondo.svg" alt="TrailReplay" width="520">
 </p>
 
-[English](./README.md) | [繁體中文（台灣）](./README.zh-TW.md)
-
 <p align="center">
   <a href="https://trailreplay.com">
     <img src="./media/trailreplay-overview.gif" alt="TrailReplay app overview: turn a GPX route into an animated, shareable story" width="520">
@@ -17,8 +15,6 @@
 TrailReplay is a browser-based GPX storytelling studio for runners, cyclists, hikers, and outdoor creators. It turns raw route files into polished, shareable replays with map animation, live stats, elevation, media, and export-ready video, all directly in the browser.
 
 The frontend lives in [`app/`](./app).
-
-> **繁體中文說明：** 請參閱 [繁體中文 README](./README.zh-TW.md)，了解功能、操作限制、本機啟動與測試方式。
 
 ## Why It Exists
 
@@ -35,7 +31,6 @@ Most GPX tools stop at route inspection. TrailReplay is built for presentation: 
 - Compare tracks from the same time window and inspect timing differences.
 - Export polished videos with map motion, stats overlays, elevation profile, and branded output.
 - Keep the core GPX workflow local in the browser by default.
-- Use English, Spanish, Catalan, German, French, or Traditional Chinese (Taiwan) across the editor and help pages.
 
 ## Demo Videos
 
@@ -129,3 +124,5 @@ TrailReplay deploys its `main` branch to trailreplay.com through Cloudflare Page
 - The active runtime is the browser app inside `app/`.
 - Help, tutorial, and GPX guide pages ship alongside the main app.
 - GPX processing stays local in the browser by default; community feedback is posted through GitHub Discussions.
+
+[繁體中文（台灣） README](./README.zh-TW.md)

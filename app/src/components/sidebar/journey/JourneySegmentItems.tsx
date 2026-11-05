@@ -4,7 +4,8 @@ import { useAppStore } from '@/store/useAppStore';
 import type { JourneySegment } from '@/types';
 import { formatDistance, formatDuration } from '@/utils/units';
 import { ACTIVITY_ICONS, isSvgActivityIcon, renderActivityIcon } from '@/utils/activityIcons';
-import { Clock, Edit3, GripVertical, Play, Trash2 } from 'lucide-react';
+import { ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { transitionSettings } from '@/utils/cameraTransition';
 import { TRANSPORT_MODES, renderJourneyTransportIcon } from './journeyTransport';
 
 interface SegmentItemProps {
@@ -13,6 +14,7 @@ interface SegmentItemProps {
   onRemove: () => void;
   onEditDuration: () => void;
   onSeek: () => void;
+  onCameraSettingChange?: (key: 'cameraTransitionZoom' | 'cameraTransitionPitch', value: number) => void;
 }
 
 export function TrackSegmentItem({
@@ -138,6 +140,7 @@ export function TransportSegmentItem({
   onRemove,
   onEditDuration,
   onSeek,
+  onCameraSettingChange,
 }: SegmentItemProps) {
   const { t } = useI18n();
   if (segment.type !== 'transport') return null;
@@ -145,6 +148,46 @@ export function TransportSegmentItem({
   const durationSeconds = (segment.duration || 0) / 1000;
   const modeInfo = TRANSPORT_MODES.find((transportMode) => transportMode.mode === segment.mode);
   const modeLabel = t(`stats.transportLabels.${segment.mode}`);
+
+  if (segment.mode === 'camera') {
+    const { zoom, pitch } = transitionSettings(segment);
+    return (
+      <div className="ml-4 overflow-hidden rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)]">
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <GripVertical className="h-3.5 w-3.5 shrink-0 text-[var(--evergreen-40)]" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--evergreen)]/10 text-[var(--evergreen)]">
+            {renderJourneyTransportIcon(segment.mode, 17)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold text-[var(--evergreen)]">{modeLabel}</p>
+            <button type="button" onClick={onEditDuration} className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
+              <Clock className="h-3 w-3" />{formatDuration(durationSeconds)}<Edit3 className="h-2.5 w-2.5" />
+            </button>
+          </div>
+          <button type="button" onClick={onSeek} aria-label={t('journey.goToSegment')} className="rounded-md p-2 text-[var(--evergreen-60)] hover:bg-[var(--evergreen)]/10"><Play className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={onRemove} aria-label={`${t('common.remove')}: ${modeLabel}`} className="rounded-md p-2 text-[var(--evergreen-60)] hover:bg-red-100 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+        </div>
+        <details className="group border-t border-[var(--evergreen)]/10" onPointerDown={(event) => event.stopPropagation()}>
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-[10px] font-semibold text-[var(--evergreen-70)] hover:bg-[var(--evergreen)]/5">
+            <SlidersHorizontal className="h-3.5 w-3.5" /><span className="flex-1">{t('journey.cameraSettings')}</span>
+            <span className="font-normal text-[var(--evergreen-40)]">{zoom.toFixed(1)} · {pitch}°</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="space-y-4 px-3 pb-3 pt-1">
+            <label className="block text-[10px] text-[var(--evergreen)]">
+              <span className="flex items-center justify-between font-semibold"><span>{t('journey.cameraTransitionZoom')}</span><span className="tabular-nums">{zoom.toFixed(1)}</span></span>
+              <input type="range" min="0" max="18" step="0.5" value={zoom} onChange={(event) => onCameraSettingChange?.('cameraTransitionZoom', Number(event.target.value))} className="mt-1 w-full accent-[var(--trail-orange)]" />
+              <span className="mt-0.5 flex justify-between text-[9px] text-[var(--evergreen-60)]"><span>{t('journey.cameraZoomWide')}</span><span>{t('journey.cameraZoomClose')}</span></span>
+            </label>
+            <label className="block text-[10px] text-[var(--evergreen)]">
+              <span className="flex items-center justify-between font-semibold"><span>{t('journey.cameraTransitionPitch')}</span><span className="tabular-nums">{pitch}°</span></span>
+              <input type="range" min="0" max="60" step="5" value={pitch} onChange={(event) => onCameraSettingChange?.('cameraTransitionPitch', Number(event.target.value))} className="mt-1 w-full accent-[var(--trail-orange)]" />
+              <span className="mt-0.5 flex justify-between text-[9px] text-[var(--evergreen-60)]"><span>{t('journey.cameraPitchTopDown')}</span><span>{t('journey.cameraPitchTilted')}</span></span>
+            </label>
+          </div>
+        </details>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[var(--evergreen)]/10 border-2 border-dashed border-[var(--evergreen)]/30 rounded-lg flex items-center gap-2 group cursor-move p-2 ml-4">
@@ -174,6 +217,7 @@ export function TransportSegmentItem({
           <span className="font-semibold">{formatDuration(durationSeconds)}</span>
           <Edit3 className="w-3 h-3 ml-1 opacity-50" />
         </button>
+
       </div>
 
       <div className="flex items-center gap-1">

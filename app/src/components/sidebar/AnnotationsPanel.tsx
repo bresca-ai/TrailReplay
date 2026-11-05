@@ -610,11 +610,11 @@ export function AnnotationsPanel() {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
-          <Label className="text-xs text-[var(--evergreen)]">
+        <div className="space-y-1.5">
+          <Label className="block text-xs text-[var(--evergreen)]">
             {t('annotations.statsBackground')}
           </Label>
-          <div className="flex rounded-lg border border-[var(--evergreen)]/20 overflow-hidden">
+          <div className="flex overflow-hidden rounded-lg border border-[var(--evergreen)]/20">
             {(['panel', 'transparent'] as const).map((mode) => (
               <button
                 key={mode}
@@ -648,13 +648,24 @@ export function AnnotationsPanel() {
         {settings.showElevationProfile && (
           <div className="ml-3 space-y-1.5 border-l border-[var(--evergreen)]/15 pl-3">
             <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="elevation-profile-per-route" className="text-sm text-[var(--evergreen)]">
+                {t('annotations.elevationProfilePerRoute')}
+              </Label>
+              <Switch
+                id="elevation-profile-per-route"
+                checked={settings.elevationProfilePerRoute}
+                onCheckedChange={(checked) => setSettings({ elevationProfilePerRoute: checked, ...(checked ? { dynamicElevationProfile: false } : {}) })}
+              />
+            </div>
+            <p className="text-xs text-[var(--evergreen-60)]">{t('annotations.elevationProfilePerRouteHint')}</p>
+            <div className="flex items-center justify-between gap-3">
               <Label className="text-sm text-[var(--evergreen)]">
                 {t('annotations.dynamicElevationProfile')}
               </Label>
               <Switch
                 checked={settings.dynamicElevationProfile}
                 onCheckedChange={(checked) => {
-                  setSettings({ dynamicElevationProfile: checked });
+                  setSettings({ dynamicElevationProfile: checked, ...(checked ? { elevationProfilePerRoute: false } : {}) });
                   trackEvent('feature_enabled', {
                     feature_name: 'dynamic_elevation_profile',
                     feature_state: checked ? 'enabled' : 'disabled',

@@ -12,6 +12,7 @@ const { MapConstructor, map } = vi.hoisted(() => {
   return { map, MapConstructor: vi.fn(function (options?: Record<string, unknown>) { return { ...map, options }; }) };
 });
 vi.mock('maplibre-gl', () => ({ Map: MapConstructor }));
+vi.mock('./useLocationChapters', () => ({ cameraForPlace: () => ({ center: [1.84, 41.59], zoom: 5, pitch: 0, bearing: 0 }) }));
 
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', vi.fn(function () {
@@ -83,6 +84,25 @@ describe('replay tile warmup camera', () => {
     expect(map.jumpTo).toHaveBeenCalledTimes(2);
     unmount();
     expect(map.off).toHaveBeenCalledWith('render', renderListener);
+  });
+
+  it('requests the zoom path to an upcoming place overview', async () => {
+    map.loaded.mockReturnValue(true);
+    const feature = { type: 'Feature' as const, properties: { id: 'place', name: 'Place', iso3: 'ESP', credit: 'source' },
+      geometry: { type: 'Polygon' as const, coordinates: [[[1, 41], [2, 41], [2, 42], [1, 42], [1, 41]]] } };
+    const { unmount } = renderHook(() => useReplayTileWarmup({
+      allCoordinates: [[1.83, 41.58], [1.85, 41.60]], animationPhase: 'playing', cameraMode: 'follow',
+      diagnostics: NOOP_TILE_PRELOAD_OBSERVER, elevationData: [], enabled: true, followBehindZoomLevel: 33,
+      isMapLoaded: true, isPlaying: true, mapStyle: 'satellite', visibleMapRef: { current: null },
+      playbackProgress: 0, playbackSpeed: 1, totalDurationMs: 95000, locationFeatures: [feature], zoomToPlace: true,
+    }));
+    for (let i = 0; i < 12; i++) {
+      const calls = map.once.mock.calls.filter(([event]) => event === 'render');
+      const listener = calls[calls.length - 1]?.[1];
+      await act(async () => { listener?.(); });
+    }
+    expect(map.jumpTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: 5, pitch: 0 }));
+    unmount();
   });
 
 });

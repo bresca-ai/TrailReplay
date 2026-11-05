@@ -1,5 +1,8 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { VIDEO_LOGO_URL } from './videoExportBrand';
-import { INTRO_DURATION, OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
+import { getIntroDuration, getIntroLevels } from '@/utils/locationChapterCamera';
+import { overlayCanvasFontFamily } from '@/utils/typography';
 import { useAppStore } from '@/store/useAppStore';
 import {
   getBlobSizeBucket,
@@ -15,7 +18,8 @@ import {
 } from '@/utils/annotationTiming';
 import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
 import fixWebmDuration from 'fix-webm-duration';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { startExportTiming } from './exportTiming';
 import { getSupportedMimeType, getVideoBitrate } from './exportConfig';
 import { finishExportProfile, startExportProfile } from './exportProfiler';
 import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
@@ -47,6 +51,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   } = useVideoExportRecorderCore(options);
+
+  const exportTimingRef = useRef<ReturnType<typeof startExportTiming> | null>(null);
+  useEffect(() => () => { exportTimingRef.current?.(); }, []);
 
   const exportProfileMetadata = useCallback((encoderPath: string, blobSize = 0) => ({
     encoderPath,
@@ -95,6 +102,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           : t('export.stageComplete'));
         setExportProgress(100);
         trackEvent('export_completed', {
+          ...exportTimingRef.current?.(),
           ...getVideoExportAnalyticsParams(videoExportSettings, 'mp4', playback.totalDuration),
           export_blob_size_bucket: getBlobSizeBucket(blob.size),
           export_encoder_path: 'webcodecs',
@@ -158,6 +166,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         export_encoder_path: 'webcodecs',
       });
     } finally {
+      exportTimingRef.current?.();
       restoreStudioMapSettings();
       studioDeliveryJobRef.current = null;
       studioQualityRef.current = false;
@@ -232,8 +241,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const { fps } = videoExportSettings;
     const frameDurationMs = 1000 / fps;
     const store = useAppStore.getState();
+    const introDuration = getIntroDuration(store.settings.locationChapters);
     const routeDurationMs = store.playback.totalDuration;
-    const annotations = store.textAnnotations;
+    const annotations = resolveSharedRouteMoments(store.textAnnotations, store.journeySegments, store.tracks, store.playback.routeTimingMode);
     const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations);
     // Preview speed only affects interactive playback. Export always preserves
     // the configured journey duration on the encoded timeline.
@@ -260,14 +270,14 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     store.setAnimationPhase('intro');
     setExportStage(t('export.recordingIntro'));
     await waitForMapFrame();
-    await captureDeterministicPhase(INTRO_DURATION, coverDurationMs, true);
+    await captureDeterministicPhase(introDuration, coverDurationMs, true);
 
     if (!isRecordingRef.current || recordingCancelledRef.current) return;
 
     store.setCinematicPlayed(true);
     store.setAnimationPhase('playing');
     setExportStage(describeRecordingStage(0, frameCount));
-    let encodedDurationMs = coverDurationMs + INTRO_DURATION;
+    let encodedDurationMs = coverDurationMs + introDuration;
     // Mirrors App.tsx's live-playback picture trigger (`getTriggeredPlaybackPictures`),
     // but drives its own hold here so the export can freeze the route
     // position for the picture's full `displayDuration` instead of just
@@ -480,6 +490,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         setExportStage(t('export.stageComplete'));
         setExportProgress(100);
         trackEvent('export_completed', {
+          ...exportTimingRef.current?.(),
           ...getVideoExportAnalyticsParams(videoExportSettings, extension, playback.totalDuration),
           export_blob_size_bucket: getBlobSizeBucket(blob.size),
           export_encoder_path: 'mediarecorder',
@@ -500,6 +511,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           export_encoder_path: 'mediarecorder',
         });
       }
+      exportTimingRef.current?.();
       setIsExporting(false);
       // The screen-recording fallback completes after the normal animation has
       // reached its finale. Reset so the next Play starts a fresh replay.
@@ -534,6 +546,12 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
 
   const handleStartExport = useCallback(async () => {
+    const chapterStatus = document.querySelector('[data-location-chapters-status]')?.getAttribute('data-location-chapters-status');
+    const chapterSettings = useAppStore.getState().settings.locationChapters;
+    if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0) && chapterStatus !== 'ready') {
+      alert(t('locationChapters.notReady'));
+      return;
+    }
     const mapCanvas = document.querySelector('.maplibregl-canvas') as HTMLCanvasElement | null;
     if (!mapCanvas) {
       alert(t('export.noCanvas'));
@@ -550,6 +568,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     }
 
+    exportTimingRef.current?.();
+    exportTimingRef.current = startExportTiming();
     startExportProfile();
     setIsExporting(true);
     setExportProgress(0);
@@ -598,6 +618,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
+      const chapterFont = useAppStore.getState().settings.trailStyle.overlayFont;
+      const chapterSettings = useAppStore.getState().settings.locationChapters;
+      if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0)) {
+        await document.fonts.load(`700 24px ${overlayCanvasFontFamily(chapterFont)}`).catch(() => []);
+      }
       await document.fonts.ready;
       // Load saved symbols before rendering the first video frame.
       const exportState = useAppStore.getState();
@@ -740,6 +765,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     } catch (error) {
       finishExportProfile('failed', exportProfileMetadata(useWebCodecsRef.current ? 'webcodecs' : 'setup'));
+      exportTimingRef.current?.();
       console.error('Export failed:', error);
       trackEvent('export_failed', {
         export_failure_scope: 'setup',
@@ -787,6 +813,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   }, [hiddenMsRef, hiddenSinceRef, isExporting, requestScreenWakeLock, studioQualityRef, wakeLockRef]);
 
   const handleCancelExport = useCallback(() => {
+    exportTimingRef.current?.();
     const exportEncoderPath = useWebCodecsRef.current ? 'webcodecs' : 'mediarecorder';
     isRecordingRef.current = false;
     recordingCancelledRef.current = true;

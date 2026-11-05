@@ -74,6 +74,70 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     logoBboxNorm,
     resolvedTitle,
   } = exportController;
+  const historyRef = useRef<Array<{ settings: typeof settings; mapStyle: typeof mapStyle; overlayFont: typeof overlayFont; camera: { center: [number, number]; zoom: number; pitch: number; bearing: number } | null }>>([]);
+  const applyingUndoRef = useRef(false);
+  const lastHistoryRef = useRef<{ key: string; time: number } | null>(null);
+  const [undoCount, setUndoCount] = useState(0);
+  const captureHistory = (state = useAppStore.getState(), key = '') => {
+    if (applyingUndoRef.current) return;
+    const now = Date.now();
+    if (key && lastHistoryRef.current?.key === key && now - lastHistoryRef.current.time < 600) {
+      lastHistoryRef.current.time = now;
+      return;
+    }
+    const map = mapGlobalRef.current;
+    const center = map?.getCenter();
+    historyRef.current.push({
+      settings: state.socialShareSettings,
+      mapStyle: state.settings.mapStyle,
+      overlayFont: state.settings.trailStyle.overlayFont,
+      camera: map && center ? { center: [center.lng, center.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() } : null,
+    });
+    if (historyRef.current.length > 100) historyRef.current.shift();
+    lastHistoryRef.current = key ? { key, time: now } : null;
+    setUndoCount(historyRef.current.length);
+  };
+  const captureHistoryRef = useRef(captureHistory);
+  useEffect(() => { captureHistoryRef.current = captureHistory; });
+  useEffect(() => useAppStore.subscribe((state, previous) => {
+    if (state.socialShareSettings === previous.socialShareSettings && state.settings.mapStyle === previous.settings.mapStyle
+      && state.settings.trailStyle.overlayFont === previous.settings.trailStyle.overlayFont) return;
+    const active = document.activeElement;
+    const group = active instanceof HTMLInputElement && ['text', 'range', 'color'].includes(active.type)
+      ? `input:${active.id || active.getAttribute('aria-label') || active.outerHTML.slice(0, 100)}` : '';
+    captureHistoryRef.current(previous, group);
+  }), []);
+  const undo = () => {
+    const entry = historyRef.current.pop();
+    if (!entry) return;
+    applyingUndoRef.current = true;
+    lastHistoryRef.current = null;
+    try {
+      if (onAspectRatioChange && entry.settings.aspectRatio !== useAppStore.getState().socialShareSettings.aspectRatio) onAspectRatioChange(entry.settings.aspectRatio);
+      useAppStore.setState((state) => ({ socialShareSettings: entry.settings, settings: { ...state.settings, mapStyle: entry.mapStyle, trailStyle: { ...state.settings.trailStyle, overlayFont: entry.overlayFont } } }));
+      if (entry.camera && mapGlobalRef.current) {
+        mapGlobalRef.current.jumpTo(entry.camera);
+        setPitch(Math.round(entry.camera.pitch));
+        setBearing(Math.round(entry.camera.bearing));
+      }
+      window.requestAnimationFrame(() => { void generatePreviewRef.current(); });
+    } finally {
+      applyingUndoRef.current = false;
+      setUndoCount(historyRef.current.length);
+    }
+  };
+  const undoRef = useRef(undo);
+  useEffect(() => { undoRef.current = undo; });
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undoRef.current();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   const [editorHost] = useState(() => document.getElementById('map-capture-container'));
   const [pitch, setPitch] = useState(() => Math.round(mapGlobalRef.current?.getPitch() ?? 0));
   const [bearing, setBearing] = useState(() => Math.round(mapGlobalRef.current?.getBearing() ?? 0));
@@ -226,11 +290,13 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
   };
 
   const handlePitch = (v: number) => {
+    captureHistory(undefined, 'camera-pitch');
     setPitch(v);
     mapGlobalRef.current?.jumpTo({ pitch: v });
     refreshCameraPreview();
   };
   const handleBearing = (v: number) => {
+    captureHistory(undefined, 'camera-bearing');
     setBearing(v);
     mapGlobalRef.current?.jumpTo({ bearing: v });
     refreshCameraPreview();
@@ -239,6 +305,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
   const nudgeMap = (x: number, y: number) => {
     const map = mapGlobalRef.current;
     if (!map) return;
+    captureHistory();
     map.panBy([x, y], { duration: 0 });
     refreshCameraPreview();
   };
@@ -246,11 +313,13 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
   const zoomMap = (direction: 'in' | 'out') => {
     const map = mapGlobalRef.current;
     if (!map) return;
+    captureHistory();
     map.zoomTo(map.getZoom() + (direction === 'in' ? MAP_ZOOM_STEP : -MAP_ZOOM_STEP), { duration: 0 });
     refreshCameraPreview();
   };
 
   const centerMap = () => {
+    captureHistory();
     fitTrackToMap();
     refreshCameraPreview();
   };
@@ -276,7 +345,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
         </div>
       )}
 
-      <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => {
+      <input ref={photoInputRef} type="file" accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif" className="hidden" onChange={(event) => {
         const file = event.target.files?.[0];
         const id = targetPhotoSlotRef.current;
         if (file && id) void loadPhotoIntoSlot(id, file);
@@ -485,6 +554,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
 
       {settings.template === 'split' && <div className="space-y-3 rounded-xl bg-black/[0.025] p-3">
         <div>
+          <label className="flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={settings.showSplitMap !== false} onChange={(event) => setSocialShareSettings({ showSplitMap: event.target.checked })} />{t('imageExport.showSplitMap')}</label>
           <div className="text-xs font-semibold uppercase tracking-wide">{t('imageExport.mapFrame')}</div>
           <p className="mt-1 text-[11px] leading-4 opacity-60">{t('imageExport.splitMapHint')}</p>
         </div>
@@ -907,7 +977,10 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           onDownload={onUseCover ? () => { onPosterReady?.(previewUrl); void exportPng(); } : undefined}
           settings={settings}
           setSocialShareSettings={setSocialShareSettings}
+          onUndo={undo}
+          canUndo={undoCount > 0}
           onMapRouteGesture={transformMapViewport}
+          onMapEditStart={() => captureHistory()}
           onPhotoSlotPick={openPhotoPicker}
           onPhotoSlotFile={(id, file) => { void loadPhotoIntoSlot(id, file); }}
           onPhotoSlotPicture={(id, pictureId) => { void loadLibraryPhotoIntoSlot(id, pictureId); }}
@@ -915,6 +988,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           activePhotoSlotId={activePhotoSlotId}
           onPhotoSlotSelect={setActivePhotoSlotId}
           onElementSelect={selectSection}
+          selectedSection={selectedSection}
           routeBboxNorm={routeBboxNorm}
           dataPanelBboxNorm={dataPanelBboxNorm}
           titleBboxNorm={titleBboxNorm}

@@ -39,7 +39,7 @@ export interface GPXTrack {
   visible: boolean;
 }
 
-export type TransportMode = 'car' | 'bus' | 'train' | 'plane' | 'bike' | 'walk' | 'ferry';
+export type TransportMode = 'car' | 'bus' | 'train' | 'plane' | 'bike' | 'walk' | 'ferry' | 'camera';
 
 export interface TransportSegment {
   id: string;
@@ -49,6 +49,12 @@ export interface TransportSegment {
   to: { lat: number; lon: number; name?: string };
   duration: number;
   distance: number;
+  /** Map zoom and tilt used while moving between routes. */
+  cameraTransitionZoom?: number;
+  cameraTransitionPitch?: number;
+  /** Legacy settings from earlier drafts, retained when reopening projects. */
+  cameraZoomOut?: number;
+  cameraZoomIn?: number;
 }
 
 export interface TrackSegment {
@@ -167,6 +173,8 @@ export interface IconChange {
 
 export interface TextAnnotation {
   id: string;
+  /** Show the same moment once on each nearby route in the journey. */
+  showOnMatchingRoutes?: boolean;
   progress: number;
   /** Stable distance from the journey start, used when timing mode changes. */
   routeDistance?: number;
@@ -245,6 +253,8 @@ export interface CameraSettings {
     | 'medium'
     | 'far';
   followBehindZoomLevel: number;
+  /** Null retains the distance-dependent default tilt. */
+  followBehindPitch: number | null;
   /** 0 = maximally stable/smooth camera, 1 = maximally reactive/tight tracking. */
   cameraStability: number;
 }
@@ -320,6 +330,7 @@ export interface SocialShareSettings {
   photoSlots: SocialSharePhotoSlot[];
   /** Normalized position and size of the map inset in photo + map layouts. */
   splitMapFrame?: { x: number; y: number; w: number; h: number };
+  showSplitMap?: boolean;
   titleMode: 'journey-name' | 'track-name' | 'custom';
   customTitle: string;
   titleScale: number;
@@ -424,13 +435,35 @@ export type StatId =
   | 'speed'
   | 'altitude';
 
+export interface LocationChapterSettings {
+  level: 'off' | 'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5';
+  color: string;
+  width: number;
+  fill: boolean;
+  showName: boolean;
+  showFlag: boolean;
+  zoomToPlace: boolean;
+  zoomDurationSeconds?: number;
+  introZoomToPlace?: boolean;
+  introCountryFirst?: boolean;
+  introLevels?: Array<'country' | 'region' | 'adm2' | 'adm3' | 'adm4' | 'adm5'>;
+  /** Explicitly keeps opening reveals enabled when travel reveals are off. */
+  introWhenPlaybackOff?: boolean;
+  introDurationSeconds?: number;
+  traceBorder?: boolean;
+  minimumStaySeconds?: number;
+  durationSeconds: number;
+}
+
 export interface AppSettings {
+  locationChapters: LocationChapterSettings;
   unitSystem: UnitSystem;
   language: LanguageCode;
   mapStyle: MapStyle;
   mapFilter: MapFilter;
   mapOverlays: MapOverlays;
   show3DTerrain: boolean;
+  terrainExaggeration: number;
   recordedElevationPrototype: boolean;
   showHeartRate: boolean;
   showPictures: boolean;
@@ -456,6 +489,7 @@ export interface AppSettings {
   showElevationProfile: boolean;
   /** Automatically focus the elevation chart on significant climbs and descents. */
   dynamicElevationProfile: boolean;
+  elevationProfilePerRoute: boolean;
   /** Route-specific boundary adjustments for automatically detected elevation sections. */
   elevationSectionOverrides: ElevationSectionOverride[];
   /** User-authored zoom sections added from the paused elevation editor. */
@@ -464,6 +498,8 @@ export interface AppSettings {
   hiddenElevationSectionIds: string[];
   /** Multiplier applied to landmark pins and their labels together. */
   landmarkScale: number;
+  /** Classic colored markers or a compact, typography-led map label. */
+  landmarkStyle: 'classic' | 'minimal';
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
   inactiveAnnotationsOpacity: number;
