@@ -7,11 +7,18 @@ const muxerState = vi.hoisted(() => ({
   probedConfigs: [] as VideoEncoderConfig[],
   configuredConfig: null as VideoEncoderConfig | null,
   emitChunks: true,
+  onData: null as ((data: Uint8Array, position: number) => void) | null,
 }));
 
 vi.mock('mp4-muxer', () => {
   class ArrayBufferTarget {
     buffer = new ArrayBuffer(0);
+  }
+
+  class StreamTarget {
+    constructor(options: { onData: (data: Uint8Array, position: number) => void }) {
+      muxerState.onData = options.onData;
+    }
   }
 
   class Muxer {
@@ -22,11 +29,11 @@ vi.mock('mp4-muxer', () => {
       this.target = options.target;
     }
 
-    addVideoChunk() {}
+    addVideoChunk() { muxerState.onData?.(new Uint8Array([1, 2]), 7); }
     finalize() {}
   }
 
-  return { ArrayBufferTarget, Muxer };
+  return { ArrayBufferTarget, StreamTarget, Muxer };
 });
 
 import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
@@ -39,6 +46,7 @@ describe('createMp4CanvasEncoder', () => {
     muxerState.probedConfigs = [];
     muxerState.configuredConfig = null;
     muxerState.emitChunks = true;
+    muxerState.onData = null;
 
     class VideoEncoderStub {
       static async isConfigSupported(config: VideoEncoderConfig) {
@@ -76,6 +84,34 @@ describe('createMp4CanvasEncoder', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('waits for disk writes before accepting the next frame and closes the file', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const write = vi.fn(() => pending);
+    const close = vi.fn(async () => {});
+    const file = new File(['video'], 'video.mp4', { type: 'video/mp4' });
+    const handle = { createWritable: async () => ({ write, close, abort: vi.fn() }), getFile: async () => file } as unknown as FileSystemFileHandle;
+    const encoder = await createMp4CanvasEncoder({ width: 1920, height: 1080, fps: 30, bitrate: 10_000_000, fileHandle: handle });
+    let done = false;
+    const frame = encoder!.encodeCanvas({} as HTMLCanvasElement, 0).then(() => { done = true; });
+    await vi.waitFor(() => expect(write).toHaveBeenCalledOnce());
+    expect(done).toBe(false);
+    expect(write).toHaveBeenCalledWith({ type: 'write', position: 7, data: new Uint8Array([1, 2]) });
+    release();
+    await frame;
+    expect(await encoder!.finalize()).toBe(file);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('surfaces disk errors and aborts the file on cancellation', async () => {
+    const abort = vi.fn(async () => {});
+    const handle = { createWritable: async () => ({ write: async () => { throw new Error('disk full'); }, abort }) } as unknown as FileSystemFileHandle;
+    const encoder = await createMp4CanvasEncoder({ width: 1920, height: 1080, fps: 30, bitrate: 10_000_000, fileHandle: handle });
+    await expect(encoder!.encodeCanvas({} as HTMLCanvasElement, 0)).rejects.toThrow('disk full');
+    encoder!.close();
+    await vi.waitFor(() => expect(abort).toHaveBeenCalledOnce());
   });
 
   it('writes chunks immediately instead of retaining the whole export for Fast Start', async () => {

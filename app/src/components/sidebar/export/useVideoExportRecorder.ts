@@ -22,7 +22,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { startExportTiming } from './exportTiming';
 import { getSupportedMimeType, getVideoBitrate } from './exportConfig';
 import { finishExportProfile, startExportProfile } from './exportProfiler';
-import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
+import { createMp4CanvasEncoder, isWebCodecsMp4Supported } from './mp4CanvasEncoder';
 import { needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { loadPinheadIcons } from '@/components/annotations/pinheadIcons';
 import {
@@ -110,7 +110,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           export_studio_timed_out_frames: studioStats.timedOutFrames,
         });
 
-        if (shouldAutoDownloadVideo(wasStudioQuality ? 'studio' : 'standard', localStudioDownload)) {
+        if (!encoder.diskBacked && shouldAutoDownloadVideo(wasStudioQuality ? 'studio' : 'standard', localStudioDownload)) {
           const url = URL.createObjectURL(blob);
           const anchor = document.createElement('a');
           anchor.href = url;
@@ -568,6 +568,25 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     }
 
+    // The picker must run directly from the user's click, before preparation
+    // awaits. Studio delivery can upload the resulting disk-backed File.
+    let fileHandle: FileSystemFileHandle | undefined;
+    const picker = (window as Window & { showSaveFilePicker?: (options: {
+      suggestedName: string; types: Array<{ description: string; accept: Record<string, string[]> }>;
+    }) => Promise<FileSystemFileHandle> }).showSaveFilePicker;
+    if (videoExportSettings.format === 'mp4' && isWebCodecsMp4Supported() && picker) {
+      try {
+        fileHandle = await picker.call(window, {
+          suggestedName: `trail-replay-${Date.now()}.mp4`,
+          types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }],
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
+        return;
+      }
+    }
+
     exportTimingRef.current?.();
     exportTimingRef.current = startExportTiming();
     startExportProfile();
@@ -666,6 +685,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       // first encoded frame. This avoids a recording that begins mid-reframe.
       await new Promise((resolve) => setTimeout(resolve, EXPORT_MAP_SETTLE_MS));
 
+      if (recordingCancelledRef.current) return;
       setExportStage(t('export.stageSetupRecorder'));
 
       // Preferred path: encode MP4 with WebCodecs + mp4-muxer. This produces a
@@ -676,6 +696,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           mp4EncoderRef.current = await createMp4CanvasEncoder({
             width,
             height,
+            fileHandle,
             fps: videoExportSettings.fps,
             bitrate: getVideoBitrate({
               width,
@@ -684,8 +705,14 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
               qualityMode: videoExportSettings.qualityMode,
             }),
           });
+          if (recordingCancelledRef.current) {
+            mp4EncoderRef.current?.close();
+            mp4EncoderRef.current = null;
+            return;
+          }
           setUseWebCodecs(mp4EncoderRef.current !== null);
         } catch (encoderError) {
+          if (fileHandle) throw encoderError;
           console.warn('WebCodecs MP4 encoder unavailable, falling back to MediaRecorder', encoderError);
           mp4EncoderRef.current = null;
           setUseWebCodecs(false);
