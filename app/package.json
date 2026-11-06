@@ -34,7 +34,7 @@
     "exifreader": "^4.50.0",
     "fflate": "^0.8.3",
     "fix-webm-duration": "^1.0.6",
-    "heic-to": "^1.6.5",
+    "heic-to": "^1.6.7",
     "immer": "^11.2.9",
     "lucide-react": "^1.60.0",
     "maplibre-gl": "6.16.0",
@@ -48,7 +48,7 @@
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
     "web-vitals": "^6.2.3",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
