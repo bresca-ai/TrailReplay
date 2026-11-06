@@ -668,6 +668,11 @@ export const en = {
     noVideos: 'No videos uploaded',
     noVideosHint: 'Add clips to appear at moments in your video',
     relinkFile: 'Re-link file',
+    relinkFolder: {
+      pictures: '{count} picture(s) missing link',
+      videos: '{count} video(s) missing link',
+      hint: 'Click here to link all unlinked elements to files in a local folder.'
+    },
     placeholderFile: 'File not attached (restored from a saved project)',
     previewPicture: 'Preview picture',
     trailAlt: 'Trail',
