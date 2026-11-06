@@ -35,7 +35,7 @@
     "fflate": "^0.8.3",
     "fix-webm-duration": "^1.0.6",
     "heic-to": "^1.6.7",
-    "immer": "^11.1.21",
+    "immer": "^11.2.9",
     "lucide-react": "^1.60.0",
     "maplibre-gl": "6.16.0",
     "mp4-muxer": "^5.2.2",
