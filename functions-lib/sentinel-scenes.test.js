@@ -3,9 +3,9 @@ import { onRequestGet } from '../functions/api/sentinel-scenes.js';
 afterEach(() => vi.unstubAllGlobals());
 it('returns only dated low-cloud scenes with reported snow', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ features:[
-    { properties:{ datetime:'2025-03-30T10:00:00Z', 'eo:cloud_cover':2, 'eo:snow_cover':27 } },
-    { properties:{ datetime:'2025-03-28T10:00:00Z', 'eo:cloud_cover':90, 'eo:snow_cover':10 } },
-    { properties:{ datetime:'2025-03-27T10:00:00Z', 'eo:cloud_cover':2, 'eo:snow_cover':0 } },
+    { properties:{ datetime:'2025-03-30T10:00:00Z', 'eo:cloud_cover':2, 's2:snow_ice_percentage':27 } },
+    { properties:{ datetime:'2025-03-28T10:00:00Z', 'eo:cloud_cover':90, 's2:snow_ice_percentage':10 } },
+    { properties:{ datetime:'2025-03-27T10:00:00Z', 'eo:cloud_cover':2, 's2:snow_ice_percentage':0 } },
   ] })));
   const r = await onRequestGet({request:new Request('https://example.test/api/sentinel-scenes?lat=42.54&lon=1.73')});
   expect(r.status).toBe(200);

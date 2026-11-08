@@ -52,10 +52,10 @@ export async function onRequestGet(context) {
     const bbox = [-WORLD + x * size, WORLD - (y + 1) * size, -WORLD + (x + 1) * size, WORLD - y * size];
     const query = new URLSearchParams({ SERVICE:'WMS', VERSION:'1.1.1', REQUEST:'GetMap', LAYERS:'TRUE_COLOR', SRS:'EPSG:3857', BBOX:bbox.join(','), WIDTH:'256', HEIGHT:'256', FORMAT:'image/png', TRANSPARENT:'true', TIME:`${date}/${date}`, MAXCC:'20' });
     const upstream = await fetch(`https://sh.dataspace.copernicus.eu/ogc/wms/${instance}?${query}`, { redirect:'error', signal:AbortSignal.timeout(20000) });
-    if (!upstream.ok || !upstream.headers.get('content-type')?.toLowerCase().startsWith('image/png')) return error(502);
+    if (!upstream.ok || !upstream.headers.get('content-type')?.toLowerCase().startsWith('image/png')) return new Response('upstream status: ' + upstream.status, {status:502});
     const body = await limitedBytes(upstream.body);
     const result = new Response(body, { headers: { ...headers, 'Content-Type':'image/png', 'Cache-Control':'public, max-age=86400' } });
     if (cache) context.waitUntil(cache.put(key, result.clone()));
     return result;
-  } catch { return error(502); }
+  } catch (e) { return new Response('exception: ' + (e?.name || 'unknown'), {status:502}); }
 }

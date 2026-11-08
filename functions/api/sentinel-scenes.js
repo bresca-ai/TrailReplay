@@ -11,7 +11,7 @@ export async function onRequestGet(context) {
   // Use the most recently completed winter so the request remains stable.
   const winterYear = lat >= 0 ? (month <= 4 ? year - 1 : year) : (month <= 9 ? year - 1 : year);
   const interval = lat >= 0 ? `${winterYear}-01-01T00:00:00Z/${winterYear}-04-15T23:59:59Z` : `${winterYear}-06-01T00:00:00Z/${winterYear}-09-30T23:59:59Z`;
-  const stac = new URL('https://stac.dataspace.copernicus.eu/v1/search');
+  const stac = new URL('https://earth-search.aws.element84.com/v1/search');
   stac.search = new URLSearchParams({ collections:'sentinel-2-l2a', bbox:`${lon-0.01},${lat-0.01},${lon+0.01},${lat+0.01}`, datetime:interval, limit:'100' });
   try {
     const upstream = await fetch(stac, { redirect:'error', signal:AbortSignal.timeout(15000) });
@@ -24,7 +24,7 @@ export async function onRequestGet(context) {
     if (!Array.isArray(data.features)) return response({ error:'unavailable' }, 502);
     const days = new Map();
     for (const scene of data.features) {
-      const p = scene?.properties, date = typeof p?.datetime === 'string' ? p.datetime.slice(0,10) : '', cloud = Number(p?.['eo:cloud_cover']), snow = Number(p?.['eo:snow_cover']);
+      const p = scene?.properties, date = typeof p?.datetime === 'string' ? p.datetime.slice(0,10) : '', cloud = Number(p?.['eo:cloud_cover']), snow = Number(p?.['s2:snow_ice_percentage']);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(cloud) || cloud > 25 || !Number.isFinite(snow) || snow <= 0) continue;
       const previous = days.get(date); if (!previous || previous.cloud > cloud) days.set(date, { date, cloud, snow });
     }
