@@ -838,8 +838,6 @@ export const fr = {
     styleTitle: "Style des lieux",
     styleClassic: "Classique",
     styleMinimal: "Minimaliste",
-    shareStyleFeedback: "Partagez votre préférence sur GitHub",
-    shareStyleFeedbackHint: "Ouvre un brouillon avec le style sélectionné. Vous pouvez le modifier avant publication.",
 
     priorityHint: 'Placez les lieux importants en haut. Ils sont prioritaires lorsque les lieux ou les étiquettes se chevauchent.', moveUp: 'Monter {name}', moveDown: 'Descendre {name}', dragPriority: 'Faites glisser pour changer la priorité',
     title: 'Points d’intérêt du parcours', description: 'Choisissez les détails du paysage à afficher dans le replay. Le marqueur du parcours reste la priorité visuelle.',
