@@ -13,10 +13,12 @@ export async function onRequestGet(context) {
   const interval = lat >= 0 ? `${winterYear}-01-01T00:00:00Z/${winterYear}-04-15T23:59:59Z` : `${winterYear}-06-01T00:00:00Z/${winterYear}-09-30T23:59:59Z`;
   const stac = new URL('https://earth-search.aws.element84.com/v1/search');
   stac.search = new URLSearchParams({ collections:'sentinel-2-l2a', bbox:`${lon-0.01},${lat-0.01},${lon+0.01},${lat+0.01}`, datetime:interval, limit:'100' });
+  let step = 'fetch';
   try {
     const upstream = await fetch(stac, { redirect:'error', signal:AbortSignal.timeout(15000) });
     if (!upstream.ok) return response({ error:'unavailable' }, 502);
     if (!upstream.body) return response({ error:'unavailable' }, 502);
+    step = 'body';
     const reader = upstream.body.getReader(), decoder = new TextDecoder(); let text = '', bytes = 0;
     try { while (true) { const part = await reader.read(); if (part.done) break; bytes += part.value.byteLength; if (bytes > 4_000_000) { await reader.cancel(); return response({ error:'unavailable' }, 502); } text += decoder.decode(part.value, { stream:true }); } text += decoder.decode(); }
     finally { reader.releaseLock(); }
@@ -29,5 +31,5 @@ export async function onRequestGet(context) {
       const previous = days.get(date); if (!previous || previous.cloud > cloud) days.set(date, { date, cloud, snow });
     }
     return response({ scenes:[...days.values()].sort((a,b) => b.date.localeCompare(a.date)).slice(0,20), coverage:'scene-wide' });
-  } catch { return response({ error:'unavailable' }, 502); }
+  } catch (e) { return response({ error:'unavailable', step, kind:e?.name }, 502); }
 }
