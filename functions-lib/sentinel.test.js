@@ -13,10 +13,17 @@ afterEach(() => vi.unstubAllGlobals());
 describe('Sentinel tiles', () => {
   it('validates inputs and never permits arbitrary upstream URLs', async () => {
     const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
-    for (const query of ['date=2025-02-30&z=1&x=0&y=0', 'date=2025-03-30&z=2&x=4&y=0', valid + '&url=https://example.org']) {
+    for (const query of ['date=2025-02-30&z=1&x=0&y=0', 'date=2025-03-30&z=2&x=4&y=0', valid + '&url=https://example.org', valid + '&v=3', valid + '&v=2&v=2']) {
       expect((await onRequestGet(context(query))).status).toBe(400);
     }
     expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('accepts the current imagery version and isolates its cache from older tiles', async () => {
+    const cache = { match: vi.fn(async () => undefined), put: vi.fn(async () => {}) };
+    vi.stubGlobal('caches', { default: cache });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(png, { headers: { 'content-type':'image/png' } })));
+    expect((await onRequestGet(context(valid + '&v=2'))).status).toBe(200);
+    expect(new URL(cache.match.mock.calls[0][0].url).searchParams.get('v')).toBe('2');
   });
   it('protects the quota and keeps upstream credentials out of responses', async () => {
     const fetcher = vi.fn(async () => new Response(png, { headers: { 'content-type':'image/png' } })); vi.stubGlobal('fetch', fetcher);

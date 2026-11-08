@@ -28,7 +28,7 @@ async function limitedBytes(body) {
 // Fixed upstream and layer: client input never controls a destination URL.
 export async function onRequestGet(context) {
   const url = new URL(context.request.url), params = url.searchParams;
-  if ([...params.keys()].some(k => !['date','z','x','y'].includes(k)) || ['date','z','x','y'].some(k => params.getAll(k).length !== 1)) return error(400);
+  if ([...params.keys()].some(k => !['date','z','x','y','v'].includes(k)) || ['date','z','x','y'].some(k => params.getAll(k).length !== 1) || params.getAll('v').length > 1 || (params.has('v') && params.get('v') !== '2')) return error(400);
   const date = params.get('date'), zs = params.get('z'), xs = params.get('x'), ys = params.get('y');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{1,2}$/.test(zs) || !/^\d{1,6}$/.test(xs) || !/^\d{1,6}$/.test(ys)) return error(400);
   const when = Date.parse(`${date}T00:00:00Z`), z = Number(zs), x = Number(xs), y = Number(ys);
@@ -37,7 +37,7 @@ export async function onRequestGet(context) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(instance ?? '') || !context.env?.LANDMARKS_DB?.prepare) return error(503);
   const cache = globalThis.caches?.default;
   // Canonicalize the key; avoid retaining unrelated request headers or secrets.
-  const key = new Request(`${url.origin}/api/sentinel?date=${date}&z=${z}&x=${x}&y=${y}`);
+  const key = new Request(`${url.origin}/api/sentinel?date=${date}&z=${z}&x=${x}&y=${y}&v=2`);
   const hit = cache && await cache.match(key);
   if (hit) return hit;
   try {
