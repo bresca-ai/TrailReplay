@@ -40,7 +40,6 @@ export async function onRequestGet(context) {
   const key = new Request(`${url.origin}/api/sentinel?date=${date}&z=${z}&x=${x}&y=${y}`);
   const hit = cache && await cache.match(key);
   if (hit) return hit;
-  let step = 'quota';
   try {
     // One atomic database update caps cache misses globally per UTC day.
     const day = new Date().toISOString().slice(0,10);
@@ -52,13 +51,11 @@ export async function onRequestGet(context) {
     const size = 2 * WORLD / 2 ** z;
     const bbox = [-WORLD + x * size, WORLD - (y + 1) * size, -WORLD + (x + 1) * size, WORLD - y * size];
     const query = new URLSearchParams({ SERVICE:'WMS', VERSION:'1.1.1', REQUEST:'GetMap', LAYERS:'TRUE_COLOR', SRS:'EPSG:3857', BBOX:bbox.join(','), WIDTH:'256', HEIGHT:'256', FORMAT:'image/png', TRANSPARENT:'true', TIME:`${date}/${date}`, MAXCC:'20' });
-    step = 'fetch';
-    const upstream = await fetch(`https://sh.dataspace.copernicus.eu/ogc/wms/${instance}?${query}`, { redirect:'error', signal:AbortSignal.timeout(20000) });
-    if (!upstream.ok || !upstream.headers.get('content-type')?.toLowerCase().startsWith('image/png')) return new Response('upstream status: ' + upstream.status, {status:502});
-    step = 'body';
+    const upstream = await fetch(`https://sh.dataspace.copernicus.eu/ogc/wms/${instance}?${query}`, { redirect:'manual', signal:AbortSignal.timeout(20000) });
+    if (!upstream.ok || !upstream.headers.get('content-type')?.toLowerCase().startsWith('image/png')) return error(502);
     const body = await limitedBytes(upstream.body);
     const result = new Response(body, { headers: { ...headers, 'Content-Type':'image/png', 'Cache-Control':'public, max-age=86400' } });
     if (cache) context.waitUntil(cache.put(key, result.clone()));
     return result;
-  } catch (e) { return new Response('exception at ' + step + ': ' + (e?.name || 'unknown'), {status:502}); }
+  } catch { return error(502); }
 }
