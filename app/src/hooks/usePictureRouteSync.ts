@@ -54,7 +54,8 @@ export function usePictureRouteSync() {
       item: {
         id: string;
         progress: number;
-        placementSource?: 'gps' | 'timestamp' | 'manual';
+        lat?: number;
+        lon?: number;
         routeDistance?: number;
         routeSegmentId?: string;
         routeSegmentDistance?: number;
@@ -73,7 +74,11 @@ export function usePictureRouteSync() {
       let routeSegmentId = picture.routeSegmentId;
       let routeSegmentDistance = picture.routeSegmentDistance;
       const hasStableAnchor = routeSegmentId !== undefined && routeSegmentDistance !== undefined;
-      if (picture.placementSource === 'manual' || (!hasStableAnchor && picture.routeDistance === undefined)) {
+      if (!hasStableAnchor && picture.routeDistance === undefined && picture.lat !== undefined && picture.lon !== undefined) {
+        const match = projectCoordinateToJourney(computedJourney, picture.lat, picture.lon, picture.progress, routeTimingMode);
+        if (match?.routeDistance !== undefined && match.routeSegmentId !== undefined && match.routeSegmentDistance !== undefined) {
+          apply(picture.id, match.progress, { routeDistance: match.routeDistance, routeSegmentId: match.routeSegmentId, routeSegmentDistance: match.routeSegmentDistance });
+        }
         continue;
       }
 

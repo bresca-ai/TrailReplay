@@ -118,11 +118,9 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       if (!video) return;
 
       video.progress = progress;
-      if (routeAnchor) {
-        video.routeDistance = routeAnchor.routeDistance;
-        video.routeSegmentId = routeAnchor.routeSegmentId;
-        video.routeSegmentDistance = routeAnchor.routeSegmentDistance;
-      }
+      video.routeDistance = routeAnchor?.routeDistance;
+      video.routeSegmentId = routeAnchor?.routeSegmentId;
+      video.routeSegmentDistance = routeAnchor?.routeSegmentDistance;
     }),
 
   setSelectedVideoId: (videoId) =>

@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 import { useAppStore } from '@/store/useAppStore';
 import { usePhotos } from '@/hooks/usePhotos';
 import { useVideos } from '@/hooks/useVideos';
+import { useComputedJourney } from '@/hooks/useComputedJourney';
+import { segmentAnchorForRouteDistance } from '@/utils/journeyUtils';
 import { isImageFile, isVideoFile } from '@/utils/files';
 import { formatDuration } from '@/utils/units';
 import { useI18n } from '@/i18n/useI18n';
@@ -27,6 +29,7 @@ export function PicturesPanel() {
   const relinkVideoFile = useAppStore((state) => state.relinkVideoFile);
   const updateVideoPosition = useAppStore((state) => state.updateVideoPosition);
   const playbackProgress = useAppStore((state) => state.playback.progress);
+  const { computedJourney, routeDistance } = useComputedJourney();
   const { addPhotos, isProcessing: isProcessingPhotos } = usePhotos();
   const { addVideos, isProcessing: isProcessingVideos } = useVideos();
   const isProcessing = isProcessingPhotos || isProcessingVideos;
@@ -413,7 +416,12 @@ export function PicturesPanel() {
                       </button>
                     )}
                     <button
-                      onClick={() => updateVideoPosition(video.id, playbackProgress)}
+                      onClick={() => {
+                        const anchor = computedJourney && segmentAnchorForRouteDistance(computedJourney.segmentTimings, routeDistance);
+                        updateVideoPosition(video.id, playbackProgress, anchor ? {
+                          routeDistance, routeSegmentId: anchor.segmentId, routeSegmentDistance: anchor.segmentDistance,
+                        } : undefined);
+                      }}
                       className="p-1.5 hover:bg-[var(--evergreen)]/10 rounded"
                       title={t('media.videoMoveToPlayhead')}
                     >
