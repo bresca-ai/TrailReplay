@@ -14,6 +14,7 @@ import { formatDuration } from '@/utils/units';
 import { getProgressBucket, trackEvent } from '@/utils/analytics';
 import { usePlaybackToggle } from '@/hooks/usePlaybackToggle';
 import { usePlayPauseShortcut } from '@/hooks/usePlayPauseShortcut';
+import { PENDING_MEDIA_DRAG_TYPE, placePendingMedia, placementAtProgress } from '@/utils/pendingMediaPlacement';
 
 const SPEED_OPTIONS = [0.25, 0.5, 1, 2, 4, 8];
 
@@ -71,7 +72,20 @@ export function PlaybackControls() {
       </div>
       
       {/* Progress Slider */}
-      <div className="flex-1 min-w-[4rem]">
+      <div className="flex-1 min-w-[4rem]" onDragOver={(event) => { if (event.dataTransfer.types.includes(PENDING_MEDIA_DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} onDrop={(event) => {
+        const raw = event.dataTransfer.getData(PENDING_MEDIA_DRAG_TYPE);
+        if (!raw) return;
+        event.preventDefault();
+        try {
+          const ids: unknown = JSON.parse(raw);
+          if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (!bounds.width) return;
+          const placement = placementAtProgress((event.clientX - bounds.left) / bounds.width);
+          if (placement) placePendingMedia(ids, placement);
+          else useAppStore.getState().setError(t('media.bulkNoTimelinePosition'));
+        } catch { /* Ignore unrelated drag data. */ }
+      }}>
         <Slider
           value={[playback.progress * 100]}
           onValueChange={handleSliderChange}

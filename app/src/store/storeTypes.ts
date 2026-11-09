@@ -48,6 +48,10 @@ export interface AppState {
   cinematicCameraKeyframes: CinematicCameraKeyframe[];
   pictures: PictureAnnotation[];
   pendingPicturePlacements: PendingPicturePlacement[];
+  selectedPendingMediaIds: string[];
+  pendingMediaMapPlacementActive: boolean;
+  setPendingMediaMapPlacementActive: (active: boolean) => void;
+  setSelectedPendingMediaIds: (ids: string[]) => void;
   videos: VideoAnnotation[];
   iconChanges: IconChange[];
   textAnnotations: TextAnnotation[];

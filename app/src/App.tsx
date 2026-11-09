@@ -139,9 +139,6 @@ function App() {
   const setSettings = useAppStore((state) => state.setSettings);
   const error = useAppStore((state) => state.error);
   const setError = useAppStore((state) => state.setError);
-  const addPicture = useAppStore((state) => state.addPicture);
-  const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
-  const clearPendingPicturePlacements = useAppStore((state) => state.clearPendingPicturePlacements);
   const activePanel = useAppStore((state) => state.activePanel);
   const exportAspectRatio = useAppStore((state) => state.videoExportSettings.aspectRatio);
   const socialShareAspectRatio = useAppStore((state) => state.socialShareSettings.aspectRatio);
@@ -803,41 +800,7 @@ function App() {
               )}
 
               {activePendingPicturePlacement && (
-                <PendingPicturePlacementBanner
-                  pendingPlacement={activePendingPicturePlacement}
-                  totalPendingPlacements={pendingPicturePlacements.length}
-                  onCancelAll={clearPendingPicturePlacements}
-                  onSkip={() => removePendingPicturePlacement(activePendingPicturePlacement.id)}
-                  onUseTimestamp={activePendingPicturePlacement.timestampAlternative
-                    ? () => {
-                        const timestampPlacement = activePendingPicturePlacement.timestampAlternative;
-                        if (!timestampPlacement) {
-                          return;
-                        }
-
-                        addPicture({
-                          id: activePendingPicturePlacement.id,
-                          file: activePendingPicturePlacement.file,
-                          displayFile: activePendingPicturePlacement.displayFile,
-                          url: activePendingPicturePlacement.url,
-                          isPlaceholder: false,
-                          lat: timestampPlacement.lat,
-                          lon: timestampPlacement.lon,
-                          timestamp: activePendingPicturePlacement.timestamp,
-                          progress: timestampPlacement.progress,
-                          position: timestampPlacement.progress,
-                          routeDistance: timestampPlacement.routeDistance,
-                          routeSegmentId: timestampPlacement.routeSegmentId,
-                          routeSegmentDistance: timestampPlacement.routeSegmentDistance,
-                          placementSource: 'timestamp',
-                          title: activePendingPicturePlacement.title,
-                          description: activePendingPicturePlacement.description,
-                          displayDuration: activePendingPicturePlacement.displayDuration,
-                        });
-                        removePendingPicturePlacement(activePendingPicturePlacement.id);
-                      }
-                    : undefined}
-                />
+                <PendingPicturePlacementBanner />
               )}
               
               {/* Picture Popup */}

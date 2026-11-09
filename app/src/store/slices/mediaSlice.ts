@@ -5,6 +5,10 @@ type MediaSlice = Pick<
   AppState,
   | 'pictures'
   | 'pendingPicturePlacements'
+  | 'selectedPendingMediaIds'
+  | 'pendingMediaMapPlacementActive'
+  | 'setPendingMediaMapPlacementActive'
+  | 'setSelectedPendingMediaIds'
   | 'videos'
   | 'iconChanges'
   | 'textAnnotations'
@@ -36,6 +40,10 @@ type MediaSlice = Pick<
 export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   pictures: [],
   pendingPicturePlacements: [],
+  selectedPendingMediaIds: [],
+  pendingMediaMapPlacementActive: false,
+  setPendingMediaMapPlacementActive: (active) => set((state) => { state.pendingMediaMapPlacementActive = active; }),
+  setSelectedPendingMediaIds: (ids) => set((state) => { state.selectedPendingMediaIds = ids; }),
   videos: [],
   iconChanges: [],
   textAnnotations: [],
@@ -50,16 +58,21 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   queuePendingPicturePlacement: (picture) =>
     set((state) => {
       state.pendingPicturePlacements.push(picture);
+      state.selectedPendingMediaIds.push(picture.id);
     }),
 
   removePendingPicturePlacement: (pictureId) =>
     set((state) => {
       state.pendingPicturePlacements = state.pendingPicturePlacements.filter((picture) => picture.id !== pictureId);
+      state.selectedPendingMediaIds = state.selectedPendingMediaIds.filter((id) => id !== pictureId);
+      if (!state.pendingPicturePlacements.length) state.pendingMediaMapPlacementActive = false;
     }),
 
   clearPendingPicturePlacements: () =>
     set((state) => {
       state.pendingPicturePlacements = [];
+      state.selectedPendingMediaIds = [];
+      state.pendingMediaMapPlacementActive = false;
     }),
 
   removePicture: (pictureId) =>
