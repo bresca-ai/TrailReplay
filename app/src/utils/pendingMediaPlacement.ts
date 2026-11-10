@@ -14,6 +14,7 @@ export interface MediaRoutePlacement {
 
 /** Resolve a timeline position using the same journey and pace as the marker. */
 export function placementAtProgress(progress: number): MediaRoutePlacement | null {
+  if (!Number.isFinite(progress)) return null;
   const state = useAppStore.getState();
   let journey = buildComputedJourney(state.journeySegments, state.tracks);
   if (!journey) return null;
@@ -43,4 +44,20 @@ export function placePendingMedia(ids: string[], placement: MediaRoutePlacement,
     else store.addPicture({ ...common, displayFile: item.displayFile, position: placement.progress, displayDuration: item.displayDuration });
     store.removePendingPicturePlacement(item.id);
   }
+}
+
+/** Move a placed item and its map marker together, retaining a mode-independent route anchor. */
+export function movePlacedMedia(kind: 'picture' | 'video', id: string, placement: MediaRoutePlacement) {
+  useAppStore.setState((state) => {
+    const item = kind === 'picture' ? state.pictures.find((entry) => entry.id === id) : state.videos.find((entry) => entry.id === id);
+    if (!item) return;
+    item.lat = placement.lat;
+    item.lon = placement.lon;
+    item.progress = placement.progress;
+    item.routeDistance = placement.routeDistance;
+    item.routeSegmentId = placement.routeSegmentId;
+    item.routeSegmentDistance = placement.routeSegmentDistance;
+    item.placementSource = 'manual';
+    if ('position' in item) item.position = placement.progress;
+  });
 }

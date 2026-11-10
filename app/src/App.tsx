@@ -16,6 +16,7 @@ import { CropPreviewBars } from '@/components/app/CropPreviewBars';
 import { PendingPicturePlacementBanner } from '@/components/app/PendingPicturePlacementBanner';
 import { WelcomeOverlay } from '@/components/app/WelcomeOverlay';
 import { PlaybackControls } from '@/components/playback/PlaybackControls';
+import { MediaTimeline } from '@/components/playback/MediaTimeline';
 import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
@@ -857,8 +858,9 @@ function App() {
             
             {/* Playback Controls */}
             {hasTracks && (
-              <div className="h-20 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
-                <PlaybackControls />
+              <div className="shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
+                <MediaTimeline />
+                <div className="h-20"><PlaybackControls /></div>
               </div>
             )}
           </div>
