@@ -150,3 +150,19 @@ it('drags an annotation to a new point without changing it until release', () =>
   expect(useAppStore.getState().textAnnotations[0].progress).toBeCloseTo(0.6, 3);
   expect(useAppStore.getState().textAnnotations[0].lat).toBeCloseTo(42.06, 3);
 });
+
+it('follows playback until manually scrolled, then recenters on the next play', () => {
+  const lane = setup();
+  const scroller = lane.parentElement!.parentElement!;
+  Object.defineProperties(scroller, { clientWidth: { value: 400 }, scrollWidth: { value: 2880 } });
+  act(() => useAppStore.setState((state) => { state.playback.progress = 0.5; state.playback.isPlaying = true; }));
+  expect(scroller.scrollLeft).toBeCloseTo(1240);
+  fireEvent.scroll(scroller);
+  scroller.scrollLeft = 200;
+  fireEvent.scroll(scroller);
+  act(() => useAppStore.setState((state) => { state.playback.progress = 0.6; }));
+  expect(scroller.scrollLeft).toBe(200);
+  act(() => useAppStore.setState((state) => { state.playback.isPlaying = false; }));
+  act(() => useAppStore.setState((state) => { state.playback.isPlaying = true; }));
+  expect(scroller.scrollLeft).toBeCloseTo(1528);
+});

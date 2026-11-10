@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/useAppStore';
+import { setTimelineDraggedPicture } from '@/utils/timelineDragPicture';
 import { PLACED_MEDIA_DRAG_TYPE } from '@/utils/pendingMediaPlacement';
 import { usePhotos } from '@/hooks/usePhotos';
 import { useVideos } from '@/hooks/useVideos';
@@ -229,7 +230,8 @@ export function PicturesPanel() {
                     <button
                       type="button"
                       draggable
-                      onDragStart={(event) => { event.dataTransfer.setData(PLACED_MEDIA_DRAG_TYPE, JSON.stringify({ kind: 'picture', id: picture.id })); event.dataTransfer.effectAllowed = 'move'; }}
+                      onDragStart={(event) => { event.dataTransfer.setData(PLACED_MEDIA_DRAG_TYPE, JSON.stringify({ kind: 'picture', id: picture.id })); event.dataTransfer.effectAllowed = 'move'; setTimelineDraggedPicture(picture.id); }}
+                      onDragEnd={() => setTimelineDraggedPicture(null)}
                       onClick={() => setSelectedPictureId(picture.id)}
                       className="w-20 h-20 rounded-xl overflow-hidden border border-[var(--evergreen)]/20 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--trail-orange)]"
                       title={t('media.previewPicture')}
