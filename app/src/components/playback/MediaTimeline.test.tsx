@@ -163,3 +163,40 @@ it('follows playback until manually scrolled, then recenters on the next play', 
   act(() => useAppStore.setState((state) => { state.playback.isPlaying = true; }));
   expect(scroller.scrollLeft).toBeCloseTo(1528);
 });
+
+it('resizes a map annotation from either edge and updates its route anchor when its end moves', () => {
+  setup();
+  act(() => useAppStore.setState((state) => {
+    state.textAnnotations = [{ id: 'note', title: 'Summit', lat: 42.05, lon: 2, progress: 0.5, color: '#345', displayDuration: 3000 }];
+  }));
+  fireEvent.keyDown(screen.getByLabelText('Adjust start of Summit'), { key: 'ArrowLeft' });
+  expect(useAppStore.getState().textAnnotations[0].displayDuration).toBeCloseTo(3500, -1);
+  expect(useAppStore.getState().textAnnotations[0].progress).toBe(0.5);
+  fireEvent.keyDown(screen.getByLabelText('Adjust end of Summit'), { key: 'ArrowRight' });
+  const note = useAppStore.getState().textAnnotations[0];
+  expect(note.progress).toBeCloseTo(30.5 / 60, 4);
+  expect(note.displayDuration).toBeCloseTo(4000, -1);
+  expect(note.lat).toBeCloseTo(42.05083, 4);
+});
+
+it('adjusts a field note hold when its edge is resized', () => {
+  setup();
+  act(() => useAppStore.setState((state) => {
+    state.textAnnotations = [{ id: 'note', title: 'Station', lat: 42.05, lon: 2, progress: 0.5, color: '#345', displayDuration: 3000, presentation: 'side-panel', holdDuration: 4000 }];
+  }));
+  fireEvent.keyDown(screen.getByLabelText('Adjust end of Station'), { key: 'ArrowRight' });
+  expect(useAppStore.getState().textAnnotations[0].holdDuration).toBe(4500);
+});
+
+it('resizes a map annotation by dragging its left handle', () => {
+  setup();
+  act(() => useAppStore.setState((state) => {
+    state.textAnnotations = [{ id: 'note', title: 'Summit', lat: 42.05, lon: 2, progress: 0.5, color: '#345', displayDuration: 3000 }];
+  }));
+  const handle = screen.getByLabelText('Adjust start of Summit');
+  Object.defineProperty(handle, 'setPointerCapture', { value: vi.fn() });
+  const down = createEvent.pointerDown(handle); Object.defineProperties(down, { clientX: { value: 100 }, button: { value: 0 } }); fireEvent(handle, down);
+  const up = createEvent.pointerUp(handle); Object.defineProperty(up, 'clientX', { value: 90 }); fireEvent(handle, up);
+  expect(useAppStore.getState().textAnnotations[0].displayDuration).toBeCloseTo(4500, -1);
+  expect(useAppStore.getState().textAnnotations[0].progress).toBe(0.5);
+});

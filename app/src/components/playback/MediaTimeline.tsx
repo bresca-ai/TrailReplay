@@ -12,7 +12,7 @@ import { getMediaHoldClock, subscribeMediaHoldClock } from '@/utils/mediaHoldClo
 import { getTimelineDraggedPicture, setTimelineDraggedPicture, subscribeTimelineDraggedPicture } from '@/utils/timelineDragPicture';
 
 type MediaId = { kind: 'picture' | 'video' | 'annotation'; id: string; anchorProgress?: number };
-type Gesture = { item: MediaId; mode: 'move' | 'start' | 'end'; clientX: number; startMs: number; endMs: number; width: number; totalMs: number; startScroll: number };
+type Gesture = { item: MediaId; mode: 'move' | 'start' | 'end'; clientX: number; startMs: number; endMs: number; width: number; totalMs: number; startScroll: number; arrivalMs?: number };
 const MIN_PICTURE_MS = 500;
 
 export function MediaTimeline() {
@@ -26,6 +26,7 @@ export function MediaTimeline() {
   const seek = useAppStore((state) => state.seekToProgress);
   const setError = useAppStore((state) => state.setError);
   const updateDuration = useAppStore((state) => state.updatePictureDuration);
+  const updateAnnotation = useAppStore((state) => state.updateTextAnnotation);
   const clock = useSyncExternalStore(subscribeMediaHoldClock, getMediaHoldClock, getMediaHoldClock);
   const draggedPictureId = useSyncExternalStore(subscribeTimelineDraggedPicture, getTimelineDraggedPicture, getTimelineDraggedPicture);
   const [zoom, setZoom] = useState<number | null>(48);
@@ -124,12 +125,39 @@ export function MediaTimeline() {
       if (Array.isArray(ids) && ids.every((id) => typeof id === 'string')) placePendingMedia(ids, placement);
     } catch { /* Ignore unrelated drag data. */ }
   };
-  const begin = (event: PointerEvent<HTMLElement>, item: MediaId, mode: Gesture['mode'], startMs: number, endMs: number) => {
+  const resizeAnnotation = (item: MediaId, edge: 'start' | 'end', delta: number, startMs: number, endMs: number, arrivalMs: number) => {
+    const annotation = annotations.find((entry) => entry.id === item.id);
+    if (!annotation || routeDuration <= 0) return;
+    if (annotation.presentation === 'side-panel') {
+      const oldHold = Math.max(0, annotation.holdDuration ?? 0);
+      const requestedChange = edge === 'start' ? -delta : delta;
+      const nextHold = Math.max(0, Math.round(oldHold + requestedChange));
+      const actualChange = nextHold - oldHold;
+      const shift = (edge === 'start' ? -1 : 1) * actualChange / 2;
+      const placement = placementForTime(item, arrivalMs + shift);
+      if (!placement) { setError(t('media.bulkNoTimelinePosition')); return; }
+      updateAnnotation(item.id, { holdDuration: nextHold, progress: placement.progress, routeDistance: placement.routeDistance, lat: placement.lat, lon: placement.lon, elevation: placement.elevation });
+      return;
+    }
+    const startRoute = Math.max(0, annotation.progress * routeDuration - annotation.displayDuration);
+    if (edge === 'start') {
+      const target = Math.max(0, Math.min(endMs, startMs + delta));
+      const targetRoute = timelineTimeToProgress(target, routeDuration, moments, timeline.blocks) * routeDuration;
+      updateAnnotation(item.id, { displayDuration: Math.max(MIN_PICTURE_MS, Math.round(annotation.progress * routeDuration - targetRoute)) });
+    } else {
+      const target = Math.max(startMs, endMs + delta);
+      const nextProgress = Math.max((startRoute + MIN_PICTURE_MS) / routeDuration, timelineTimeToProgress(target, routeDuration, moments, timeline.blocks));
+      const placement = placementAtProgress(Math.min(1, nextProgress));
+      if (!placement) { setError(t('media.bulkNoTimelinePosition')); return; }
+      updateAnnotation(item.id, { displayDuration: Math.max(MIN_PICTURE_MS, Math.round(placement.progress * routeDuration - startRoute)), progress: placement.progress, routeDistance: placement.routeDistance, lat: placement.lat, lon: placement.lon, elevation: placement.elevation });
+    }
+  };
+  const begin = (event: PointerEvent<HTMLElement>, item: MediaId, mode: Gesture['mode'], startMs: number, endMs: number, arrivalMs?: number) => {
     if (event.button !== 0 || !laneRef.current) return;
     event.preventDefault(); event.stopPropagation();
     const width = laneRef.current.getBoundingClientRect().width;
     if (!width) return;
-    gesture.current = { item, mode, clientX: event.clientX, startMs, endMs, width, totalMs: total, startScroll: scrollerRef.current?.scrollLeft ?? 0 };
+    gesture.current = { item, mode, clientX: event.clientX, startMs, endMs, width, totalMs: total, startScroll: scrollerRef.current?.scrollLeft ?? 0, arrivalMs };
     setPreviewGesture(gesture.current);
     setSelected(item);
     setDragDelta(0);
@@ -145,6 +173,7 @@ export function MediaTimeline() {
     setTimelineDraggedPicture(null);
     const delta = (event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs;
     if (!Number.isFinite(delta) || Math.abs(delta) < 1) return;
+    if (g.item.kind === 'annotation' && g.mode !== 'move') { resizeAnnotation(g.item, g.mode, delta, g.startMs, g.endMs, g.arrivalMs ?? g.endMs); return; }
     if (g.mode === 'move') moveToTime(g.item, Math.max(0, g.startMs + delta));
     else if (g.mode === 'end') updateDuration(g.item.id, Math.max(MIN_PICTURE_MS, Math.round(g.endMs + delta - g.startMs)));
     else {
@@ -218,11 +247,11 @@ export function MediaTimeline() {
               return <div key={`${block.kind}-${block.id}`} role="button" tabIndex={0} aria-label={t('media.timelineMarker', { name, percent: Math.round(item.progress * 100) })} title={`${name} · ${(block.durationMs / 1000).toFixed(1)}s`}
                 onPointerDown={(event) => begin(event, item, 'move', block.startMs, block.endMs)} onPointerMove={(event) => { const g = gesture.current; if (g) { scrollAtEdge(event.clientX); const delta = (event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs; setDragDelta(delta); if (g.mode !== 'end') { if (g.item.kind === 'picture') setTimelineDraggedPicture(g.item.id); setPreviewPosition(placementForTime(g.item, Math.max(0, g.startMs + delta))); } } }} onPointerUp={end} onPointerCancel={() => { gesture.current = null; setPreviewGesture(null); setDragDelta(null); setPreviewPosition(null); setTimelineDraggedPicture(null); }} onLostPointerCapture={() => { if (gesture.current) { gesture.current = null; setPreviewGesture(null); setDragDelta(null); setPreviewPosition(null); setTimelineDraggedPicture(null); } }}
                 onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); moveToTime(item, block.startMs + (event.key === 'ArrowLeft' ? -1000 : 1000)); } }}
-                className={`absolute top-1 flex h-14 min-w-2 touch-none select-none overflow-hidden rounded-md border-2 bg-[var(--evergreen)] text-white shadow-sm focus:z-20 ${selected?.id === item.id && selected.kind === item.kind ? 'border-[var(--trail-orange)]' : 'border-white'}`}
+                className={`group absolute top-1 flex h-14 min-w-2 touch-none select-none overflow-hidden rounded-md border-2 bg-[var(--evergreen)] text-white shadow-sm focus:z-20 ${selected?.id === item.id && selected.kind === item.kind ? 'border-[var(--trail-orange)]' : 'border-white'}`}
                 style={{ left: `${displayStart / total * 100}%`, width: `${Math.max(0, displayEnd - displayStart) / total * 100}%`, zIndex: index + 1 }}>
-                {item.kind === 'picture' && <span role="slider" tabIndex={0} aria-label={t('media.timelineResizeStart', { name })} aria-valuetext={`${(block.durationMs / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, item, 'start', block.startMs, block.endMs)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const delta = event.key === 'ArrowLeft' ? -500 : 500; const next = Math.max(0, Math.min(block.endMs - MIN_PICTURE_MS, block.startMs + delta)); if (moveToTime(item, next)) updateDuration(item.id, block.endMs - next); } }} className="z-10 w-2 shrink-0 cursor-ew-resize bg-white/65" />}
+                {item.kind === 'picture' && <span role="slider" tabIndex={0} aria-label={t('media.timelineResizeStart', { name })} aria-valuetext={`${(block.durationMs / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, item, 'start', block.startMs, block.endMs)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const delta = event.key === 'ArrowLeft' ? -500 : 500; const next = Math.max(0, Math.min(block.endMs - MIN_PICTURE_MS, block.startMs + delta)); if (moveToTime(item, next)) updateDuration(item.id, block.endMs - next); } }} className="z-10 flex w-3 shrink-0 cursor-ew-resize items-center justify-center bg-white/85 text-[var(--evergreen)] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-sm:opacity-100"><span aria-hidden="true" className="text-[10px] font-bold">⋮</span></span>}
                 <span className="flex min-w-0 flex-1 cursor-grab items-center gap-1 overflow-hidden">{item.url ? item.kind === 'picture' ? <img src={item.url} alt="" className="h-full w-10 shrink-0 object-cover" draggable={false} /> : <video src={item.url} muted preload="metadata" className="h-full w-10 shrink-0 object-cover" /> : item.kind === 'picture' ? <ImageIcon size={16} /> : <Video size={16} />}<span className="truncate text-[10px]">{name}</span></span>
-                {item.kind === 'picture' && <span role="slider" tabIndex={0} aria-label={t('media.timelineResizeEnd', { name })} aria-valuetext={`${(block.durationMs / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, item, 'end', block.startMs, block.endMs)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); updateDuration(item.id, Math.max(MIN_PICTURE_MS, block.durationMs + (event.key === 'ArrowLeft' ? -500 : 500))); } }} className="z-10 w-2 shrink-0 cursor-ew-resize bg-white/65" />}
+                {item.kind === 'picture' && <span role="slider" tabIndex={0} aria-label={t('media.timelineResizeEnd', { name })} aria-valuetext={`${(block.durationMs / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, item, 'end', block.startMs, block.endMs)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); updateDuration(item.id, Math.max(MIN_PICTURE_MS, block.durationMs + (event.key === 'ArrowLeft' ? -500 : 500))); } }} className="z-10 flex w-3 shrink-0 cursor-ew-resize items-center justify-center bg-white/85 text-[var(--evergreen)] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-sm:opacity-100"><span aria-hidden="true" className="text-[10px] font-bold">⋮</span></span>}
               </div>;
             })}
             {moments.map((annotation, index) => {
@@ -232,13 +261,20 @@ export function MediaTimeline() {
               const start = progressToTimelineTime(routeDuration ? startRoute / routeDuration : 0, routeDuration, moments, timeline.blocks);
               const endTime = progressToTimelineTime(routeDuration ? endRoute / routeDuration : 0, routeDuration, moments, timeline.blocks);
               const arrivalTime = progressToTimelineTime(annotation.progress, routeDuration, moments, timeline.blocks);
-              const delta = previewGesture?.item.kind === 'annotation' && previewGesture.item.id === annotation.id ? (dragDelta ?? 0) : 0;
+              const active = previewGesture?.item.kind === 'annotation' && previewGesture.item.id === annotation.id ? previewGesture : null;
+              const delta = active ? (dragDelta ?? 0) : 0;
+              const displayStart = active?.mode === 'move' ? Math.max(0, start + delta) : active?.mode === 'start' ? Math.max(0, Math.min(endTime - MIN_PICTURE_MS, start + delta)) : start;
+              const displayEnd = active?.mode === 'move' ? displayStart + endTime - start : active?.mode === 'end' ? Math.max(start + MIN_PICTURE_MS, endTime + delta) : endTime;
+              const annotationId = { kind: 'annotation' as const, id: annotation.id, anchorProgress: annotation.progress };
               return <div key={`${annotation.id}-${index}`} role="button" tabIndex={0} title={annotation.title} aria-label={t('media.timelineAnnotation', { name: annotation.title })}
-                onPointerDown={(event) => begin(event, { kind: 'annotation', id: annotation.id, anchorProgress: annotation.progress }, 'move', arrivalTime, arrivalTime + Math.max(0, endTime - start))}
-                onPointerMove={(event) => { const g = gesture.current; if (g) { scrollAtEdge(event.clientX); const change = (event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs; setDragDelta(change); setPreviewPosition(placementForTime(g.item, Math.max(0, g.startMs + change))); } }}
+                onPointerDown={(event) => begin(event, annotationId, 'move', arrivalTime, arrivalTime + Math.max(0, endTime - start))}
+                onPointerMove={(event) => { const g = gesture.current; if (g) { scrollAtEdge(event.clientX); const change = (event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs; setDragDelta(change); if (g.mode === 'move') setPreviewPosition(placementForTime(g.item, Math.max(0, g.startMs + change))); else if (annotation.presentation === 'side-panel') setPreviewPosition(placementForTime(g.item, Math.max(0, (g.arrivalMs ?? g.endMs) + change / 2))); else if (g.mode === 'end') setPreviewPosition(placementAtProgress(timelineTimeToProgress(Math.max(0, g.endMs + change), routeDuration, moments, timeline.blocks))); } }}
                 onPointerUp={end} onPointerCancel={() => { gesture.current = null; setPreviewGesture(null); setDragDelta(null); setPreviewPosition(null); setTimelineDraggedPicture(null); }} onLostPointerCapture={() => { if (gesture.current) { gesture.current = null; setPreviewGesture(null); setDragDelta(null); setPreviewPosition(null); setTimelineDraggedPicture(null); } }} onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); moveToTime({ kind: 'annotation', id: annotation.id, anchorProgress: annotation.progress }, arrivalTime + (event.key === 'ArrowLeft' ? -1000 : 1000)); } }}
-                className="absolute top-1 z-20 flex h-14 min-w-8 touch-none select-none items-center overflow-hidden rounded border-2 border-white px-1 text-left text-[10px] text-white cursor-grab" style={{ left: `${Math.max(0, start + delta) / total * 100}%`, width: `${Math.max(0, endTime - start) / total * 100}%`, backgroundColor: annotation.color || '#385b4d' }}>{annotation.title}</div>;
+                className="group absolute top-1 z-20 flex h-14 min-w-8 touch-none select-none items-center overflow-hidden rounded border-2 border-white text-left text-[10px] text-white cursor-grab" style={{ left: `${displayStart / total * 100}%`, width: `${Math.max(0, displayEnd - displayStart) / total * 100}%`, backgroundColor: annotation.color || '#385b4d' }}>
+                {(['start', 'end'] as const).map((edge) => <span key={edge} role="slider" tabIndex={0} aria-label={t(edge === 'start' ? 'media.timelineResizeStart' : 'media.timelineResizeEnd', { name: annotation.title })} aria-valuetext={`${((endTime - start) / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, annotationId, edge, start, endTime, arrivalTime)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); resizeAnnotation(annotationId, edge, event.key === 'ArrowLeft' ? -500 : 500, start, endTime, arrivalTime); } }} className={`${edge === 'end' ? 'order-last' : ''} z-10 flex h-full w-3 shrink-0 cursor-ew-resize items-center justify-center bg-white/85 text-[var(--evergreen)] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-sm:opacity-100`}><span aria-hidden="true" className="text-[10px] font-bold">⋮</span></span>)}
+                <span className="min-w-0 flex-1 truncate px-1">{annotation.title}</span>
+              </div>;
             })}
           </div>
         </div>
