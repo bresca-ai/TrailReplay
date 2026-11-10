@@ -1,4 +1,20 @@
 import { getInterpolatedRouteCoordinate } from '@/utils/replayCameraPlan';
+import { limitRateOfChange, MAX_CENTER_ELEVATION_RATE_M_PER_S } from '@/components/map/cameraUtils';
+
+/** Keep a stable height through missing tiles and limit DEM refinement jumps. */
+export function settleCinematicElevation(
+  previous: number | null,
+  sample: number | null,
+  deltaMs: number | null,
+  terrainEnabled: boolean,
+): number | null {
+  if (!terrainEnabled) return null;
+  if (sample === null || !Number.isFinite(sample)) return previous;
+  if (previous === null || deltaMs === null) return sample;
+  // Renders at the same playback time must not consume a terrain update.
+  if (deltaMs === 0) return previous;
+  return limitRateOfChange(previous, sample, deltaMs, MAX_CENTER_ELEVATION_RATE_M_PER_S);
+}
 
 // Fixed, symmetric Blackman taps: predictable work and no lag on a climb.
 const HALF_TAPS = 6;
