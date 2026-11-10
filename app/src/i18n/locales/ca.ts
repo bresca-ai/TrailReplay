@@ -699,6 +699,8 @@ export const ca = {
     timelineZoomIn: "Amplia el zoom",
     timelineAnnotations: "Anotacions",
     timelineAnnotation: "Anotació: {name}",
+    timelineCollapse: "Minimitza la línia de temps",
+    timelineExpand: "Mostra la línia de temps",
     bulkTitle: "Fitxers pendents d’ubicació",
     bulkShow: "Mostra",
     bulkHide: "Minimitza",

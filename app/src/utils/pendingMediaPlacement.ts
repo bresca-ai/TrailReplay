@@ -5,12 +5,14 @@ import { readVideoDuration } from '@/utils/videoMetadata';
 import { useAppStore } from '@/store/useAppStore';
 import { buildComputedJourney, buildJourneyDistanceProfile, getJourneyDistanceAtProgress, getJourneyPointAtDistance, getJourneyPointAtProgress, getSegmentAtProgress, segmentAnchorForRouteDistance, uniformJourneyWithCameraTransitions } from '@/utils/journeyUtils';
 
+export const ANNOTATION_DRAG_TYPE = 'application/x-trailreplay-annotation';
 export const PLACED_MEDIA_DRAG_TYPE = 'application/x-trailreplay-placed-media';
 export const PENDING_MEDIA_DRAG_TYPE = 'application/x-trailreplay-pending-media';
 
 export interface MediaRoutePlacement {
   lat: number;
   lon: number;
+  elevation?: number;
   progress: number;
   routeDistance?: number;
   routeSegmentId?: string;
@@ -35,7 +37,7 @@ export function placementAtProgress(progress: number): MediaRoutePlacement | nul
   const timing = journey.segmentTimings.find((segment) => segment.segmentIndex === point.segmentIndex);
   const anchor = timing ? { segmentId: timing.segmentId, segmentDistance: Math.max(0, Math.min(timing.endDistance - timing.startDistance, distance - timing.startDistance)) } : segmentAnchorForRouteDistance(journey.segmentTimings, distance);
   if (!anchor || (!uniform && getSegmentAtProgress(clamped, journey.segmentTimings)?.segment.transportMode === 'camera')) return null;
-  return { lat: point.lat, lon: point.lon, progress: clamped, routeDistance: distance, routeSegmentId: anchor.segmentId, routeSegmentDistance: anchor.segmentDistance };
+  return { lat: point.lat, lon: point.lon, elevation: point.elevation, progress: clamped, routeDistance: distance, routeSegmentId: anchor.segmentId, routeSegmentDistance: anchor.segmentDistance };
 }
 
 /** Commit only selected pending items; all others remain inactive in the queue. */
@@ -81,4 +83,8 @@ export async function importMediaAtPlacement(files: File[], placement: MediaRout
       store.addVideo({ id: createId('video'), file, url, originalFileName: file.name, isPlaceholder: false, ...placement, placementSource: 'manual', durationSeconds: probe.status === 'ok' ? probe.durationSeconds : undefined });
     }
   }
+}
+
+export function moveTimelineAnnotation(id: string, placement: MediaRoutePlacement) {
+  useAppStore.getState().updateTextAnnotation(id, { progress: placement.progress, routeDistance: placement.routeDistance, lat: placement.lat, lon: placement.lon, elevation: placement.elevation });
 }

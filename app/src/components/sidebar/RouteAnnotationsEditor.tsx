@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { convertElevation, formatDistance } from '@/utils/units';
+import { ANNOTATION_DRAG_TYPE } from '@/utils/pendingMediaPlacement';
 import { annotationPlacementAtDistance } from '@/utils/annotationPlacement';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { trackEvent } from '@/utils/analytics';
@@ -152,7 +153,7 @@ export function RouteAnnotationsEditor() {
 
               return (
                 <details key={annotation.id} className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-left text-[var(--evergreen)]">
+                  <summary draggable onDragStart={(event) => { event.dataTransfer.setData(ANNOTATION_DRAG_TYPE, annotation.id); event.dataTransfer.effectAllowed = 'move'; }} className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-left text-[var(--evergreen)]">
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: annotation.color }} />
                     <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{content.title || t('annotations.routeAnnotationTitlePlaceholder')}</span><span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{annotation.routeDistance !== undefined ? formatDistance(annotation.routeDistance, unitSystem) : t('annotations.routeAnnotationProgress', { percent: (annotation.progress * 100).toFixed(0) })} · {t(isSidePanel ? 'annotations.presentationSidePanel' : 'annotations.presentationMapCard')}</span></span>
                     <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />

@@ -710,6 +710,8 @@ export const en = {
     timelineZoomIn: "Zoom in",
     timelineAnnotations: "Annotations",
     timelineAnnotation: "Annotation: {name}",
+    timelineCollapse: "Minimize timeline",
+    timelineExpand: "Show timeline",
     bulkTitle: 'Media needs placement',
     bulkShow: 'Show',
     bulkHide: 'Minimize',

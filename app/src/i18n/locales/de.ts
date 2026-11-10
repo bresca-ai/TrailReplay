@@ -699,6 +699,8 @@ export const de = {
     timelineZoomIn: "Vergrößern",
     timelineAnnotations: "Anmerkungen",
     timelineAnnotation: "Anmerkung: {name}",
+    timelineCollapse: "Zeitleiste minimieren",
+    timelineExpand: "Zeitleiste anzeigen",
     bulkTitle: "Medien ohne Position",
     bulkShow: "Anzeigen",
     bulkHide: "Minimieren",

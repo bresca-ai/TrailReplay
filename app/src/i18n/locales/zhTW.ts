@@ -212,6 +212,8 @@ export const zhTW = {
     timelineZoomIn: "放大",
     timelineAnnotations: "註記",
     timelineAnnotation: "註記：{name}",
+    timelineCollapse: "收合時間軸",
+    timelineExpand: "顯示時間軸",
     bulkTitle: "待定位媒體",
     bulkShow: "顯示",
     bulkHide: "收合",

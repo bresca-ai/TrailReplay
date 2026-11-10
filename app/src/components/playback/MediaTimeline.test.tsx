@@ -106,3 +106,47 @@ it('moves the playhead through the current media hold and displays annotations',
   expect(parseFloat(line.style.left)).toBeCloseTo(14 / 64 * 100);
   act(() => setMediaHoldClock(null));
 });
+
+it('fits the full timeline at minimum zoom and can be minimized and reopened', () => {
+  const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(600);
+  setup();
+  const zoomOut = screen.getByRole('button', { name: 'Zoom out' }) as HTMLButtonElement;
+  for (let count = 0; count < 20 && !zoomOut.disabled; count += 1) fireEvent.click(zoomOut);
+  expect(zoomOut.disabled).toBe(true);
+  const lane = screen.getByLabelText('Media timeline drop area');
+  expect(lane.parentElement?.style.width).toBe('600px');
+  fireEvent.click(screen.getByRole('button', { name: 'Minimize timeline' }));
+  expect(screen.queryByLabelText('Media timeline drop area')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Show timeline' }));
+  expect(screen.getByLabelText('Media timeline drop area')).toBeTruthy();
+  width.mockRestore();
+});
+
+it('moves an annotation in the media lane and updates its route position', () => {
+  const lane = setup();
+  act(() => useAppStore.setState((state) => {
+    state.textAnnotations = [{ id: 'note', title: 'Summit', lat: 42.05, lon: 2, progress: 0.5, routeDistance: 1, color: '#345', displayDuration: 3000 }];
+  }));
+  const note = screen.getByRole('button', { name: 'Annotation: Summit' });
+  expect(lane.contains(note)).toBe(true);
+  fireEvent.keyDown(note, { key: 'ArrowRight' });
+  const moved = useAppStore.getState().textAnnotations[0];
+  expect(moved.progress).toBeCloseTo(0.5167, 3);
+  expect(moved.lat).toBeCloseTo(42.05167, 3);
+  expect(moved.routeDistance).toBeGreaterThan(1);
+});
+
+it('drags an annotation to a new point without changing it until release', () => {
+  setup();
+  act(() => useAppStore.setState((state) => {
+    state.textAnnotations = [{ id: 'note', title: 'Summit', lat: 42.05, lon: 2, progress: 0.5, color: '#345', displayDuration: 3000 }];
+  }));
+  const annotation = screen.getByRole('button', { name: 'Annotation: Summit' });
+  Object.defineProperty(annotation, 'setPointerCapture', { value: vi.fn() });
+  const down = createEvent.pointerDown(annotation); Object.defineProperties(down, { clientX: { value: 100 }, button: { value: 0 } }); fireEvent(annotation, down);
+  const move = createEvent.pointerMove(annotation); Object.defineProperty(move, 'clientX', { value: 140 }); fireEvent(annotation, move);
+  expect(useAppStore.getState().textAnnotations[0].progress).toBe(0.5);
+  const up = createEvent.pointerUp(annotation); Object.defineProperty(up, 'clientX', { value: 140 }); fireEvent(annotation, up);
+  expect(useAppStore.getState().textAnnotations[0].progress).toBeCloseTo(0.6, 3);
+  expect(useAppStore.getState().textAnnotations[0].lat).toBeCloseTo(42.06, 3);
+});

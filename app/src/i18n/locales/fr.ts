@@ -699,6 +699,8 @@ export const fr = {
     timelineZoomIn: "Zoomer",
     timelineAnnotations: "Annotations",
     timelineAnnotation: "Annotation : {name}",
+    timelineCollapse: "Réduire la chronologie",
+    timelineExpand: "Afficher la chronologie",
     bulkTitle: "Médias à positionner",
     bulkShow: "Afficher",
     bulkHide: "Réduire",

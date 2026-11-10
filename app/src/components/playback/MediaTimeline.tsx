@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent, type PointerEvent } from 'react';
 import { Image as ImageIcon, Video } from 'lucide-react';
+import * as maplibregl from 'maplibre-gl';
+import { mapGlobalRef } from '@/utils/mapRef';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
-import { importMediaAtPlacement, movePlacedMedia, PENDING_MEDIA_DRAG_TYPE, PLACED_MEDIA_DRAG_TYPE, placePendingMedia, placementAtProgress } from '@/utils/pendingMediaPlacement';
+import { ANNOTATION_DRAG_TYPE, importMediaAtPlacement, movePlacedMedia, moveTimelineAnnotation, PENDING_MEDIA_DRAG_TYPE, PLACED_MEDIA_DRAG_TYPE, placePendingMedia, placementAtProgress } from '@/utils/pendingMediaPlacement';
 import { buildMediaTimeline, progressToTimelineTime, timelineTimeToProgress } from '@/utils/mediaTimeline';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { formatDuration } from '@/utils/units';
 import { getMediaHoldClock, subscribeMediaHoldClock } from '@/utils/mediaHoldClock';
 
-type MediaId = { kind: 'picture' | 'video'; id: string };
+type MediaId = { kind: 'picture' | 'video' | 'annotation'; id: string; anchorProgress?: number };
 type Gesture = { item: MediaId; mode: 'move' | 'start' | 'end'; clientX: number; startMs: number; endMs: number; width: number; totalMs: number; startScroll: number };
 const MIN_PICTURE_MS = 500;
 
@@ -26,7 +28,9 @@ export function MediaTimeline() {
   const selectPicture = useAppStore((state) => state.setSelectedPictureId);
   const selectVideo = useAppStore((state) => state.setSelectedVideoId);
   const clock = useSyncExternalStore(subscribeMediaHoldClock, getMediaHoldClock, getMediaHoldClock);
-  const [zoom, setZoom] = useState(48);
+  const [zoom, setZoom] = useState<number | null>(48);
+  const [collapsed, setCollapsed] = useState(false);
+  const [previewPosition, setPreviewPosition] = useState<{ lat: number; lon: number } | null>(null);
   const [viewport, setViewport] = useState({ left: 0, width: 800 });
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<MediaId | null>(null);
@@ -47,7 +51,26 @@ export function MediaTimeline() {
     const observer = new ResizeObserver(update);
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [collapsed]);
+  useEffect(() => {
+    const map = mapGlobalRef.current;
+    if (!map || !previewPosition) return;
+    const element = document.createElement('div');
+    element.style.cssText = 'width: 36px; height: 36px; border: 3px solid white; border-radius: 50%; background: #c1652f; box-shadow: 0 2px 8px #0008; overflow: hidden; pointer-events: none';
+    const photo = previewGesture?.item.kind === 'picture' ? pictures.find((item) => item.id === previewGesture.item.id) : null;
+    if (photo?.url) {
+      const thumbnail = document.createElement('img');
+      thumbnail.src = photo.url;
+      thumbnail.alt = '';
+      thumbnail.style.cssText = 'width: 100%; height: 100%; object-fit: cover';
+      element.appendChild(thumbnail);
+    }
+    const marker = new maplibregl.Marker({ element, anchor: 'bottom' }).setLngLat([previewPosition.lon, previewPosition.lat]).addTo(map);
+    const pixel = map.project([previewPosition.lon, previewPosition.lat]);
+    const canvas = map.getCanvas();
+    if (pixel.x < 30 || pixel.y < 30 || pixel.x > canvas.clientWidth - 30 || pixel.y > canvas.clientHeight - 30) map.jumpTo({ center: [previewPosition.lon, previewPosition.lat] });
+    return () => { marker.remove(); };
+  }, [previewPosition, previewGesture, pictures]);
   const routeDuration = playback.totalDuration;
   const moments = useMemo(() => resolveSharedRouteMoments(annotations, segments, tracks, playback.routeTimingMode), [annotations, segments, tracks, playback.routeTimingMode]);
   const timeline = useMemo(() => buildMediaTimeline(routeDuration, moments, pictures, videos), [routeDuration, moments, pictures, videos]);
@@ -56,26 +79,36 @@ export function MediaTimeline() {
     ...videos.map((item) => ({ ...item, kind: 'video' as const })),
   ], [pictures, videos]);
   const selectedItem = items.find((item) => item.id === selected?.id && item.kind === selected.kind);
+  const selectedAnnotation = selected?.kind === 'annotation' ? annotations.find((item) => item.id === selected.id) : undefined;
   const total = Math.max(timeline.totalMs, 1);
+  const placementForTime = (item: MediaId, timeMs: number) => {
+    const otherMoments = item.kind === 'annotation' ? moments.filter((entry) => entry.id !== item.id) : moments;
+    const without = buildMediaTimeline(routeDuration, otherMoments, pictures.filter((p) => item.kind !== 'picture' || p.id !== item.id), videos.filter((v) => item.kind !== 'video' || v.id !== item.id));
+    const originalProgress = item.anchorProgress ?? annotations.find((entry) => entry.id === item.id)?.progress;
+    const annotationOffset = item.kind === 'annotation' && originalProgress !== undefined
+      ? progressToTimelineTime(originalProgress, routeDuration, moments, timeline.blocks) - progressToTimelineTime(originalProgress, routeDuration, otherMoments, without.blocks)
+      : 0;
+    return placementAtProgress(timelineTimeToProgress(timeMs - annotationOffset, routeDuration, otherMoments, without.blocks));
+  };
   const moveToTime = (item: MediaId, timeMs: number) => {
-    // Remove the item's own hold before translating its new output time.
-    const without = buildMediaTimeline(routeDuration, moments, pictures.filter((p) => item.kind !== 'picture' || p.id !== item.id), videos.filter((v) => item.kind !== 'video' || v.id !== item.id));
-    const progress = timelineTimeToProgress(timeMs, routeDuration, moments, without.blocks);
-    const placement = placementAtProgress(progress);
+    const placement = placementForTime(item, timeMs);
     if (!placement) { setError(t('media.bulkNoTimelinePosition')); return false; }
-    movePlacedMedia(item.kind, item.id, placement);
+    if (item.kind === 'annotation') moveTimelineAnnotation(item.id, placement);
+    else movePlacedMedia(item.kind, item.id, placement);
     return true;
   };
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     const raw = event.dataTransfer.getData(PENDING_MEDIA_DRAG_TYPE);
     const placed = event.dataTransfer.getData(PLACED_MEDIA_DRAG_TYPE);
+    const annotationId = event.dataTransfer.getData(ANNOTATION_DRAG_TYPE);
     const files = Array.from(event.dataTransfer.files ?? []);
-    if (!raw && !placed && !files.length) return;
-    event.preventDefault(); setHovering(false);
+    if (!raw && !placed && !annotationId && !files.length) return;
+    event.preventDefault(); setHovering(false); setPreviewPosition(null);
     const bounds = event.currentTarget.getBoundingClientRect();
     if (!bounds.width || !Number.isFinite(event.clientX)) return;
     try {
       const time = Math.max(0, Math.min(total, (event.clientX - bounds.left) / bounds.width * total));
+      if (annotationId && annotations.some((item) => item.id === annotationId)) { moveToTime({ kind: 'annotation', id: annotationId }, time); return; }
       if (placed) {
         const item: unknown = JSON.parse(placed);
         if (item && typeof item === 'object' && 'kind' in item && 'id' in item && (item.kind === 'picture' || item.kind === 'video') && typeof item.id === 'string') { moveToTime(item as MediaId, time); setSelected(item as MediaId); }
@@ -105,6 +138,7 @@ export function MediaTimeline() {
     gesture.current = null;
     setPreviewGesture(null);
     setDragDelta(null);
+    setPreviewPosition(null);
     const delta = (event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs;
     if (!Number.isFinite(delta) || Math.abs(delta) < 1) return;
     if (g.mode === 'move') moveToTime(g.item, Math.max(0, g.startMs + delta));
@@ -116,38 +150,42 @@ export function MediaTimeline() {
   };
   const activeBlock = clock && timeline.blocks.find((block) => block.kind === clock.kind && block.id === clock.id);
   const playhead = activeBlock && clock ? activeBlock.startMs + Math.min(activeBlock.durationMs, Math.max(0, clock.elapsedMs)) : progressToTimelineTime(playback.progress, routeDuration, moments, timeline.blocks);
-  const laneWidth = Math.max(viewport.width, Math.ceil(total / 1000 * zoom));
+  const laneWidth = Math.max(1, viewport.width, Math.ceil(total / 1000 * (zoom ?? 0)));
   const pixelsPerSecond = laneWidth / (total / 1000);
-  const firstTick = Math.max(0, Math.floor(viewport.left / pixelsPerSecond) - 1);
-  const lastTick = Math.min(Math.floor(total / 1000), Math.ceil((viewport.left + viewport.width) / pixelsPerSecond) + 1);
-  const ticks = Array.from({ length: Math.max(0, lastTick - firstTick + 1) }, (_, index) => (firstTick + index) * 1000);
+  const minStep = Math.max(1, Math.ceil(42 / pixelsPerSecond));
+  const scale = 10 ** Math.floor(Math.log10(minStep));
+  const step = [1, 2, 5, 10].find((value) => value * scale >= minStep)! * scale;
+  const firstTick = Math.max(0, Math.floor(viewport.left / pixelsPerSecond / step) - 1);
+  const lastTick = Math.min(Math.floor(total / 1000 / step), Math.ceil((viewport.left + viewport.width) / pixelsPerSecond / step) + 1);
+  const ticks = Array.from({ length: Math.max(0, lastTick - firstTick + 1) }, (_, index) => (firstTick + index) * step * 1000);
   const scrollAtEdge = (clientX: number) => {
     const node = scrollerRef.current;
     if (!node) return;
     const bounds = node.getBoundingClientRect();
+    if (!bounds.width) return;
     if (clientX < bounds.left + 35) node.scrollLeft -= 18;
     else if (clientX > bounds.right - 35) node.scrollLeft += 18;
   };
   const scrollByPage = (direction: number) => scrollerRef.current?.scrollBy({ left: direction * viewport.width * 0.8, behavior: 'smooth' });
   return (
     <section aria-label={t('media.timelineTitle')} className="shrink-0 min-w-0 max-w-full overflow-hidden border-t border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 sm:px-4">
-      <div className="flex items-center justify-between gap-2 text-xs"><h2 className="font-semibold text-[var(--evergreen)]">{t('media.timelineTitle')}</h2><span className="text-[var(--evergreen-60)]">{formatDuration(playhead / 1000)} / {t('media.timelineDuration', { duration: formatDuration(total / 1000) })}</span></div>
-      <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+      <div className="flex items-center justify-between gap-2 text-xs"><h2 className="font-semibold text-[var(--evergreen)]">{t('media.timelineTitle')}</h2><span className="ml-auto text-[var(--evergreen-60)]">{formatDuration(playhead / 1000)} / {t('media.timelineDuration', { duration: formatDuration(total / 1000) })}</span><button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { setCollapsed((value) => !value); setPreviewPosition(null); }} aria-expanded={!collapsed}>{t(collapsed ? 'media.timelineExpand' : 'media.timelineCollapse')}</button></div>
+      {!collapsed && <><div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
         <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => scrollByPage(-1)} aria-label={t('media.timelineScrollBack')}>←</button>
         <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => scrollByPage(1)} aria-label={t('media.timelineScrollForward')}>→</button>
         <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => scrollerRef.current?.scrollTo({ left: Math.max(0, playhead / total * laneWidth - viewport.width / 2), behavior: 'smooth' })}>{t('media.timelineFindPlayhead')}</button>
-        <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom <= 32} onClick={() => setZoom((value) => Math.max(32, value - 16))} aria-label={t('media.timelineZoomOut')}>−</button>
-        <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom >= 128} onClick={() => setZoom((value) => Math.min(128, value + 16))} aria-label={t('media.timelineZoomIn')}>+</button>
+        <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom === null} onClick={() => setZoom((value) => { const next = (value ?? 0) / 1.5; return next <= viewport.width / (total / 1000) ? null : next; })} aria-label={t('media.timelineZoomOut')}>−</button>
+        <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom !== null && zoom >= 128} onClick={() => setZoom((value) => Math.min(128, Math.max(viewport.width / (total / 1000) * 1.5, (value ?? 0) * 1.5)))} aria-label={t('media.timelineZoomIn')}>+</button>
       </div>
       <div ref={scrollerRef} onScroll={(event) => setViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })} className="w-full min-w-0 overflow-x-auto pb-2">
         <div className="relative" style={{ width: `${laneWidth}px` }}>
           <div className="relative mt-1 h-5 text-[10px] text-[var(--evergreen-60)]" aria-hidden="true">{ticks.map((ms) => <span key={ms} className="absolute border-l border-[var(--evergreen)]/30 pl-1" style={{ left: `${ms / total * 100}%` }}>{formatDuration(ms / 1000)}</span>)}</div>
           <div ref={laneRef} className={`relative h-16 rounded-lg border border-dashed ${hovering ? 'border-[var(--trail-orange)] bg-[var(--trail-orange)]/10' : 'border-[var(--evergreen)]/25 bg-[var(--evergreen)]/5'}`}
             aria-label={t('media.timelineDrop')} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width) seek(timelineTimeToProgress((event.clientX - bounds.left) / bounds.width * total, routeDuration, moments, timeline.blocks)); }}
-            onDragOver={(event) => { if ((event.dataTransfer.types.includes(PENDING_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes(PLACED_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes('Files'))) { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PLACED_MEDIA_DRAG_TYPE) ? 'move' : 'copy'; setHovering(true); scrollAtEdge(event.clientX); } }}
-            onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHovering(false); }} onDrop={onDrop}>
+            onDragOver={(event) => { if ((event.dataTransfer.types.includes(PENDING_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes(PLACED_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes(ANNOTATION_DRAG_TYPE) || event.dataTransfer.types.includes('Files'))) { event.preventDefault(); event.dataTransfer.dropEffect = (event.dataTransfer.types.includes(PLACED_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes(ANNOTATION_DRAG_TYPE)) ? 'move' : 'copy'; setHovering(true); scrollAtEdge(event.clientX); const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width) setPreviewPosition(placementAtProgress(timelineTimeToProgress(Math.max(0, Math.min(total, (event.clientX - bounds.left) / bounds.width * total)), routeDuration, moments, timeline.blocks))); } }}
+            onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) { setHovering(false); setPreviewPosition(null); } }} onDrop={onDrop}>
             <div className="pointer-events-none absolute inset-y-0 z-30 w-0.5 bg-[var(--trail-orange)]" style={{ left: `${playhead / total * 100}%` }} />
-            {items.length === 0 && <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-[var(--evergreen-60)]">{t('media.timelineEmpty')}</p>}
+            {items.length === 0 && moments.length === 0 && <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-[var(--evergreen-60)]">{t('media.timelineEmpty')}</p>}
             {timeline.blocks.map((block, index) => {
               const item = items.find((entry) => entry.id === block.id && entry.kind === block.kind);
               if (!item) return null;
@@ -157,7 +195,7 @@ export function MediaTimeline() {
               const displayStart = active?.mode === 'move' ? Math.max(0, block.startMs + delta) : active?.mode === 'start' ? Math.max(0, Math.min(block.endMs - MIN_PICTURE_MS, block.startMs + delta)) : block.startMs;
               const displayEnd = active?.mode === 'move' ? displayStart + block.durationMs : active?.mode === 'end' ? Math.max(block.startMs + MIN_PICTURE_MS, block.endMs + delta) : block.endMs;
               return <div key={`${block.kind}-${block.id}`} role="button" tabIndex={0} aria-label={t('media.timelineMarker', { name, percent: Math.round(item.progress * 100) })} title={`${name} · ${(block.durationMs / 1000).toFixed(1)}s`}
-                onPointerDown={(event) => begin(event, item, 'move', block.startMs, block.endMs)} onPointerMove={(event) => { const g = gesture.current; if (g) { scrollAtEdge(event.clientX); setDragDelta((event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs); } }} onPointerUp={end} onPointerCancel={() => { gesture.current = null; setPreviewGesture(null); setDragDelta(null); }}
+                onPointerDown={(event) => begin(event, item, 'move', block.startMs, block.endMs)} onPointerMove={(event) => { const g = gesture.current; if (g) { scrollAtEdge(event.clientX); const delta = (event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs; setDragDelta(delta); if (g.mode !== 'end') setPreviewPosition(placementForTime(g.item, Math.max(0, g.startMs + delta))); } }} onPointerUp={end} onPointerCancel={() => { gesture.current = null; setPreviewGesture(null); setDragDelta(null); setPreviewPosition(null); }}
                 onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); moveToTime(item, block.startMs + (event.key === 'ArrowLeft' ? -1000 : 1000)); } }}
                 className={`absolute top-1 flex h-14 min-w-2 touch-none select-none overflow-hidden rounded-md border-2 bg-[var(--evergreen)] text-white shadow-sm focus:z-20 ${selected?.id === item.id && selected.kind === item.kind ? 'border-[var(--trail-orange)]' : 'border-white'}`}
                 style={{ left: `${displayStart / total * 100}%`, width: `${Math.max(0, displayEnd - displayStart) / total * 100}%`, zIndex: index + 1 }}>
@@ -166,24 +204,29 @@ export function MediaTimeline() {
                 {item.kind === 'picture' && <span role="slider" tabIndex={0} aria-label={t('media.timelineResizeEnd', { name })} aria-valuetext={`${(block.durationMs / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, item, 'end', block.startMs, block.endMs)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); updateDuration(item.id, Math.max(MIN_PICTURE_MS, block.durationMs + (event.key === 'ArrowLeft' ? -500 : 500))); } }} className="z-10 w-2 shrink-0 cursor-ew-resize bg-white/65" />}
               </div>;
             })}
-          </div>
-          {moments.length > 0 && <div aria-label={t('media.timelineAnnotations')} className="relative mt-1 h-8 rounded border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/5">
             {moments.map((annotation, index) => {
               const arrival = annotation.progress * routeDuration;
               const startRoute = Math.max(0, arrival - (annotation.presentation === 'side-panel' ? 500 : Math.max(0, annotation.displayDuration)));
               const endRoute = annotation.presentation === 'side-panel' ? Math.min(routeDuration, arrival + 500) : arrival;
               const start = progressToTimelineTime(routeDuration ? startRoute / routeDuration : 0, routeDuration, moments, timeline.blocks);
-              const end = progressToTimelineTime(routeDuration ? endRoute / routeDuration : 0, routeDuration, moments, timeline.blocks);
-              return <button key={`${annotation.id}-${index}`} type="button" title={annotation.title} aria-label={t('media.timelineAnnotation', { name: annotation.title })} onClick={() => seek(annotation.progress)} className="absolute top-0.5 h-6 min-w-6 overflow-hidden rounded border border-white/60 px-1 text-left text-[10px] text-white" style={{ left: `${start / total * 100}%`, width: `${Math.max(0, end - start) / total * 100}%`, backgroundColor: annotation.color || '#385b4d' }}>{annotation.title}</button>;
+              const endTime = progressToTimelineTime(routeDuration ? endRoute / routeDuration : 0, routeDuration, moments, timeline.blocks);
+              const arrivalTime = progressToTimelineTime(annotation.progress, routeDuration, moments, timeline.blocks);
+              const delta = previewGesture?.item.kind === 'annotation' && previewGesture.item.id === annotation.id ? (dragDelta ?? 0) : 0;
+              return <div key={`${annotation.id}-${index}`} role="button" tabIndex={0} title={annotation.title} aria-label={t('media.timelineAnnotation', { name: annotation.title })}
+                onPointerDown={(event) => begin(event, { kind: 'annotation', id: annotation.id, anchorProgress: annotation.progress }, 'move', arrivalTime, arrivalTime + Math.max(0, endTime - start))}
+                onPointerMove={(event) => { const g = gesture.current; if (g) { scrollAtEdge(event.clientX); const change = (event.clientX - g.clientX + (scrollerRef.current?.scrollLeft ?? 0) - g.startScroll) / g.width * g.totalMs; setDragDelta(change); setPreviewPosition(placementForTime(g.item, Math.max(0, g.startMs + change))); } }}
+                onPointerUp={end} onPointerCancel={() => { gesture.current = null; setPreviewGesture(null); setDragDelta(null); setPreviewPosition(null); }} onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); moveToTime({ kind: 'annotation', id: annotation.id, anchorProgress: annotation.progress }, arrivalTime + (event.key === 'ArrowLeft' ? -1000 : 1000)); } }}
+                className="absolute top-1 z-20 flex h-14 min-w-8 touch-none select-none items-center overflow-hidden rounded border-2 border-white px-1 text-left text-[10px] text-white cursor-grab" style={{ left: `${Math.max(0, start + delta) / total * 100}%`, width: `${Math.max(0, endTime - start) / total * 100}%`, backgroundColor: annotation.color || '#385b4d' }}>{annotation.title}</div>;
             })}
-            <div className="pointer-events-none absolute inset-y-0 z-30 w-0.5 bg-[var(--trail-orange)]" style={{ left: `${playhead / total * 100}%` }} />
-          </div>}
+          </div>
         </div>
       </div>
-      {items.length > 0 && <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-        <select aria-label={t('media.timelineSelect')} value={selectedItem ? `${selectedItem.kind}:${selectedItem.id}` : ''} onChange={(event) => { const item = items.find((entry) => `${entry.kind}:${entry.id}` === event.target.value); setSelected(item ? { id: item.id, kind: item.kind } : null); }} className="min-w-0 max-w-48 flex-1 rounded border border-[var(--evergreen)]/20 bg-transparent px-1 py-1"><option value="">{t('media.timelineSelect')}</option>{timeline.blocks.map((block) => { const item = items.find((entry) => entry.kind === block.kind && entry.id === block.id)!; return <option key={`${item.kind}:${item.id}`} value={`${item.kind}:${item.id}`}>{item.file?.name ?? item.originalFileName ?? item.id} · {formatDuration(block.startMs / 1000)}</option>; })}</select>
+      {(items.length > 0 || annotations.length > 0) && <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+        <select aria-label={t('media.timelineSelect')} value={selectedItem ? `${selectedItem.kind}:${selectedItem.id}` : selectedAnnotation ? `annotation:${selectedAnnotation.id}` : ''} onChange={(event) => { const item = items.find((entry) => `${entry.kind}:${entry.id}` === event.target.value); const note = annotations.find((entry) => `annotation:${entry.id}` === event.target.value); setSelected(item ? { id: item.id, kind: item.kind } : note ? { id: note.id, kind: 'annotation' } : null); }} className="min-w-0 max-w-48 flex-1 rounded border border-[var(--evergreen)]/20 bg-transparent px-1 py-1"><option value="">{t('media.timelineSelect')}</option>{timeline.blocks.map((block) => { const item = items.find((entry) => entry.kind === block.kind && entry.id === block.id)!; return <option key={`${item.kind}:${item.id}`} value={`${item.kind}:${item.id}`}>{item.file?.name ?? item.originalFileName ?? item.id} · {formatDuration(block.startMs / 1000)}</option>; })}{annotations.map((annotation) => <option key={`annotation:${annotation.id}`} value={`annotation:${annotation.id}`}>{annotation.title}</option>)}</select>
+        {selectedAnnotation && <><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => seek(selectedAnnotation.progress)}>{t('media.timelineSeek')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { const placement = placementAtProgress(playback.progress); if (placement) moveTimelineAnnotation(selectedAnnotation.id, placement); }}>{t('media.bulkAtPlayhead')}</button></>}
         {selectedItem && <><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { if (selectedItem.kind === 'picture') selectPicture(selectedItem.id); else selectVideo(selectedItem.id); }}>{t('media.timelinePreview')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => seek(selectedItem.progress)}>{t('media.timelineSeek')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { const placement = placementAtProgress(playback.progress); if (placement) movePlacedMedia(selectedItem.kind, selectedItem.id, placement); }}>{t('media.bulkAtPlayhead')}</button></>}
-      </div>}
+      </div>}</>}
     </section>
   );
 }

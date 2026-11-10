@@ -699,6 +699,8 @@ export const es = {
     timelineZoomIn: "Ampliar zoom",
     timelineAnnotations: "Anotaciones",
     timelineAnnotation: "Anotación: {name}",
+    timelineCollapse: "Minimizar línea de tiempo",
+    timelineExpand: "Mostrar línea de tiempo",
     bulkTitle: "Archivos pendientes de ubicación",
     bulkShow: "Mostrar",
     bulkHide: "Minimizar",
