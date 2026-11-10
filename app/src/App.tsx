@@ -638,12 +638,12 @@ function App() {
           </ExportAwareSidebar>
           
           {/* Map Area */}
-          <div className="flex-1 flex flex-col relative">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col relative">
             {/* Map Container */}
             <div
               id="map-capture-container"
               ref={mapContainerRef}
-              className="flex-1 relative"
+              className="flex-1 min-w-0 min-h-0 relative"
             >
               <Suspense fallback={<AppLoadingOverlay />}>
                 <TrailMap

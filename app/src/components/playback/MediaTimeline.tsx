@@ -130,7 +130,7 @@ export function MediaTimeline() {
   };
   const scrollByPage = (direction: number) => scrollerRef.current?.scrollBy({ left: direction * viewport.width * 0.8, behavior: 'smooth' });
   return (
-    <section aria-label={t('media.timelineTitle')} className="shrink-0 border-t border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 sm:px-4">
+    <section aria-label={t('media.timelineTitle')} className="shrink-0 min-w-0 max-w-full overflow-hidden border-t border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 sm:px-4">
       <div className="flex items-center justify-between gap-2 text-xs"><h2 className="font-semibold text-[var(--evergreen)]">{t('media.timelineTitle')}</h2><span className="text-[var(--evergreen-60)]">{formatDuration(playhead / 1000)} / {t('media.timelineDuration', { duration: formatDuration(total / 1000) })}</span></div>
       <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
         <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => scrollByPage(-1)} aria-label={t('media.timelineScrollBack')}>←</button>
@@ -139,7 +139,7 @@ export function MediaTimeline() {
         <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom <= 32} onClick={() => setZoom((value) => Math.max(32, value - 16))} aria-label={t('media.timelineZoomOut')}>−</button>
         <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom >= 128} onClick={() => setZoom((value) => Math.min(128, value + 16))} aria-label={t('media.timelineZoomIn')}>+</button>
       </div>
-      <div ref={scrollerRef} onScroll={(event) => setViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })} className="overflow-x-auto pb-2">
+      <div ref={scrollerRef} onScroll={(event) => setViewport({ left: event.currentTarget.scrollLeft, width: event.currentTarget.clientWidth })} className="w-full min-w-0 overflow-x-auto pb-2">
         <div className="relative" style={{ width: `${laneWidth}px` }}>
           <div className="relative mt-1 h-5 text-[10px] text-[var(--evergreen-60)]" aria-hidden="true">{ticks.map((ms) => <span key={ms} className="absolute border-l border-[var(--evergreen)]/30 pl-1" style={{ left: `${ms / total * 100}%` }}>{formatDuration(ms / 1000)}</span>)}</div>
           <div ref={laneRef} className={`relative h-16 rounded-lg border border-dashed ${hovering ? 'border-[var(--trail-orange)] bg-[var(--trail-orange)]/10' : 'border-[var(--evergreen)]/25 bg-[var(--evergreen)]/5'}`}
