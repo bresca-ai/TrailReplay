@@ -19,7 +19,8 @@ it('places only selected media by coordinates and keeps the rest inactive', () =
     useAppStore.getState().queuePendingPicturePlacement({ id, mediaKind, file: new File([''], `${id}.jpg`), url: 'blob:test', displayDuration: 3000, placementReason: 'missing-gps' });
   }
   render(<PendingPicturePlacementBanner />);
-  fireEvent.click(screen.getByLabelText('Select two.jpg'));
+  expect((screen.getByLabelText('Select all') as HTMLInputElement).checked).toBe(false);
+  fireEvent.click(screen.getByLabelText('Select one.jpg'));
   fireEvent.change(screen.getByLabelText('Latitude, longitude'), { target: { value: '42.05, 2' } });
   fireEvent.click(screen.getByRole('button', { name: /^Place$/ }));
   expect(useAppStore.getState().pictures).toHaveLength(1);
@@ -32,8 +33,19 @@ it('places only selected media by coordinates and keeps the rest inactive', () =
 it('rejects invalid coordinates without removing the pending item', () => {
   useAppStore.getState().queuePendingPicturePlacement({ id: 'one', file: new File([''], 'one.jpg'), url: 'blob:test', displayDuration: 3000, placementReason: 'missing-gps' });
   render(<PendingPicturePlacementBanner />);
+  fireEvent.click(screen.getByLabelText('Select one.jpg'));
   fireEvent.change(screen.getByLabelText('Latitude, longitude'), { target: { value: '200, 2' } });
   fireEvent.click(screen.getByRole('button', { name: /^Place$/ }));
   expect(screen.getByRole('alert')).toBeTruthy();
   expect(useAppStore.getState().pendingPicturePlacements).toHaveLength(1);
+});
+
+it('drags only the chosen unselected photo without selecting the whole queue', () => {
+  for (const id of ['one', 'two']) useAppStore.getState().queuePendingPicturePlacement({ id, file: new File([''], `${id}.jpg`), url: 'blob:test', displayDuration: 3000, placementReason: 'missing-gps' });
+  render(<PendingPicturePlacementBanner />);
+  const row = screen.getByLabelText('Select one.jpg').parentElement!;
+  const data: Record<string, string> = {};
+  fireEvent.dragStart(row, { dataTransfer: { setData: (type: string, value: string) => { data[type] = value; }, effectAllowed: '' } });
+  expect(JSON.parse(data['application/x-trailreplay-pending-media'])).toEqual(['one']);
+  expect(useAppStore.getState().selectedPendingMediaIds).toEqual([]);
 });

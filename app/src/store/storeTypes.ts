@@ -150,6 +150,7 @@ export interface AppState {
   ) => void;
   updatePictureMetadata: (pictureId: string, title: string, description: string) => void;
   updatePictureDuration: (pictureId: string, duration: number) => void;
+  updateAllPictureDurations: (duration: number) => void;
   addVideo: (video: VideoAnnotation) => void;
   removeVideo: (videoId: string) => void;
   updateVideoPosition: (

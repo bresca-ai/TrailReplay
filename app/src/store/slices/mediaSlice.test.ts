@@ -142,3 +142,19 @@ describe('mediaSlice video selection', () => {
     expect(video.routeSegmentDistance).toBe(3_000);
   });
 });
+
+describe('bulk photo duration', () => {
+  it('updates placed and waiting photos without changing videos or placement state', () => {
+    const store = createAppStore();
+    store.getState().addPicture(createPlaceholderPicture());
+    store.getState().queuePendingPicturePlacement({ id: 'waiting', file: new File([''], 'waiting.jpg'), url: '', displayDuration: 3000, placementReason: 'missing-gps' });
+    store.getState().queuePendingPicturePlacement({ id: 'clip', mediaKind: 'video', file: new File([''], 'clip.mp4'), url: '', displayDuration: 5000, durationSeconds: 8, placementReason: 'missing-gps' });
+    expect(store.getState().selectedPendingMediaIds).toEqual([]);
+    store.getState().updateAllPictureDurations(2000);
+    expect(store.getState().pictures[0].displayDuration).toBe(2000);
+    expect(store.getState().pendingPicturePlacements[0].displayDuration).toBe(2000);
+    expect(store.getState().pendingPicturePlacements[1].displayDuration).toBe(5000);
+    expect(store.getState().pendingPicturePlacements).toHaveLength(2);
+    expect(store.getState().selectedPendingMediaIds).toEqual([]);
+  });
+});

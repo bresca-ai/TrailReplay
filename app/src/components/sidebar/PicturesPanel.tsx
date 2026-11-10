@@ -20,6 +20,8 @@ export function PicturesPanel() {
   const { t } = useI18n();
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
+  const pendingPhotos = useAppStore((state) => state.pendingPicturePlacements.filter((item) => item.mediaKind !== 'video').length);
+  const updateAllPictureDurations = useAppStore((state) => state.updateAllPictureDurations);
   const annotationCount = useAppStore((state) => state.textAnnotations.length);
   const removePicture = useAppStore((state) => state.removePicture);
   const removeVideo = useAppStore((state) => state.removeVideo);
@@ -37,10 +39,11 @@ export function PicturesPanel() {
   const isProcessing = isProcessingPhotos || isProcessingVideos;
 
   const [activeTab, setActiveTab] = useState<'pictures' | 'videos' | 'annotations'>(
-    () => annotationCount > 0 && pictures.length + videos.length === 0 ? 'annotations' : 'pictures',
+    () => annotationCount > 0 && pictures.length + pendingPhotos + videos.length === 0 ? 'annotations' : 'pictures',
   );
   const [editingPicture, setEditingPicture] = useState<string | null>(null);
   const [durationValue, setDurationValue] = useState(3);
+  const [bulkDuration, setBulkDuration] = useState('3');
   const [descriptionValue, setDescriptionValue] = useState('');
   const relinkTargetRef = useRef<{ kind: 'picture' | 'video'; id: string } | null>(null);
   const relinkInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +113,7 @@ export function PicturesPanel() {
   const mediaTabs = [
     {
       id: 'pictures' as const,
-      count: pictures.length,
+      count: pictures.length + pendingPhotos,
       icon: ImageIcon,
       label: t('media.picturesTabLabel'),
     },
@@ -210,10 +213,28 @@ export function PicturesPanel() {
         </section>
       )}
       
+      {activeTab === 'pictures' && pictures.length + pendingPhotos > 0 && (
+        <form className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/5 p-3" onSubmit={(event) => {
+          event.preventDefault();
+          const seconds = Number(bulkDuration);
+          if (!Number.isFinite(seconds) || seconds < 0.5 || seconds > 60) return;
+          updateAllPictureDurations(seconds * 1000);
+          toast.success(t('media.bulkDurationApplied', { count: pictures.length + pendingPhotos }));
+        }}>
+          <label htmlFor="bulk-picture-duration" className="block text-xs font-semibold text-[var(--evergreen)]">{t('media.bulkDurationTitle')}</label>
+          <p className="mt-1 text-[11px] text-[var(--evergreen-60)]">{t('media.bulkDurationHint', { count: pictures.length + pendingPhotos })}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <input id="bulk-picture-duration" type="number" min="0.5" max="60" step="0.5" required value={bulkDuration} onChange={(event) => setBulkDuration(event.target.value)} className="w-20 rounded border border-[var(--evergreen)]/30 bg-[var(--canvas)] px-2 py-1.5 text-xs" />
+            <span className="text-xs text-[var(--evergreen-60)]">{t('media.seconds')}</span>
+            <button type="submit" className="ml-auto rounded bg-[var(--evergreen)] px-3 py-1.5 text-xs font-medium text-[var(--canvas)] hover:bg-[var(--evergreen)]/90">{t('media.bulkDurationApply')}</button>
+          </div>
+        </form>
+      )}
+
       {/* Pictures List */}
       {activeTab === 'pictures' && (
         <div>
-          {pictures.length === 0 ? (
+          {pictures.length === 0 && pendingPhotos === 0 ? (
             <div className="text-center py-8 text-[var(--evergreen-60)]">
               <p className="text-sm">{t('media.noPictures')}</p>
               <p className="text-xs mt-1">{t('media.noPicturesHint')}</p>

@@ -22,6 +22,7 @@ type MediaSlice = Pick<
   | 'updatePicturePosition'
   | 'updatePictureMetadata'
   | 'updatePictureDuration'
+  | 'updateAllPictureDurations'
   | 'addVideo'
   | 'removeVideo'
   | 'updateVideoPosition'
@@ -58,7 +59,6 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   queuePendingPicturePlacement: (picture) =>
     set((state) => {
       state.pendingPicturePlacements.push(picture);
-      state.selectedPendingMediaIds.push(picture.id);
     }),
 
   removePendingPicturePlacement: (pictureId) =>
@@ -110,6 +110,15 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
     set((state) => {
       const picture = state.pictures.find((entry) => entry.id === pictureId);
       if (picture) picture.displayDuration = duration;
+    }),
+
+  updateAllPictureDurations: (duration) =>
+    set((state) => {
+      if (!Number.isFinite(duration) || duration < 500 || duration > 60_000) return;
+      state.pictures.forEach((picture) => { picture.displayDuration = duration; });
+      state.pendingPicturePlacements.forEach((item) => {
+        if (item.mediaKind !== 'video') item.displayDuration = duration;
+      });
     }),
 
   addVideo: (video) =>
