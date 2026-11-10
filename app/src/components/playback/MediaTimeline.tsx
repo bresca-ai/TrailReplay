@@ -26,8 +26,6 @@ export function MediaTimeline() {
   const seek = useAppStore((state) => state.seekToProgress);
   const setError = useAppStore((state) => state.setError);
   const updateDuration = useAppStore((state) => state.updatePictureDuration);
-  const selectPicture = useAppStore((state) => state.setSelectedPictureId);
-  const selectVideo = useAppStore((state) => state.setSelectedVideoId);
   const clock = useSyncExternalStore(subscribeMediaHoldClock, getMediaHoldClock, getMediaHoldClock);
   const draggedPictureId = useSyncExternalStore(subscribeTimelineDraggedPicture, getTimelineDraggedPicture, getTimelineDraggedPicture);
   const [zoom, setZoom] = useState<number | null>(48);
@@ -85,8 +83,6 @@ export function MediaTimeline() {
     ...pictures.map((item) => ({ ...item, kind: 'picture' as const })),
     ...videos.map((item) => ({ ...item, kind: 'video' as const })),
   ], [pictures, videos]);
-  const selectedItem = items.find((item) => item.id === selected?.id && item.kind === selected.kind);
-  const selectedAnnotation = selected?.kind === 'annotation' ? annotations.find((item) => item.id === selected.id) : undefined;
   const total = Math.max(timeline.totalMs, 1);
   const placementForTime = (item: MediaId, timeMs: number) => {
     const otherMoments = item.kind === 'annotation' ? moments.filter((entry) => entry.id !== item.id) : moments;
@@ -190,11 +186,16 @@ export function MediaTimeline() {
   const scrollByPage = (direction: number) => { followPlayhead.current = false; expectedScroll.current = null; scrollerRef.current?.scrollBy({ left: direction * viewport.width * 0.8, behavior: 'smooth' }); };
   return (
     <section aria-label={t('media.timelineTitle')} className="shrink-0 min-w-0 max-w-full overflow-hidden border-t border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 sm:px-4">
-      <div className="flex items-center justify-between gap-2 text-xs"><h2 className="font-semibold text-[var(--evergreen)]">{t('media.timelineTitle')}</h2><span className="ml-auto text-[var(--evergreen-60)]">{formatDuration(playhead / 1000)} / {t('media.timelineDuration', { duration: formatDuration(total / 1000) })}</span><button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { setCollapsed((value) => !value); setPreviewPosition(null); }} aria-expanded={!collapsed}>{t(collapsed ? 'media.timelineExpand' : 'media.timelineCollapse')}</button></div>
-      {!collapsed && <><div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-        <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom === null} onClick={() => setZoom((value) => { const next = (value ?? 0) / 1.5; return next <= viewport.width / (total / 1000) ? null : next; })} aria-label={t('media.timelineZoomOut')}>−</button>
-        <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom !== null && zoom >= 128} onClick={() => setZoom((value) => Math.min(128, Math.max(viewport.width / (total / 1000) * 1.5, (value ?? 0) * 1.5)))} aria-label={t('media.timelineZoomIn')}>+</button>
+      <div className="flex items-center gap-2 text-xs">
+        <h2 className="font-semibold text-[var(--evergreen)]">{t('media.timelineTitle')}</h2>
+        {!collapsed && <div className="flex items-center gap-1">
+          <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom === null} onClick={() => setZoom((value) => { const next = (value ?? 0) / 1.5; return next <= viewport.width / (total / 1000) ? null : next; })} aria-label={t('media.timelineZoomOut')}>−</button>
+          <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" disabled={zoom !== null && zoom >= 128} onClick={() => setZoom((value) => Math.min(128, Math.max(viewport.width / (total / 1000) * 1.5, (value ?? 0) * 1.5)))} aria-label={t('media.timelineZoomIn')}>+</button>
+        </div>}
+        <span className="ml-auto text-[var(--evergreen-60)]">{formatDuration(playhead / 1000)} / {t('media.timelineDuration', { duration: formatDuration(total / 1000) })}</span>
+        <button type="button" className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { setCollapsed((value) => !value); setPreviewPosition(null); }} aria-expanded={!collapsed}>{t(collapsed ? 'media.timelineExpand' : 'media.timelineCollapse')}</button>
       </div>
+      {!collapsed && <>
       <div className="flex min-w-0 items-center gap-1">
       <button type="button" className="shrink-0 rounded px-1 py-2 text-[var(--evergreen)] hover:bg-[var(--evergreen)]/10" onClick={() => scrollByPage(-1)} aria-label={t('media.timelineScrollBack')}>‹</button>
       <div ref={scrollerRef} onScroll={(event) => { const node = event.currentTarget; if (expectedScroll.current === null || Math.abs(node.scrollLeft - expectedScroll.current) > 1) followPlayhead.current = false; expectedScroll.current = null; setViewport({ left: node.scrollLeft, width: node.clientWidth }); }} className="flex-1 min-w-0 overflow-x-auto pb-2">
@@ -244,11 +245,7 @@ export function MediaTimeline() {
       </div>
       <button type="button" className="shrink-0 rounded px-1 py-2 text-[var(--evergreen)] hover:bg-[var(--evergreen)]/10" onClick={() => scrollByPage(1)} aria-label={t('media.timelineScrollForward')}>›</button>
       </div>
-      {(items.length > 0 || annotations.length > 0) && <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-        <select aria-label={t('media.timelineSelect')} value={selectedItem ? `${selectedItem.kind}:${selectedItem.id}` : selectedAnnotation ? `annotation:${selectedAnnotation.id}` : ''} onChange={(event) => { const item = items.find((entry) => `${entry.kind}:${entry.id}` === event.target.value); const note = annotations.find((entry) => `annotation:${entry.id}` === event.target.value); setSelected(item ? { id: item.id, kind: item.kind } : note ? { id: note.id, kind: 'annotation' } : null); }} className="min-w-0 max-w-48 flex-1 rounded border border-[var(--evergreen)]/20 bg-transparent px-1 py-1"><option value="">{t('media.timelineSelect')}</option>{timeline.blocks.map((block) => { const item = items.find((entry) => entry.kind === block.kind && entry.id === block.id)!; return <option key={`${item.kind}:${item.id}`} value={`${item.kind}:${item.id}`}>{item.file?.name ?? item.originalFileName ?? item.id} · {formatDuration(block.startMs / 1000)}</option>; })}{annotations.map((annotation) => <option key={`annotation:${annotation.id}`} value={`annotation:${annotation.id}`}>{annotation.title}</option>)}</select>
-        {selectedAnnotation && <><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => seek(selectedAnnotation.progress)}>{t('media.timelineSeek')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { const placement = placementAtProgress(playback.progress); if (placement) moveTimelineAnnotation(selectedAnnotation.id, placement); }}>{t('media.bulkAtPlayhead')}</button></>}
-        {selectedItem && <><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { if (selectedItem.kind === 'picture') selectPicture(selectedItem.id); else selectVideo(selectedItem.id); }}>{t('media.timelinePreview')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => seek(selectedItem.progress)}>{t('media.timelineSeek')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { const placement = placementAtProgress(playback.progress); if (placement) movePlacedMedia(selectedItem.kind, selectedItem.id, placement); }}>{t('media.bulkAtPlayhead')}</button></>}
-      </div>}</>}
+      </>}
     </section>
   );
 }

@@ -39,18 +39,15 @@ it('drops pending media in the lane and moves its marker and route anchor', () =
   expect(picture.routeSegmentId).toBe('route');
 });
 
-it('offers every overlapping item in the selector and moves the chosen one to the playhead', () => {
+it('lets each overlapping item be moved with the keyboard', () => {
   setup();
   act(() => useAppStore.setState((state) => {
-    state.playback.progress = 0.8;
     state.pictures = ['a', 'b'].map((id) => ({ id, file: null, originalFileName: `${id}.jpg`, url: '', isPlaceholder: true, progress: 0.2, position: 0.2, displayDuration: 3000 }));
   }));
-  fireEvent.change(screen.getByLabelText('Select a media item'), { target: { value: 'picture:b' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Place at playhead' }));
+  fireEvent.keyDown(screen.getByRole('button', { name: /b.jpg, at 20%/ }), { key: 'ArrowRight' });
   expect(useAppStore.getState().pictures[0].progress).toBe(0.2);
-  expect(useAppStore.getState().pictures[1].progress).toBeCloseTo(0.8);
+  expect(useAppStore.getState().pictures[1].progress).not.toBe(0.2);
 });
-
 
 it('resizes the photo duration without moving its route position', () => {
   setup();
