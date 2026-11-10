@@ -49,7 +49,7 @@ export function PendingPicturePlacementBanner() {
         <p className="mt-1 text-xs text-[var(--evergreen-60)]">{t('media.bulkHint')}</p>
         <label className="mt-2 flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={pending.length > 0 && selected.length === pending.length} onChange={(event) => setSelected(event.target.checked ? pending.map((item) => item.id) : [])} />{t('media.bulkSelectAll')}</label>
         <div className="mt-2 max-h-36 overflow-y-auto rounded-lg border border-[var(--evergreen)]/10">
-          {pending.map((item) => <div key={item.id} draggable={selectedSet.has(item.id)} onDragStart={(event) => { event.dataTransfer.setData(PENDING_MEDIA_DRAG_TYPE, JSON.stringify(selected)); event.dataTransfer.effectAllowed = 'copy'; }} className="flex items-center gap-2 border-b border-[var(--evergreen)]/10 p-2 last:border-0">
+          {pending.map((item) => <div key={item.id} draggable={selectedSet.has(item.id)} onDragStart={(event) => { event.dataTransfer.setData(PENDING_MEDIA_DRAG_TYPE, JSON.stringify(selected)); event.dataTransfer.effectAllowed = 'copyMove'; }} className="flex items-center gap-2 border-b border-[var(--evergreen)]/10 p-2 last:border-0">
             <input aria-label={t('media.bulkSelectFile', { name: item.file.name })} type="checkbox" checked={selectedSet.has(item.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, item.id] : selected.filter((id) => id !== item.id))} />
             {item.mediaKind === 'video' ? <video src={item.url} muted preload="metadata" className="h-9 w-9 rounded object-cover" /> : <img src={item.url} alt="" className="h-9 w-9 rounded object-cover" />}
             <span className="min-w-0 flex-1 truncate text-xs">{item.file.name}</span>

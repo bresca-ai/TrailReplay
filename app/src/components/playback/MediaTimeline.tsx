@@ -1,90 +1,140 @@
-import { useMemo, useState, type DragEvent } from 'react';
+import { useMemo, useRef, useState, type DragEvent, type PointerEvent } from 'react';
 import { Image as ImageIcon, Video } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
-import { movePlacedMedia, PENDING_MEDIA_DRAG_TYPE, placePendingMedia, placementAtProgress } from '@/utils/pendingMediaPlacement';
+import { importMediaAtPlacement, movePlacedMedia, PENDING_MEDIA_DRAG_TYPE, PLACED_MEDIA_DRAG_TYPE, placePendingMedia, placementAtProgress } from '@/utils/pendingMediaPlacement';
+import { buildMediaTimeline, progressToTimelineTime, timelineTimeToProgress } from '@/utils/mediaTimeline';
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
+import { formatDuration } from '@/utils/units';
 
-const PLACED_DRAG_TYPE = 'application/x-trailreplay-placed-media';
 type MediaId = { kind: 'picture' | 'video'; id: string };
+type Gesture = { item: MediaId; mode: 'move' | 'start' | 'end'; clientX: number; startMs: number; endMs: number; width: number; totalMs: number };
+const MIN_PICTURE_MS = 500;
 
 export function MediaTimeline() {
   const { t } = useI18n();
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
-  const progress = useAppStore((state) => state.playback.progress);
+  const playback = useAppStore((state) => state.playback);
+  const annotations = useAppStore((state) => state.textAnnotations);
+  const segments = useAppStore((state) => state.journeySegments);
+  const tracks = useAppStore((state) => state.tracks);
   const seek = useAppStore((state) => state.seekToProgress);
   const setError = useAppStore((state) => state.setError);
+  const updateDuration = useAppStore((state) => state.updatePictureDuration);
   const selectPicture = useAppStore((state) => state.setSelectedPictureId);
   const selectVideo = useAppStore((state) => state.setSelectedVideoId);
   const [selected, setSelected] = useState<MediaId | null>(null);
   const [hovering, setHovering] = useState(false);
+  const [dragDelta, setDragDelta] = useState<number | null>(null);
+  const [previewGesture, setPreviewGesture] = useState<Gesture | null>(null);
+  const laneRef = useRef<HTMLDivElement>(null);
+  const gesture = useRef<Gesture | null>(null);
+  const routeDuration = playback.totalDuration;
+  const moments = useMemo(() => resolveSharedRouteMoments(annotations, segments, tracks, playback.routeTimingMode), [annotations, segments, tracks, playback.routeTimingMode]);
+  const timeline = useMemo(() => buildMediaTimeline(routeDuration, moments, pictures, videos), [routeDuration, moments, pictures, videos]);
   const items = useMemo(() => [
     ...pictures.map((item) => ({ ...item, kind: 'picture' as const })),
     ...videos.map((item) => ({ ...item, kind: 'video' as const })),
   ], [pictures, videos]);
   const selectedItem = items.find((item) => item.id === selected?.id && item.kind === selected.kind);
-  const move = (item: MediaId, target: number) => {
-    const placement = placementAtProgress(target);
-    if (!placement) { setError(t('media.bulkNoTimelinePosition')); return; }
+  const total = Math.max(timeline.totalMs, 1);
+  const moveToTime = (item: MediaId, timeMs: number) => {
+    // Remove the item's own hold before translating its new output time.
+    const without = buildMediaTimeline(routeDuration, moments, pictures.filter((p) => item.kind !== 'picture' || p.id !== item.id), videos.filter((v) => item.kind !== 'video' || v.id !== item.id));
+    const progress = timelineTimeToProgress(timeMs, routeDuration, moments, without.blocks);
+    const placement = placementAtProgress(progress);
+    if (!placement) { setError(t('media.bulkNoTimelinePosition')); return false; }
     movePlacedMedia(item.kind, item.id, placement);
+    return true;
   };
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
-    const pending = event.dataTransfer.getData(PENDING_MEDIA_DRAG_TYPE);
-    const placed = event.dataTransfer.getData(PLACED_DRAG_TYPE);
-    if (!pending && !placed) return;
-    event.preventDefault();
-    setHovering(false);
+    const raw = event.dataTransfer.getData(PENDING_MEDIA_DRAG_TYPE);
+    const placed = event.dataTransfer.getData(PLACED_MEDIA_DRAG_TYPE);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (!raw && !placed && !files.length) return;
+    event.preventDefault(); setHovering(false);
     const bounds = event.currentTarget.getBoundingClientRect();
     if (!bounds.width || !Number.isFinite(event.clientX)) return;
-    const target = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
     try {
-      if (pending) {
-        const ids: unknown = JSON.parse(pending);
-        if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) return;
-        const placement = placementAtProgress(target);
-        if (!placement) { setError(t('media.bulkNoTimelinePosition')); return; }
-        placePendingMedia(ids, placement);
-      } else {
+      const time = Math.max(0, Math.min(total, (event.clientX - bounds.left) / bounds.width * total));
+      if (placed) {
         const item: unknown = JSON.parse(placed);
-        if (item && typeof item === 'object' && 'kind' in item && 'id' in item && (item.kind === 'picture' || item.kind === 'video') && typeof item.id === 'string') {
-          move(item as MediaId, target);
-          setSelected(item as MediaId);
-        }
+        if (item && typeof item === 'object' && 'kind' in item && 'id' in item && (item.kind === 'picture' || item.kind === 'video') && typeof item.id === 'string') { moveToTime(item as MediaId, time); setSelected(item as MediaId); }
+        return;
       }
-    } catch { /* Ignore malformed drag data. */ }
+      const placement = placementAtProgress(timelineTimeToProgress(time, routeDuration, moments, timeline.blocks));
+      if (!placement) { setError(t('media.bulkNoTimelinePosition')); return; }
+      if (files.length) { void importMediaAtPlacement(files, placement).catch(() => setError(t('media.timelineImportError'))); return; }
+      const ids: unknown = JSON.parse(raw);
+      if (Array.isArray(ids) && ids.every((id) => typeof id === 'string')) placePendingMedia(ids, placement);
+    } catch { /* Ignore unrelated drag data. */ }
   };
+  const begin = (event: PointerEvent<HTMLElement>, item: MediaId, mode: Gesture['mode'], startMs: number, endMs: number) => {
+    if (event.button !== 0 || !laneRef.current) return;
+    event.preventDefault(); event.stopPropagation();
+    const width = laneRef.current.getBoundingClientRect().width;
+    if (!width) return;
+    gesture.current = { item, mode, clientX: event.clientX, startMs, endMs, width, totalMs: total };
+    setPreviewGesture(gesture.current);
+    setSelected(item);
+    setDragDelta(0);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const end = (event: PointerEvent<HTMLElement>) => {
+    const g = gesture.current;
+    if (!g) return;
+    gesture.current = null;
+    setPreviewGesture(null);
+    setDragDelta(null);
+    const delta = (event.clientX - g.clientX) / g.width * g.totalMs;
+    if (!Number.isFinite(delta) || Math.abs(delta) < 1) return;
+    if (g.mode === 'move') moveToTime(g.item, Math.max(0, g.startMs + delta));
+    else if (g.mode === 'end') updateDuration(g.item.id, Math.max(MIN_PICTURE_MS, Math.round(g.endMs + delta - g.startMs)));
+    else {
+      const nextStart = Math.max(0, Math.min(g.endMs - MIN_PICTURE_MS, g.startMs + delta));
+      if (moveToTime(g.item, nextStart)) updateDuration(g.item.id, Math.max(MIN_PICTURE_MS, Math.round(g.endMs - nextStart)));
+    }
+  };
+  const playhead = progressToTimelineTime(playback.progress, routeDuration, moments, timeline.blocks);
+  const stepSeconds = total > 600_000 ? 60 : total > 120_000 ? 30 : total > 30_000 ? 10 : 5;
+  const ticks = Array.from({ length: Math.floor(total / (stepSeconds * 1000)) + 1 }, (_, index) => index * stepSeconds * 1000);
   return (
     <section aria-label={t('media.timelineTitle')} className="shrink-0 border-t border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 sm:px-4">
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <h2 className="font-semibold text-[var(--evergreen)]">{t('media.timelineTitle')}</h2>
-        <span className="text-[var(--evergreen-60)]">{t('media.timelineHint')}</span>
+      <div className="flex items-center justify-between gap-2 text-xs"><h2 className="font-semibold text-[var(--evergreen)]">{t('media.timelineTitle')}</h2><span className="text-[var(--evergreen-60)]">{t('media.timelineDuration', { duration: formatDuration(total / 1000) })}</span></div>
+      <div className="overflow-x-auto">
+        <div className="relative" style={{ width: `max(100%, ${Math.ceil(total / 1000 * 20)}px)` }}>
+          <div className="relative mt-1 h-5 text-[10px] text-[var(--evergreen-60)]" aria-hidden="true">{ticks.map((ms) => <span key={ms} className="absolute" style={{ left: `${ms / total * 100}%` }}>{formatDuration(ms / 1000)}</span>)}</div>
+          <div ref={laneRef} className={`relative h-16 rounded-lg border border-dashed ${hovering ? 'border-[var(--trail-orange)] bg-[var(--trail-orange)]/10' : 'border-[var(--evergreen)]/25 bg-[var(--evergreen)]/5'}`}
+            aria-label={t('media.timelineDrop')} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width) seek(timelineTimeToProgress((event.clientX - bounds.left) / bounds.width * total, routeDuration, moments, timeline.blocks)); }}
+            onDragOver={(event) => { if ((event.dataTransfer.types.includes(PENDING_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes(PLACED_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes('Files'))) { event.preventDefault(); event.dataTransfer.dropEffect = event.dataTransfer.types.includes(PLACED_MEDIA_DRAG_TYPE) ? 'move' : 'copy'; setHovering(true); } }}
+            onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHovering(false); }} onDrop={onDrop}>
+            <div className="pointer-events-none absolute inset-y-0 z-30 w-0.5 bg-[var(--trail-orange)]" style={{ left: `${playhead / total * 100}%` }} />
+            {items.length === 0 && <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-[var(--evergreen-60)]">{t('media.timelineEmpty')}</p>}
+            {timeline.blocks.map((block, index) => {
+              const item = items.find((entry) => entry.id === block.id && entry.kind === block.kind);
+              if (!item) return null;
+              const name = item.file?.name ?? item.originalFileName ?? item.id;
+              const active = previewGesture?.item.id === block.id && previewGesture.item.kind === block.kind ? previewGesture : null;
+              const delta = active && dragDelta !== null ? dragDelta : 0;
+              const displayStart = active?.mode === 'move' ? Math.max(0, block.startMs + delta) : active?.mode === 'start' ? Math.max(0, Math.min(block.endMs - MIN_PICTURE_MS, block.startMs + delta)) : block.startMs;
+              const displayEnd = active?.mode === 'move' ? displayStart + block.durationMs : active?.mode === 'end' ? Math.max(block.startMs + MIN_PICTURE_MS, block.endMs + delta) : block.endMs;
+              return <div key={`${block.kind}-${block.id}`} role="button" tabIndex={0} aria-label={t('media.timelineMarker', { name, percent: Math.round(item.progress * 100) })} title={`${name} · ${(block.durationMs / 1000).toFixed(1)}s`}
+                onPointerDown={(event) => begin(event, item, 'move', block.startMs, block.endMs)} onPointerMove={(event) => { const g = gesture.current; if (g) setDragDelta((event.clientX - g.clientX) / g.width * g.totalMs); }} onPointerUp={end} onPointerCancel={() => { gesture.current = null; setPreviewGesture(null); setDragDelta(null); }}
+                onClick={(event) => event.stopPropagation()} onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); moveToTime(item, block.startMs + (event.key === 'ArrowLeft' ? -1000 : 1000)); } }}
+                className={`absolute top-1 flex h-14 min-w-2 touch-none select-none overflow-hidden rounded-md border-2 bg-[var(--evergreen)] text-white shadow-sm focus:z-20 ${selected?.id === item.id && selected.kind === item.kind ? 'border-[var(--trail-orange)]' : 'border-white'}`}
+                style={{ left: `${displayStart / total * 100}%`, width: `${Math.max(0, displayEnd - displayStart) / total * 100}%`, zIndex: index + 1 }}>
+                {item.kind === 'picture' && <span role="slider" tabIndex={0} aria-label={t('media.timelineResizeStart', { name })} aria-valuetext={`${(block.durationMs / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, item, 'start', block.startMs, block.endMs)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const delta = event.key === 'ArrowLeft' ? -500 : 500; const next = Math.max(0, Math.min(block.endMs - MIN_PICTURE_MS, block.startMs + delta)); if (moveToTime(item, next)) updateDuration(item.id, block.endMs - next); } }} className="z-10 w-2 shrink-0 cursor-ew-resize bg-white/65" />}
+                <span className="flex min-w-0 flex-1 cursor-grab items-center gap-1 overflow-hidden">{item.url ? item.kind === 'picture' ? <img src={item.url} alt="" className="h-full w-10 shrink-0 object-cover" draggable={false} /> : <video src={item.url} muted preload="metadata" className="h-full w-10 shrink-0 object-cover" /> : item.kind === 'picture' ? <ImageIcon size={16} /> : <Video size={16} />}<span className="truncate text-[10px]">{name}</span></span>
+                {item.kind === 'picture' && <span role="slider" tabIndex={0} aria-label={t('media.timelineResizeEnd', { name })} aria-valuetext={`${(block.durationMs / 1000).toFixed(1)}s`} onPointerDown={(event) => begin(event, item, 'end', block.startMs, block.endMs)} onPointerUp={end} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); updateDuration(item.id, Math.max(MIN_PICTURE_MS, block.durationMs + (event.key === 'ArrowLeft' ? -500 : 500))); } }} className="z-10 w-2 shrink-0 cursor-ew-resize bg-white/65" />}
+              </div>;
+            })}
+          </div>
+        </div>
       </div>
-      <div className={`relative mt-2 h-14 rounded-lg border border-dashed ${hovering ? 'border-[var(--trail-orange)] bg-[var(--trail-orange)]/10' : 'border-[var(--evergreen)]/25 bg-[var(--evergreen)]/5'}`}
-        aria-label={t('media.timelineDrop')} onClick={(event) => { const bounds = event.currentTarget.getBoundingClientRect(); if (bounds.width) seek(Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width))); }} onDragOver={(event) => {
-          if (event.dataTransfer.types.includes(PENDING_MEDIA_DRAG_TYPE) || event.dataTransfer.types.includes(PLACED_DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; setHovering(true); }
-        }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHovering(false); }} onDrop={onDrop}>
-        <div className="pointer-events-none absolute inset-y-0 z-10 w-0.5 bg-[var(--trail-orange)]" style={{ left: `${progress * 100}%` }} />
-        {items.length === 0 && <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-[var(--evergreen-60)]">{t('media.timelineEmpty')}</p>}
-        {items.map((item, index) => {
-          const name = item.file?.name ?? item.originalFileName ?? t(item.kind === 'picture' ? 'media.picturesTab' : 'media.videosTab', { count: 1 });
-          const samePosition = items.filter((other) => Math.abs(other.progress - item.progress) < 0.002);
-          const stackIndex = samePosition.findIndex((other) => other.id === item.id && other.kind === item.kind);
-          return <button key={`${item.kind}-${item.id}`} type="button" draggable onDragStart={(event) => { event.dataTransfer.setData(PLACED_DRAG_TYPE, JSON.stringify({ kind: item.kind, id: item.id })); event.dataTransfer.effectAllowed = 'move'; }}
-            onClick={(event) => { event.stopPropagation(); setSelected({ kind: item.kind, id: item.id }); }}
-            onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); move(item, item.progress + (event.key === 'ArrowLeft' ? -0.01 : 0.01)); } }}
-            aria-label={t('media.timelineMarker', { name, percent: Math.round(item.progress * 100) })} title={name}
-            className={`absolute top-1 h-11 w-11 overflow-hidden rounded-md border-2 bg-[var(--canvas)] shadow-sm focus:z-30 focus:outline-2 focus:outline-[var(--trail-orange)] ${selected?.id === item.id && selected.kind === item.kind ? 'border-[var(--trail-orange)] z-20' : 'border-white'}`}
-            style={{ left: `clamp(0px, calc(${Math.max(0, Math.min(1, item.progress)) * 100}% - 22px + ${stackIndex * 8}px), calc(100% - 44px))`, zIndex: selected?.id === item.id ? 20 : index + 1 }}>
-            {item.url ? item.kind === 'picture' ? <img src={item.url} alt="" className="h-full w-full object-cover" draggable={false} /> : <video src={item.url} muted preload="metadata" className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center">{item.kind === 'picture' ? <ImageIcon size={18} /> : <Video size={18} />}</span>}
-          </button>;
-        })}
-      </div>
-      {items.length > 0 && <div className="mt-1 flex items-center gap-2 text-xs">
-        <select aria-label={t('media.timelineSelect')} value={selectedItem ? `${selectedItem.kind}:${selectedItem.id}` : ''} onChange={(event) => { const item = items.find((entry) => `${entry.kind}:${entry.id}` === event.target.value); setSelected(item ? { id: item.id, kind: item.kind } : null); }} className="min-w-0 max-w-48 flex-1 rounded border border-[var(--evergreen)]/20 bg-transparent px-1 py-1">
-          <option value="">{t('media.timelineSelect')}</option>
-          {items.map((item) => <option key={`${item.kind}:${item.id}`} value={`${item.kind}:${item.id}`}>{item.file?.name ?? item.originalFileName ?? item.id} · {Math.round(item.progress * 100)}%</option>)}
-        </select>
-        {selectedItem && <><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { if (selectedItem.kind === 'picture') selectPicture(selectedItem.id); else selectVideo(selectedItem.id); }}>{t('media.timelinePreview')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => seek(selectedItem.progress)}>{t('media.timelineSeek')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => move(selectedItem, progress)}>{t('media.bulkAtPlayhead')}</button></>}
+      {items.length > 0 && <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+        <select aria-label={t('media.timelineSelect')} value={selectedItem ? `${selectedItem.kind}:${selectedItem.id}` : ''} onChange={(event) => { const item = items.find((entry) => `${entry.kind}:${entry.id}` === event.target.value); setSelected(item ? { id: item.id, kind: item.kind } : null); }} className="min-w-0 max-w-48 flex-1 rounded border border-[var(--evergreen)]/20 bg-transparent px-1 py-1"><option value="">{t('media.timelineSelect')}</option>{timeline.blocks.map((block) => { const item = items.find((entry) => entry.kind === block.kind && entry.id === block.id)!; return <option key={`${item.kind}:${item.id}`} value={`${item.kind}:${item.id}`}>{item.file?.name ?? item.originalFileName ?? item.id} · {formatDuration(block.startMs / 1000)}</option>; })}</select>
+        {selectedItem && <><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { if (selectedItem.kind === 'picture') selectPicture(selectedItem.id); else selectVideo(selectedItem.id); }}>{t('media.timelinePreview')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => seek(selectedItem.progress)}>{t('media.timelineSeek')}</button><button className="rounded border border-[var(--evergreen)]/20 px-2 py-1" onClick={() => { const placement = placementAtProgress(playback.progress); if (placement) movePlacedMedia(selectedItem.kind, selectedItem.id, placement); }}>{t('media.bulkAtPlayhead')}</button></>}
       </div>}
     </section>
   );

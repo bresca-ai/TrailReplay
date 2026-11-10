@@ -1,6 +1,11 @@
+import { createId } from '@/utils/id';
+import { isImageFile, isVideoFile } from '@/utils/files';
+import { createRenderableImageAsset } from '@/utils/imagePreview';
+import { readVideoDuration } from '@/utils/videoMetadata';
 import { useAppStore } from '@/store/useAppStore';
 import { buildComputedJourney, buildJourneyDistanceProfile, getJourneyDistanceAtProgress, getJourneyPointAtDistance, getJourneyPointAtProgress, getSegmentAtProgress, segmentAnchorForRouteDistance, uniformJourneyWithCameraTransitions } from '@/utils/journeyUtils';
 
+export const PLACED_MEDIA_DRAG_TYPE = 'application/x-trailreplay-placed-media';
 export const PENDING_MEDIA_DRAG_TYPE = 'application/x-trailreplay-pending-media';
 
 export interface MediaRoutePlacement {
@@ -60,4 +65,20 @@ export function movePlacedMedia(kind: 'picture' | 'video', id: string, placement
     item.placementSource = 'manual';
     if ('position' in item) item.position = placement.progress;
   });
+}
+
+/** Import files dropped directly onto the timeline at the chosen route location. */
+export async function importMediaAtPlacement(files: File[], placement: MediaRoutePlacement) {
+  const store = useAppStore.getState();
+  for (const file of files) {
+    if (isImageFile(file)) {
+      const asset = await createRenderableImageAsset(file);
+      store.addPicture({ id: createId('photo'), file, displayFile: asset.displayFile, url: asset.url, isPlaceholder: false, ...placement, position: placement.progress, placementSource: 'manual', displayDuration: 3000 });
+    } else if (isVideoFile(file)) {
+      const url = URL.createObjectURL(file);
+      const probe = await readVideoDuration(url);
+      if (probe.status === 'unsupported') { URL.revokeObjectURL(url); throw new Error(file.name); }
+      store.addVideo({ id: createId('video'), file, url, originalFileName: file.name, isPlaceholder: false, ...placement, placementSource: 'manual', durationSeconds: probe.status === 'ok' ? probe.durationSeconds : undefined });
+    }
+  }
 }

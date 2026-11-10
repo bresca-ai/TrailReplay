@@ -14,6 +14,7 @@ function setup() {
     state.tracks = [track];
     state.journeySegments = [{ id: 'route', type: 'track', trackId: track.id, duration: 60000 }];
     state.playback.routeTimingMode = 'uniform';
+    state.playback.totalDuration = 60000;
   });
   render(<MediaTimeline />);
   const lane = screen.getByLabelText('Media timeline drop area');
@@ -31,9 +32,9 @@ it('drops pending media in the lane and moves its marker and route anchor', () =
   const marker = screen.getByRole('button', { name: /photo.jpg, at 25%/ });
   fireEvent.keyDown(marker, { key: 'ArrowRight' });
   const picture = useAppStore.getState().pictures[0];
-  expect(picture.progress).toBeCloseTo(0.26);
-  expect(picture.position).toBeCloseTo(0.26);
-  expect(picture.lat).toBeCloseTo(42.026, 3);
+  expect(picture.progress).toBeCloseTo(0.2667, 3);
+  expect(picture.position).toBeCloseTo(0.2667, 3);
+  expect(picture.lat).toBeCloseTo(42.02667, 3);
   expect(picture.routeSegmentId).toBe('route');
 });
 
@@ -47,4 +48,44 @@ it('offers every overlapping item in the selector and moves the chosen one to th
   fireEvent.click(screen.getByRole('button', { name: 'Place at playhead' }));
   expect(useAppStore.getState().pictures[0].progress).toBe(0.2);
   expect(useAppStore.getState().pictures[1].progress).toBeCloseTo(0.8);
+});
+
+
+it('resizes the photo duration without moving its route position', () => {
+  setup();
+  act(() => useAppStore.setState((state) => {
+    state.pictures = [{ id: 'a', file: null, originalFileName: 'a.jpg', url: '', isPlaceholder: true, progress: 0.2, position: 0.2, displayDuration: 3000 }];
+  }));
+  fireEvent.keyDown(screen.getByLabelText('Adjust end of a.jpg'), { key: 'ArrowRight' });
+  expect(useAppStore.getState().pictures[0].displayDuration).toBe(3500);
+  expect(useAppStore.getState().pictures[0].progress).toBe(0.2);
+});
+
+it('resizes a photo by dragging its right edge in seconds', () => {
+  setup();
+  act(() => useAppStore.setState((state) => {
+    state.pictures = [{ id: 'a', file: null, originalFileName: 'a.jpg', url: '', isPlaceholder: true, progress: 0.2, position: 0.2, displayDuration: 3000 }];
+  }));
+  const handle = screen.getByLabelText('Adjust end of a.jpg');
+  Object.defineProperty(handle, 'setPointerCapture', { value: vi.fn() });
+  const down = createEvent.pointerDown(handle, { button: 0, pointerId: 1 });
+  Object.defineProperty(down, 'clientX', { value: 100 });
+  Object.defineProperty(down, 'button', { value: 0 });
+  fireEvent(handle, down);
+  const up = createEvent.pointerUp(handle, { pointerId: 1 });
+  Object.defineProperty(up, 'clientX', { value: 140 });
+  fireEvent(handle, up);
+  expect(useAppStore.getState().pictures[0].displayDuration).toBeCloseTo(9300, 0);
+});
+
+it('moves an existing photo dragged from the media panel', () => {
+  const lane = setup();
+  act(() => useAppStore.setState((state) => {
+    state.pictures = [{ id: 'a', file: null, originalFileName: 'a.jpg', url: '', isPlaceholder: true, progress: 0.2, position: 0.2, displayDuration: 3000 }];
+  }));
+  const drop = createEvent.drop(lane, { dataTransfer: { getData: (type: string) => type === 'application/x-trailreplay-placed-media' ? '{"kind":"picture","id":"a"}' : '' } });
+  Object.defineProperty(drop, 'clientX', { value: 300 });
+  fireEvent(lane, drop);
+  expect(useAppStore.getState().pictures[0].progress).toBeCloseTo(0.525, 3);
+  expect(useAppStore.getState().pictures[0].routeSegmentId).toBe('route');
 });

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/useAppStore';
+import { PLACED_MEDIA_DRAG_TYPE } from '@/utils/pendingMediaPlacement';
 import { usePhotos } from '@/hooks/usePhotos';
 import { useVideos } from '@/hooks/useVideos';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -227,6 +228,8 @@ export function PicturesPanel() {
                     {/* Thumbnail */}
                     <button
                       type="button"
+                      draggable
+                      onDragStart={(event) => { event.dataTransfer.setData(PLACED_MEDIA_DRAG_TYPE, JSON.stringify({ kind: 'picture', id: picture.id })); event.dataTransfer.effectAllowed = 'move'; }}
                       onClick={() => setSelectedPictureId(picture.id)}
                       className="w-20 h-20 rounded-xl overflow-hidden border border-[var(--evergreen)]/20 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--trail-orange)]"
                       title={t('media.previewPicture')}
@@ -241,6 +244,7 @@ export function PicturesPanel() {
                       ) : (
                         <img
                           src={picture.url}
+                          draggable={false}
                           alt={t('media.trailAlt')}
                           className="w-full h-full object-cover"
                         />
@@ -388,7 +392,7 @@ export function PicturesPanel() {
                   key={video.id}
                   className="tr-journey-segment p-3 flex items-center gap-3"
                 >
-                  <div className="w-12 h-12 rounded-lg bg-[var(--evergreen)]/10 flex items-center justify-center">
+                  <div draggable onDragStart={(event) => { event.dataTransfer.setData(PLACED_MEDIA_DRAG_TYPE, JSON.stringify({ kind: 'video', id: video.id })); event.dataTransfer.effectAllowed = 'move'; }} className="w-12 h-12 rounded-lg bg-[var(--evergreen)]/10 flex items-center justify-center cursor-grab">
                     <Video className="w-6 h-6 text-[var(--evergreen)]" />
                   </div>
                   
