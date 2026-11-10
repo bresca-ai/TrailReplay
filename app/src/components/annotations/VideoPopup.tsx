@@ -19,12 +19,13 @@ interface VideoPopupProps {
    * reached while the encoder was busy.
    */
   exportCurrentTimeSeconds?: number | null;
+  onElapsedChange?: (elapsedMs: number | null) => void;
 }
 
 /** How long past a clip's own length the replay waits before giving up on it. */
 const PLAYBACK_GRACE_MS = 2000;
 
-export function VideoPopup({ video, onClose, exportFrame, exportCurrentTimeSeconds }: VideoPopupProps) {
+export function VideoPopup({ video, onClose, exportFrame, exportCurrentTimeSeconds, onElapsedChange }: VideoPopupProps) {
   const { t } = useI18n();
   const relinkVideoFile = useAppStore((state) => state.relinkVideoFile);
   const videoElementRef = useRef<HTMLVideoElement>(null);
@@ -35,6 +36,8 @@ export function VideoPopup({ video, onClose, exportFrame, exportCurrentTimeSecon
   // The import may not have got a length out of the browser (a hidden tab
   // never decodes), so the element that plays the clip is asked again.
   const [resolvedDuration, setResolvedDuration] = useState(video.durationSeconds ?? 0);
+
+  useEffect(() => () => { onElapsedChange?.(null); }, [onElapsedChange]);
 
   const isExportDriven = exportCurrentTimeSeconds !== undefined && exportCurrentTimeSeconds !== null;
   const { imageBoxWidth, imageBoxHeight, isExportSafe, popupStyle } = getPicturePopupLayout(exportFrame);
@@ -150,6 +153,7 @@ export function VideoPopup({ video, onClose, exportFrame, exportCurrentTimeSecon
             onTimeUpdate={(event) => {
               if (isExportDriven) return;
               const element = event.currentTarget;
+              onElapsedChange?.(element.currentTime * 1000);
               const duration = element.duration || resolvedDuration;
               setDisplayProgress(duration > 0 ? Math.min(100, (element.currentTime / duration) * 100) : 0);
             }}

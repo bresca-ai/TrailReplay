@@ -13,6 +13,7 @@ interface PicturePopupProps {
   onClose?: () => void;
   exportFrame?: PicturePopupExportFrame | null;
   playbackCurrentTime?: number;
+  onElapsedChange?: (elapsedMs: number | null) => void;
 }
 
 // A large, calm reveal reads better than the previous thumbnail-like pop.
@@ -49,7 +50,7 @@ function getZoomStyle(elapsed: number, displayDuration: number): { opacity: numb
   return { opacity: 1, scale: 1, translateY: 0 };
 }
 
-export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTime }: PicturePopupProps) {
+export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTime, onElapsedChange }: PicturePopupProps) {
   const { t } = useI18n();
   const relinkPictureFile = useAppStore((state) => state.relinkPictureFile);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -93,6 +94,7 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
     progressIntervalRef.current = window.setInterval(() => {
       const elapsed = Date.now() - startTime;
       setElapsedMs(elapsed);
+      onElapsedChange?.(elapsed);
 
       if (elapsed >= displayDuration) {
         requestClose();
@@ -101,8 +103,9 @@ export function PicturePopup({ picture, onClose, exportFrame, playbackCurrentTim
 
     return () => {
       clearProgressInterval();
+      onElapsedChange?.(null);
     };
-  }, [clearProgressInterval, displayDuration, playbackCurrentTime, requestClose]);
+  }, [clearProgressInterval, displayDuration, playbackCurrentTime, requestClose, onElapsedChange]);
 
   // Deterministic-export path: driven off the replay clock so the zoom
   // animation bakes into exported frames instead of jumping straight to

@@ -17,6 +17,7 @@ import { PendingPicturePlacementBanner } from '@/components/app/PendingPicturePl
 import { WelcomeOverlay } from '@/components/app/WelcomeOverlay';
 import { PlaybackControls } from '@/components/playback/PlaybackControls';
 import { MediaTimeline } from '@/components/playback/MediaTimeline';
+import { setMediaHoldClock } from '@/utils/mediaHoldClock';
 import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
@@ -536,7 +537,9 @@ function App() {
     };
   }, [availableStats.length, isResizingStats, setSettings]);
 
-  const { activePicture, activeVideo, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
+  const { activePicture, activeVideo, autoPictureId, autoVideoId, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
+  const onPictureElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoPictureId ? null : { kind: 'picture', id: autoPictureId, elapsedMs }); }, [autoPictureId]);
+  const onVideoElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoVideoId ? null : { kind: 'video', id: autoVideoId, elapsedMs }); }, [autoVideoId]);
 
   const activeTextAnnotationId = useMemo(() => getActivePlaybackAnnotationId({
     annotations: resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode),
@@ -810,6 +813,7 @@ function App() {
                   key={activePicture.id}
                   picture={activePicture} 
                   onClose={closeActivePicture}
+                  onElapsedChange={autoPictureId ? onPictureElapsed : undefined}
                   exportFrame={activeExportCropMetrics}
                   playbackCurrentTime={isDeterministicExport ? (exportPictureHoldElapsedMs ?? playback.currentTime) : undefined}
                 />
@@ -821,6 +825,7 @@ function App() {
                   key={activeVideo.id}
                   video={activeVideo}
                   onClose={closeActiveVideo}
+                  onElapsedChange={autoVideoId ? onVideoElapsed : undefined}
                   exportFrame={activeExportCropMetrics}
                   exportCurrentTimeSeconds={isDeterministicExport ? exportVideoHoldTimeSeconds : undefined}
                 />
@@ -859,7 +864,7 @@ function App() {
             {/* Playback Controls */}
             {hasTracks && (
               <div className="shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
-                <MediaTimeline />
+                {activePanel === 'pictures' && showSidebar && !isExporting && <MediaTimeline />}
                 <div className="h-20"><PlaybackControls /></div>
               </div>
             )}

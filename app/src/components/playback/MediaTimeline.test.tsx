@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { parseGPX } from '@/utils/gpxParser';
 import { PENDING_MEDIA_DRAG_TYPE } from '@/utils/pendingMediaPlacement';
+import { setMediaHoldClock } from '@/utils/mediaHoldClock';
 import { MediaTimeline } from './MediaTimeline';
 
 const initial = useAppStore.getState();
@@ -88,4 +89,20 @@ it('moves an existing photo dragged from the media panel', () => {
   fireEvent(lane, drop);
   expect(useAppStore.getState().pictures[0].progress).toBeCloseTo(0.525, 3);
   expect(useAppStore.getState().pictures[0].routeSegmentId).toBe('route');
+});
+
+it('moves the playhead through the current media hold and displays annotations', () => {
+  setup();
+  act(() => useAppStore.setState((state) => {
+    state.pictures = [{ id: 'a', file: null, originalFileName: 'a.jpg', url: '', isPlaceholder: true, progress: 0.2, position: 0.2, displayDuration: 4000 }];
+    state.textAnnotations = [{ id: 'note', title: 'Summit', lat: 42, lon: 2, progress: 0.5, color: '#345', displayDuration: 3000 }];
+  }));
+  expect(screen.getByRole('button', { name: 'Annotation: Summit' })).toBeTruthy();
+  expect(screen.getByText('0:01')).toBeTruthy();
+  const lane = screen.getByLabelText('Media timeline drop area');
+  const line = lane.firstElementChild as HTMLElement;
+  expect(parseFloat(line.style.left)).toBeCloseTo(0);
+  act(() => setMediaHoldClock({ kind: 'picture', id: 'a', elapsedMs: 2000 }));
+  expect(parseFloat(line.style.left)).toBeCloseTo(14 / 64 * 100);
+  act(() => setMediaHoldClock(null));
 });

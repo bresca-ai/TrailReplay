@@ -8,6 +8,7 @@ import {
 
 export function usePlaybackMediaPopups() {
   const [autoPlaybackPictureId, setAutoPlaybackPictureId] = useState<string | null>(null);
+  const [autoPlaybackVideoId, setAutoPlaybackVideoId] = useState<string | null>(null);
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
   const tracks = useAppStore((state) => state.tracks);
@@ -176,7 +177,7 @@ export function usePlaybackMediaPopups() {
         resumePlaybackAfterVideoRef.current = true;
         pause();
         const nextVideoId = queuedPlaybackVideoIdsRef.current.shift();
-        if (nextVideoId) setSelectedVideoId(nextVideoId);
+        if (nextVideoId) { setAutoPlaybackVideoId(nextVideoId); setSelectedVideoId(nextVideoId); }
       }
     }
 
@@ -197,10 +198,12 @@ export function usePlaybackMediaPopups() {
   const closeActiveVideo = useCallback(() => {
     const nextVideoId = queuedPlaybackVideoIdsRef.current.shift();
     if (nextVideoId) {
+      setAutoPlaybackVideoId(nextVideoId);
       setSelectedVideoId(nextVideoId);
       return;
     }
 
+    setAutoPlaybackVideoId(null);
     setSelectedVideoId(null);
     if (resumePlaybackAfterVideoRef.current) {
       resumePlaybackAfterVideoRef.current = false;
@@ -240,5 +243,5 @@ export function usePlaybackMediaPopups() {
     : undefined;
   const activePicture = selectedPicture || autoPlaybackPicture;
   const activeVideo = selectedVideoId ? videos.find((entry) => entry.id === selectedVideoId) : undefined;
-  return { activePicture, activeVideo, closeActivePicture, closeActiveVideo };
+  return { activePicture, activeVideo, autoPictureId: autoPlaybackPictureId, autoVideoId: autoPlaybackVideoId === selectedVideoId ? autoPlaybackVideoId : null, closeActivePicture, closeActiveVideo };
 }
