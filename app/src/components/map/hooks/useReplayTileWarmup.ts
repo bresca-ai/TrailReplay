@@ -137,6 +137,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const discoveryOffsetRef = useRef(0);
   const discoveryScanTimeRef = useRef(0);
   const startupScannedRef = useRef(false);
+  const triggerWarmupRef = useRef<(() => void) | null>(null);
   const scannedValuesRef = useRef<unknown[] | null>(null);
   const startupCacheVersionRef = useRef(0);
   const completedStartupRef = useRef<{ values: unknown[]; at: number; cacheVersion: number; previouslyPlayed: boolean } | null>(null);
@@ -556,11 +557,13 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
 
     // Scan the whole horizon quickly; request completion is deliberately owned
     // by the independent queue rather than by the offscreen map's idle state.
+    triggerWarmupRef.current = () => { void warmFuture(); };
     void warmFuture();
     intervalId = setInterval(() => { void warmFuture(); }, RESCHEDULE_INTERVAL_MS);
 
     return () => {
       cancelled = true;
+      triggerWarmupRef.current = null;
       finishActivePose?.();
       scheduler.cancelPending();
       isWarmupPoseActiveRef.current = false;
@@ -571,4 +574,8 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     params.allCoordinates, params.routeCoordinates, params.elevationData, params.aerialTerrainPlan,
     params.cameraMode, params.cinematicKeyframes, params.cameraStability, params.followBehindZoomLevel,
     params.followBehindPitch, params.totalDurationMs, params.locationFeatures, params.zoomToPlace, scheduler]);
+
+  useEffect(() => {
+    if (animationPhase === 'preloading') triggerWarmupRef.current?.();
+  }, [animationPhase]);
 }

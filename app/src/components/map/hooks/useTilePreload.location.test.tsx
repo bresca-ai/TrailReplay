@@ -100,9 +100,8 @@ it('skips the repeated camera sweep after a verified completed replay', async ()
     }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(map.jumpTo).toHaveBeenCalledTimes(1);
-    expect(setAnimationPhase).not.toHaveBeenCalled();
-    act(() => listeners.get('idle')?.());
     expect(setAnimationPhase).toHaveBeenCalledWith('intro');
+    expect(listeners.has('idle')).toBe(false);
     unmount();
   } finally { vi.useRealTimers(); }
 });

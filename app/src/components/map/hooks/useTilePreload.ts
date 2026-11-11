@@ -195,7 +195,7 @@ export function useTilePreload({
     ]);
     let deadline = 0;
 
-    const restoreAndAdvance = () => {
+    const restoreAndAdvance = (immediate = false) => {
       if (hasAdvancedRef.current || cancelled) return;
       hasAdvancedRef.current = true;
       if (activeTimeout) clearTimeout(activeTimeout);
@@ -203,6 +203,10 @@ export function useTilePreload({
       if (introPose) {
         smoothBearingRef.current = introPose.bearing;
         targetBearingRef.current = introPose.bearing;
+      }
+      if (immediate) {
+        setAnimationPhase('intro');
+        return;
       }
       // jumpTo schedules a new render. Starting the fly-in immediately can
       // expose the last warm-up frame (or empty tiles) for the opening frame.
@@ -248,10 +252,9 @@ export function useTilePreload({
         await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
       }
       if (cancelled) return;
-      // A completed replay has already visited these views. The restored
-      // opening still waits for MapLibre to render before it is revealed.
+      // A completed replay has already visited the opening views.
       if (fastWarmupRef?.current) {
-        restoreAndAdvance();
+        restoreAndAdvance(true);
         return;
       }
       deadline = Date.now() + PRELOAD_TIMEOUT_MS;

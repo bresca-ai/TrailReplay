@@ -58,7 +58,6 @@ describe('replay tile warmup camera', () => {
     rerender({ phase: 'outro', playing: false });
     ready.mockClear();
     rerender({ phase: 'preloading', playing: true });
-    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
     expect(ready).toHaveBeenCalledWith(true, true);
     unmount();
   });
