@@ -54,9 +54,12 @@ export function useMapInitialization({
       canvasContextAttributes: { preserveDrawingBuffer: true },
       attributionControl: false,
       transformRequest: retainedTileRequest,
-      // Bound GPU memory during long flyovers. The fallback pyramid and
-      // predictive warmer help cover cache misses as the camera moves.
-      maxTileCacheSize: 128,
+      // MapLibre uses the smaller of this ceiling and viewport tile count ×
+      // maxTileCacheZoomLevels. Its default of five zoom levels leaves a very
+      // small decoded cache on narrow screens, even with a larger ceiling.
+      // Keep more recently visited tiles for replay, with a per-source bound.
+      maxTileCacheSize: 512,
+      maxTileCacheZoomLevels: 20,
       // Preserve the coarser tiles already on screen while close-follow camera
       // zooms request their detailed replacements. This trades a little extra
       // memory/network work for continuous imagery during replay motion.
