@@ -30,6 +30,7 @@ import {
 } from '@/utils/tileRequestScheduler';
 import { containsPosition, type LocationFeature } from '@/utils/locationBoundaries';
 import { cameraForPlace } from './useLocationChapters';
+import { routeTileCorridor } from '@/utils/routeTileCorridor';
 
 const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // Terrain can expose additional imagery after the first render as DEM data
@@ -81,8 +82,14 @@ export function replayWarmupHorizonMs(requestedMs: number, progress: number, dur
   return Math.min(Math.max(0, requestedMs), Math.max(0, 1 - Math.max(0, Math.min(1, progress))) * Math.max(1, durationMs));
 }
 
+export function canReuseStartupWarmup(values: unknown[], previous: { values: unknown[]; at: number } | null, now: number, hasFailures: boolean): boolean {
+  return Boolean(previous && now - previous.at < 300000 && !hasFailures
+    && previous.values.length === values.length && previous.values.every((value, index) => value === values[index]));
+}
+
 interface UseReplayTileWarmupParams {
   allCoordinates: number[][];
+  routeCoordinates?: number[][];
   animationPhase: 'preloading' | 'intro' | 'playing' | 'idle' | 'outro' | 'ended';
   cameraMode: ReplayCameraMode | 'cinematic';
   cinematicKeyframes?: PreparedCinematicKeyframe[];
@@ -128,10 +135,12 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const discoveryOffsetRef = useRef(0);
   const discoveryScanTimeRef = useRef(0);
   const startupScannedRef = useRef(false);
+  const completedStartupRef = useRef<{ values: unknown[]; at: number } | null>(null);
   useEffect(() => {
     if (animationPhase === 'preloading' && onStartupReadyChange) {
       onStartupReadyChange(false);
       startupScannedRef.current = false;
+      if (import.meta.env.DEV) document.documentElement.dataset.tileWarmupMode = 'scan';
     }
   }, [animationPhase, onStartupReadyChange]);
   useEffect(() => {
@@ -139,7 +148,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     const publish = () => { document.documentElement.dataset.tileWarmupQueue = JSON.stringify(scheduler.snapshot()); };
     publish();
     const interval = window.setInterval(publish, 500);
-    return () => { window.clearInterval(interval); delete document.documentElement.dataset.tileWarmupQueue; };
+    return () => { window.clearInterval(interval); delete document.documentElement.dataset.tileWarmupQueue; delete document.documentElement.dataset.tileWarmupMode; };
   }, [scheduler]);
   useEffect(() => {
     latestParamsRef.current = params;
@@ -330,9 +339,25 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         || (current.cameraMode === 'aerial-follow' && current.aerialTerrainLoading)
       ) return;
 
+      const viewport = current.visibleMapRef.current?.getContainer();
+      const startupValues = [current.allCoordinates, current.routeCoordinates, current.elevationData, current.aerialTerrainPlan,
+        current.cinematicKeyframes, current.cameraMode, current.cameraStability, current.mapStyle,
+        current.followBehindZoomLevel, current.followBehindPitch, current.totalDurationMs,
+        current.terrainExaggeration, current.locationFeatures, current.zoomToPlace,
+        viewport?.clientWidth, viewport?.clientHeight];
+      const previous = completedStartupRef.current;
+      if (current.animationPhase === 'preloading' && current.onStartupReadyChange && !startupScannedRef.current
+        && canReuseStartupWarmup(startupValues, previous, performance.now(), scheduler.hasFailures())) {
+        startupScannedRef.current = true;
+        if (import.meta.env.DEV) document.documentElement.dataset.tileWarmupMode = 'reuse';
+      }
+
       if (current.animationPhase === 'preloading' && current.onStartupReadyChange && startupScannedRef.current) {
         const pending = scheduler.snapshot();
-        if (pending.active === 0 && pending.queued === 0) current.onStartupReadyChange(true);
+        if (pending.active === 0 && pending.queued === 0) {
+          if (!scheduler.hasFailures()) completedStartupRef.current = { values: startupValues, at: performance.now() };
+          current.onStartupReadyChange(true);
+        }
         return;
       }
 
@@ -346,6 +371,34 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
 
       const isClose3D = current.cameraMode === 'aerial-follow' || (current.cameraMode === 'follow-behind' && current.followBehindZoomLevel >= 66);
       const startupScan = current.animationPhase === 'preloading' && Boolean(current.onStartupReadyChange);
+      if (startupScan) {
+        // Camera samples can skip a narrow valley or a fast turn. Request a
+        // continuous corridor independently so every route section has local
+        // imagery even when the projected viewport changes between samples.
+        const presentation = BASEMAP_PRESENTATIONS[current.mapStyle] ?? BASEMAP_PRESENTATIONS.satellite;
+        const source = MAP_STYLE.sources[presentation.sourceId as keyof typeof MAP_STYLE.sources];
+        const template = source && 'tiles' in source ? source.tiles[0] : undefined;
+        for (const zoom of [11, 12, 13, 14, 15, 16]) {
+          for (const key of routeTileCorridor(current.routeCoordinates ?? current.allCoordinates, zoom, zoom === 16 ? 0 : 1)) {
+            const url = getTileRequestUrl(presentation.sourceId, key, template);
+            if (!url) continue;
+            current.diagnostics.predictTile(presentation.sourceId, key);
+            scheduler.enqueue({ key, sourceId: presentation.sourceId, url,
+              priority: discoveryScanTimeRef.current - 100, neededAt: discoveryScanTimeRef.current + 120 });
+          }
+        }
+        if ((current.terrainExaggeration ?? 0) > 0) {
+          for (const zoom of [12, 13, 14, 15]) {
+            for (const key of routeTileCorridor(current.routeCoordinates ?? current.allCoordinates, zoom, zoom === 15 ? 0 : 1)) {
+              const url = getTileRequestUrl('terrain-dem', key);
+              if (!url) continue;
+              current.diagnostics.predictTile('terrain-dem', key);
+              scheduler.enqueue({ key, sourceId: 'terrain-dem', url,
+                priority: discoveryScanTimeRef.current - 90, neededAt: discoveryScanTimeRef.current + 120 });
+            }
+          }
+        }
+      }
       const horizonMs = replayWarmupHorizonMs(
         startupScan ? current.totalDurationMs :
         (isClose3D ? CLOSE_3D_HORIZON_MS : NORMAL_HORIZON_MS) * Math.max(0.25, current.playbackSpeed),
@@ -476,7 +529,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     return () => {
       cancelled = true;
       finishActivePose?.();
-      scheduler.clear();
+      scheduler.cancelPending();
       isWarmupPoseActiveRef.current = false;
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);

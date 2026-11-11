@@ -430,6 +430,7 @@ export function TrailMap(_props: TrailMapProps) {
 
   useReplayTileWarmup({
     allCoordinates: cameraPathCoordinates,
+    routeCoordinates: allCoordinates,
     animationPhase,
     cameraMode,
     aerialTerrainPlan: matchingTerrainPlan?.plan ?? null,

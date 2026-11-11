@@ -2,7 +2,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { NOOP_TILE_PRELOAD_OBSERVER } from '@/utils/tilePreloadObserver';
-import { discoveryTileRequest, replayViewOffsetSeconds, replayWarmupHorizonMs, useReplayTileWarmup, viewportTilePriority } from './useReplayTileWarmup';
+import { canReuseStartupWarmup, discoveryTileRequest, replayViewOffsetSeconds, replayWarmupHorizonMs, useReplayTileWarmup, viewportTilePriority } from './useReplayTileWarmup';
 
 const { MapConstructor, map } = vi.hoisted(() => {
   const map = {
@@ -32,6 +32,14 @@ afterEach(() => {
 });
 
 describe('replay tile warmup camera', () => {
+  it('reuses only a recent successful warmup with unchanged route and camera settings', () => {
+    const route = [[1, 2], [3, 4]];
+    const previous = { values: [route, 'satellite', 60], at: 1000 };
+    expect(canReuseStartupWarmup([route, 'satellite', 60], previous, 2000, false)).toBe(true);
+    expect(canReuseStartupWarmup([route, 'topo', 60], previous, 2000, false)).toBe(false);
+    expect(canReuseStartupWarmup([route, 'satellite', 60], previous, 2000, true)).toBe(false);
+    expect(canReuseStartupWarmup([route, 'satellite', 60], previous, 301001, false)).toBe(false);
+  });
   it('estimates when a future route view will be needed at each playback speed', () => {
     expect(replayViewOffsetSeconds(0.5, 0.25, 60000, 1)).toBe(15);
     expect(replayViewOffsetSeconds(0.5, 0.25, 60000, 2)).toBe(7.5);

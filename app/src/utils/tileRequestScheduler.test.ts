@@ -7,6 +7,17 @@ import {
 } from './tileRequestScheduler';
 
 describe('TileRequestScheduler', () => {
+  it('retains completed tiles when playback stops and restarts', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load });
+    const tile = { key: '12/1/2', priority: 0, sourceId: 'satellite', url: 'tile' };
+    scheduler.enqueue(tile);
+    await vi.waitFor(() => expect(scheduler.snapshot().completed).toBe(1));
+    scheduler.cancelPending();
+    scheduler.enqueue(tile);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(load).toHaveBeenCalledTimes(1);
+  });
   it('retries a failed discovery request without needing the map to rediscover it', async () => {
     const load = vi.fn().mockRejectedValueOnce(new Error('temporary')).mockResolvedValue(undefined);
     const completed = vi.fn();

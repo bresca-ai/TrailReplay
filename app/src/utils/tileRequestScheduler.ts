@@ -29,6 +29,7 @@ export class TileRequestScheduler {
   private readonly activeIds = new Set<string>();
   private readonly activeControllers = new Map<string, AbortController>();
   private readonly completed = new Map<string, number>();
+  private readonly failed = new Set<string>();
   private readonly queued = new Map<string, QueuedTileRequest>();
   private readonly retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly retryCounts = new Map<string, number>();
@@ -48,13 +49,14 @@ export class TileRequestScheduler {
     const id = `${request.sourceId}:${request.key}`;
     const completedAt = this.completed.get(id);
     if ((this.activeIds.has(id) && !this.activeControllers.get(id)?.signal.aborted)
-      || (completedAt !== undefined && Date.now() - completedAt < 60_000)) return;
+      || (completedAt !== undefined && Date.now() - completedAt < 600_000)) return;
     const retryTimer = this.retryTimers.get(id);
     if (retryTimer !== undefined) {
       clearTimeout(retryTimer);
       this.retryTimers.delete(id);
     }
     this.completed.delete(id);
+    this.failed.delete(id);
 
     const existing = this.queued.get(id);
     const wasStale = existing ? (this.options.isStale?.(existing) ?? false) : false;
@@ -66,8 +68,14 @@ export class TileRequestScheduler {
   }
 
   clear(): void {
-    this.clearQueued();
     this.completed.clear();
+    this.failed.clear();
+    this.cancelPending();
+  }
+
+  /** Stop outstanding work while retaining recently completed cache entries. */
+  cancelPending(): void {
+    this.clearQueued();
     this.generation++;
     for (const controller of this.activeControllers.values()) controller.abort();
   }
@@ -83,6 +91,8 @@ export class TileRequestScheduler {
   snapshot(): { active: number; queued: number; completed: number } {
     return { active: this.active, queued: this.queued.size + this.retryTimers.size, completed: this.completed.size };
   }
+
+  hasFailures(): boolean { return this.failed.size > 0; }
 
   private drain(): void {
     while (this.active < this.options.concurrency && this.queued.size > 0) {
@@ -112,6 +122,7 @@ export class TileRequestScheduler {
           const retries = this.retryCounts.get(id) ?? 0;
           if (retries >= 2) {
             this.retryCounts.delete(id);
+            this.failed.add(id);
             this.options.onError?.(next);
             return;
           }
