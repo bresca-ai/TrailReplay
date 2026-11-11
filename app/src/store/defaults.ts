@@ -33,7 +33,7 @@ export function createDefaultSettings(): AppSettings {
     paint3DBuildings: true,
     showHeartRate: false,
     showPictures: true,
-    cameraMode: 'follow-behind',
+    cameraMode: 'cinematic',
     defaultAnimationSpeed: 1,
     trailStyle: {
       trailColor: '#C1652F',

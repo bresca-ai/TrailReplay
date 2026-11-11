@@ -24,6 +24,7 @@ const options = {
 describe('replay camera plan', () => {
   it('defaults to an automatic cinematic flight with natural terrain and supports authored shots', () => {
     expect(createDefaultCameraSettings().mode).toBe('cinematic');
+    expect(createDefaultSettings().cameraMode).toBe(createDefaultCameraSettings().mode);
     expect(createDefaultSettings().terrainExaggeration).toBe(1);
     expect(resolveReplayCameraMode('cinematic', 0)).toBe('aerial-follow');
     expect(resolveReplayCameraMode('cinematic', 1)).toBe('cinematic');
