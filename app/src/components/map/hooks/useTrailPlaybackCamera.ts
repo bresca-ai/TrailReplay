@@ -38,7 +38,7 @@ import {
   getPlaybackCameraPose,
   getRouteBearingAtProgress,
 } from '@/utils/replayCameraPlan';
-import { getCinematicCenterElevation } from '@/utils/cinematicCameraElevation';
+import { getCinematicCenterElevation, settleCinematicElevation } from '@/utils/cinematicCameraElevation';
 import { terrainPlanBearing, terrainPlanZoomOffset } from '@/utils/aerialTerrainPlan';
 import { getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
 import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
@@ -770,8 +770,7 @@ export function useTrailPlaybackCamera({
       let elevationSamples = 0;
 
       // Cinematic height follows a symmetric spatial average on the planned
-      // anchor path. Raw terrain under one point makes the view bob over mesh
-      // detail; a time chase instead lags behind genuine sustained climbs.
+      // anchor path, followed by a rate limit for changing DEM tile data.
       if (cameraMode === 'cinematic') {
         const halfWindowSeconds = 0.15 + 0.75 * (1 - Math.max(0, Math.min(1, cameraStability)));
         const sampled = getCinematicCenterElevation({
@@ -808,10 +807,19 @@ export function useTrailPlaybackCamera({
 
       let centerElevation: { elevation?: number } = {};
 
-      if (elevationSamples > 0) {
+      if (cameraMode === 'cinematic') {
+        const settled = settleCinematicElevation(
+          smoothedElevationRef.current,
+          elevationSamples > 0 ? elevationSum / elevationSamples : null,
+          deltaMs,
+          Boolean(mapRef.current.getTerrain()),
+        );
+        smoothedElevationRef.current = settled;
+        if (settled !== null) centerElevation = { elevation: settled };
+      } else if (elevationSamples > 0) {
         const averaged = elevationSum / elevationSamples;
         const previousElevation = smoothedElevationRef.current;
-        const settled = usesRawPose || cameraMode === 'cinematic' || previousElevation === null || deltaMs === null
+        const settled = usesRawPose || previousElevation === null || deltaMs === null
           ? averaged
           : limitRateOfChange(previousElevation, averaged, deltaMs, MAX_CENTER_ELEVATION_RATE_M_PER_S);
 
