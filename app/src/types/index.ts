@@ -14,11 +14,20 @@ export interface GPXPoint {
   speed: number;
 }
 
+export interface GPXWaypoint {
+  lat: number;
+  lon: number;
+  name: string;
+  description?: string;
+  elevation?: number;
+}
+
 export interface GPXTrack {
   id: string;
   name: string;
   activityIcon: string;
   points: GPXPoint[];
+  waypoints?: GPXWaypoint[];
   totalDistance: number;
   totalTime: number;
   movingTime: number;

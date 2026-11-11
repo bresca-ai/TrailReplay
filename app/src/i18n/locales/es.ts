@@ -446,6 +446,7 @@ export const es = {
     train: 'Tren',
   },
   annotations: {
+    waypointImportTitle: "Importar puntos de paso GPX", waypointImportDescription: "Esta ruta contiene {count} puntos de paso con nombre. ¿Cómo quieres añadirlos?", waypointImportDiscard: "Descartar puntos de paso",
     annotationEmptyPlacementHint: "Elige una posición de la ruta para añadir tu primera anotación.", noRoutePositionHint: "Carga una ruta para elegir la posición de la anotación.",
     mapCaptionExplanation: "Texto breve sobre el mapa.", fieldNoteExplanation: "Un panel más grande que ralentiza la reproducción para leer.", positionOnRoute: "Posición en la ruta", usePlayhead: "Usar el cursor", positionTotal: "de {distance}", positionReady: "Listo para añadir en {distance}.",
     newAnnotation: 'Nueva anotación', additionalDetails: 'Detalles adicionales',

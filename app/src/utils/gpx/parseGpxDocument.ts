@@ -1,5 +1,6 @@
 import { SaxesParser, type SaxesTagNS } from 'saxes';
 import type { RawTrackPoint } from './trackStats';
+import type { GPXWaypoint } from '@/types';
 
 type PointField = 'elevation' | 'time' | 'heartRate' | 'cadence' | 'power' | 'temperature';
 
@@ -19,7 +20,9 @@ export function parseGpxDocument(gpxContent: string, fileName: string) {
   const elements: string[] = [];
   const rawPoints: RawTrackPoint[] = [];
   let pendingPoint: PendingPoint | null = null;
-  let capture: { field: PointField | 'name'; text: string } | null = null;
+  let waypoint: { lat: number; lon: number; values: Record<string, string> } | null = null;
+  const waypoints: GPXWaypoint[] = [];
+  let capture: { field: PointField | 'name' | 'waypoint-name' | 'waypoint-desc' | 'waypoint-cmt' | 'waypoint-ele'; text: string } | null = null;
   let name = '';
   let pointElementCount = 0;
   let parseError: Error | null = null;
@@ -32,6 +35,14 @@ export function parseGpxDocument(gpxContent: string, fileName: string) {
     const local = tag.local.toLowerCase();
     elements.push(local);
 
+    if (local === 'wpt' && elements[elements.length - 2] === 'gpx') {
+      waypoint = { lat: Number.parseFloat(attributeValue(tag, 'lat') || ''), lon: Number.parseFloat(attributeValue(tag, 'lon') || ''), values: {} };
+      return;
+    }
+    if (waypoint && elements[elements.length - 2] === 'wpt' && ['name', 'desc', 'cmt', 'ele'].includes(local)) {
+      capture = { field: `waypoint-${local}` as 'waypoint-name' | 'waypoint-desc' | 'waypoint-cmt' | 'waypoint-ele', text: '' };
+      return;
+    }
     if (local === 'trkpt' || local === 'rtept') {
       pointElementCount += 1;
       pendingPoint = {
@@ -63,10 +74,23 @@ export function parseGpxDocument(gpxContent: string, fileName: string) {
   parser.on('closetag', (tag) => {
     const local = tag.local.toLowerCase();
 
-    if (capture && (capture.field === 'name' ? local === 'name' : pointFieldForElement(local) === capture.field)) {
+    if (capture && (capture.field.startsWith('waypoint-') ? local === capture.field.slice(9) : capture.field === 'name' ? local === 'name' : pointFieldForElement(local) === capture.field)) {
       const value = capture.text.trim();
-      if (capture.field === 'name') name = value;
-      else if (pendingPoint) pendingPoint.values[capture.field] = value;
+      if (capture.field.startsWith('waypoint-') && waypoint) waypoint.values[capture.field.slice(9)] = value;
+      else if (capture.field === 'name') name = value;
+      else if (pendingPoint) pendingPoint.values[capture.field as PointField] = value;
+      capture = null;
+    }
+
+    if (local === 'wpt' && waypoint) {
+      const { lat, lon, values } = waypoint;
+      const title = values.name || values.desc || values.cmt;
+      if (isValidCoordinate(lat, lon) && title) {
+        const description = values.desc || values.cmt;
+        const elevation = Number.parseFloat(values.ele || '');
+        waypoints.push({ lat, lon, name: title, ...(description && description !== title ? { description } : {}), ...(Number.isFinite(elevation) ? { elevation } : {}) });
+      }
+      waypoint = null;
       capture = null;
     }
 
@@ -104,7 +128,7 @@ export function parseGpxDocument(gpxContent: string, fileName: string) {
       : 'A GPX route needs at least two valid track points');
   }
 
-  return { name: name || getFileStem(fileName), rawPoints };
+  return { name: name || getFileStem(fileName), rawPoints, waypoints };
 }
 
 function attributeValue(tag: SaxesTagNS, localName: string): string | undefined {

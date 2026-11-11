@@ -11,12 +11,13 @@ export { serializeTrackToGpx };
 
 // Parse GPX XML content
 export function parseGPX(gpxContent: string, fileName: string): GPXTrack {
-  const { name, rawPoints } = parseGpxDocument(gpxContent, fileName);
+  const { name, rawPoints, waypoints } = parseGpxDocument(gpxContent, fileName);
 
   return buildTrackFromRawPoints({
     idPrefix: 'track',
     name,
     rawPoints,
+    waypoints,
   });
 }
 

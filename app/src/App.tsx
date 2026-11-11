@@ -1,5 +1,6 @@
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { ExportAwareSidebar } from '@/components/sidebar/ExportAwareSidebar';
+import { WaypointImportDialog } from '@/components/app/WaypointImportDialog';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -910,6 +911,7 @@ function App() {
           )}
         </main>
         
+        <WaypointImportDialog />
         <Toaster 
           position="bottom-right"
           toastOptions={{

@@ -457,6 +457,7 @@ export const en = {
     train: 'Train',
   },
   annotations: {
+    waypointImportTitle: "Import GPX waypoints", waypointImportDescription: "This route contains {count} named waypoints. How would you like to add them?", waypointImportDiscard: "Discard waypoints",
     annotationEmptyPlacementHint: "Choose a position along the route to add your first annotation.", noRoutePositionHint: "Load a route to choose an annotation position.",
     mapCaptionExplanation: "Short text displayed on the map.", fieldNoteExplanation: "A larger panel; slows playback for reading.", positionOnRoute: "Position on route", usePlayhead: "Use playhead", positionTotal: "of {distance}", positionReady: "Ready to add at {distance}.",
     newAnnotation: 'New annotation', additionalDetails: 'Additional details',

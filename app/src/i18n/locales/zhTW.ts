@@ -142,6 +142,7 @@ export const zhTW = {
   colors: { trailOrange: '山徑橘', stravaOrange: 'Strava 橘', stravaGreen: 'Strava 綠', green: '綠色', teal: '藍綠色', blue: '藍色', red: '紅色', purple: '紫色' },
   activities: { running: '跑步', runner: '跑者', cycling: '騎自行車', cyclist: '自行車騎士', hiking: '健行', walking: '步行', walker: '行人', skiing: '滑雪', swimming: '游泳', climbing: '攀登', horse: '騎馬', kayak: '獨木舟', skate: '溜冰', ski: '雙板滑雪', snowboard: '單板滑雪', car: '汽車', motorcycle: '機車', plane: '飛機', train: '火車' },
   annotations: {
+    waypointImportTitle: "匯入 GPX 航點", waypointImportDescription: "這條路線包含 {count} 個有名稱的航點。你想如何新增？", waypointImportDiscard: "捨棄航點",
     annotationEmptyPlacementHint: "選擇路線上的位置，新增第一個註記。", noRoutePositionHint: "載入路線後即可選擇註記位置。",
     mapCaptionExplanation: "顯示在地圖上的簡短文字。", fieldNoteExplanation: "較大的側欄，並放慢播放方便閱讀。", positionOnRoute: "路線上的位置", usePlayhead: "使用播放位置", positionTotal: "共 {distance}", positionReady: "準備新增於 {distance}。",
     newAnnotation: '新增註記', additionalDetails: '其他詳細資訊',
