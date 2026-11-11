@@ -53,6 +53,21 @@ describe('TileRequestScheduler', () => {
     await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
     expect(load.mock.calls[1][2]).toMatchObject({ retain: true });
   });
+  it('upgrades queued camera tiles to critical without losing the upgrade', async () => {
+    let finish!: () => void;
+    const held = new Promise<void>(resolve => { finish = resolve; });
+    const load = vi.fn().mockReturnValueOnce(held).mockResolvedValue(undefined);
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load });
+    scheduler.enqueue({ key: '1/0/0', priority: 0, sourceId: 'satellite', url: 'active' });
+    const tile = { key: '12/1/2', priority: 2, sourceId: 'satellite', url: 'opening' };
+    scheduler.enqueue(tile);
+    scheduler.enqueue({ ...tile, priority: 5, retain: true });
+    scheduler.enqueue({ ...tile, priority: 1 });
+    expect(scheduler.pendingRetained()).toBe(1);
+    finish();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+    expect(load.mock.calls[1][2]).toMatchObject({ retain: true, priority: 1 });
+  });
   it('counts route-critical work separately from distant view requests', async () => {
     let finish!: () => void;
     const held = new Promise<void>(resolve => { finish = resolve; });

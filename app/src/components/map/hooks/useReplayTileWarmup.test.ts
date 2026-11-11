@@ -2,7 +2,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { NOOP_TILE_PRELOAD_OBSERVER } from '@/utils/tilePreloadObserver';
-import { canReuseStartupWarmup, discoveryTileRequest, replayViewOffsetSeconds, replayWarmupHorizonMs, useReplayTileWarmup, viewportTilePriority } from './useReplayTileWarmup';
+import { canReuseStartupWarmup, discoveryTileRequest, replayViewOffsetSeconds, replayWarmupHorizonMs, shouldRefreshReplayWarmup, useReplayTileWarmup, viewportTilePriority } from './useReplayTileWarmup';
 
 const { MapConstructor, map } = vi.hoisted(() => {
   const map = {
@@ -102,6 +102,13 @@ describe('replay tile warmup camera', () => {
     expect(replayWarmupHorizonMs(360000, 0.5, 60000)).toBe(30000);
     expect(replayWarmupHorizonMs(45000, 0.9, 60000)).toBeCloseTo(6000);
     expect(replayWarmupHorizonMs(45000, 1, 60000)).toBe(0);
+  });
+  it('refreshes a moving scan after about a second at the current speed', () => {
+    expect(shouldRefreshReplayWarmup(0, 0.01, 60000, 1)).toBe(false);
+    expect(shouldRefreshReplayWarmup(0, 0.02, 60000, 1)).toBe(true);
+    expect(shouldRefreshReplayWarmup(0, 0.1, 60000, 8)).toBe(false);
+    expect(shouldRefreshReplayWarmup(0, 0.14, 60000, 8)).toBe(true);
+    expect(shouldRefreshReplayWarmup(0.5, 0.1, 60000, 1)).toBe(true);
   });
   it('prioritizes the middle of the view without excluding its edges', () => {
     const center = viewportTilePriority('12/10/20', () => ({ x: 500, y: 348 }), 1000, 600);

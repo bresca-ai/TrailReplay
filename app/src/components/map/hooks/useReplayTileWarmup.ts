@@ -39,6 +39,7 @@ const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // every image to finish; the independent scheduler completes the requests.
 const DISCOVERY_RENDER_WINDOW_MS = 200;
 const RESCHEDULE_INTERVAL_MS = 1500;
+const CRITICAL_OPENING_SECONDS = 3;
 const NORMAL_HORIZON_MS = 20000;
 const CLOSE_3D_HORIZON_MS = 24000;
 const NORMAL_SAMPLE_COUNT = 12;
@@ -81,6 +82,12 @@ export function replayViewOffsetSeconds(progress: number, currentProgress: numbe
 /** Spread the full sampling budget across the route that remains. */
 export function replayWarmupHorizonMs(requestedMs: number, progress: number, durationMs: number): number {
   return Math.min(Math.max(0, requestedMs), Math.max(0, 1 - Math.max(0, Math.min(1, progress))) * Math.max(1, durationMs));
+}
+
+/** Refresh a moving scan after roughly one second of route progress. */
+export function shouldRefreshReplayWarmup(startProgress: number, progress: number, durationMs: number, speed: number): boolean {
+  const threshold = Math.max(0.01, Math.max(0.25, speed) * 1000 / Math.max(1, durationMs));
+  return Math.abs(progress - startProgress) >= threshold;
 }
 
 export function canReuseStartupWarmup(values: unknown[], previous: { values: unknown[]; at: number } | null, now: number, hasFailures: boolean): boolean {
@@ -134,6 +141,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const warmupMapRef = useRef<maplibregl.Map | null>(null);
   const warmupInitializedRef = useRef(false);
   const isWarmupPoseActiveRef = useRef(false);
+  const startupDiscoveryRef = useRef(false);
   const discoveryOffsetRef = useRef(0);
   const discoveryScanTimeRef = useRef(0);
   const startupScannedRef = useRef(false);
@@ -250,6 +258,8 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       const template = source && 'tiles' in source ? source.tiles[0] : undefined;
       const url = getTileRequestUrl(sourceId, key, template);
       if (url) {
+        const openingCritical = startupDiscoveryRef.current && discoveryOffsetRef.current <= CRITICAL_OPENING_SECONDS;
+        if (openingCritical) markRouteTile(url);
         const canvas = warmupMap.getCanvas();
         const viewportPriority = viewportTilePriority(key, point => warmupMap.project(point), canvas.clientWidth, canvas.clientHeight);
         scheduler.enqueue({
@@ -257,12 +267,13 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           // Time-to-use dominates source type: the next DEM tile must beat a
           // base tile that is thirty seconds farther down the route.
           neededAt: discoveryScanTimeRef.current + discoveryOffsetRef.current,
-          priority: discoveryScanTimeRef.current + discoveryOffsetRef.current + getTilePriority(sourceId) + viewportPriority,
+          priority: discoveryScanTimeRef.current + discoveryOffsetRef.current + getTilePriority(sourceId) + viewportPriority - (openingCritical ? 50 : 0),
           sourceId,
           url,
           // Predicted camera views are useful even outside the route corridor.
           // Cache their bytes opportunistically without blocking the first play.
           cache: true,
+          retain: openingCritical,
         });
       }
     };
@@ -399,6 +410,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
 
       const isClose3D = current.cameraMode === 'aerial-follow' || (current.cameraMode === 'follow-behind' && current.followBehindZoomLevel >= 66);
       const startupScan = preparing;
+      startupDiscoveryRef.current = startupScan;
       if (startupScan) {
         completedStartupRef.current = null;
         scheduler.resetFailures();
@@ -539,9 +551,15 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       }
       const poses = deduplicateCameraPoses([...upcomingPoses, ...outroPoses]);
 
+      let refresh = false;
       try {
         for (const pose of poses) {
           if (cancelled) return;
+          const latest = latestParamsRef.current;
+          if (!startupScan && latest.isPlaying && shouldRefreshReplayWarmup(current.playbackProgress, latest.playbackProgress, current.totalDurationMs, latest.playbackSpeed)) {
+            refresh = true;
+            break;
+          }
           discoveryOffsetRef.current = viewOffsets.get(pose) ?? 0;
           await warmPose(map, pose);
         }
@@ -550,8 +568,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           startupScannedRef.current = true;
         }
       } finally {
+        if (!cancelled) startupDiscoveryRef.current = false;
         isWarming = false;
       }
+      if (refresh && !cancelled) void warmFuture();
     };
 
     // Scan the whole horizon quickly; request completion is deliberately owned
@@ -566,6 +586,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       finishActivePose?.();
       scheduler.cancelPending();
       isWarmupPoseActiveRef.current = false;
+      startupDiscoveryRef.current = false;
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
     };

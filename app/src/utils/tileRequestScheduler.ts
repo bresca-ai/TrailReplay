@@ -70,10 +70,11 @@ export class TileRequestScheduler {
     this.failedRetained.delete(id);
 
     const existing = this.queued.get(id);
+    if (existing?.retain && !request.retain) request = { ...request, retain: true };
     const wasStale = existing ? (this.options.isStale?.(existing) ?? false) : false;
     const isStale = this.options.isStale?.(request) ?? false;
-    if (!existing || (wasStale && !isStale) || (wasStale === isStale && request.priority < existing.priority)) {
-      this.queued.set(id, { ...request, sequence: this.sequence++ });
+    if (!existing || (request.retain && !existing.retain) || (wasStale && !isStale) || (wasStale === isStale && request.priority < existing.priority)) {
+      this.queued.set(id, { ...request, priority: existing && request.retain && !existing.retain ? Math.min(existing.priority, request.priority) : request.priority, sequence: this.sequence++ });
     }
     this.drain();
   }
