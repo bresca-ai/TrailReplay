@@ -182,7 +182,7 @@ export function useTilePreload({
       ...(openingStages.length > 1 ? openingStages.slice(1).flatMap((pose, index) => sampleCameraTransition(openingStages[index], pose)) : transitions.intro),
       ...transitions.outro,
     ]);
-    const deadline = Date.now() + PRELOAD_TIMEOUT_MS;
+    let deadline = 0;
 
     const restoreAndAdvance = () => {
       if (hasAdvancedRef.current || cancelled) return;
@@ -232,14 +232,16 @@ export function useTilePreload({
     });
 
     void (async () => {
+      // Let route-critical requests finish first, before the visible map
+      // starts warming wide opening and closing views that compete for slots.
+      while (!cancelled && backgroundWarmupReadyRef && !backgroundWarmupReadyRef.current) {
+        await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
+      }
+      if (cancelled) return;
+      deadline = Date.now() + PRELOAD_TIMEOUT_MS;
       for (const pose of poses) {
         if (cancelled || Date.now() >= deadline) break;
         await warmPose(pose);
-      }
-      // Keep the preparation cover in place until the offscreen camera has
-      // visited the entire planned route and its tile request queue drains.
-      while (!cancelled && backgroundWarmupReadyRef && !backgroundWarmupReadyRef.current) {
-        await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
       }
       restoreAndAdvance();
     })();

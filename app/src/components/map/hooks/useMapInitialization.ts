@@ -7,6 +7,7 @@ import { registerAspectProtocol, registerSlopeProtocol } from '@/components/map/
 import { MAP_STYLE } from '@/components/map/mapStyle';
 import { setupTrackSources } from '@/components/map/mapSetup';
 import { TRADITIONAL_CHINESE_FONT_FAMILY } from '@/utils/typography';
+import { retainedTileRequest } from '@/utils/routeTileCache';
 
 interface UseMapInitializationParams {
   mapContainer: React.RefObject<HTMLDivElement | null>;
@@ -46,6 +47,7 @@ export function useMapInitialization({
       // successive popup snapshots piled up on top of each other.
       canvasContextAttributes: { preserveDrawingBuffer: true },
       attributionControl: false,
+      transformRequest: retainedTileRequest,
       // Bound GPU memory during long flyovers. The fallback pyramid and
       // predictive warmer help cover cache misses as the camera moves.
       maxTileCacheSize: 128,

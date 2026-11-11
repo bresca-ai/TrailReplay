@@ -7,6 +7,54 @@ import {
 } from './tileRequestScheduler';
 
 describe('TileRequestScheduler', () => {
+  it('starts track tiles before surrounding and distant queued tiles', async () => {
+    let release!: () => void;
+    const held = new Promise<void>(resolve => { release = resolve; });
+    const load = vi.fn((url: string) => url === 'active' ? held : Promise.resolve());
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load });
+    scheduler.enqueue({ key: '1/0/0', priority: 0, sourceId: 'satellite', url: 'active' });
+    scheduler.enqueue({ key: '1/0/1', priority: 10, sourceId: 'satellite', url: 'distant' });
+    scheduler.enqueue({ key: '1/0/2', priority: -100, sourceId: 'satellite', url: 'surrounding', retain: true });
+    scheduler.enqueue({ key: '1/0/3', priority: -200, sourceId: 'satellite', url: 'track', retain: true });
+    release();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(4));
+    expect(load.mock.calls.map(([url]) => url)).toEqual(['active', 'track', 'surrounding', 'distant']);
+  });
+  it('upgrades an active distant request to a retained route request', async () => {
+    let finish!: () => void;
+    const held = new Promise<void>(resolve => { finish = resolve; });
+    const load = vi.fn().mockReturnValueOnce(held).mockResolvedValue(undefined);
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load, isCompletedAvailable: request => !request.retain });
+    const tile = { key: '12/1/2', priority: 0, sourceId: 'satellite', url: 'tile' };
+    scheduler.enqueue(tile);
+    scheduler.enqueue({ ...tile, retain: true });
+    expect(scheduler.pendingRetained()).toBe(1);
+    finish();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+    expect(load.mock.calls[1][2]).toMatchObject({ retain: true });
+  });
+  it('counts route-critical work separately from distant view requests', async () => {
+    let finish!: () => void;
+    const held = new Promise<void>(resolve => { finish = resolve; });
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load: () => held });
+    scheduler.enqueue({ key: '1/0/0', priority: 0, sourceId: 'satellite', url: 'route', retain: true });
+    scheduler.enqueue({ key: '1/0/1', priority: 1, sourceId: 'satellite', url: 'distant' });
+    expect(scheduler.pendingRetained()).toBe(1);
+    finish();
+    await vi.waitFor(() => expect(scheduler.pendingRetained()).toBe(0));
+  });
+
+  it('requests a retained tile again when its actual cached bytes are unavailable', async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    let available = true;
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load, isCompletedAvailable: () => available });
+    const tile = { key: '12/1/2', priority: 0, sourceId: 'satellite', url: 'tile', retain: true };
+    scheduler.enqueue(tile);
+    await vi.waitFor(() => expect(scheduler.snapshot().completed).toBe(1));
+    available = false;
+    scheduler.enqueue(tile);
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+  });
   it('retains completed tiles when playback stops and restarts', async () => {
     const load = vi.fn().mockResolvedValue(undefined);
     const scheduler = new TileRequestScheduler({ concurrency: 1, load });

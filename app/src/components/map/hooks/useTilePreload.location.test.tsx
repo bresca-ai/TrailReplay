@@ -64,7 +64,7 @@ it('keeps the opening covered until route-wide background warmup finishes', asyn
     await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
     expect(setAnimationPhase).not.toHaveBeenCalled();
     backgroundWarmupReadyRef.current = true;
-    await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(6250); });
     expect(setAnimationPhase).toHaveBeenCalledWith('intro');
     unmount();
   } finally { vi.useRealTimers(); }

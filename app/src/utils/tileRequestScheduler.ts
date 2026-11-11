@@ -4,6 +4,7 @@ export interface TileRequest {
   neededAt?: number;
   sourceId: string;
   url: string;
+  retain?: boolean;
 }
 
 interface QueuedTileRequest extends TileRequest {
@@ -12,7 +13,8 @@ interface QueuedTileRequest extends TileRequest {
 
 export interface TileRequestSchedulerOptions {
   concurrency: number;
-  load: (url: string, signal?: AbortSignal) => Promise<void>;
+  load: (url: string, signal?: AbortSignal, request?: TileRequest) => Promise<void>;
+  isCompletedAvailable?: (request: TileRequest) => boolean;
   isStale?: (request: TileRequest) => boolean;
   onComplete?: (request: TileRequest) => void;
   onError?: (request: TileRequest) => void;
@@ -27,12 +29,14 @@ export interface TileRequestSchedulerOptions {
 export class TileRequestScheduler {
   private active = 0;
   private readonly activeIds = new Set<string>();
+  private readonly activeRetainedIds = new Set<string>();
   private readonly activeControllers = new Map<string, AbortController>();
   private readonly completed = new Map<string, number>();
   private readonly failed = new Set<string>();
   private readonly queued = new Map<string, QueuedTileRequest>();
   private readonly retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly retryCounts = new Map<string, number>();
+  private readonly retainedRetryIds = new Set<string>();
   private sequence = 0;
   private generation = 0;
   private readonly options: TileRequestSchedulerOptions;
@@ -48,12 +52,15 @@ export class TileRequestScheduler {
   enqueue(request: TileRequest): void {
     const id = `${request.sourceId}:${request.key}`;
     const completedAt = this.completed.get(id);
-    if ((this.activeIds.has(id) && !this.activeControllers.get(id)?.signal.aborted)
-      || (completedAt !== undefined && Date.now() - completedAt < 600_000)) return;
+    if ((this.activeIds.has(id) && !this.activeControllers.get(id)?.signal.aborted
+        && (!request.retain || this.activeRetainedIds.has(id)))
+      || (completedAt !== undefined && Date.now() - completedAt < 600_000
+        && (this.options.isCompletedAvailable?.(request) ?? true))) return;
     const retryTimer = this.retryTimers.get(id);
     if (retryTimer !== undefined) {
       clearTimeout(retryTimer);
       this.retryTimers.delete(id);
+      this.retainedRetryIds.delete(id);
     }
     this.completed.delete(id);
     this.failed.delete(id);
@@ -86,6 +93,7 @@ export class TileRequestScheduler {
     for (const timer of this.retryTimers.values()) clearTimeout(timer);
     this.retryTimers.clear();
     this.retryCounts.clear();
+    this.retainedRetryIds.clear();
   }
 
   snapshot(): { active: number; queued: number; completed: number } {
@@ -93,6 +101,11 @@ export class TileRequestScheduler {
   }
 
   hasFailures(): boolean { return this.failed.size > 0; }
+
+  pendingRetained(): number {
+    return this.activeRetainedIds.size + this.retainedRetryIds.size
+      + [...this.queued.values()].filter(request => request.retain).length;
+  }
 
   private drain(): void {
     while (this.active < this.options.concurrency && this.queued.size > 0) {
@@ -106,10 +119,11 @@ export class TileRequestScheduler {
       this.queued.delete(id);
       this.active += 1;
       this.activeIds.add(id);
+      if (next.retain) this.activeRetainedIds.add(id);
       const generation = this.generation;
       const controller = new AbortController();
       this.activeControllers.set(id, controller);
-      void this.options.load(next.url, controller.signal)
+      void this.options.load(next.url, controller.signal, next)
         .then(() => {
           if (generation === this.generation) {
             this.completed.set(id, Date.now());
@@ -129,14 +143,17 @@ export class TileRequestScheduler {
           this.retryCounts.set(id, retries + 1);
           const timer = setTimeout(() => {
             this.retryTimers.delete(id);
+            this.retainedRetryIds.delete(id);
             if (generation === this.generation) this.enqueue(next);
           }, (this.options.retryDelayMs ?? 1000) * (retries + 1));
           this.retryTimers.set(id, timer);
+          if (next.retain) this.retainedRetryIds.add(id);
         })
         .finally(() => {
           this.activeControllers.delete(id);
           this.active -= 1;
           this.activeIds.delete(id);
+          this.activeRetainedIds.delete(id);
           this.drain();
         });
     }

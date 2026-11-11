@@ -31,6 +31,7 @@ import {
 import { containsPosition, type LocationFeature } from '@/utils/locationBoundaries';
 import { cameraForPlace } from './useLocationChapters';
 import { routeTileCorridor } from '@/utils/routeTileCorridor';
+import { beginRouteTilePreload, getRetainedTileUrl, markRouteTile, resetRouteTileCacheStats, retainRouteTile, routeTileCacheStats, routeTileCacheVersion } from '@/utils/routeTileCache';
 
 const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // Terrain can expose additional imagery after the first render as DEM data
@@ -124,10 +125,11 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const latestParamsRef = useRef(params);
   const [scheduler] = useState(() => new TileRequestScheduler({
     concurrency: 6,
-    load: preloadTileImage,
+    load: (url, signal, request) => request?.retain ? retainRouteTile(url, signal) : preloadTileImage(url, signal),
+    isCompletedAvailable: (request) => !request.retain || Boolean(getRetainedTileUrl(request.url)),
     // Keep missed predictions available, but do not let a long backlog from
     // a past view block tiles the camera is about to need after a seek.
-    isStale: (request) => (request.neededAt ?? request.priority) < (performance.now() / 1000) - 3,
+    isStale: (request) => !request.retain && (request.neededAt ?? request.priority) < (performance.now() / 1000) - 3,
   }));
   const warmupMapRef = useRef<maplibregl.Map | null>(null);
   const warmupInitializedRef = useRef(false);
@@ -135,20 +137,25 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const discoveryOffsetRef = useRef(0);
   const discoveryScanTimeRef = useRef(0);
   const startupScannedRef = useRef(false);
-  const completedStartupRef = useRef<{ values: unknown[]; at: number } | null>(null);
+  const startupCacheVersionRef = useRef(0);
+  const completedStartupRef = useRef<{ values: unknown[]; at: number; cacheVersion: number } | null>(null);
   useEffect(() => {
     if (animationPhase === 'preloading' && onStartupReadyChange) {
       onStartupReadyChange(false);
       startupScannedRef.current = false;
+      resetRouteTileCacheStats();
       if (import.meta.env.DEV) document.documentElement.dataset.tileWarmupMode = 'scan';
     }
   }, [animationPhase, onStartupReadyChange]);
   useEffect(() => {
     if (!import.meta.env.DEV || typeof document === 'undefined') return;
-    const publish = () => { document.documentElement.dataset.tileWarmupQueue = JSON.stringify(scheduler.snapshot()); };
+    const publish = () => {
+      document.documentElement.dataset.tileWarmupQueue = JSON.stringify(scheduler.snapshot());
+      document.documentElement.dataset.routeTileCache = JSON.stringify(routeTileCacheStats());
+    };
     publish();
     const interval = window.setInterval(publish, 500);
-    return () => { window.clearInterval(interval); delete document.documentElement.dataset.tileWarmupQueue; delete document.documentElement.dataset.tileWarmupMode; };
+    return () => { window.clearInterval(interval); delete document.documentElement.dataset.tileWarmupQueue; delete document.documentElement.dataset.tileWarmupMode; delete document.documentElement.dataset.routeTileCache; };
   }, [scheduler]);
   useEffect(() => {
     latestParamsRef.current = params;
@@ -347,15 +354,17 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         viewport?.clientWidth, viewport?.clientHeight];
       const previous = completedStartupRef.current;
       if (current.animationPhase === 'preloading' && current.onStartupReadyChange && !startupScannedRef.current
+        && previous?.cacheVersion === routeTileCacheVersion()
         && canReuseStartupWarmup(startupValues, previous, performance.now(), scheduler.hasFailures())) {
         startupScannedRef.current = true;
         if (import.meta.env.DEV) document.documentElement.dataset.tileWarmupMode = 'reuse';
       }
 
       if (current.animationPhase === 'preloading' && current.onStartupReadyChange && startupScannedRef.current) {
-        const pending = scheduler.snapshot();
-        if (pending.active === 0 && pending.queued === 0) {
-          if (!scheduler.hasFailures()) completedStartupRef.current = { values: startupValues, at: performance.now() };
+        if (scheduler.pendingRetained() === 0) {
+          if (!scheduler.hasFailures() && startupCacheVersionRef.current === routeTileCacheVersion()) {
+            completedStartupRef.current = { values: startupValues, at: performance.now(), cacheVersion: routeTileCacheVersion() };
+          }
           current.onStartupReadyChange(true);
         }
         return;
@@ -372,29 +381,29 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       const isClose3D = current.cameraMode === 'aerial-follow' || (current.cameraMode === 'follow-behind' && current.followBehindZoomLevel >= 66);
       const startupScan = current.animationPhase === 'preloading' && Boolean(current.onStartupReadyChange);
       if (startupScan) {
+        startupCacheVersionRef.current = routeTileCacheVersion();
+        beginRouteTilePreload();
         // Camera samples can skip a narrow valley or a fast turn. Request a
         // continuous corridor independently so every route section has local
         // imagery even when the projected viewport changes between samples.
         const presentation = BASEMAP_PRESENTATIONS[current.mapStyle] ?? BASEMAP_PRESENTATIONS.satellite;
         const source = MAP_STYLE.sources[presentation.sourceId as keyof typeof MAP_STYLE.sources];
         const template = source && 'tiles' in source ? source.tiles[0] : undefined;
-        for (const zoom of [11, 12, 13, 14, 15, 16]) {
-          for (const key of routeTileCorridor(current.routeCoordinates ?? current.allCoordinates, zoom, zoom === 16 ? 0 : 1)) {
-            const url = getTileRequestUrl(presentation.sourceId, key, template);
-            if (!url) continue;
-            current.diagnostics.predictTile(presentation.sourceId, key);
-            scheduler.enqueue({ key, sourceId: presentation.sourceId, url,
-              priority: discoveryScanTimeRef.current - 100, neededAt: discoveryScanTimeRef.current + 120 });
-          }
-        }
-        if ((current.terrainExaggeration ?? 0) > 0) {
-          for (const zoom of [12, 13, 14, 15]) {
-            for (const key of routeTileCorridor(current.routeCoordinates ?? current.allCoordinates, zoom, zoom === 15 ? 0 : 1)) {
-              const url = getTileRequestUrl('terrain-dem', key);
+        const route = current.routeCoordinates ?? current.allCoordinates;
+        const sources = [{ id: presentation.sourceId, template, zooms: [11, 12, 13, 14, 15, 16], maxRingZoom: 15 },
+          ...((current.terrainExaggeration ?? 0) > 0 ? [{ id: 'terrain-dem', template: undefined, zooms: [12, 13, 14, 15], maxRingZoom: 14 }] : [])];
+        // Enqueue every tile touched by the track before its surrounding ring.
+        // Both classes stay ahead of the far-away viewport discoveries.
+        for (const radius of [0, 1]) {
+          for (const source of sources) for (const zoom of source.zooms) {
+            if (radius === 1 && zoom > source.maxRingZoom) continue;
+            for (const key of routeTileCorridor(route, zoom, radius)) {
+              const url = getTileRequestUrl(source.id, key, source.template);
               if (!url) continue;
-              current.diagnostics.predictTile('terrain-dem', key);
-              scheduler.enqueue({ key, sourceId: 'terrain-dem', url,
-                priority: discoveryScanTimeRef.current - 90, neededAt: discoveryScanTimeRef.current + 120 });
+              markRouteTile(url);
+              current.diagnostics.predictTile(source.id, key);
+              scheduler.enqueue({ key, sourceId: source.id, url, retain: true,
+                priority: discoveryScanTimeRef.current - (radius === 0 ? 200 : 100), neededAt: discoveryScanTimeRef.current + 120 });
             }
           }
         }
