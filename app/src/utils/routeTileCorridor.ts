@@ -1,5 +1,5 @@
 /** Tiles intersecting a route and its immediate surroundings at a given zoom. */
-export function routeTileCorridor(coordinates: number[][], zoom: number, radius = 1): string[] {
+export function routeTileCorridor(coordinates: number[][], zoom: number, radius = 1, maxTiles = Infinity): string[] {
   const size = 2 ** zoom;
   const keys = new Set<string>();
   let previous: [number, number] | null = null;
@@ -8,11 +8,12 @@ export function routeTileCorridor(coordinates: number[][], zoom: number, radius 
     for (let dx = -radius; dx <= radius; dx++) {
       for (let dy = -radius; dy <= radius; dy++) {
         const tileY = ty + dy;
-        if (tileY >= 0 && tileY < size) keys.add(`${zoom}/${((tx + dx) % size + size) % size}/${tileY}`);
+        if (tileY >= 0 && tileY < size && keys.size < maxTiles) keys.add(`${zoom}/${((tx + dx) % size + size) % size}/${tileY}`);
       }
     }
   };
   for (const coordinate of coordinates) {
+    if (keys.size >= maxTiles) break;
     const [longitude, latitude] = coordinate;
     if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) { previous = null; continue; }
     const lat = Math.max(-85.051129, Math.min(85.051129, latitude)) * Math.PI / 180;
@@ -24,7 +25,7 @@ export function routeTileCorridor(coordinates: number[][], zoom: number, radius 
     if (dx < -size / 2) dx += size;
     const dy = y - previous[1];
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 2));
-    for (let step = 1; step <= steps; step++) add(previous[0] + dx * step / steps, previous[1] + dy * step / steps);
+    for (let step = 1; step <= steps && keys.size < maxTiles; step++) add(previous[0] + dx * step / steps, previous[1] + dy * step / steps);
     previous = [x, y];
   }
   return [...keys];

@@ -456,6 +456,7 @@ export function TrailMap(_props: TrailMapProps) {
     isMapLoaded,
     isPlaying: playback.isPlaying,
     mapStyle: settings.mapStyle,
+    waybackItemURL: settings.waybackItemURL,
     playbackProgress: playback.progress,
     playbackSpeed: playback.speed,
     totalDurationMs: playback.totalDuration,
@@ -490,6 +491,7 @@ export function TrailMap(_props: TrailMapProps) {
     fastWarmupRef: startupWarmupFastRef,
     // OSM's standard tile service prohibits speculative tile prefetching.
     skipPredictivePreload: settings.mapStyle === 'street',
+    basemapIdentity: `${settings.mapStyle}:${settings.waybackItemURL ?? ''}`,
   });
 
   useEffect(() => {

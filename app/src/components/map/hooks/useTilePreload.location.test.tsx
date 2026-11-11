@@ -83,7 +83,24 @@ it('keeps the opening covered until route-wide background warmup finishes', asyn
     unmount();
   } finally { vi.useRealTimers(); }
 });
-it('starts immediately after a successful background warmup', async () => {
+it('continues with visible-map preparation if background readiness never arrives', async () => {
+  const { act } = await import('@testing-library/react');
+  vi.useFakeTimers();
+  try {
+    const map = { jumpTo: vi.fn(), cameraForBounds: () => ({ center: [0, 0], zoom: 5 }), once: vi.fn(), off: vi.fn(), triggerRepaint: vi.fn() } as unknown as MapLibreMap;
+    const setAnimationPhase = vi.fn();
+    const { unmount } = renderHook(() => useTilePreload({
+      allCoordinates: [[0, 0], [0.01, 0]], animationPhase: 'preloading', cameraMode: 'follow', elevationData: [],
+      followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: map }, setAnimationPhase,
+      smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 }, totalDurationMs: 60000,
+      backgroundWarmupReadyRef: { current: false },
+    }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(25000); });
+    expect(setAnimationPhase).toHaveBeenCalledWith('intro');
+    unmount();
+  } finally { vi.useRealTimers(); }
+});
+it('warms the visible map once, then reuses it for an unchanged replay', async () => {
   const { act } = await import('@testing-library/react');
   vi.useFakeTimers();
   try {
@@ -92,16 +109,29 @@ it('starts immediately after a successful background warmup', async () => {
       once: (event: string, handler: () => void) => listeners.set(event, handler),
       off: (event: string) => listeners.delete(event), triggerRepaint: vi.fn() } as unknown as MapLibreMap;
     const setAnimationPhase = vi.fn();
-    const { unmount } = renderHook(() => useTilePreload({
-      allCoordinates: [[0, 0], [0.01, 0]], animationPhase: 'preloading', cameraMode: 'follow',
-      elevationData: [], followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: map },
+    const coordinates = [[0, 0], [0.01, 0]];
+    const elevationData: Array<{ elevation: number }> = [];
+    const base = {
+      allCoordinates: coordinates, animationPhase: 'preloading' as 'preloading' | 'idle', cameraMode: 'follow' as const,
+      elevationData, followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: map },
       setAnimationPhase, smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 }, totalDurationMs: 60000,
       backgroundWarmupReadyRef: { current: true }, fastWarmupRef: { current: true },
-    }));
+    };
+    const { unmount, rerender } = renderHook(({ phase }) => useTilePreload({ ...base, animationPhase: phase }), { initialProps: { phase: 'preloading' as 'preloading' | 'idle' } });
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(map.jumpTo).toHaveBeenCalledTimes(1);
+    expect(setAnimationPhase).not.toHaveBeenCalled();
+    for (let i = 0; i < 100 && !setAnimationPhase.mock.calls.length; i++) {
+      await act(async () => { listeners.get('idle')?.(); await Promise.resolve(); });
+    }
     expect(setAnimationPhase).toHaveBeenCalledWith('intro');
-    expect(listeners.has('idle')).toBe(false);
+    rerender({ phase: 'idle' });
+    setAnimationPhase.mockClear();
+    const visits = vi.mocked(map.jumpTo).mock.calls.length;
+    rerender({ phase: 'preloading' });
+    await act(async () => { await Promise.resolve(); });
+    expect(setAnimationPhase).toHaveBeenCalledWith('intro');
+    expect(vi.mocked(map.jumpTo).mock.calls.length).toBe(visits + 1);
     unmount();
   } finally { vi.useRealTimers(); }
 });

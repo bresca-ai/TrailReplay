@@ -1,3 +1,4 @@
+import { AJAXError } from 'maplibre-gl';
 // Retain route-adjacent responses independently of the browser HTTP cache.
 // MapLibre's much smaller decoded-tile cache can then be rebuilt without
 // downloading those responses again on every replay.
@@ -47,7 +48,9 @@ function cacheLifetime(response: Response): number {
   if (/\b(?:no-store|no-cache)\b/i.test(cacheControl)) return 0;
   const maxAge = /(?:^|,)\s*max-age\s*=\s*"?(\d+)/i.exec(cacheControl);
   const ageSeconds = Number(response.headers?.get('age') ?? 0);
-  return maxAge ? Math.min(DEFAULT_MAX_AGE_MS, Math.max(0, Number(maxAge[1]) - (Number.isFinite(ageSeconds) ? ageSeconds : 0)) * 1000) : DEFAULT_MAX_AGE_MS;
+  if (maxAge) return Math.min(DEFAULT_MAX_AGE_MS, Math.max(0, Number(maxAge[1]) - (Number.isFinite(ageSeconds) ? ageSeconds : 0)) * 1000);
+  const expires = Date.parse(response.headers?.get('expires') ?? '');
+  return Number.isFinite(expires) ? Math.min(DEFAULT_MAX_AGE_MS, Math.max(0, expires - Date.now())) : DEFAULT_MAX_AGE_MS;
 }
 
 function storeTile(url: string, blob: Blob, maxAgeMs: number): void {
@@ -104,20 +107,21 @@ export function retainedTileRequest(url: string, resourceType?: string): { url: 
 }
 
 /** Return an independent buffer: MapLibre may transfer ownership to a worker. */
-export async function readRetainedTile(protocolUrl: string, signal?: AbortSignal): Promise<{ data: ArrayBuffer }> {
+export async function readRetainedTile(protocolUrl: string, signal?: AbortSignal): Promise<{ data: ArrayBuffer; cacheControl?: string; expires?: string | null }> {
   const originalUrl = decodeURIComponent(protocolUrl.slice('trailcache://'.length));
   if (signal?.aborted) throw new Error('Tile request cancelled');
   const cached = getRetainedTile(originalUrl);
   if (cached) {
     const data = await cached.arrayBuffer();
     if (signal?.aborted) throw new Error('Tile request cancelled');
-    return { data };
+    const entry = entries.get(originalUrl);
+    return { data, cacheControl: `max-age=${Math.max(0, Math.floor(((entry?.expiresAt ?? Date.now()) - Date.now()) / 1000))}` };
   }
   // An entry can expire or be evicted between transformRequest and this call.
   const response = await fetch(originalUrl, { mode: 'cors', signal });
-  if (!response.ok) throw new Error(`Tile request failed (${response.status})`);
+  if (!response.ok) throw new AJAXError(response.status, response.statusText, originalUrl, await response.blob());
   const blob = await response.blob();
   if (signal?.aborted) throw new Error('Tile request cancelled');
   storeTile(originalUrl, blob, cacheLifetime(response));
-  return { data: await blob.arrayBuffer() };
+  return { data: await blob.arrayBuffer(), cacheControl: response.headers?.get('cache-control') ?? undefined, expires: response.headers?.get('expires') ?? undefined };
 }

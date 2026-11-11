@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { routeTileCorridor } from './routeTileCorridor';
 
 describe('routeTileCorridor', () => {
+  it('bounds work on routes spanning continents', () => {
+    const keys = routeTileCorridor([[-120, 0], [100, 0]], 16, 1, 128);
+    expect(keys).toHaveLength(128);
+  });
   it('covers the tiles between sparse points as well as their neighbours', () => {
     const keys = routeTileCorridor([[0, 0], [0.1, 0]], 14);
     const rows = new Set(keys.map(key => key.split('/')[2]));

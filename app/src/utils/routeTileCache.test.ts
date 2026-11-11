@@ -4,6 +4,15 @@ import { beginRouteTilePreload, hasRetainedTile, markRouteTile, readRetainedTile
 afterEach(() => vi.unstubAllGlobals());
 
 describe('route tile cache', () => {
+  it('preserves HTTP status and freshness metadata for MapLibre', async () => {
+    const source = 'https://server.arcgisonline.com/review-test';
+    const request = retainedTileRequest(source, 'Tile');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found', blob: async () => new Blob() })
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'cache-control': 'max-age=30' }), blob: async () => new Blob(['tile']) }));
+    await expect(readRetainedTile(request.url)).rejects.toMatchObject({ status: 404 });
+    expect((await readRetainedTile(request.url)).cacheControl).toBe('max-age=30');
+    expect((await readRetainedTile(request.url)).cacheControl).toMatch(/^max-age=(?:30|2[89])$/);
+  });
   it('serves retained bytes to the map without creating object URLs', async () => {
     const source = 'https://tiles.example.test/retained/1';
     const fetchTile = vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['tile']) });

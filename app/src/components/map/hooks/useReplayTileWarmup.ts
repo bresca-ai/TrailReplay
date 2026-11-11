@@ -113,6 +113,7 @@ interface UseReplayTileWarmupParams {
   isPlaying: boolean;
   visibleMapRef: React.MutableRefObject<maplibregl.Map | null>;
   mapStyle: string;
+  waybackItemURL?: string | null;
   playbackProgress: number;
   playbackSpeed: number;
   totalDurationMs: number;
@@ -217,13 +218,24 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     // A tilted camera sees a different tile footprint over mountains than it
     // does on a flat plane. Use the same terrain for discovery when active;
     // the pixel ratio and bounded cache below limit the additional GPU load.
+    const selected = BASEMAP_PRESENTATIONS[params.mapStyle] ?? BASEMAP_PRESENTATIONS.satellite;
+    const waybackTemplate = params.waybackItemURL?.replace('{level}', '{z}').replace('{row}', '{y}').replace('{col}', '{x}');
+    const selectedLayers = new Set([selected.layerId, selected.fallbackLayerId]);
+    const staticLayers = new Set<string>([...STATIC_BASEMAP_LAYER_IDS, ...STATIC_FALLBACK_LAYER_IDS]);
     const discoveryStyle: maplibregl.StyleSpecification = {
       ...MAP_STYLE as unknown as maplibregl.StyleSpecification,
+      sources: { ...MAP_STYLE.sources as unknown as maplibregl.StyleSpecification['sources'],
+        ...(params.mapStyle === 'wayback' && waybackTemplate ? {
+          wayback: { type: 'raster' as const, tiles: [waybackTemplate], tileSize: 256 },
+          'fallback-wayback': { type: 'raster' as const, tiles: [waybackTemplate], tileSize: 256, maxzoom: 8 },
+        } : {}) },
       layers: [
-        ...MAP_STYLE.layers as unknown as maplibregl.LayerSpecification[],
-        ...((params.terrainExaggeration ?? 0) > 0 ? [] : [
-          { id: 'warmup-dem', type: 'hillshade' as const, source: 'terrain-dem', paint: { 'hillshade-exaggeration': 0 } },
-        ]),
+        ...(MAP_STYLE.layers as unknown as maplibregl.LayerSpecification[]).filter(layer => staticLayers.has(layer.id)).map(layer =>
+          ({ ...layer, layout: { ...layer.layout, visibility: selectedLayers.has(layer.id) ? 'visible' as const : 'none' as const } })),
+        ...(params.mapStyle === 'wayback' && waybackTemplate ? [
+          { id: 'fallback-wayback', type: 'raster' as const, source: 'fallback-wayback', paint: { 'raster-fade-duration': 0 } },
+          { id: 'wayback', type: 'raster' as const, source: 'wayback', paint: { 'raster-fade-duration': 0 } },
+        ] : []),
       ],
     };
     if ((params.terrainExaggeration ?? 0) > 0) {
@@ -238,7 +250,13 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       // Match authored shots; the default 60-degree cap missed their horizon.
       maxPitch: REPLAY_CAMERA_MAX_PITCH,
       cancelPendingTileRequestsWhileZooming: false,
-      transformRequest: discoveryTileRequest,
+      transformRequest: (url, resourceType) => {
+        if (resourceType === 'Tile' && waybackTemplate && params.mapStyle === 'wayback') {
+          const prefix = waybackTemplate.split(/\{[zxy]\}/)[0];
+          if (prefix && url.startsWith(prefix)) return { url: DISCOVERY_TILE };
+        }
+        return discoveryTileRequest(url, resourceType);
+      },
       // The primary map owns decoded replay tiles. Discovery only needs a
       // small working set; completed requests remain in the browser cache.
       maxTileCacheSize: 128,
@@ -275,7 +293,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
 
       params.diagnostics.predictTile(sourceId, key);
       const source = MAP_STYLE.sources[sourceId as keyof typeof MAP_STYLE.sources];
-      const template = source && 'tiles' in source ? source.tiles[0] : undefined;
+      const template = sourceId === 'wayback' || sourceId === 'fallback-wayback' ? waybackTemplate : source && 'tiles' in source ? source.tiles[0] : undefined;
       const url = getTileRequestUrl(sourceId, key, template);
       if (url) {
         const openingCritical = startupDiscoveryRef.current && discoveryOffsetRef.current <= CRITICAL_OPENING_SECONDS;
@@ -334,7 +352,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       warmupMapRef.current = null;
       warmupInitializedRef.current = false;
     };
-  }, [params.diagnostics, params.enabled, params.isMapLoaded, params.visibleMapRef, params.terrainExaggeration, scheduler]);
+  }, [params.diagnostics, params.enabled, params.isMapLoaded, params.visibleMapRef, params.terrainExaggeration, params.mapStyle, params.waybackItemURL, scheduler]);
 
   useEffect(() => {
     if (!params.enabled) return;
@@ -392,7 +410,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       const style = map.style as unknown as { tileManagers?: Record<string, { getIds?: () => string[]; getTileByID?: (id: string) => { tileID?: unknown; constructor?: unknown } | undefined }> } | undefined;
       const manager = style?.tileManagers?.[presentation.sourceId];
       const source = MAP_STYLE.sources[presentation.sourceId as keyof typeof MAP_STYLE.sources];
-      const template = source && 'tiles' in source ? source.tiles[0] : undefined;
+      const template = presentation.sourceId === 'wayback' ? current.waybackItemURL?.replace('{level}', '{z}').replace('{row}', '{y}').replace('{col}', '{x}') : source && 'tiles' in source ? source.tiles[0] : undefined;
       if (!manager?.getIds || !manager.getTileByID) return;
       for (const id of manager.getIds()) {
         const tile = manager.getTileByID(id);
@@ -424,7 +442,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         current.cinematicKeyframes, current.cameraMode, current.cameraStability, current.mapStyle,
         current.followBehindZoomLevel, current.followBehindPitch, current.totalDurationMs,
         current.terrainExaggeration, current.locationFeatures, current.zoomToPlace,
-        viewport?.clientWidth, viewport?.clientHeight];
+        current.waybackItemURL, viewport?.clientWidth, viewport?.clientHeight];
       const previous = completedStartupRef.current;
       const preparing = Boolean(current.onStartupReadyChange)
         && (current.animationPhase === 'preloading' || (current.animationPhase === 'idle' && !current.isPlaying));
@@ -477,16 +495,22 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         // imagery even when the projected viewport changes between samples.
         const presentation = BASEMAP_PRESENTATIONS[current.mapStyle] ?? BASEMAP_PRESENTATIONS.satellite;
         const source = MAP_STYLE.sources[presentation.sourceId as keyof typeof MAP_STYLE.sources];
-        const template = source && 'tiles' in source ? source.tiles[0] : undefined;
+        const template = presentation.sourceId === 'wayback' ? current.waybackItemURL?.replace('{level}', '{z}').replace('{row}', '{y}').replace('{col}', '{x}') : source && 'tiles' in source ? source.tiles[0] : undefined;
         const route = current.routeCoordinates ?? current.allCoordinates;
-        const sources = [{ id: presentation.sourceId, template, zooms: [11, 12, 13, 14, 15, 16], maxRingZoom: 16 },
-          ...((current.terrainExaggeration ?? 0) > 0 ? [{ id: 'terrain-dem', template: undefined, zooms: [12, 13, 14, 15], maxRingZoom: 15 }] : [])];
+        const zooms = new Set<number>();
+        for (let i = 0; i <= 12; i++) {
+          const pose = getReplayWarmupPose({ cameraMode: current.cameraMode, cinematicKeyframes: current.cinematicKeyframes, aerialTerrainPlan: current.aerialTerrainPlan, cameraStability: current.cameraStability, totalDurationMs: current.totalDurationMs, coordinates: current.allCoordinates, elevationData: current.elevationData, followBehindZoomLevel: current.followBehindZoomLevel, followBehindPitch: current.followBehindPitch, progress: i / 12 });
+          if (pose) { const z = Math.max(0, Math.min(19, Math.floor(pose.zoom))); zooms.add(z); zooms.add(Math.max(0, z - 1)); }
+        }
+        const predictedZooms = [...zooms].sort((a, b) => b - a).slice(0, 4);
+        const sources = [{ id: presentation.sourceId, template, zooms: predictedZooms, maxRingZoom: 19 },
+          ...((current.terrainExaggeration ?? 0) > 0 ? [{ id: 'terrain-dem', template: undefined, zooms: [...new Set(predictedZooms.map(z => Math.min(15, z)))], maxRingZoom: 15 }] : [])];
         // Enqueue every tile touched by the track before its surrounding ring.
         // Both classes stay ahead of the far-away viewport discoveries.
         for (const radius of [0, 1]) {
           for (const source of sources) for (const zoom of source.zooms) {
             if (radius === 1 && zoom > source.maxRingZoom) continue;
-            for (const key of routeTileCorridor(route, zoom, radius)) {
+            for (const key of routeTileCorridor(route, zoom, radius, 256)) {
               const url = getTileRequestUrl(source.id, key, source.template);
               if (!url) continue;
               markRouteTile(url);
@@ -647,7 +671,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [params.diagnostics, params.enabled, params.isMapLoaded, params.mapStyle, params.terrainExaggeration,
+  }, [params.diagnostics, params.enabled, params.isMapLoaded, params.mapStyle, params.waybackItemURL, params.terrainExaggeration,
     params.allCoordinates, params.routeCoordinates, params.elevationData, params.aerialTerrainPlan,
     params.cameraMode, params.cinematicKeyframes, params.cameraStability, params.followBehindZoomLevel,
     params.followBehindPitch, params.totalDurationMs, params.locationFeatures, params.zoomToPlace, scheduler]);

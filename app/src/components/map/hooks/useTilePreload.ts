@@ -17,6 +17,7 @@ import {
 // Never hold the replay behind the preparation screen indefinitely. The opening
 // sequence gets the whole budget; each camera sample may finish sooner on idle.
 const PRELOAD_TIMEOUT_MS = 6000;
+const BACKGROUND_TIMEOUT_MS = 15000;
 const POSE_TIMEOUT_MS = 350;
 const RESTORED_VIEW_TIMEOUT_MS = 3000;
 const OPENING_WINDOW_MS = 12000;
@@ -48,6 +49,7 @@ interface UseTilePreloadParams {
   backgroundWarmupReadyRef?: React.MutableRefObject<boolean>;
   fastWarmupRef?: React.MutableRefObject<boolean>;
   skipPredictivePreload?: boolean;
+  basemapIdentity?: string;
 }
 
 /**
@@ -81,8 +83,10 @@ export function useTilePreload({
   backgroundWarmupReadyRef,
   fastWarmupRef,
   skipPredictivePreload = false,
+  basemapIdentity,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
+  const visibleWarmupRef = useRef<unknown[] | null>(null);
 
   useEffect(() => {
     if (animationPhase !== 'preloading') {
@@ -116,6 +120,9 @@ export function useTilePreload({
     let activeTimeout: ReturnType<typeof setTimeout> | null = null;
     let pendingAdvance: (() => void) | null = null;
     const originalPadding = cameraMode === 'aerial-follow' ? map.getPadding() : null;
+    const visibleKey = [map, allCoordinates, elevationData, cinematicKeyframes, aerialTerrainPlan, cameraMode, cameraStability, followBehindZoomLevel, followBehindPitch, totalDurationMs, introStartOverride, introStageOverrides, basemapIdentity, map.getCanvas?.().clientWidth, map.getCanvas?.().clientHeight];
+    const visibleAlreadyWarm = visibleWarmupRef.current?.length === visibleKey.length && visibleKey.every((value, index) => value === visibleWarmupRef.current?.[index]);
+    let visibleSweepSettled = true;
     const introPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
@@ -225,43 +232,47 @@ export function useTilePreload({
     };
 
     const warmPose = (pose: ReplayCameraPose) => new Promise<void>((resolve) => {
-      const finish = () => {
-        map.off('idle', finish);
+      const finish = (timedOut = false) => {
+        if (timedOut) visibleSweepSettled = false;
+        map.off('idle', onIdle);
         if (activeTimeout) {
           clearTimeout(activeTimeout);
           activeTimeout = null;
         }
         resolve();
       };
+      const onIdle = () => finish();
 
       const padding = originalPadding && {
         ...originalPadding,
         top: (originalPadding.top ?? 0) + map.getCanvas().clientHeight * 0.16,
       };
       map.jumpTo(padding ? { ...pose, padding } : pose);
-      map.once('idle', finish);
+      map.once('idle', onIdle);
       // Do not let one slow viewport consume the whole budget: the rest of
       // the zoom path still needs to submit tile requests before playback.
-      activeTimeout = setTimeout(finish, Math.max(0, Math.min(POSE_TIMEOUT_MS, deadline - Date.now())));
+      activeTimeout = setTimeout(() => finish(true), Math.max(0, Math.min(POSE_TIMEOUT_MS, deadline - Date.now())));
     });
 
     void (async () => {
       // Let route-critical requests finish first, before the visible map
       // starts warming wide opening and closing views that compete for slots.
-      while (!cancelled && backgroundWarmupReadyRef && !backgroundWarmupReadyRef.current) {
+      const backgroundDeadline = Date.now() + BACKGROUND_TIMEOUT_MS;
+      while (!cancelled && backgroundWarmupReadyRef && !backgroundWarmupReadyRef.current && Date.now() < backgroundDeadline) {
         await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
       }
       if (cancelled) return;
       // The route-critical background warmup has completed successfully.
-      if (fastWarmupRef?.current) {
+      if (fastWarmupRef?.current && visibleAlreadyWarm) {
         restoreAndAdvance(true);
         return;
       }
       deadline = Date.now() + PRELOAD_TIMEOUT_MS;
       for (const pose of poses) {
-        if (cancelled || Date.now() >= deadline) break;
+        if (cancelled || Date.now() >= deadline) { visibleSweepSettled = false; break; }
         await warmPose(pose);
       }
+      if (visibleSweepSettled && !cancelled) visibleWarmupRef.current = visibleKey;
       restoreAndAdvance();
     })();
 
@@ -290,6 +301,7 @@ export function useTilePreload({
     backgroundWarmupReadyRef,
     fastWarmupRef,
     skipPredictivePreload,
+    basemapIdentity,
     mapRef,
     setAnimationPhase,
     smoothBearingRef,

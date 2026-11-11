@@ -33,6 +33,25 @@ afterEach(() => {
 });
 
 describe('replay tile warmup camera', () => {
+  it('discovers only the selected Wayback imagery and rebuilds for a changed date', () => {
+    const coordinates = [[1.83, 41.58], [1.85, 41.60]];
+    const elevations: Array<{ elevation: number }> = [];
+    const visibleMapRef = { current: null };
+    const { rerender, unmount } = renderHook(({ waybackItemURL }) => useReplayTileWarmup({
+      allCoordinates: coordinates, animationPhase: 'idle', cameraMode: 'follow', diagnostics: NOOP_TILE_PRELOAD_OBSERVER,
+      elevationData: elevations, enabled: true, followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: false,
+      mapStyle: 'wayback', waybackItemURL, visibleMapRef, playbackProgress: 0, playbackSpeed: 1, totalDurationMs: 60000,
+    }), { initialProps: { waybackItemURL: 'https://example.test/2020/{level}/{row}/{col}' } });
+    const options = MapConstructor.mock.calls.at(-1)?.[0] as { style: { sources: Record<string, { tiles?: string[] }>; layers: Array<{ id: string; layout?: { visibility?: string } }> }; transformRequest: (url: string, type: string) => { url: string } };
+    expect(options.style.sources.wayback.tiles).toEqual(['https://example.test/2020/{z}/{y}/{x}']);
+    expect(options.style.layers.find(layer => layer.id === 'background')?.layout?.visibility).toBe('none');
+    expect(options.style.layers.some(layer => layer.id === 'carto-labels')).toBe(false);
+    expect(options.transformRequest('https://example.test/2020/12/2/1', 'Tile').url).toMatch(/^data:image/);
+    rerender({ waybackItemURL: 'https://example.test/2024/{level}/{row}/{col}' });
+    const updated = MapConstructor.mock.calls.at(-1)?.[0] as typeof options;
+    expect(updated.style.sources.wayback.tiles?.[0]).toContain('/2024/');
+    unmount();
+  });
   it('prepares a loaded route while idle and reuses that scan when play starts', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers(), blob: async () => new Blob(['tile']) }));
