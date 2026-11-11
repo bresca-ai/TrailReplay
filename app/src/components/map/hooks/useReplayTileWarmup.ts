@@ -112,7 +112,7 @@ interface UseReplayTileWarmupParams {
   diagnostics: TilePreloadObserver;
   locationFeatures?: LocationFeature[];
   zoomToPlace?: boolean;
-  onStartupReadyChange?: (ready: boolean, previouslyPlayed?: boolean) => void;
+  onStartupReadyChange?: (ready: boolean, canStartImmediately?: boolean) => void;
 }
 
 /**
@@ -140,15 +140,12 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const triggerWarmupRef = useRef<(() => void) | null>(null);
   const scannedValuesRef = useRef<unknown[] | null>(null);
   const startupCacheVersionRef = useRef(0);
-  const completedStartupRef = useRef<{ values: unknown[]; at: number; cacheVersion: number; previouslyPlayed: boolean } | null>(null);
+  const completedStartupRef = useRef<{ values: unknown[]; at: number; cacheVersion: number } | null>(null);
   useEffect(() => {
     if (animationPhase === 'preloading' && onStartupReadyChange) {
       onStartupReadyChange(false);
       resetRouteTileCacheStats();
       if (import.meta.env.DEV) document.documentElement.dataset.tileWarmupMode = 'scan';
-    }
-    if ((animationPhase === 'outro' || animationPhase === 'ended') && completedStartupRef.current) {
-      completedStartupRef.current.previouslyPlayed = true;
     }
   }, [animationPhase, onStartupReadyChange]);
   useEffect(() => {
@@ -382,10 +379,9 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       if (preparing && current.onStartupReadyChange && startupScannedRef.current) {
         if (scheduler.pendingRetained() === 0) {
           if (!scheduler.hasRetainedFailures() && startupCacheVersionRef.current === routeTileCacheVersion()) {
-            const wasPlayed = Boolean(previous?.previouslyPlayed && canReuseStartupWarmup(startupValues, previous, performance.now(), false));
-            completedStartupRef.current = { values: startupValues, at: performance.now(), cacheVersion: routeTileCacheVersion(), previouslyPlayed: wasPlayed };
+            completedStartupRef.current = { values: startupValues, at: performance.now(), cacheVersion: routeTileCacheVersion() };
           }
-          if (current.animationPhase === 'preloading') current.onStartupReadyChange(true, Boolean(completedStartupRef.current?.previouslyPlayed));
+          if (current.animationPhase === 'preloading') current.onStartupReadyChange(true, Boolean(completedStartupRef.current));
         }
         return;
       }

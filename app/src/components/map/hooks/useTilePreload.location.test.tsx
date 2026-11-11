@@ -83,7 +83,7 @@ it('keeps the opening covered until route-wide background warmup finishes', asyn
     unmount();
   } finally { vi.useRealTimers(); }
 });
-it('skips the repeated camera sweep after a verified completed replay', async () => {
+it('starts immediately after a successful background warmup', async () => {
   const { act } = await import('@testing-library/react');
   vi.useFakeTimers();
   try {

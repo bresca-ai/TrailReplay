@@ -52,8 +52,7 @@ describe('replay tile warmup camera', () => {
     expect(map.jumpTo).toHaveBeenCalled();
     const visits = map.jumpTo.mock.calls.length;
     rerender({ phase: 'preloading', playing: true });
-    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
-    expect(ready).toHaveBeenCalledWith(true, false);
+    expect(ready).toHaveBeenCalledWith(true, true);
     expect(map.jumpTo.mock.calls.length).toBe(visits);
     rerender({ phase: 'outro', playing: false });
     ready.mockClear();
@@ -82,7 +81,7 @@ describe('replay tile warmup camera', () => {
     expect(map.jumpTo.mock.calls.some(([pose]) => pose.center[0] > 32.9)).toBe(true);
     rerender({ route: second, phase: 'preloading', playing: true });
     await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
-    expect(ready).toHaveBeenCalledWith(true, false);
+    expect(ready).toHaveBeenCalledWith(true, true);
     unmount();
   });
   it('reuses only a recent successful warmup with unchanged route and camera settings', () => {

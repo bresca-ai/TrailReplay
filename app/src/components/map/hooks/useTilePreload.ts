@@ -252,7 +252,7 @@ export function useTilePreload({
         await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
       }
       if (cancelled) return;
-      // A completed replay has already visited the opening views.
+      // The route-critical background warmup has completed successfully.
       if (fastWarmupRef?.current) {
         restoreAndAdvance(true);
         return;
