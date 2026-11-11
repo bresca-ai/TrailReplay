@@ -64,3 +64,27 @@ describe('usePictureRouteSync route actions', () => {
     });
   });
 });
+
+describe('media timing', () => {
+  beforeEach(() => useAppStore.setState(initialState, true));
+
+  it('migrates manually placed photos and videos and keeps them on the route when pace changes', async () => {
+    const track = unevenTrack();
+    const point = track.points[2];
+    useAppStore.setState((state) => {
+      state.tracks = [track];
+      state.journeySegments = [{ id: 'route-segment', type: 'track', trackId: track.id, duration: 60_000 }];
+      state.pictures = [{ id: 'photo', file: null, url: '', isPlaceholder: false, lat: point.lat, lon: point.lon, progress: 0.5, position: 0.5, displayDuration: 3000, placementSource: 'manual' }];
+      state.videos = [{ id: 'video', file: null, url: '', isPlaceholder: false, lat: point.lat, lon: point.lon, progress: 0.5, placementSource: 'manual' }];
+    });
+    renderHook(() => usePictureRouteSync());
+    await waitFor(() => expect(useAppStore.getState().pictures[0].routeSegmentId).toBe('route-segment'));
+    act(() => useAppStore.getState().setRouteTimingMode('uniform'));
+    await waitFor(() => {
+      expect(useAppStore.getState().pictures[0].progress).toBeCloseTo(0.2, 2);
+      expect(useAppStore.getState().videos[0].progress).toBeCloseTo(0.2, 2);
+    });
+    act(() => useAppStore.getState().setRouteTimingMode('recorded'));
+    await waitFor(() => expect(useAppStore.getState().pictures[0].progress).toBeCloseTo(0.5, 2));
+  });
+});
