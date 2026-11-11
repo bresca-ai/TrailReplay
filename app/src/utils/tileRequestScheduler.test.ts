@@ -7,6 +7,49 @@ import {
 } from './tileRequestScheduler';
 
 describe('TileRequestScheduler', () => {
+  it('retries a failed discovery request without needing the map to rediscover it', async () => {
+    const load = vi.fn().mockRejectedValueOnce(new Error('temporary')).mockResolvedValue(undefined);
+    const completed = vi.fn();
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load, onComplete: completed, retryDelayMs: 1 });
+    scheduler.enqueue({ key: '12/1/2', priority: 0, sourceId: 'satellite', url: 'tile' });
+    await vi.waitFor(() => expect(completed).toHaveBeenCalledTimes(1));
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(scheduler.snapshot().queued).toBe(0);
+  });
+
+  it('cancels delayed retries when playback resets', async () => {
+    vi.useFakeTimers();
+    try {
+      const load = vi.fn().mockRejectedValue(new Error('temporary'));
+      const scheduler = new TileRequestScheduler({ concurrency: 1, load, retryDelayMs: 1000 });
+      scheduler.enqueue({ key: '12/1/2', priority: 0, sourceId: 'satellite', url: 'tile' });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(scheduler.snapshot().queued).toBe(1);
+      scheduler.clear();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(scheduler.snapshot().queued).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not leave a delayed duplicate when a failed tile is rediscovered', async () => {
+    vi.useFakeTimers();
+    try {
+      const load = vi.fn().mockRejectedValueOnce(new Error('temporary')).mockResolvedValue(undefined);
+      const scheduler = new TileRequestScheduler({ concurrency: 1, load, retryDelayMs: 1000 });
+      const tile = { key: '12/1/2', priority: 0, sourceId: 'satellite', url: 'tile' };
+      scheduler.enqueue(tile);
+      await vi.advanceTimersByTimeAsync(0);
+      scheduler.enqueue(tile);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(load).toHaveBeenCalledTimes(2);
+      expect(scheduler.snapshot().queued).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('does not queue duplicate requests while a tile is already loading', async () => {
     let finish!: () => void;
     const pending = new Promise<void>(resolve => { finish = resolve; });

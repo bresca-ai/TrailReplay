@@ -47,6 +47,28 @@ it('warms the first playback view before the long zoom-in sequence', () => {
   expect(jumpTo.mock.calls[0][0].zoom).toBeGreaterThan(10);
   unmount();
 });
+it('keeps the opening covered until route-wide background warmup finishes', async () => {
+  const { act } = await import('@testing-library/react');
+  vi.useFakeTimers();
+  try {
+    const map = { jumpTo: vi.fn(), cameraForBounds: () => ({ center: [0, 0], zoom: 5 }),
+      once: vi.fn(), off: vi.fn() } as unknown as MapLibreMap;
+    const setAnimationPhase = vi.fn();
+    const backgroundWarmupReadyRef = { current: false };
+    const { unmount } = renderHook(() => useTilePreload({
+      allCoordinates: [[0, 0], [0.01, 0]], animationPhase: 'preloading', cameraMode: 'follow',
+      elevationData: [], followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: map },
+      setAnimationPhase, smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 }, totalDurationMs: 60000,
+      backgroundWarmupReadyRef,
+    }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000); });
+    expect(setAnimationPhase).not.toHaveBeenCalled();
+    backgroundWarmupReadyRef.current = true;
+    await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+    expect(setAnimationPhase).toHaveBeenCalledWith('intro');
+    unmount();
+  } finally { vi.useRealTimers(); }
+});
 it('waits for the restored place view before revealing the opening frame', async () => {
   const { act } = await import('@testing-library/react');
   vi.useFakeTimers();

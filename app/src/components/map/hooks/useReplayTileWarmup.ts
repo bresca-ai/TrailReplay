@@ -104,6 +104,7 @@ interface UseReplayTileWarmupParams {
   diagnostics: TilePreloadObserver;
   locationFeatures?: LocationFeature[];
   zoomToPlace?: boolean;
+  onStartupReadyChange?: (ready: boolean) => void;
 }
 
 /**
@@ -112,6 +113,7 @@ interface UseReplayTileWarmupParams {
  * close follow-behind shots receive a wider horizon and more samples at turns.
  */
 export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
+  const { animationPhase, onStartupReadyChange } = params;
   const latestParamsRef = useRef(params);
   const [scheduler] = useState(() => new TileRequestScheduler({
     concurrency: 6,
@@ -125,6 +127,13 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const isWarmupPoseActiveRef = useRef(false);
   const discoveryOffsetRef = useRef(0);
   const discoveryScanTimeRef = useRef(0);
+  const startupScannedRef = useRef(false);
+  useEffect(() => {
+    if (animationPhase === 'preloading' && onStartupReadyChange) {
+      onStartupReadyChange(false);
+      startupScannedRef.current = false;
+    }
+  }, [animationPhase, onStartupReadyChange]);
   useEffect(() => {
     if (!import.meta.env.DEV || typeof document === 'undefined') return;
     const publish = () => { document.documentElement.dataset.tileWarmupQueue = JSON.stringify(scheduler.snapshot()); };
@@ -321,6 +330,12 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         || (current.cameraMode === 'aerial-follow' && current.aerialTerrainLoading)
       ) return;
 
+      if (current.animationPhase === 'preloading' && current.onStartupReadyChange && startupScannedRef.current) {
+        const pending = scheduler.snapshot();
+        if (pending.active === 0 && pending.queued === 0) current.onStartupReadyChange(true);
+        return;
+      }
+
       isWarming = true;
       isWarmupPoseActiveRef.current = true;
       // Do not discard the backlog: MapLibre can retain discovery tiles and
@@ -330,12 +345,14 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       discoveryScanTimeRef.current = performance.now() / 1000;
 
       const isClose3D = current.cameraMode === 'aerial-follow' || (current.cameraMode === 'follow-behind' && current.followBehindZoomLevel >= 66);
+      const startupScan = current.animationPhase === 'preloading' && Boolean(current.onStartupReadyChange);
       const horizonMs = replayWarmupHorizonMs(
+        startupScan ? current.totalDurationMs :
         (isClose3D ? CLOSE_3D_HORIZON_MS : NORMAL_HORIZON_MS) * Math.max(0.25, current.playbackSpeed),
         current.playbackProgress,
         current.totalDurationMs || 60000,
       );
-      const sampleCount = isClose3D ? CLOSE_3D_SAMPLE_COUNT : NORMAL_SAMPLE_COUNT;
+      const sampleCount = startupScan ? Math.max(32, Math.min(96, Math.ceil(current.totalDurationMs / 1000))) : isClose3D ? CLOSE_3D_SAMPLE_COUNT : NORMAL_SAMPLE_COUNT;
       const viewOffsets = new Map<ReplayCameraPose, number>();
       const playbackPoses = current.cameraMode === 'cinematic' || current.cameraMode === 'aerial-follow'
         ? getOpeningPreloadProgresses(current.totalDurationMs || 60000, horizonMs, sampleCount)
@@ -445,6 +462,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           discoveryOffsetRef.current = viewOffsets.get(pose) ?? 0;
           await warmPose(map, pose);
         }
+        if (startupScan && !cancelled) startupScannedRef.current = true;
       } finally {
         isWarming = false;
       }

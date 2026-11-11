@@ -45,6 +45,7 @@ interface UseTilePreloadParams {
   aerialTerrainPlan?: number[] | null;
   introStartOverride?: ReplayCameraPose;
   introStageOverrides?: ReplayCameraPose[];
+  backgroundWarmupReadyRef?: React.MutableRefObject<boolean>;
 }
 
 /**
@@ -75,6 +76,7 @@ export function useTilePreload({
   aerialTerrainPlan,
   introStartOverride,
   introStageOverrides,
+  backgroundWarmupReadyRef,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
 
@@ -234,6 +236,11 @@ export function useTilePreload({
         if (cancelled || Date.now() >= deadline) break;
         await warmPose(pose);
       }
+      // Keep the preparation cover in place until the offscreen camera has
+      // visited the entire planned route and its tile request queue drains.
+      while (!cancelled && backgroundWarmupReadyRef && !backgroundWarmupReadyRef.current) {
+        await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
+      }
       restoreAndAdvance();
     })();
 
@@ -259,6 +266,7 @@ export function useTilePreload({
     locationBoundariesLoading,
     aerialTerrainLoading,
     aerialTerrainPlan,
+    backgroundWarmupReadyRef,
     mapRef,
     setAnimationPhase,
     smoothBearingRef,

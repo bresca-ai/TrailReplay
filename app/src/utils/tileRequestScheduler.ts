@@ -16,6 +16,7 @@ export interface TileRequestSchedulerOptions {
   isStale?: (request: TileRequest) => boolean;
   onComplete?: (request: TileRequest) => void;
   onError?: (request: TileRequest) => void;
+  retryDelayMs?: number;
 }
 
 /**
@@ -29,6 +30,8 @@ export class TileRequestScheduler {
   private readonly activeControllers = new Map<string, AbortController>();
   private readonly completed = new Map<string, number>();
   private readonly queued = new Map<string, QueuedTileRequest>();
+  private readonly retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly retryCounts = new Map<string, number>();
   private sequence = 0;
   private generation = 0;
   private readonly options: TileRequestSchedulerOptions;
@@ -46,6 +49,11 @@ export class TileRequestScheduler {
     const completedAt = this.completed.get(id);
     if ((this.activeIds.has(id) && !this.activeControllers.get(id)?.signal.aborted)
       || (completedAt !== undefined && Date.now() - completedAt < 60_000)) return;
+    const retryTimer = this.retryTimers.get(id);
+    if (retryTimer !== undefined) {
+      clearTimeout(retryTimer);
+      this.retryTimers.delete(id);
+    }
     this.completed.delete(id);
 
     const existing = this.queued.get(id);
@@ -67,10 +75,13 @@ export class TileRequestScheduler {
   /** Drop obsolete predictions without interrupting in-flight requests. */
   clearQueued(): void {
     this.queued.clear();
+    for (const timer of this.retryTimers.values()) clearTimeout(timer);
+    this.retryTimers.clear();
+    this.retryCounts.clear();
   }
 
   snapshot(): { active: number; queued: number; completed: number } {
-    return { active: this.active, queued: this.queued.size, completed: this.completed.size };
+    return { active: this.active, queued: this.queued.size + this.retryTimers.size, completed: this.completed.size };
   }
 
   private drain(): void {
@@ -92,10 +103,25 @@ export class TileRequestScheduler {
         .then(() => {
           if (generation === this.generation) {
             this.completed.set(id, Date.now());
+            this.retryCounts.delete(id);
             this.options.onComplete?.(next);
           }
         })
-        .catch(() => { if (generation === this.generation) this.options.onError?.(next); })
+        .catch(() => {
+          if (generation !== this.generation) return;
+          const retries = this.retryCounts.get(id) ?? 0;
+          if (retries >= 2) {
+            this.retryCounts.delete(id);
+            this.options.onError?.(next);
+            return;
+          }
+          this.retryCounts.set(id, retries + 1);
+          const timer = setTimeout(() => {
+            this.retryTimers.delete(id);
+            if (generation === this.generation) this.enqueue(next);
+          }, (this.options.retryDelayMs ?? 1000) * (retries + 1));
+          this.retryTimers.set(id, timer);
+        })
         .finally(() => {
           this.activeControllers.delete(id);
           this.active -= 1;

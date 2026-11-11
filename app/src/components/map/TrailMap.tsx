@@ -69,6 +69,8 @@ export function TrailMap(_props: TrailMapProps) {
   const targetBearingRef = useRef<number>(0);
   const loadZoomDoneRef = useRef<boolean>(false);
   const handledZoomButtonPressRef = useRef(false);
+  const startupWarmupReadyRef = useRef(false);
+  const setStartupWarmupReady = useCallback((ready: boolean) => { startupWarmupReadyRef.current = ready; }, []);
   const restoredCameraKeyRef = useRef<string | null>(null);
 
   const tracks = useAppStore((state) => state.tracks);
@@ -419,28 +421,6 @@ export function TrailMap(_props: TrailMapProps) {
     show3DTerrain: settings.show3DTerrain,
   });
 
-  useTilePreload({
-    allCoordinates: cameraPathCoordinates,
-    animationPhase,
-    cameraMode,
-    cinematicKeyframes,
-    cameraStability: cameraSettings.cameraStability,
-    elevationData,
-    followBehindZoomLevel,
-    followBehindPitch: cameraSettings.followBehindPitch,
-    isMapLoaded,
-    isPlaying: playback.isPlaying,
-    mapRef: map,
-    setAnimationPhase,
-    smoothBearingRef,
-    targetBearingRef,
-    totalDurationMs: playback.totalDuration,
-    locationBoundariesLoading: locationChapter.loading,
-    aerialTerrainLoading: cameraMode === 'aerial-follow' && terrainExaggeration > 0 && cameraPathCoordinates.length >= 2 && !matchingTerrainPlan,
-    aerialTerrainPlan: matchingTerrainPlan?.plan ?? null,
-    introStartOverride: locationChapter.introCamera,
-    introStageOverrides,
-  });
 
   const tileDiagnostics = useTilePreloadDiagnostics({
     isMapLoaded,
@@ -476,6 +456,31 @@ export function TrailMap(_props: TrailMapProps) {
     terrainExaggeration,
     locationFeatures: locationChapter.features,
     zoomToPlace: Boolean(settings.locationChapters?.zoomToPlace),
+    onStartupReadyChange: !isExporting && cameraMode !== 'overview' ? setStartupWarmupReady : undefined,
+  });
+
+  useTilePreload({
+    allCoordinates: cameraPathCoordinates,
+    animationPhase,
+    cameraMode,
+    cinematicKeyframes,
+    cameraStability: cameraSettings.cameraStability,
+    elevationData,
+    followBehindZoomLevel,
+    followBehindPitch: cameraSettings.followBehindPitch,
+    isMapLoaded,
+    isPlaying: playback.isPlaying,
+    mapRef: map,
+    setAnimationPhase,
+    smoothBearingRef,
+    targetBearingRef,
+    totalDurationMs: playback.totalDuration,
+    locationBoundariesLoading: locationChapter.loading,
+    aerialTerrainLoading: cameraMode === 'aerial-follow' && terrainExaggeration > 0 && cameraPathCoordinates.length >= 2 && !matchingTerrainPlan,
+    aerialTerrainPlan: matchingTerrainPlan?.plan ?? null,
+    introStartOverride: locationChapter.introCamera,
+    introStageOverrides,
+    backgroundWarmupReadyRef: !isExporting && cameraMode !== 'overview' ? startupWarmupReadyRef : undefined,
   });
 
   useEffect(() => {
