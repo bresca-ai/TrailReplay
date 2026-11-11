@@ -445,7 +445,7 @@ export function TrailMap(_props: TrailMapProps) {
     // time duplicates its tile/GPU cache and caused memory to climb into
     // gigabytes during annotation slowdowns. Unmount it for the export and let
     // the recording map own tile loading until the export completes.
-    enabled: !isExporting && (playback.isPlaying || animationPhase === 'preloading' || animationPhase === 'intro' || animationPhase === 'outro'),
+    enabled: !isExporting && settings.mapStyle !== 'street' && (playback.isPlaying || animationPhase === 'preloading' || animationPhase === 'intro' || animationPhase === 'outro'),
     followBehindZoomLevel,
     followBehindPitch: cameraSettings.followBehindPitch,
     isMapLoaded,
@@ -482,6 +482,8 @@ export function TrailMap(_props: TrailMapProps) {
     introStartOverride: locationChapter.introCamera,
     introStageOverrides,
     backgroundWarmupReadyRef: !isExporting && cameraMode !== 'overview' ? startupWarmupReadyRef : undefined,
+    // OSM's standard tile service prohibits speculative tile prefetching.
+    skipPredictivePreload: settings.mapStyle === 'street',
   });
 
   useEffect(() => {

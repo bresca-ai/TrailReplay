@@ -46,6 +46,7 @@ interface UseTilePreloadParams {
   introStartOverride?: ReplayCameraPose;
   introStageOverrides?: ReplayCameraPose[];
   backgroundWarmupReadyRef?: React.MutableRefObject<boolean>;
+  skipPredictivePreload?: boolean;
 }
 
 /**
@@ -77,6 +78,7 @@ export function useTilePreload({
   introStartOverride,
   introStageOverrides,
   backgroundWarmupReadyRef,
+  skipPredictivePreload = false,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
 
@@ -93,6 +95,13 @@ export function useTilePreload({
 
     // The opening reveal needs the first polygon before the fly-in starts.
     if (locationBoundariesLoading || aerialTerrainLoading) return;
+
+    // Some basemap providers allow normal viewport loading but prohibit
+    // speculative scans of future viewports.
+    if (skipPredictivePreload) {
+      setAnimationPhase('intro');
+      return;
+    }
 
     const map = mapRef.current;
     if (!map || !isMapLoaded || allCoordinates.length === 0 || cameraMode === 'overview') {
@@ -193,10 +202,9 @@ export function useTilePreload({
         smoothBearingRef.current = introPose.bearing;
         targetBearingRef.current = introPose.bearing;
       }
-      if (!introStartOverride) { setAnimationPhase('intro'); return; }
       // jumpTo schedules a new render. Starting the fly-in immediately can
       // expose the last warm-up frame (or empty tiles) for the opening frame.
-      // Give the restored overview a bounded chance to settle before revealing it.
+      // Give every restored overview a bounded chance to settle before revealing it.
       const advance = () => {
         if (cancelled || pendingAdvance !== advance) return;
         pendingAdvance = null;
@@ -269,6 +277,7 @@ export function useTilePreload({
     aerialTerrainLoading,
     aerialTerrainPlan,
     backgroundWarmupReadyRef,
+    skipPredictivePreload,
     mapRef,
     setAnimationPhase,
     smoothBearingRef,

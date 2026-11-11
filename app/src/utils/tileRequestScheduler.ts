@@ -109,10 +109,18 @@ export class TileRequestScheduler {
 
   private drain(): void {
     while (this.active < this.options.concurrency && this.queued.size > 0) {
-      const next = [...this.queued.values()].filter(request => !this.activeIds.has(`${request.sourceId}:${request.key}`)).sort((left, right) => (
-        Number(this.options.isStale?.(left) ?? false) - Number(this.options.isStale?.(right) ?? false)
-        || left.priority - right.priority || left.sequence - right.sequence
-      ))[0];
+      let next: QueuedTileRequest | undefined;
+      let nextIsStale = false;
+      for (const request of this.queued.values()) {
+        if (this.activeIds.has(`${request.sourceId}:${request.key}`)) continue;
+        const isStale = this.options.isStale?.(request) ?? false;
+        if (!next || Number(isStale) < Number(nextIsStale)
+          || (isStale === nextIsStale && (request.priority < next.priority
+            || (request.priority === next.priority && request.sequence < next.sequence)))) {
+          next = request;
+          nextIsStale = isStale;
+        }
+      }
       if (!next) return;
 
       const id = `${next.sourceId}:${next.key}`;

@@ -96,6 +96,12 @@ export function useTilePreloadDiagnostics({
     const publishSnapshot = () => {
       const snapshot = diagnostics.snapshot();
       document.documentElement.dataset.tilePreloadDiagnostics = JSON.stringify(snapshot.summary);
+      const map = mapRef.current;
+      document.documentElement.dataset.tileRenderReadiness = JSON.stringify({
+        tilesLoaded: map ? map.areTilesLoaded() : null,
+        mapLoaded: map ? map.loaded() : null,
+        moving: map ? map.isMoving() : null,
+      });
       const now = performance.now();
       const recent = snapshot.records.filter(record => record.sourceId === 'satellite' && record.neededAt !== null && now - record.neededAt < 3000);
       const zooms: Record<string, number> = {};
@@ -126,10 +132,11 @@ export function useTilePreloadDiagnostics({
       window.clearInterval(intervalId);
       delete window.__trailReplayTileDiagnostics;
       delete document.documentElement.dataset.tilePreloadDiagnostics;
+      delete document.documentElement.dataset.tileRenderReadiness;
       delete document.documentElement.dataset.tilePreloadRecent;
       delete document.documentElement.dataset.terrainPreloadRecent;
     };
-  }, [diagnostics]);
+  }, [diagnostics, mapRef]);
 
   return diagnostics;
 }
