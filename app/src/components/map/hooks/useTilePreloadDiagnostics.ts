@@ -94,7 +94,30 @@ export function useTilePreloadDiagnostics({
     if (!isDevelopmentDiagnostics(diagnostics)) return;
     window.__trailReplayTileDiagnostics = () => diagnostics.snapshot();
     const publishSnapshot = () => {
-      document.documentElement.dataset.tilePreloadDiagnostics = JSON.stringify(diagnostics.snapshot().summary);
+      const snapshot = diagnostics.snapshot();
+      document.documentElement.dataset.tilePreloadDiagnostics = JSON.stringify(snapshot.summary);
+      const now = performance.now();
+      const recent = snapshot.records.filter(record => record.sourceId === 'satellite' && record.neededAt !== null && now - record.neededAt < 3000);
+      const zooms: Record<string, number> = {};
+      for (const record of recent) {
+        const zoom = record.key.split('/')[0];
+        zooms[zoom] = (zooms[zoom] ?? 0) + 1;
+      }
+      document.documentElement.dataset.tilePreloadRecent = JSON.stringify({
+        total: recent.length,
+        notPredicted: recent.filter(record => record.firstPredictedAt === null || record.firstPredictedAt > record.neededAt!).length,
+        readyBefore: recent.filter(record => record.loadedAt !== null && record.loadedAt <= record.neededAt!).length,
+        readyAfter: recent.filter(record => record.loadedAt !== null && record.loadedAt > record.neededAt!).length,
+        notReady: recent.filter(record => record.loadedAt === null).length,
+        zooms,
+      });
+      const recentTerrain = snapshot.records.filter(record => record.sourceId === 'terrain-dem' && record.neededAt !== null && now - record.neededAt < 3000);
+      document.documentElement.dataset.terrainPreloadRecent = JSON.stringify({
+        total: recentTerrain.length,
+        notPredicted: recentTerrain.filter(record => record.firstPredictedAt === null || record.firstPredictedAt > record.neededAt!).length,
+        readyBefore: recentTerrain.filter(record => record.loadedAt !== null && record.loadedAt <= record.neededAt!).length,
+        notReady: recentTerrain.filter(record => record.loadedAt === null).length,
+      });
     };
     publishSnapshot();
     const intervalId = window.setInterval(publishSnapshot, 500);
@@ -103,6 +126,8 @@ export function useTilePreloadDiagnostics({
       window.clearInterval(intervalId);
       delete window.__trailReplayTileDiagnostics;
       delete document.documentElement.dataset.tilePreloadDiagnostics;
+      delete document.documentElement.dataset.tilePreloadRecent;
+      delete document.documentElement.dataset.terrainPreloadRecent;
     };
   }, [diagnostics]);
 

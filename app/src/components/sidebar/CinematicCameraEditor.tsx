@@ -19,6 +19,7 @@ import { mapGlobalRef } from '@/utils/mapRef';
 import { formatDuration } from '@/utils/units';
 import { trackEvent } from '@/utils/analytics';
 import { getPlaybackCameraPose, getRouteBearingAtProgress } from '@/utils/replayCameraPlan';
+import { getReadyAerialTerrainPlan, terrainPlanBearing, terrainPlanZoomOffset } from '@/utils/aerialTerrainPlan';
 import {
   CINEMATIC_BEARING_MAX,
   CINEMATIC_BEARING_MIN,
@@ -209,6 +210,10 @@ export function CinematicCameraEditor() {
 
   const draftPoseState = useState({ bearingDeg: 180, pitchDeg: 55, zoom: 14 });
   const [draftPose, setDraftPose] = draftPoseState;
+  const wasComposingRef = useRef(false);
+  const hasPlayedRef = useRef(false);
+  const skipComposePreviewRef = useRef(false);
+  const holdPausedViewRef = useRef(false);
 
   const routeHeadingDeg = cameraPathCoordinates.length > 0
     ? getRouteBearingAtProgress(cameraPathCoordinates, playback.progress)
@@ -232,7 +237,25 @@ export function CinematicCameraEditor() {
   // was left after editing a different keyframe. Also resyncs when playback
   // stops, so the ball matches the frame the replay left on screen.
   useEffect(() => {
-    if (!isComposing) return;
+    if (!isComposing) {
+      wasComposingRef.current = false;
+      hasPlayedRef.current = true;
+      return;
+    }
+
+    // On pause, keep the actual flight pose instead of replacing it with a
+    // different fallback on the first editor render. Seeking while already
+    // paused still computes a pose for the newly selected route position.
+    const map = mapGlobalRef.current;
+    if (!wasComposingRef.current && hasPlayedRef.current && map) {
+      wasComposingRef.current = true;
+      skipComposePreviewRef.current = true;
+      holdPausedViewRef.current = true;
+      setDraftPose({ bearingDeg: map.getBearing(), pitchDeg: map.getPitch(), zoom: map.getZoom() });
+      return;
+    }
+    wasComposingRef.current = true;
+    holdPausedViewRef.current = false;
 
     const cinematicPose = getCinematicCameraPose({
       keyframes: preparedKeyframes,
@@ -241,13 +264,18 @@ export function CinematicCameraEditor() {
       routeHeadingDeg,
     });
     const pose = cinematicPose ?? getPlaybackCameraPose({
-      cameraMode: 'follow-behind',
+      cameraMode: 'aerial-follow',
       coordinates: cameraPathCoordinates,
       elevationData,
       followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
       progress: playback.progress,
     });
     if (pose) {
+      const automaticPlan = !cinematicPose ? getReadyAerialTerrainPlan(cameraPathCoordinates) : null;
+      if (automaticPlan?.length) {
+        pose.bearing = terrainPlanBearing(automaticPlan, playback.progress);
+        pose.zoom += terrainPlanZoomOffset(automaticPlan, playback.progress);
+      }
       setDraftPose({ bearingDeg: pose.bearing, pitchDeg: pose.pitch, zoom: pose.zoom });
     }
     // Deliberately keyed on progress and on whether we are composing at all:
@@ -263,9 +291,17 @@ export function CinematicCameraEditor() {
   // nothing here that can decouple what's shown from what gets captured.
   useEffect(() => {
     if (!isComposing) return;
+    if (skipComposePreviewRef.current) {
+      skipComposePreviewRef.current = false;
+      return;
+    }
 
     const map = mapGlobalRef.current;
     if (!map || !currentPosition) return;
+    if (holdPausedViewRef.current && Math.abs(map.getBearing() - draftPose.bearingDeg) < 0.001
+      && Math.abs(map.getPitch() - draftPose.pitchDeg) < 0.001
+      && Math.abs(map.getZoom() - draftPose.zoom) < 0.001) return;
+    holdPausedViewRef.current = false;
 
     map.jumpTo({
       center: [currentPosition.lon, currentPosition.lat],

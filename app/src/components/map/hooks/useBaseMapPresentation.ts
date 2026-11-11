@@ -4,6 +4,7 @@ import type { AppSettings, TrailStyleSettings } from '@/types';
 import { satelliteRoofs } from '@/components/map/satelliteRoofs';
 import { applyBasemapFilter } from '@/components/map/mapFilters';
 import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
+import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
 import {
   BASEMAP_FALLBACK_MAX_ZOOM,
   BASEMAP_PRESENTATIONS,
@@ -203,7 +204,7 @@ export function useBaseMapPresentation({
       if (map.getSource('terrain-dem')) {
         map.setTerrain({
           source: 'terrain-dem',
-          exaggeration: settings.recordedElevationPrototype ? 1 : Math.max(0.5, Math.min(3, settings.terrainExaggeration ?? 1.5))
+          exaggeration: effectiveTerrainExaggeration(settings)
         });
       }
       return;

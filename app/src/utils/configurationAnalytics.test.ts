@@ -25,7 +25,7 @@ describe('configuration usage analytics', () => {
     expect(getCameraUsageAnalyticsParams(camera).camera_stability_bucket).toBe('balanced');
     expect(getCameraUsageAnalyticsParams({ ...camera, cameraStability: 0 }).camera_stability_bucket).toBe('stable');
     expect(getCameraUsageAnalyticsParams({ ...camera, cameraStability: 1 }).camera_stability_bucket).toBe('reactive');
-    expect(getCameraUsageAnalyticsParams({ ...camera, followBehindZoomLevel: 0 }).camera_zoom_bucket).toBe('far');
+    expect(getCameraUsageAnalyticsParams({ ...camera, mode: 'follow-behind', followBehindZoomLevel: 0 }).camera_zoom_bucket).toBe('far');
     expect(getCameraUsageAnalyticsParams({ ...camera, mode: 'overview' })).toEqual({
       camera_stability_bucket: 'not_applicable', camera_zoom_bucket: 'not_applicable',
     });
@@ -33,7 +33,7 @@ describe('configuration usage analytics', () => {
 
   it('reports both used defaults and disabled options with bounded values', () => {
     const usage = new Map(getConfigurationUsage(configuration()));
-    expect(usage.get('camera_mode')).toBe('follow-behind');
+    expect(usage.get('camera_mode')).toBe('cinematic');
     expect(usage.get('camera_stability')).toBe('balanced');
     expect(usage.get('annotations')).toBe('none');
     expect(usage.get('terrain_3d')).toBe('enabled');

@@ -1,6 +1,7 @@
 export interface TileRequest {
   key: string;
   priority: number;
+  neededAt?: number;
   sourceId: string;
   url: string;
 }
@@ -11,7 +12,8 @@ interface QueuedTileRequest extends TileRequest {
 
 export interface TileRequestSchedulerOptions {
   concurrency: number;
-  load: (url: string) => Promise<void>;
+  load: (url: string, signal?: AbortSignal) => Promise<void>;
+  isStale?: (request: TileRequest) => boolean;
   onComplete?: (request: TileRequest) => void;
   onError?: (request: TileRequest) => void;
 }
@@ -23,48 +25,81 @@ export interface TileRequestSchedulerOptions {
  */
 export class TileRequestScheduler {
   private active = 0;
-  private readonly completed = new Set<string>();
+  private readonly activeIds = new Set<string>();
+  private readonly activeControllers = new Map<string, AbortController>();
+  private readonly completed = new Map<string, number>();
   private readonly queued = new Map<string, QueuedTileRequest>();
   private sequence = 0;
+  private generation = 0;
   private readonly options: TileRequestSchedulerOptions;
 
   constructor(options: TileRequestSchedulerOptions) {
     this.options = options;
   }
 
+  setOnComplete(onComplete: TileRequestSchedulerOptions['onComplete']): void {
+    this.options.onComplete = onComplete;
+  }
+
   enqueue(request: TileRequest): void {
     const id = `${request.sourceId}:${request.key}`;
-    if (this.completed.has(id)) return;
+    const completedAt = this.completed.get(id);
+    if ((this.activeIds.has(id) && !this.activeControllers.get(id)?.signal.aborted)
+      || (completedAt !== undefined && Date.now() - completedAt < 60_000)) return;
+    this.completed.delete(id);
 
     const existing = this.queued.get(id);
-    if (!existing || request.priority < existing.priority) {
+    const wasStale = existing ? (this.options.isStale?.(existing) ?? false) : false;
+    const isStale = this.options.isStale?.(request) ?? false;
+    if (!existing || (wasStale && !isStale) || (wasStale === isStale && request.priority < existing.priority)) {
       this.queued.set(id, { ...request, sequence: this.sequence++ });
     }
     this.drain();
   }
 
   clear(): void {
+    this.clearQueued();
+    this.completed.clear();
+    this.generation++;
+    for (const controller of this.activeControllers.values()) controller.abort();
+  }
+
+  /** Drop obsolete predictions without interrupting in-flight requests. */
+  clearQueued(): void {
     this.queued.clear();
+  }
+
+  snapshot(): { active: number; queued: number; completed: number } {
+    return { active: this.active, queued: this.queued.size, completed: this.completed.size };
   }
 
   private drain(): void {
     while (this.active < this.options.concurrency && this.queued.size > 0) {
-      const next = [...this.queued.values()].sort((left, right) => (
-        left.priority - right.priority || left.sequence - right.sequence
+      const next = [...this.queued.values()].filter(request => !this.activeIds.has(`${request.sourceId}:${request.key}`)).sort((left, right) => (
+        Number(this.options.isStale?.(left) ?? false) - Number(this.options.isStale?.(right) ?? false)
+        || left.priority - right.priority || left.sequence - right.sequence
       ))[0];
       if (!next) return;
 
       const id = `${next.sourceId}:${next.key}`;
       this.queued.delete(id);
       this.active += 1;
-      void this.options.load(next.url)
+      this.activeIds.add(id);
+      const generation = this.generation;
+      const controller = new AbortController();
+      this.activeControllers.set(id, controller);
+      void this.options.load(next.url, controller.signal)
         .then(() => {
-          this.completed.add(id);
-          this.options.onComplete?.(next);
+          if (generation === this.generation) {
+            this.completed.set(id, Date.now());
+            this.options.onComplete?.(next);
+          }
         })
-        .catch(() => this.options.onError?.(next))
+        .catch(() => { if (generation === this.generation) this.options.onError?.(next); })
         .finally(() => {
+          this.activeControllers.delete(id);
           this.active -= 1;
+          this.activeIds.delete(id);
           this.drain();
         });
     }
@@ -82,11 +117,11 @@ const TILE_TEMPLATES: Record<string, string> = {
   'terrain-dem': 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
 };
 
-export function getTileRequestUrl(sourceId: string, key: string): string | null {
+export function getTileRequestUrl(sourceId: string, key: string, sourceTemplate?: string): string | null {
   const canonicalSourceId = sourceId.startsWith('fallback-')
     ? sourceId.slice('fallback-'.length)
     : sourceId;
-  const template = TILE_TEMPLATES[canonicalSourceId];
+  const template = TILE_TEMPLATES[canonicalSourceId] ?? sourceTemplate;
   const [z, x, y] = key.split('/');
   if (!template || !z || !x || !y) return null;
   return template.replace('{z}', z).replace('{x}', x).replace('{y}', y);
@@ -100,15 +135,51 @@ export function getTilePriority(sourceId: string): number {
   return 0;
 }
 
-export function preloadTileImage(url: string): Promise<void> {
+function loadTileImageOnce(url: string, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(new Error('Tile request cancelled')); return; }
     const image = new Image();
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      image.onload = null;
+      image.onerror = null;
+      signal?.removeEventListener('abort', onAbort);
+      if (error) reject(error); else resolve();
+    };
+    const onAbort = () => {
+      finish(new Error('Tile request cancelled'));
+      image.src = '';
+    };
+    const timeout = setTimeout(() => {
+      finish(new Error('Tile request timed out'));
+      image.src = '';
+    }, 5000);
+    signal?.addEventListener('abort', onAbort, { once: true });
     // Match MapLibre's CORS-mode tile requests. Without this, the browser can
     // cache a response fetched without Origin/ACAO headers and later reject
     // that cached response when MapLibre requests the same terrain tile.
     image.crossOrigin = 'anonymous';
-    image.onload = () => resolve();
-    image.onerror = () => reject(new Error(`Tile request failed: ${url}`));
+    image.onload = () => finish();
+    image.onerror = () => finish(new Error('Tile request failed'));
     image.src = url;
   });
+}
+
+/** Retry one transient provider failure even if the discovery map retains the tile ID. */
+export async function preloadTileImage(url: string, signal?: AbortSignal): Promise<void> {
+  try {
+    await loadTileImageOnce(url, signal);
+  } catch {
+    if (signal?.aborted) throw new Error('Tile request cancelled');
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => { clearTimeout(timeout); reject(new Error('Tile request cancelled')); };
+      const timeout = setTimeout(() => { signal?.removeEventListener('abort', onAbort); resolve(); }, 500);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      if (signal?.aborted) onAbort();
+    });
+    await loadTileImageOnce(url, signal);
+  }
 }

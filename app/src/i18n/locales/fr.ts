@@ -211,6 +211,8 @@ export const fr = {
     aspectLegendNorthwest: 'Nord-Ouest',
     aspectLegendFooter: 'Transparent sur les terrains très plats',
     cameraModes: {
+      aerialFollow: 'Vol de montagne',
+      aerialFollowDesc: 'Suivi aérien fluide, incliné et adapté au terrain',
       overview: 'Vue d’ensemble',
       overviewDesc: 'Vue fixe du parcours complet',
       follow: 'Suivi',
@@ -218,7 +220,7 @@ export const fr = {
       followBehind: 'Suivi arrière',
       followBehindDesc: 'Vue cinématique derrière le marqueur',
       cinematic: 'Cinématique',
-      cinematicDesc: 'Plans de caméra personnalisés placés sur la chronologie',
+      cinematicDesc: 'Vol fluide adapté au terrain avec plans de caméra personnalisés en option',
     },
     cinematicCamera: {
       title: 'Images clés de la caméra',
@@ -234,7 +236,7 @@ export const fr = {
       infoEasing: 'Transition : Douce s’adoucit vers l’image clé suivante. Linéaire se déplace à vitesse constante. Maintien reste immobile, puis coupe.',
       infoStability: 'La stabilité de la caméra décide de la part du zigzag du parcours qui atteint la caméra : vers Cinématique elle suit une ligne lissée à travers les lacets pendant que le repère bouge dans le cadre ; vers Réactive elle suit le repère de près.',
       capture: 'Définir une image clé de caméra',
-      empty: 'Aucune image clé pour l’instant — la caméra se comporte comme Suivi arrière jusqu’à ce que vous en ajoutiez une.',
+      empty: 'La caméra vole automatiquement. Ajoutez des images clés pour créer des plans personnalisés.',
       keyframeAt: 'À {time}',
       frame: 'Référence',
       frameWorld: 'Monde',

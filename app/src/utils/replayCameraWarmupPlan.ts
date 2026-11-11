@@ -1,8 +1,12 @@
 import { getCinematicCameraPose, type PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import { getSmoothedCameraAnchor, getSmoothedRouteHeadingDeg } from '@/utils/cinematicCameraAnchor';
+import { cinematicAnchorSmoothingHalfWindow, cinematicHeadingBaselineHalfWidth } from '@/components/map/cameraUtils';
+import { terrainPlanBearing, terrainPlanZoomOffset } from '@/utils/aerialTerrainPlan';
 import {
   getOpeningPreloadProgresses,
   getPlaybackCameraPose,
   getRouteBearingAtProgress,
+  getRouteCoordinateAtProgress,
   type ReplayCameraMode,
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
@@ -12,6 +16,9 @@ export type WarmupCameraMode = ReplayCameraMode | 'cinematic';
 interface ReplayPoseOptions {
   cameraMode: WarmupCameraMode;
   cinematicKeyframes?: PreparedCinematicKeyframe[];
+  aerialTerrainPlan?: number[] | null;
+  cameraStability?: number;
+  totalDurationMs?: number;
   coordinates: number[][];
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
@@ -101,12 +108,16 @@ export function getDeterministicIntroStartPose({
 /** The same unsmoothed target pose the replay camera uses for a given mode. */
 export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPose | null {
   if (options.cameraMode === 'cinematic') {
-    return getCinematicCameraPose({
+    const halfWindow = cinematicAnchorSmoothingHalfWindow(options.cameraStability ?? 0.5, (options.totalDurationMs ?? 60000) / 1000);
+    const heading = getSmoothedRouteHeadingDeg({ coordinates: options.coordinates, progress: options.progress, smoothingHalfWindow: halfWindow, baselineHalfWidth: cinematicHeadingBaselineHalfWidth(halfWindow) })
+      ?? getRouteBearingAtProgress(options.coordinates, options.progress);
+    const authoredPose = getCinematicCameraPose({
       keyframes: options.cinematicKeyframes ?? [],
       coordinates: options.coordinates,
       progress: options.progress,
-      routeHeadingDeg: getRouteBearingAtProgress(options.coordinates, options.progress),
-    }) ?? getPlaybackCameraPose({
+      routeHeadingDeg: heading,
+    });
+    const fallback = authoredPose ? null : getPlaybackCameraPose({
       cameraMode: 'follow-behind',
       coordinates: options.coordinates,
       elevationData: options.elevationData,
@@ -114,9 +125,15 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
       followBehindPitch: options.followBehindPitch,
       progress: options.progress,
     });
+    const pose = authoredPose ?? (fallback && { ...fallback, bearing: heading });
+    const marker = getRouteCoordinateAtProgress(options.coordinates, options.progress);
+    if (pose && marker) {
+      pose.center = getSmoothedCameraAnchor({ coordinates: options.coordinates, progress: options.progress, smoothingHalfWindow: halfWindow, markerPosition: marker, zoom: pose.zoom });
+    }
+    return pose;
   }
 
-  return getPlaybackCameraPose({
+  const pose = getPlaybackCameraPose({
     cameraMode: options.cameraMode,
     coordinates: options.coordinates,
     elevationData: options.elevationData,
@@ -124,6 +141,20 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
     followBehindPitch: options.followBehindPitch,
     progress: options.progress,
   });
+  if (pose && options.cameraMode === 'aerial-follow') {
+    pose.center = getSmoothedCameraAnchor({
+      coordinates: options.coordinates,
+      progress: options.progress,
+      smoothingHalfWindow: cinematicAnchorSmoothingHalfWindow(options.cameraStability ?? 0.5, (options.totalDurationMs ?? 60000) / 1000),
+      markerPosition: pose.center,
+      zoom: pose.zoom,
+    });
+    if (options.aerialTerrainPlan?.length) {
+      pose.bearing = terrainPlanBearing(options.aerialTerrainPlan, options.progress);
+      pose.zoom += terrainPlanZoomOffset(options.aerialTerrainPlan, options.progress);
+    }
+  }
+  return pose;
 }
 
 /**
@@ -183,7 +214,7 @@ export function getOpeningReplayWarmupPoses({
 }): ReplayCameraPose[] {
   return deduplicateCameraPoses(
     getOpeningPreloadProgresses(totalDurationMs, windowMs, sampleCount)
-      .map((progress) => getReplayWarmupPose({ ...options, progress })),
+      .map((progress) => getReplayWarmupPose({ ...options, totalDurationMs, progress })),
   );
 }
 

@@ -61,6 +61,7 @@ export function ExportPanel() {
 
   const {
     estimatedSize,
+    exportError,
     exportProgress,
     exportStage,
     exportedBlob,
@@ -271,6 +272,12 @@ export function ExportPanel() {
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <strong>{t('export.deliverySetupFailed')}</strong>
               {studioDeliveryError && <span className="mt-1 block text-xs">{studioDeliveryError}</span>}
+            </div>
+          )}
+
+          {!isExporting && exportError && (
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {exportError}
             </div>
           )}
 

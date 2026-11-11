@@ -46,10 +46,9 @@ export function useMapInitialization({
       // successive popup snapshots piled up on top of each other.
       canvasContextAttributes: { preserveDrawingBuffer: true },
       attributionControl: false,
-      // Keep more tiles in memory than the viewport-based default so the tiles
-      // warmed during the `preloading` phase (and along the route) aren't evicted
-      // mid-flythrough, which would re-introduce white tiles. See issue #63.
-      maxTileCacheSize: 2000,
+      // Bound GPU memory during long flyovers. The fallback pyramid and
+      // predictive warmer help cover cache misses as the camera moves.
+      maxTileCacheSize: 128,
       // Preserve the coarser tiles already on screen while close-follow camera
       // zooms request their detailed replacements. This trades a little extra
       // memory/network work for continuous imagery during replay motion.

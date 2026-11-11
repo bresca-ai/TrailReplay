@@ -29,6 +29,7 @@ interface UseTilePreloadParams {
   animationPhase: AnimationPhase;
   cameraMode: ReplayCameraMode | 'cinematic';
   cinematicKeyframes?: PreparedCinematicKeyframe[];
+  cameraStability?: number;
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
   followBehindPitch?: number | null;
@@ -40,6 +41,8 @@ interface UseTilePreloadParams {
   targetBearingRef: React.MutableRefObject<number>;
   totalDurationMs: number;
   locationBoundariesLoading?: boolean;
+  aerialTerrainLoading?: boolean;
+  aerialTerrainPlan?: number[] | null;
   introStartOverride?: ReplayCameraPose;
   introStageOverrides?: ReplayCameraPose[];
 }
@@ -56,6 +59,7 @@ export function useTilePreload({
   animationPhase,
   cameraMode,
   cinematicKeyframes,
+  cameraStability,
   elevationData,
   followBehindZoomLevel,
   followBehindPitch,
@@ -67,6 +71,8 @@ export function useTilePreload({
   targetBearingRef,
   totalDurationMs,
   locationBoundariesLoading = false,
+  aerialTerrainLoading = false,
+  aerialTerrainPlan,
   introStartOverride,
   introStageOverrides,
 }: UseTilePreloadParams) {
@@ -84,7 +90,7 @@ export function useTilePreload({
     }
 
     // The opening reveal needs the first polygon before the fly-in starts.
-    if (locationBoundariesLoading) return;
+    if (locationBoundariesLoading || aerialTerrainLoading) return;
 
     const map = mapRef.current;
     if (!map || !isMapLoaded || allCoordinates.length === 0 || cameraMode === 'overview') {
@@ -96,9 +102,13 @@ export function useTilePreload({
     let cancelled = false;
     let activeTimeout: ReturnType<typeof setTimeout> | null = null;
     let pendingAdvance: (() => void) | null = null;
+    const originalPadding = cameraMode === 'aerial-follow' ? map.getPadding() : null;
     const introPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
+      aerialTerrainPlan,
+      cameraStability,
+      totalDurationMs,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
@@ -120,6 +130,9 @@ export function useTilePreload({
     const finalPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
+      aerialTerrainPlan,
+      cameraStability,
+      totalDurationMs,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
@@ -129,6 +142,8 @@ export function useTilePreload({
     const openingPoses = getOpeningReplayWarmupPoses({
       cameraMode,
       cinematicKeyframes,
+      aerialTerrainPlan,
+      cameraStability,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
@@ -155,13 +170,14 @@ export function useTilePreload({
       outroFrom: finalPose,
       outroTo: outroPose,
     });
-    // Opening is immediately visible, so spend the real idle-wait budget there
-    // first. Once the deadline expires, remaining poses are still visited with
-    // zero-delay discovery; the predictive map refreshes outro coverage later.
+    // Cover the first flight views before the zoom transition consumes the
+    // bounded wait budget. Otherwise a slow intro can use the whole budget
+    // and leave every playback pose untouched.
     const openingStages = introStageOverrides?.length ? [...introStageOverrides, introPose] : [];
     const poses = deduplicateCameraPoses([
-      ...(openingStages.length > 1 ? openingStages.slice(1).flatMap((pose, index) => sampleCameraTransition(openingStages[index], pose)) : transitions.intro),
+      introPose,
       ...openingPoses,
+      ...(openingStages.length > 1 ? openingStages.slice(1).flatMap((pose, index) => sampleCameraTransition(openingStages[index], pose)) : transitions.intro),
       ...transitions.outro,
     ]);
     const deadline = Date.now() + PRELOAD_TIMEOUT_MS;
@@ -170,7 +186,7 @@ export function useTilePreload({
       if (hasAdvancedRef.current || cancelled) return;
       hasAdvancedRef.current = true;
       if (activeTimeout) clearTimeout(activeTimeout);
-      map.jumpTo(overview);
+      map.jumpTo(originalPadding ? { ...overview, padding: originalPadding } : overview);
       if (introPose) {
         smoothBearingRef.current = introPose.bearing;
         targetBearingRef.current = introPose.bearing;
@@ -202,7 +218,11 @@ export function useTilePreload({
         resolve();
       };
 
-      map.jumpTo(pose);
+      const padding = originalPadding && {
+        ...originalPadding,
+        top: (originalPadding.top ?? 0) + map.getCanvas().clientHeight * 0.16,
+      };
+      map.jumpTo(padding ? { ...pose, padding } : pose);
       map.once('idle', finish);
       // Do not let one slow viewport consume the whole budget: the rest of
       // the zoom path still needs to submit tile requests before playback.
@@ -221,13 +241,14 @@ export function useTilePreload({
       cancelled = true;
       if (activeTimeout) clearTimeout(activeTimeout);
       if (pendingAdvance) map.off('idle', pendingAdvance);
-      if (!hasAdvancedRef.current) map.jumpTo(overview);
+      if (!hasAdvancedRef.current) map.jumpTo(originalPadding ? { ...overview, padding: originalPadding } : overview);
     };
   }, [
     allCoordinates,
     animationPhase,
     cameraMode,
     cinematicKeyframes,
+    cameraStability,
     elevationData,
     followBehindZoomLevel,
     followBehindPitch,
@@ -236,6 +257,8 @@ export function useTilePreload({
     introStartOverride,
     introStageOverrides,
     locationBoundariesLoading,
+    aerialTerrainLoading,
+    aerialTerrainPlan,
     mapRef,
     setAnimationPhase,
     smoothBearingRef,

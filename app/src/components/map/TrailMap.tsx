@@ -7,6 +7,8 @@ import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useStartLocationLevels } from '@/hooks/useStartLocationLevels';
 import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
+import { getAerialFollowBearing, resolveReplayCameraMode } from '@/utils/replayCameraPlan';
+import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
 import { useSuggestedFollowBehindDistance } from '@/components/map/hooks/useSuggestedFollowBehindDistance';
 import { MapElevationProfile } from './MapElevationProfile';
 import { ComparisonLeaderboard } from './ComparisonLeaderboard';
@@ -15,6 +17,7 @@ import { COMPARISON_MARKER_SIZE } from '@/utils/comparisonMarker';
 import { useI18n } from '@/i18n/useI18n';
 import { areFollowingSamePath } from '@/utils/routeComparisonSharedPath';
 import { MAP_LAYERS } from './mapStyle';
+import { DEFAULT_SKY_COLOR } from './mapSky';
 import {
   getFollowBehindLevelForStopIndex,
   getFollowBehindStopIndexForLevel,
@@ -42,6 +45,8 @@ import { useLocationChapters } from './hooks/useLocationChapters';
 import { useLocationStartCue } from './hooks/useLocationStartCue';
 import { useMapControlLabels } from './hooks/useMapControlLabels';
 import type { CropPreviewMetrics } from '@/utils/crop';
+import { loadRouteTerrainPlan, registerAerialTerrainPlan, terrainPlanBearing, trailingFlightBearing, unregisterAerialTerrainPlan } from '@/utils/aerialTerrainPlan';
+import { cinematicAnchorSmoothingHalfWindow } from '@/components/map/cameraUtils';
 
 interface TrailMapProps {
   activeTextAnnotationId?: string | null;
@@ -130,9 +135,35 @@ export function TrailMap(_props: TrailMapProps) {
   const currentTrackName = currentSegment?.segment.type === 'track' && currentSegment.segment.trackId
     ? tracks.find((t) => t.id === currentSegment.segment.trackId)?.name
     : activeTrack?.name;
-  const cameraMode = cameraSettings.mode;
   const followBehindZoomLevel = cameraSettings.followBehindZoomLevel;
   const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
+  const cameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.length);
+  const [terrainViewportHeight, setTerrainViewportHeight] = useState(720);
+  const [terrainPlanState, setTerrainPlanState] = useState<{ coordinates: number[][]; elevations: typeof elevationData; viewportHeight: number; exaggeration: number; halfWindow: number; durationMs: number; plan: number[] | null } | null>(null);
+  const terrainExaggeration = effectiveTerrainExaggeration(settings);
+  const aerialHalfWindow = cinematicAnchorSmoothingHalfWindow(cameraSettings.cameraStability, playback.totalDuration / 1000);
+  useEffect(() => {
+    const canvas = map.current?.getCanvas();
+    if (!isMapLoaded || !canvas) return;
+    const update = () => { if (canvas.clientHeight > 0) setTerrainViewportHeight(canvas.clientHeight); };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [isMapLoaded]);
+  useEffect(() => {
+    if (cameraMode !== 'aerial-follow' || !terrainExaggeration || cameraPathCoordinates.length < 2 || !isMapLoaded) return;
+    const controller = new AbortController();
+    let cancelled = false;
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const preparation = loadRouteTerrainPlan(cameraPathCoordinates, terrainExaggeration, controller.signal, aerialHalfWindow, { elevationData, viewportHeight: terrainViewportHeight, durationSeconds: playback.totalDuration / 1000 })
+      .then(plan => { if (!cancelled) { if (import.meta.env.DEV) console.debug('Aerial terrain plan:', plan ? `${plan.length} poses` : 'unavailable'); setTerrainPlanState({ coordinates: cameraPathCoordinates, elevations: elevationData, viewportHeight: terrainViewportHeight, exaggeration: terrainExaggeration, halfWindow: aerialHalfWindow, durationMs: playback.totalDuration, plan }); } return plan; })
+      .catch(error => { if (!cancelled) { if (import.meta.env.DEV) console.debug('Aerial terrain plan unavailable:', error); setTerrainPlanState({ coordinates: cameraPathCoordinates, elevations: elevationData, viewportHeight: terrainViewportHeight, exaggeration: terrainExaggeration, halfWindow: aerialHalfWindow, durationMs: playback.totalDuration, plan: null }); } return null; })
+      .finally(() => clearTimeout(timeout));
+    registerAerialTerrainPlan(cameraPathCoordinates, preparation);
+    return () => { cancelled = true; controller.abort(); clearTimeout(timeout); unregisterAerialTerrainPlan(cameraPathCoordinates, preparation); };
+  }, [cameraMode, cameraPathCoordinates, elevationData, isMapLoaded, terrainExaggeration, aerialHalfWindow, terrainViewportHeight, playback.totalDuration]);
+  const matchingTerrainPlan = terrainPlanState?.coordinates === cameraPathCoordinates && terrainPlanState.elevations === elevationData && terrainPlanState.viewportHeight === terrainViewportHeight && terrainPlanState.exaggeration === terrainExaggeration && terrainPlanState.halfWindow === aerialHalfWindow && terrainPlanState.durationMs === playback.totalDuration ? terrainPlanState : null;
   const routeComparisonActive = comparisonMode === 'route' && comparisonTracks.some((track) => track.visible);
   const primaryComparisonTrack = tracks.find((track) => track.id === currentPosition?.trackId) ?? activeTrack ?? null;
   const comparisonActive = comparisonTracks.some((track) => track.visible && (!track.groupId || track.groupId === primaryComparisonTrack?.id));
@@ -317,6 +348,7 @@ export function TrailMap(_props: TrailMapProps) {
     activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
     allCoordinates,
     cameraCoordinates: cameraPathCoordinates,
+    aerialTerrainPlan: matchingTerrainPlan?.plan ?? null,
     animationPhase,
     cameraMode,
     cameraStability: cameraSettings.cameraStability,
@@ -380,7 +412,7 @@ export function TrailMap(_props: TrailMapProps) {
   // Applies in every camera mode, and to manual navigation as much as to the
   // replay: whatever moves the camera, it does not end up underground.
   useCameraTerrainClearance({
-    playbackOwnsCamera: cameraMode === 'cinematic'
+    playbackOwnsCamera: (cameraMode === 'cinematic' || cameraMode === 'aerial-follow')
       && (isExporting || playback.isPlaying || animationPhase === 'intro' || animationPhase === 'outro'),
     isMapLoaded,
     mapRef: map,
@@ -392,6 +424,7 @@ export function TrailMap(_props: TrailMapProps) {
     animationPhase,
     cameraMode,
     cinematicKeyframes,
+    cameraStability: cameraSettings.cameraStability,
     elevationData,
     followBehindZoomLevel,
     followBehindPitch: cameraSettings.followBehindPitch,
@@ -403,6 +436,8 @@ export function TrailMap(_props: TrailMapProps) {
     targetBearingRef,
     totalDurationMs: playback.totalDuration,
     locationBoundariesLoading: locationChapter.loading,
+    aerialTerrainLoading: cameraMode === 'aerial-follow' && terrainExaggeration > 0 && cameraPathCoordinates.length >= 2 && !matchingTerrainPlan,
+    aerialTerrainPlan: matchingTerrainPlan?.plan ?? null,
     introStartOverride: locationChapter.introCamera,
     introStageOverrides,
   });
@@ -417,7 +452,10 @@ export function TrailMap(_props: TrailMapProps) {
     allCoordinates: cameraPathCoordinates,
     animationPhase,
     cameraMode,
+    aerialTerrainPlan: matchingTerrainPlan?.plan ?? null,
+    aerialTerrainLoading: cameraMode === 'aerial-follow' && terrainExaggeration > 0 && cameraPathCoordinates.length >= 2 && !matchingTerrainPlan,
     cinematicKeyframes,
+    cameraStability: cameraSettings.cameraStability,
     diagnostics: tileDiagnostics,
     visibleMapRef: map,
     elevationData,
@@ -426,7 +464,7 @@ export function TrailMap(_props: TrailMapProps) {
     // time duplicates its tile/GPU cache and caused memory to climb into
     // gigabytes during annotation slowdowns. Unmount it for the export and let
     // the recording map own tile loading until the export completes.
-    enabled: !isExporting,
+    enabled: !isExporting && (playback.isPlaying || animationPhase === 'preloading' || animationPhase === 'intro' || animationPhase === 'outro'),
     followBehindZoomLevel,
     followBehindPitch: cameraSettings.followBehindPitch,
     isMapLoaded,
@@ -435,6 +473,7 @@ export function TrailMap(_props: TrailMapProps) {
     playbackProgress: playback.progress,
     playbackSpeed: playback.speed,
     totalDurationMs: playback.totalDuration,
+    terrainExaggeration,
     locationFeatures: locationChapter.features,
     zoomToPlace: Boolean(settings.locationChapters?.zoomToPlace),
   });
@@ -544,8 +583,11 @@ export function TrailMap(_props: TrailMapProps) {
   }, [showZoomButtonsHint]);
 
   return (
-    <div className="w-full h-full relative">
-      <div ref={mapContainer} className="w-full h-full" />
+    <div className="w-full h-full relative" data-aerial-plan={import.meta.env.DEV ? (matchingTerrainPlan ? (matchingTerrainPlan.plan ? 'ready' : 'unavailable') : 'loading') : undefined}
+      data-aerial-follow-bearing={import.meta.env.DEV && cameraPathCoordinates.length > 1 ? getAerialFollowBearing(cameraPathCoordinates, playback.progress).toFixed(1) : undefined}
+      data-aerial-trailing-bearing={import.meta.env.DEV && cameraPathCoordinates.length > 1 ? trailingFlightBearing(cameraPathCoordinates, playback.progress).toFixed(1) : undefined}
+      data-aerial-planned-bearing={import.meta.env.DEV && matchingTerrainPlan?.plan ? terrainPlanBearing(matchingTerrainPlan.plan, playback.progress).toFixed(1) : undefined}>
+      <div ref={mapContainer} className="w-full h-full" style={{ backgroundColor: DEFAULT_SKY_COLOR }} />
       {settings.show3DBuildings && <div className="absolute bottom-1 left-1 z-10 bg-black/70 px-1 text-[10px] text-white">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a></div>}
 
       <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : "ready"} />

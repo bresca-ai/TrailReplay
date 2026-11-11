@@ -11,6 +11,42 @@ it('waits for location boundaries before starting the initial camera fly-in', ()
   expect(setAnimationPhase).not.toHaveBeenCalled();
   rerender({ loading: false }); expect(setAnimationPhase).toHaveBeenCalledWith('intro');
 });
+it('waits for the route-wide terrain plan before starting the aerial fly-in', () => {
+  const setAnimationPhase = vi.fn();
+  const base = { allCoordinates: [[0, 0], [1, 1]], animationPhase: 'preloading' as const, cameraMode: 'aerial-follow' as const,
+    elevationData: [], followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: null as MapLibreMap | null },
+    setAnimationPhase, smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 }, totalDurationMs: 60000 };
+  const { rerender } = renderHook(({ loading }) => useTilePreload({ ...base, aerialTerrainLoading: loading }), { initialProps: { loading: true } });
+  expect(setAnimationPhase).not.toHaveBeenCalled();
+  rerender({ loading: false });
+  expect(setAnimationPhase).toHaveBeenCalledWith('intro');
+});
+it('warms cinematic views with playback headroom and restores the original padding', () => {
+  const original = { top: 10, bottom: 2, left: 3, right: 4 };
+  const jumpTo = vi.fn();
+  const map = { jumpTo, getPadding: () => original, getCanvas: () => ({ clientHeight: 500 }),
+    cameraForBounds: () => ({ center: [0, 0], zoom: 5 }), once: vi.fn(), off: vi.fn() } as unknown as MapLibreMap;
+  const { unmount } = renderHook(() => useTilePreload({
+    allCoordinates: [[0, 0], [0.01, 0]], animationPhase: 'preloading', cameraMode: 'aerial-follow',
+    elevationData: [], followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: map },
+    setAnimationPhase: vi.fn(), smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 }, totalDurationMs: 60000,
+  }));
+  expect(jumpTo).toHaveBeenCalledWith(expect.objectContaining({ padding: { ...original, top: 90 } }));
+  unmount();
+  expect(jumpTo).toHaveBeenLastCalledWith(expect.objectContaining({ padding: original }));
+});
+it('warms the first playback view before the long zoom-in sequence', () => {
+  const jumpTo = vi.fn();
+  const map = { jumpTo, cameraForBounds: () => ({ center: [0, 0], zoom: 5 }),
+    once: vi.fn(), off: vi.fn() } as unknown as MapLibreMap;
+  const { unmount } = renderHook(() => useTilePreload({
+    allCoordinates: [[0, 0], [0.01, 0]], animationPhase: 'preloading', cameraMode: 'follow',
+    elevationData: [], followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: map },
+    setAnimationPhase: vi.fn(), smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 }, totalDurationMs: 60000,
+  }));
+  expect(jumpTo.mock.calls[0][0].zoom).toBeGreaterThan(10);
+  unmount();
+});
 it('waits for the restored place view before revealing the opening frame', async () => {
   const { act } = await import('@testing-library/react');
   vi.useFakeTimers();

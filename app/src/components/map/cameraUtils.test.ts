@@ -6,6 +6,7 @@ import {
   shouldBypassProceduralCameraSmoothing,
   frameTimeMultiplierFromDeltaMs,
   smoothBearing,
+  smoothAerialBearing,
   smoothCoordinate,
   limitRateOfChange,
   MAX_CENTER_ELEVATION_RATE_M_PER_S,
@@ -17,6 +18,15 @@ import {
 } from './cameraUtils';
 
 describe('camera utilities', () => {
+  it('smooths aerial bearing across north at a consistent rate', () => {
+    expect(smoothAerialBearing(359, 1, 1000)).toBeGreaterThan(359);
+    const step = (frames: number) => Array.from({length: frames}).reduce<number>(
+      (bearing) => smoothAerialBearing(bearing, 40, 1000 / frames), 0);
+    expect(step(30)).toBeCloseTo(step(60), 6);
+    expect(smoothAerialBearing(0, 180, 1000, 0)).toBe(340);
+    expect(smoothAerialBearing(0, 180, 1000, 1)).toBe(320);
+  });
+
   it('stabilizes cinematic fallback poses but preserves authored keyframes exactly', () => {
     expect(shouldBypassProceduralCameraSmoothing('cinematic', 0)).toBe(false);
     expect(shouldBypassProceduralCameraSmoothing('cinematic', 1)).toBe(true);

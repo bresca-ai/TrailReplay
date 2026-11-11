@@ -6,7 +6,9 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 // budget and can request hundreds of tiles during a single cinematic pan.
 // A small zoom range limits imagery seams without disabling that budget.
 export const BASEMAP_MAX_TILE_ZOOM_LEVELS = 4;
-export const BASEMAP_TILE_COUNT_RATIO = 4;
+// A pitched route view can otherwise request hundreds of detail tiles per
+// second. Let MapLibre use coarser coverage while the camera is moving.
+export const BASEMAP_TILE_COUNT_RATIO = 2;
 
 /** Apply the same bounded imagery detail policy in preview and tile warmup. */
 export function applyConsistentBasemapTileLod(

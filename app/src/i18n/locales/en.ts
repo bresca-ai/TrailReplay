@@ -222,6 +222,8 @@ export const en = {
     aspectLegendNorthwest: 'Northwest',
     aspectLegendFooter: 'Transparent on very flat terrain',
     cameraModes: {
+      aerialFollow: 'Aerial Follow',
+      aerialFollowDesc: 'Smooth aerial follow with a high tilt and terrain-aware framing',
       overview: 'Overview',
       overviewDesc: 'Fixed view of entire track',
       follow: 'Follow',
@@ -229,7 +231,7 @@ export const en = {
       followBehind: 'Follow Behind',
       followBehindDesc: 'Cinematic view from behind',
       cinematic: 'Cinematic',
-      cinematicDesc: 'Custom camera shots you place along the timeline',
+      cinematicDesc: 'Smooth terrain-aware flight with optional custom camera shots',
     },
     cinematicCamera: {
       title: 'Camera keyframes',
@@ -245,7 +247,7 @@ export const en = {
       infoEasing: 'Easing: Smooth eases into the next keyframe. Linear moves at a constant rate. Hold stays put, then cuts.',
       infoStability: 'Camera Stability decides how much of the route’s zig-zag reaches the camera: toward Cinematic it flies a smoothed line through switchbacks while the marker weaves inside the frame, toward Reactive it tracks the marker closely.',
       capture: 'Set camera keyframe',
-      empty: 'No keyframes yet — the camera behaves like Follow Behind until you add one.',
+      empty: 'The camera flies automatically. Add keyframes to create custom shots.',
       keyframeAt: 'At {time}',
       frame: 'Frame',
       frameWorld: 'World',

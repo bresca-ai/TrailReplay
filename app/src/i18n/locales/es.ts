@@ -211,6 +211,8 @@ export const es = {
     aspectLegendNorthwest: 'Noroeste',
     aspectLegendFooter: 'Transparente en terreno muy plano',
     cameraModes: {
+      aerialFollow: 'Vuelo de montaña',
+      aerialFollowDesc: 'Seguimiento aéreo suave, inclinado y adaptado al terreno',
       overview: 'Panorámica',
       overviewDesc: 'Vista fija de toda la ruta',
       follow: 'Seguir',
@@ -218,7 +220,7 @@ export const es = {
       followBehind: 'Seguir desde atrás',
       followBehindDesc: 'Vista cinematográfica desde atrás',
       cinematic: 'Cinemática',
-      cinematicDesc: 'Planos de cámara personalizados que colocas en la línea de tiempo',
+      cinematicDesc: 'Vuelo suave adaptado al terreno con planos de cámara personalizados opcionales',
     },
     cinematicCamera: {
       title: 'Fotogramas clave de cámara',
@@ -234,7 +236,7 @@ export const es = {
       infoEasing: 'Transición: Suave se aproxima al siguiente fotograma clave. Lineal se mueve a ritmo constante. Mantener se queda quieta y luego corta.',
       infoStability: 'La estabilidad de la cámara decide cuánto del zigzag de la ruta llega a la cámara: hacia Cinemática vuela una línea suavizada entre las curvas mientras el marcador se mueve dentro del encuadre; hacia Reactiva sigue de cerca al marcador.',
       capture: 'Fijar fotograma clave de cámara',
-      empty: 'Aún no hay fotogramas clave: la cámara se comporta como Seguir desde atrás hasta que añadas uno.',
+      empty: 'La cámara vuela automáticamente. Añade fotogramas clave para crear planos personalizados.',
       keyframeAt: 'En {time}',
       frame: 'Referencia',
       frameWorld: 'Mundo',

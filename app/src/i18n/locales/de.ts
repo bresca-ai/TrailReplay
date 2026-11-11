@@ -211,6 +211,8 @@ export const de = {
     aspectLegendNorthwest: 'Nordwest',
     aspectLegendFooter: 'Transparent auf sehr flachem Gelände',
     cameraModes: {
+      aerialFollow: 'Bergflug',
+      aerialFollowDesc: 'Ruhige, geneigte Luftaufnahme mit Geländeanpassung',
       overview: 'Überblick',
       overviewDesc: 'Ansicht der gesamten Strecke korrigiert',
       follow: 'Folgen',
@@ -218,7 +220,7 @@ export const de = {
       followBehind: 'Folge hinterher',
       followBehindDesc: 'Filmischer Blick von hinten',
       cinematic: 'Filmisch',
-      cinematicDesc: 'Eigene Kameraeinstellungen, die du auf der Zeitleiste platzierst',
+      cinematicDesc: 'Ruhiger geländeangepasster Flug mit optionalen eigenen Kameraeinstellungen',
     },
     cinematicCamera: {
       title: 'Kamera-Keyframes',
@@ -234,7 +236,7 @@ export const de = {
       infoEasing: 'Übergang: Sanft leitet sanft zum nächsten Keyframe über. Linear bewegt sich mit konstanter Geschwindigkeit. Halten bleibt stehen und schneidet dann.',
       infoStability: 'Die Kamerastabilität entscheidet, wie viel vom Zickzack der Strecke bei der Kamera ankommt: Richtung Filmisch fliegt sie eine geglättete Linie durch die Kehren, während sich die Markierung im Bild bewegt; Richtung Reaktiv folgt sie der Markierung eng.',
       capture: 'Kamera-Keyframe setzen',
-      empty: 'Noch keine Keyframes — die Kamera verhält sich wie „Folge hinterher“, bis Du eines hinzufügst.',
+      empty: 'Die Kamera fliegt automatisch. Füge Keyframes für eigene Kameraeinstellungen hinzu.',
       keyframeAt: 'Bei {time}',
       frame: 'Bezug',
       frameWorld: 'Welt',
