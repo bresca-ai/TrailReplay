@@ -19,7 +19,7 @@ function evict(url: string): void {
   if (!entry) return;
   entries.delete(url);
   bytes -= entry.size;
-  evictionVersion++;
+  if (routeUrls.has(url)) evictionVersion++;
 }
 
 function getRetainedTile(url: string): Blob | undefined {
@@ -70,7 +70,8 @@ export async function retainRouteTile(url: string, signal?: AbortSignal): Promis
   // Another request can have stored the same URL while this fetch was in flight.
   if (hasRetainedTile(url)) return;
   while (bytes + blob.size > MAX_CACHE_BYTES && entries.size > 0) {
-    const oldest = entries.keys().next().value;
+    // A wide camera view must not evict route-critical tiles first.
+    const oldest = [...entries.keys()].find(key => !routeUrls.has(key)) ?? entries.keys().next().value;
     if (!oldest) break;
     evict(oldest);
   }

@@ -226,13 +226,7 @@ describe('replay tile warmup camera', () => {
 
   it('reports completed predictions to a diagnostics observer installed after mount', async () => {
     vi.useFakeTimers();
-    class LoadedImage {
-      crossOrigin: string | null = null;
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      set src(_url: string) { queueMicrotask(() => this.onload?.()); }
-    }
-    vi.stubGlobal('Image', LoadedImage);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers(), blob: async () => new Blob(['tile']) }));
     const visibleMapRef = { current: null };
     const ready = vi.fn();
     const updatedObserver = { ...NOOP_TILE_PRELOAD_OBSERVER, markTileReady: ready };
@@ -255,16 +249,10 @@ describe('replay tile warmup camera', () => {
 
   it('retains discovered requests across scans when the hidden map does not rediscover them', async () => {
     vi.useFakeTimers();
-    const images: Array<{ onload: (() => void) | null; src: string }> = [];
-    class PendingImage {
-      crossOrigin: string | null = null;
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      private url = '';
-      set src(value: string) { this.url = value; images.push(this); }
-      get src() { return this.url; }
-    }
-    vi.stubGlobal('Image', PendingImage);
+    const requests: Array<{ url: string; finish: () => void }> = [];
+    vi.stubGlobal('fetch', vi.fn((url: string) => new Promise(resolve => {
+      requests.push({ url, finish: () => resolve({ ok: true, headers: new Headers(), blob: async () => new Blob(['tile']) }) });
+    })));
     const { unmount } = renderHook(() => useReplayTileWarmup({
       allCoordinates: [[1.83, 41.58], [1.85, 41.60]], animationPhase: 'playing', cameraMode: 'follow',
       diagnostics: NOOP_TILE_PRELOAD_OBSERVER, elevationData: [], enabled: true,
@@ -275,13 +263,13 @@ describe('replay tile warmup camera', () => {
     act(() => { loadListener(); vi.advanceTimersByTime(1600); });
     const onLoading = map.on.mock.calls.find(([event]) => event === 'sourcedataloading')?.[1];
     act(() => {
-      for (let y = 0; y < 7; y++) onLoading({ sourceId: 'satellite', coord: { canonical: { z: 12, x: 1, y } } });
+      for (let y = 0; y < 7; y++) onLoading({ sourceId: 'satellite', coord: { canonical: { z: 12, x: 20, y } } });
     });
-    expect(images).toHaveLength(6);
+    expect(requests).toHaveLength(6);
     await act(async () => { await vi.advanceTimersByTimeAsync(3200); });
-    await act(async () => { images[0].onload?.(); await Promise.resolve(); });
-    expect(images).toHaveLength(7);
-    expect(images[6].src).toContain('/12/6/1');
+    await act(async () => { requests[0].finish(); await Promise.resolve(); });
+    expect(requests).toHaveLength(7);
+    expect(requests[6].url).toContain('/12/6/20');
     unmount();
   });
 

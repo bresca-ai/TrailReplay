@@ -5,6 +5,8 @@ export interface TileRequest {
   sourceId: string;
   url: string;
   retain?: boolean;
+  /** Cache opportunistically without delaying route-critical readiness. */
+  cache?: boolean;
 }
 
 interface QueuedTileRequest extends TileRequest {

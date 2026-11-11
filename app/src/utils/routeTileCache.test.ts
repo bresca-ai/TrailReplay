@@ -31,6 +31,8 @@ describe('route tile cache', () => {
 
   it('expires a cached response according to the provider freshness lifetime', async () => {
     const source = 'https://tiles.example.test/expiry/1';
+    beginRouteTilePreload();
+    markRouteTile(source);
     const now = vi.spyOn(Date, 'now').mockReturnValue(100000);
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers({ 'cache-control': 'public, max-age=10', age: '3' }), blob: async () => new Blob(['tile']) }));
     await retainRouteTile(source);
@@ -85,5 +87,25 @@ describe('route tile cache', () => {
     retainedTileRequest('https://tiles.example.test/route/missing', 'Tile');
     retainedTileRequest('https://tiles.example.test/far/missing', 'Tile');
     expect(routeTileCacheStats()).toMatchObject({ misses: 2, routeMisses: 1, routeHits: 0 });
+  });
+
+  it('evicts predicted view tiles before protected route tiles', async () => {
+    vi.resetModules();
+    const cache = await import('./routeTileCache');
+    const route = 'https://tiles.example.test/protected';
+    const firstView = 'https://tiles.example.test/view/1';
+    const secondView = 'https://tiles.example.test/view/2';
+    const blob = { size: 50 * 1024 * 1024 } as Blob;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, blob: async () => blob }));
+    cache.beginRouteTilePreload();
+    cache.markRouteTile(route);
+    await cache.retainRouteTile(route);
+    await cache.retainRouteTile(firstView);
+    const version = cache.routeTileCacheVersion();
+    await cache.retainRouteTile(secondView);
+    expect(cache.hasRetainedTile(route)).toBe(true);
+    expect(cache.hasRetainedTile(firstView)).toBe(false);
+    expect(cache.hasRetainedTile(secondView)).toBe(true);
+    expect(cache.routeTileCacheVersion()).toBe(version);
   });
 });

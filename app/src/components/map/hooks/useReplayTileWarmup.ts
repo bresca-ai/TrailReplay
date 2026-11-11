@@ -125,8 +125,8 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const latestParamsRef = useRef(params);
   const [scheduler] = useState(() => new TileRequestScheduler({
     concurrency: 6,
-    load: (url, signal, request) => request?.retain ? retainRouteTile(url, signal) : preloadTileImage(url, signal),
-    isCompletedAvailable: (request) => !request.retain || hasRetainedTile(request.url),
+    load: (url, signal, request) => request?.retain || request?.cache ? retainRouteTile(url, signal) : preloadTileImage(url, signal),
+    isCompletedAvailable: (request) => !(request.retain || request.cache) || hasRetainedTile(request.url),
     // Keep missed predictions available, but do not let a long backlog from
     // a past view block tiles the camera is about to need after a seek.
     isStale: (request) => !request.retain && (request.neededAt ?? request.priority) < (performance.now() / 1000) - 3,
@@ -260,6 +260,9 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           priority: discoveryScanTimeRef.current + discoveryOffsetRef.current + getTilePriority(sourceId) + viewportPriority,
           sourceId,
           url,
+          // Predicted camera views are useful even outside the route corridor.
+          // Cache their bytes opportunistically without blocking the first play.
+          cache: true,
         });
       }
     };
