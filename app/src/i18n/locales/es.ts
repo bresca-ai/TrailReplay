@@ -843,8 +843,6 @@ export const es = {
     styleTitle: "Estilo de lugares",
     styleClassic: "Clásico",
     styleMinimal: "Minimalista",
-    shareStyleFeedback: "Comparte tu preferencia en GitHub",
-    shareStyleFeedbackHint: "Abre un borrador con el estilo seleccionado. Puedes editarlo antes de publicarlo.",
 
     priorityHint: 'Mueve los lugares importantes arriba. Tendrán prioridad cuando se solapen lugares o etiquetas.', moveUp: 'Subir {name}', moveDown: 'Bajar {name}', dragPriority: 'Arrastra para cambiar la prioridad',
     title: 'Puntos de interés de la ruta', description: 'Elige los detalles del paisaje que quieres mostrar en la repetición. El marcador de la ruta mantiene la prioridad visual.',

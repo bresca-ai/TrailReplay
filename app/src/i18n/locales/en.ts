@@ -854,8 +854,6 @@ export const en = {
     styleTitle: "Place style",
     styleClassic: "Classic",
     styleMinimal: "Minimal",
-    shareStyleFeedback: "Share your preference on GitHub",
-    shareStyleFeedbackHint: "Opens a discussion draft with your selected style. You can edit it before posting.",
 
     priorityHint: 'Move important landmarks to the top. They take priority when places or labels overlap.', moveUp: 'Move {name} up', moveDown: 'Move {name} down', dragPriority: 'Drag to change priority',
     title: 'Route landmarks', description: 'Choose the landscape details you want on the replay. Your route marker remains the visual priority.',

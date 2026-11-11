@@ -227,8 +227,6 @@ export const zhTW = {
     styleTitle: "地點樣式",
     styleClassic: "經典",
     styleMinimal: "簡約",
-    shareStyleFeedback: "在 GitHub 分享你的偏好",
-    shareStyleFeedbackHint: "開啟包含所選樣式的討論草稿，發布前可以編輯。",
 
     priorityHint: '將重要地點移到上方。地點或標籤重疊時會優先顯示。', moveUp: '將 {name} 上移', moveDown: '將 {name} 下移', dragPriority: '拖曳以變更優先順序',
     title: '路線地標', description: '選擇要在重播中呈現的景觀資訊，路線移動標記仍會保持醒目。', routeMoments: '旅程重點', routeMomentsDescription: '最高點、主要爬升與下降、半程點及終點，預設關閉。', nearbyPlaces: '附近地點', nearbyPlacesDescription: '從 OpenStreetMap 尋找路線附近有名稱的山峰、山口、湖泊、山屋與城鎮。',
