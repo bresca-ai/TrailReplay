@@ -32,6 +32,7 @@ import { containsPosition, type LocationFeature } from '@/utils/locationBoundari
 import { cameraForPlace } from './useLocationChapters';
 import { routeTileCorridor } from '@/utils/routeTileCorridor';
 import { beginRouteTilePreload, hasRetainedTile, markRouteTile, resetRouteTileCacheStats, retainRouteTile, routeTileCacheStats, routeTileCacheVersion } from '@/utils/routeTileCache';
+import { VisibleRasterWarmup } from '@/utils/visibleRasterWarmup';
 
 const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // Terrain can expose additional imagery after the first render as DEM data
@@ -139,6 +140,8 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     isStale: (request) => !request.retain && (request.neededAt ?? request.priority) < (performance.now() / 1000) - 3,
   }));
   const warmupMapRef = useRef<maplibregl.Map | null>(null);
+  const visibleRasterWarmupRef = useRef<VisibleRasterWarmup | null>(null);
+  const rasterPredictionsRef = useRef(new Map<string, { id: Parameters<VisibleRasterWarmup['enqueue']>[1]; TileClass: Parameters<VisibleRasterWarmup['enqueue']>[2]; neededAt: number }>());
   const warmupInitializedRef = useRef(false);
   const isWarmupPoseActiveRef = useRef(false);
   const startupDiscoveryRef = useRef(false);
@@ -161,18 +164,35 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
     const publish = () => {
       document.documentElement.dataset.tileWarmupQueue = JSON.stringify(scheduler.snapshot());
       document.documentElement.dataset.routeTileCache = JSON.stringify(routeTileCacheStats());
+      document.documentElement.dataset.visibleRasterWarmup = JSON.stringify(visibleRasterWarmupRef.current?.snapshot() ?? null);
     };
     publish();
     const interval = window.setInterval(publish, 500);
-    return () => { window.clearInterval(interval); delete document.documentElement.dataset.tileWarmupQueue; delete document.documentElement.dataset.tileWarmupMode; delete document.documentElement.dataset.routeTileCache; };
+    return () => { window.clearInterval(interval); delete document.documentElement.dataset.tileWarmupQueue; delete document.documentElement.dataset.tileWarmupMode; delete document.documentElement.dataset.routeTileCache; delete document.documentElement.dataset.visibleRasterWarmup; };
   }, [scheduler]);
   useEffect(() => {
     latestParamsRef.current = params;
   });
   useEffect(() => {
-    scheduler.setOnComplete((request) => latestParamsRef.current.diagnostics.markTileReady(request.sourceId, request.key));
+    scheduler.setOnComplete((request) => {
+      latestParamsRef.current.diagnostics.markTileReady(request.sourceId, request.key);
+      const prediction = rasterPredictionsRef.current.get(`${request.sourceId}:${request.key}`);
+      const phase = latestParamsRef.current.animationPhase;
+      if (prediction && (phase === 'idle' || phase === 'preloading' || prediction.neededAt >= performance.now() / 1000 - 2)) {
+        visibleRasterWarmupRef.current?.enqueue(request.sourceId, prediction.id, prediction.TileClass, prediction.neededAt);
+      }
+      rasterPredictionsRef.current.delete(`${request.sourceId}:${request.key}`);
+    });
     return () => scheduler.setOnComplete(undefined);
   }, [scheduler]);
+
+  useEffect(() => {
+    if (!params.enabled || !params.isMapLoaded) return;
+    const predictions = rasterPredictionsRef.current;
+    const warmer = new VisibleRasterWarmup(() => latestParamsRef.current.visibleMapRef.current, maplibregl.getVersion() === '6.16.0');
+    visibleRasterWarmupRef.current = warmer;
+    return () => { visibleRasterWarmupRef.current = null; predictions.clear(); warmer.dispose(); };
+  }, [params.enabled, params.isMapLoaded]);
 
   useEffect(() => {
     if (!params.enabled || !params.isMapLoaded || warmupMapRef.current || typeof document === 'undefined') return;
@@ -260,6 +280,23 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       if (url) {
         const openingCritical = startupDiscoveryRef.current && discoveryOffsetRef.current <= CRITICAL_OPENING_SECONDS;
         if (openingCritical) markRouteTile(url);
+        const eventTile = (event as { tile?: { tileID?: unknown; constructor?: unknown }; coord?: unknown });
+        const id = eventTile.tile?.tileID ?? eventTile.coord;
+        const TileClass = eventTile.tile?.constructor;
+        if (sourceId === presentation.sourceId && discoveryOffsetRef.current <= 8 && id && TileClass) {
+          const prediction = { id, TileClass, neededAt: discoveryScanTimeRef.current + discoveryOffsetRef.current } as Parameters<VisibleRasterWarmup['enqueue']> extends [string, infer I, infer C, number] ? { id: I; TileClass: C; neededAt: number } : never;
+          const predictionKey = `${sourceId}:${key}`;
+          if (hasRetainedTile(url)) {
+            visibleRasterWarmupRef.current?.enqueue(sourceId, prediction.id, prediction.TileClass, prediction.neededAt);
+            rasterPredictionsRef.current.delete(predictionKey);
+          } else {
+            rasterPredictionsRef.current.set(predictionKey, prediction);
+            if (rasterPredictionsRef.current.size > 512) {
+              const oldest = rasterPredictionsRef.current.keys().next().value;
+              if (oldest) rasterPredictionsRef.current.delete(oldest);
+            }
+          }
+        }
         const canvas = warmupMap.getCanvas();
         const viewportPriority = viewportTilePriority(key, point => warmupMap.project(point), canvas.clientWidth, canvas.clientHeight);
         scheduler.enqueue({
@@ -348,6 +385,25 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       const visiblePadding = current.visibleMapRef.current?.getPadding();
       map.jumpTo({ ...pose, padding: visiblePadding ?? { top: current.cameraMode === 'aerial-follow' ? map.getCanvas().clientHeight * 0.16 : 0, bottom: 0, left: 0, right: 0 } });
     });
+
+    const warmVisibleView = (map: maplibregl.Map, neededAt: number) => {
+      const current = latestParamsRef.current;
+      const presentation = BASEMAP_PRESENTATIONS[current.mapStyle] ?? BASEMAP_PRESENTATIONS.satellite;
+      const style = map.style as unknown as { tileManagers?: Record<string, { getIds?: () => string[]; getTileByID?: (id: string) => { tileID?: unknown; constructor?: unknown } | undefined }> } | undefined;
+      const manager = style?.tileManagers?.[presentation.sourceId];
+      const source = MAP_STYLE.sources[presentation.sourceId as keyof typeof MAP_STYLE.sources];
+      const template = source && 'tiles' in source ? source.tiles[0] : undefined;
+      if (!manager?.getIds || !manager.getTileByID) return;
+      for (const id of manager.getIds()) {
+        const tile = manager.getTileByID(id);
+        const key = getMapLibreTileKey({ tile });
+        const url = key && getTileRequestUrl(presentation.sourceId, key, template);
+        if (!tile?.tileID || !tile.constructor || !url || !hasRetainedTile(url)) continue;
+        visibleRasterWarmupRef.current?.enqueue(presentation.sourceId,
+          tile.tileID as Parameters<VisibleRasterWarmup['enqueue']>[1],
+          tile.constructor as Parameters<VisibleRasterWarmup['enqueue']>[2], neededAt);
+      }
+    };
 
     const warmFuture = async () => {
       if (isWarming) return;
@@ -562,6 +618,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           }
           discoveryOffsetRef.current = viewOffsets.get(pose) ?? 0;
           await warmPose(map, pose);
+          if (!cancelled && discoveryOffsetRef.current <= 8) warmVisibleView(map, discoveryScanTimeRef.current + discoveryOffsetRef.current);
         }
         if (startupScan && !cancelled) {
           scannedValuesRef.current = startupValues;

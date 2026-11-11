@@ -15,7 +15,7 @@ const { MapConstructor, map } = vi.hoisted(() => {
   };
   return { map, MapConstructor: vi.fn(function (options?: Record<string, unknown>) { return { ...map, options }; }) };
 });
-vi.mock('maplibre-gl', () => ({ Map: MapConstructor, LngLatBounds: class { extend() { return this; } } }));
+vi.mock('maplibre-gl', () => ({ Map: MapConstructor, getVersion: () => '6.16.0', LngLatBounds: class { extend() { return this; } } }));
 vi.mock('./useLocationChapters', () => ({ cameraForPlace: () => ({ center: [1.84, 41.59], zoom: 5, pitch: 0, bearing: 0 }) }));
 
 beforeEach(() => {
