@@ -6,6 +6,7 @@ import { usePhotos } from '@/hooks/usePhotos';
 import { useVideos } from '@/hooks/useVideos';
 import { isImageFile, isVideoFile } from '@/utils/files';
 import { formatDuration } from '@/utils/units';
+import { relinkFolder } from '@/utils/relinkFolder';
 import { useI18n } from '@/i18n/useI18n';
 import { RouteAnnotationsEditor } from './RouteAnnotationsEditor';
 import { Play, Trash2, Image as ImageIcon, Video, MapPin, Clock, Settings2, Link2, MessageSquareText } from 'lucide-react';
@@ -29,6 +30,7 @@ function RelinkFolderButton(props: {
         {t(`media.relinkFolder.${props.kind}`, { count: props.missing })}
       </span>
       <button
+        aria-label={t('media.relinkFolder.hint')}
         onClick={() => props.startRelink(props.kind)}
         className="flex items-center justify-center rounded-lg border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] px-3 py-2 hover:bg-[var(--trail-orange)]/20"
       >
@@ -103,15 +105,21 @@ export function PicturesPanel() {
     const kind = relinkFolderTargetRef.current?.kind;
     relinkFolderTargetRef.current = null;
 
-    if (!kind || !files) return;
+    if (!kind || files.length === 0) return;
 
     if (kind === 'pictures') {
-      unlinkedPictures.forEach(picture => {
-        relinkPictureFile(picture.id, files);
+      void relinkFolder(files, unlinkedPictures, kind, (id, file, asset) => {
+        // Conversion is asynchronous: the item may have been removed or relinked.
+        const picture = useAppStore.getState().pictures.find((entry) => entry.id === id);
+        if (!picture?.isPlaceholder) {
+          if (asset) URL.revokeObjectURL(asset.url);
+          return;
+        }
+        relinkPictureFile(id, [file], asset);
       });
     } else {
-      unlinkedVideos.forEach(video => {
-        relinkVideoFile(video.id, files);
+      void relinkFolder(files, unlinkedVideos, kind, (id, file) => {
+        relinkVideoFile(id, [file]);
       });
     }
   };
