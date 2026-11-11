@@ -129,67 +129,38 @@ export interface CinematicAnchorOptions {
   zoom: number;
 }
 
-/**
- * How many times the window is halved looking for one that fits the frame.
- * Six gets within a sixty-fourth of the requested width, which is far finer
- * than any visible difference in the result.
- */
-const WINDOW_FIT_ITERATIONS = 6;
+/** Number of candidate windows blended to keep framing changes continuous. */
+const WINDOW_CANDIDATES = 16;
 
 /**
- * The camera's look-at point: the route position around `progress`, smoothed
- * as heavily as the framing allows.
- *
- * The window is *narrowed until it fits* rather than smoothed wide and then
- * clamped back, and that distinction is the whole of it. Clamping a distant
- * smoothed point back toward the marker looks reasonable and is actively
- * harmful: the offset keeps its direction, that direction swings as the
- * marker weaves, and the camera ends up pinned to a circle around the marker
- * being swung around by exactly the motion it was supposed to ignore.
- *
- * Measured on a real 206 km route as a 60 s clip, at the stable end of the
- * slider: the raw smoothed point sat a mean of 837 m from the marker against
- * a 495 m allowance, so the clamp was active on 70% of frames, and the
- * resulting anchor accelerated by a median of 79 m per frame. It was worse
- * than no smoothing at all, which is what a wide window plus a clamp will
- * always be once the route covers more ground per second than the frame is
- * wide.
- *
- * Narrowing instead means the anchor is always a genuinely smoothed position,
- * and the amount of smoothing available is whatever the framing can absorb.
- * Wanting more of it is a reason to pull the camera back — a wider shot can
- * hide a bigger wander, and that is a real trade the user can make.
+ * Blend smoothed positions at several window widths. A candidate fades out
+ * before it reaches the framing limit. Unlike a binary search, this remains
+ * continuous when a winding route has several separate windows that fit.
+ * Every contributing point is within the framing disc, so their weighted
+ * average is within it too. A small marker weight covers the case where no
+ * sampled window fits, without a hard switch at the edge.
  */
 export function getSmoothedCameraAnchor(options: CinematicAnchorOptions): [number, number] {
   const { coordinates, progress, smoothingHalfWindow, markerPosition, zoom } = options;
-
   const allowanceMeters =
     visibleWidthMetersAtZoom(zoom, markerPosition[1]) * MAX_MARKER_OFFSET_VIEWPORT_FRACTION;
   if (!Number.isFinite(allowanceMeters) || allowanceMeters <= 0) return markerPosition;
 
-  const requested = smoothRoutePosition(coordinates, progress, smoothingHalfWindow);
-  if (!requested) return markerPosition;
-  if (offsetMetersFrom(markerPosition, requested) <= allowanceMeters) return requested;
-
-  // Too far: bisect the window down to the widest one that stays in frame.
-  // Deviation is zero at zero width and grows with it, so halving converges
-  // on a window that fits.
-  let tooWide = 1;
-  let fits = 0;
-  let best: [number, number] = markerPosition;
-
-  for (let iteration = 0; iteration < WINDOW_FIT_ITERATIONS; iteration++) {
-    const scale = (fits + tooWide) / 2;
+  let weightSum = 0.001;
+  let lonSum = markerPosition[0] * weightSum;
+  let latSum = markerPosition[1] * weightSum;
+  for (let index = 1; index <= WINDOW_CANDIDATES; index++) {
+    const scale = index / WINDOW_CANDIDATES;
     const candidate = smoothRoutePosition(coordinates, progress, smoothingHalfWindow * scale);
-    if (candidate && offsetMetersFrom(markerPosition, candidate) <= allowanceMeters) {
-      best = candidate;
-      fits = scale;
-    } else {
-      tooWide = scale;
-    }
+    if (!candidate) continue;
+    const distance = offsetMetersFrom(markerPosition, candidate);
+    const fit = 1 - smoothstep(allowanceMeters * 0.4, allowanceMeters, distance);
+    const weight = scale ** 4 * fit;
+    lonSum += candidate[0] * weight;
+    latSum += candidate[1] * weight;
+    weightSum += weight;
   }
-
-  return best;
+  return [lonSum / weightSum, latSum / weightSum];
 }
 
 /** Ground distance between two lng/lat points, over the short spans used here. */
