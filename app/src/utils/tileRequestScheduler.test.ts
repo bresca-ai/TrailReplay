@@ -7,6 +7,15 @@ import {
 } from './tileRequestScheduler';
 
 describe('TileRequestScheduler', () => {
+  it('does not repeatedly request a tile that cannot be cached', async () => {
+    const load = vi.fn().mockRejectedValue(Object.assign(new Error('no-store'), { retryable: false }));
+    const onError = vi.fn();
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load, onError, retryDelayMs: 1 });
+    scheduler.enqueue({ key: '12/1/2', priority: 0, sourceId: 'satellite', url: 'tile', retain: true });
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledOnce());
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(scheduler.hasFailures()).toBe(true);
+  });
   it('starts track tiles before surrounding and distant queued tiles', async () => {
     let release!: () => void;
     const held = new Promise<void>(resolve => { release = resolve; });

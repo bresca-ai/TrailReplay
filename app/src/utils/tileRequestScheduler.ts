@@ -131,10 +131,10 @@ export class TileRequestScheduler {
             this.options.onComplete?.(next);
           }
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           if (generation !== this.generation) return;
           const retries = this.retryCounts.get(id) ?? 0;
-          if (retries >= 2) {
+          if (retries >= 2 || (typeof error === 'object' && error !== null && 'retryable' in error && error.retryable === false)) {
             this.retryCounts.delete(id);
             this.failed.add(id);
             this.options.onError?.(next);

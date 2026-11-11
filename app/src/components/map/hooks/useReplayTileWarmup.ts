@@ -31,7 +31,7 @@ import {
 import { containsPosition, type LocationFeature } from '@/utils/locationBoundaries';
 import { cameraForPlace } from './useLocationChapters';
 import { routeTileCorridor } from '@/utils/routeTileCorridor';
-import { beginRouteTilePreload, getRetainedTileUrl, markRouteTile, resetRouteTileCacheStats, retainRouteTile, routeTileCacheStats, routeTileCacheVersion } from '@/utils/routeTileCache';
+import { beginRouteTilePreload, hasRetainedTile, markRouteTile, resetRouteTileCacheStats, retainRouteTile, routeTileCacheStats, routeTileCacheVersion } from '@/utils/routeTileCache';
 
 const WARMUP_VIEWPORT = { width: 1920, height: 1080 };
 // Terrain can expose additional imagery after the first render as DEM data
@@ -126,7 +126,7 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const [scheduler] = useState(() => new TileRequestScheduler({
     concurrency: 6,
     load: (url, signal, request) => request?.retain ? retainRouteTile(url, signal) : preloadTileImage(url, signal),
-    isCompletedAvailable: (request) => !request.retain || Boolean(getRetainedTileUrl(request.url)),
+    isCompletedAvailable: (request) => !request.retain || hasRetainedTile(request.url),
     // Keep missed predictions available, but do not let a long backlog from
     // a past view block tiles the camera is about to need after a seek.
     isStale: (request) => !request.retain && (request.neededAt ?? request.priority) < (performance.now() / 1000) - 3,
@@ -390,8 +390,8 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         const source = MAP_STYLE.sources[presentation.sourceId as keyof typeof MAP_STYLE.sources];
         const template = source && 'tiles' in source ? source.tiles[0] : undefined;
         const route = current.routeCoordinates ?? current.allCoordinates;
-        const sources = [{ id: presentation.sourceId, template, zooms: [11, 12, 13, 14, 15, 16], maxRingZoom: 15 },
-          ...((current.terrainExaggeration ?? 0) > 0 ? [{ id: 'terrain-dem', template: undefined, zooms: [12, 13, 14, 15], maxRingZoom: 14 }] : [])];
+        const sources = [{ id: presentation.sourceId, template, zooms: [11, 12, 13, 14, 15, 16], maxRingZoom: 16 },
+          ...((current.terrainExaggeration ?? 0) > 0 ? [{ id: 'terrain-dem', template: undefined, zooms: [12, 13, 14, 15], maxRingZoom: 15 }] : [])];
         // Enqueue every tile touched by the track before its surrounding ring.
         // Both classes stay ahead of the far-away viewport discoveries.
         for (const radius of [0, 1]) {

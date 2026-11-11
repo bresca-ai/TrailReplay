@@ -1,19 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { beginRouteTilePreload, getRetainedTileUrl, markRouteTile, resetRouteTileCacheStats, retainRouteTile, retainedTileRequest, routeTileCacheStats } from './routeTileCache';
+import { beginRouteTilePreload, hasRetainedTile, markRouteTile, readRetainedTile, resetRouteTileCacheStats, retainRouteTile, retainedTileRequest, routeTileCacheStats, routeTileCacheVersion } from './routeTileCache';
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('route tile cache', () => {
-  it('retains tile bytes and hands the visible map the same local URL', async () => {
+  it('serves retained bytes to the map without creating object URLs', async () => {
     const source = 'https://tiles.example.test/retained/1';
     const fetchTile = vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(['tile']) });
     vi.stubGlobal('fetch', fetchTile);
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-retained');
     await retainRouteTile(source);
     await retainRouteTile(source);
     expect(fetchTile).toHaveBeenCalledTimes(1);
-    expect(getRetainedTileUrl(source)).toBe('blob:test-retained');
-    expect(retainedTileRequest(source, 'Tile')).toEqual({ url: 'blob:test-retained' });
+    expect(hasRetainedTile(source)).toBe(true);
+    const request = retainedTileRequest(source, 'Tile');
+    expect(request.url).toMatch(/^trailcache:\/\//);
+    const first = await readRetainedTile(request.url);
+    const second = await readRetainedTile(request.url);
+    expect(new TextDecoder().decode(first.data)).toBe('tile');
+    expect(first.data).not.toBe(second.data);
     expect(retainedTileRequest(source, 'Source')).toEqual({ url: source });
     vi.restoreAllMocks();
   });
@@ -25,6 +29,43 @@ describe('route tile cache', () => {
     expect(retainedTileRequest(source, 'Tile')).toEqual({ url: source });
   });
 
+  it('expires a cached response according to the provider freshness lifetime', async () => {
+    const source = 'https://tiles.example.test/expiry/1';
+    const now = vi.spyOn(Date, 'now').mockReturnValue(100000);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers({ 'cache-control': 'public, max-age=10', age: '3' }), blob: async () => new Blob(['tile']) }));
+    await retainRouteTile(source);
+    const version = routeTileCacheVersion();
+    now.mockReturnValue(106999);
+    expect(hasRetainedTile(source)).toBe(true);
+    now.mockReturnValue(107000);
+    expect(hasRetainedTile(source)).toBe(false);
+    expect(routeTileCacheVersion()).toBeGreaterThan(version);
+    vi.restoreAllMocks();
+  });
+
+  it('does not retain responses that prohibit caching', async () => {
+    const source = 'https://tiles.example.test/no-store/1';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers({ 'cache-control': 'no-store' }), blob: async () => new Blob(['tile']) }));
+    await expect(retainRouteTile(source)).rejects.toMatchObject({ retryable: false });
+    expect(hasRetainedTile(source)).toBe(false);
+  });
+
+  it('falls back to the original provider if an entry expires after a map request is transformed', async () => {
+    const source = 'https://tiles.example.test/race/1';
+    const now = vi.spyOn(Date, 'now').mockReturnValue(100000);
+    const bytes = new TextEncoder().encode('fresh').buffer;
+    const fetchTile = vi.fn()
+      .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'cache-control': 'max-age=1' }), blob: async () => new Blob(['cached']) })
+      .mockResolvedValueOnce({ ok: true, arrayBuffer: async () => bytes });
+    vi.stubGlobal('fetch', fetchTile);
+    await retainRouteTile(source);
+    const request = retainedTileRequest(source, 'Tile');
+    now.mockReturnValue(101000);
+    expect(new TextDecoder().decode((await readRetainedTile(request.url)).data)).toBe('fresh');
+    expect(fetchTile.mock.calls[1][0]).toBe(source);
+    vi.restoreAllMocks();
+  });
+
   it('cancels an in-flight route tile when playback is stopped', async () => {
     const source = 'https://tiles.example.test/aborted/1';
     vi.stubGlobal('fetch', vi.fn((_url: string, options: { signal: AbortSignal }) => new Promise((_resolve, reject) => {
@@ -34,7 +75,7 @@ describe('route tile cache', () => {
     const pending = retainRouteTile(source, controller.signal);
     controller.abort();
     await expect(pending).rejects.toThrow('aborted');
-    expect(getRetainedTileUrl(source)).toBeUndefined();
+    expect(hasRetainedTile(source)).toBe(false);
   });
 
   it('distinguishes route cache misses from requests outside the route', () => {

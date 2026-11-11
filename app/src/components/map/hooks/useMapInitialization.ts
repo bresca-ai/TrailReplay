@@ -7,7 +7,9 @@ import { registerAspectProtocol, registerSlopeProtocol } from '@/components/map/
 import { MAP_STYLE } from '@/components/map/mapStyle';
 import { setupTrackSources } from '@/components/map/mapSetup';
 import { TRADITIONAL_CHINESE_FONT_FAMILY } from '@/utils/typography';
-import { retainedTileRequest } from '@/utils/routeTileCache';
+import { readRetainedTile, retainedTileRequest } from '@/utils/routeTileCache';
+
+let routeCacheProtocolRegistered = false;
 
 interface UseMapInitializationParams {
   mapContainer: React.RefObject<HTMLDivElement | null>;
@@ -29,6 +31,10 @@ export function useMapInitialization({
 
     registerSlopeProtocol();
     registerAspectProtocol();
+    if (!routeCacheProtocolRegistered) {
+      maplibregl.addProtocol('trailcache', (request, controller) => readRetainedTile(request.url, controller.signal));
+      routeCacheProtocolRegistered = true;
+    }
     maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
     mapRef.current = new maplibregl.Map({
