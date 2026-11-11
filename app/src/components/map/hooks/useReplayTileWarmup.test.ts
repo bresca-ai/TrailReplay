@@ -9,12 +9,13 @@ const { MapConstructor, map } = vi.hoisted(() => {
     on: vi.fn(), off: vi.fn(), once: vi.fn(), remove: vi.fn(),
     isStyleLoaded: () => false, loaded: vi.fn(() => false), jumpTo: vi.fn(),
     getLayer: vi.fn(() => undefined), getSource: vi.fn(() => undefined),
+    cameraForBounds: vi.fn(() => undefined),
     getCanvas: () => ({ clientWidth: 1000, clientHeight: 600 }),
     project: () => ({ x: 500, y: 348 }),
   };
   return { map, MapConstructor: vi.fn(function (options?: Record<string, unknown>) { return { ...map, options }; }) };
 });
-vi.mock('maplibre-gl', () => ({ Map: MapConstructor }));
+vi.mock('maplibre-gl', () => ({ Map: MapConstructor, LngLatBounds: class { extend() { return this; } } }));
 vi.mock('./useLocationChapters', () => ({ cameraForPlace: () => ({ center: [1.84, 41.59], zoom: 5, pitch: 0, bearing: 0 }) }));
 
 beforeEach(() => {
@@ -32,6 +33,59 @@ afterEach(() => {
 });
 
 describe('replay tile warmup camera', () => {
+  it('prepares a loaded route while idle and reuses that scan when play starts', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers(), blob: async () => new Blob(['tile']) }));
+    const coordinates = [[30, 30], [30.0001, 30.0001]];
+    const elevations: Array<{ elevation: number }> = [];
+    const ready = vi.fn();
+    const visibleMapRef = { current: null };
+    const { rerender, unmount } = renderHook(({ phase, playing }) => useReplayTileWarmup({
+      allCoordinates: coordinates, routeCoordinates: coordinates, animationPhase: phase,
+      cameraMode: 'aerial-follow', diagnostics: NOOP_TILE_PRELOAD_OBSERVER,
+      elevationData: elevations, enabled: true, followBehindZoomLevel: 33, isMapLoaded: true,
+      isPlaying: playing, mapStyle: 'satellite', visibleMapRef, playbackProgress: 0,
+      playbackSpeed: 1, totalDurationMs: 1000, onStartupReadyChange: ready,
+    }), { initialProps: { phase: 'idle' as 'idle' | 'preloading' | 'outro', playing: false } });
+    const listeners = map.once.mock.calls.filter(([event]) => event === 'style.load');
+    await act(async () => { listeners.forEach(([, listener]) => listener()); await vi.advanceTimersByTimeAsync(20000); });
+    expect(map.jumpTo).toHaveBeenCalled();
+    const visits = map.jumpTo.mock.calls.length;
+    rerender({ phase: 'preloading', playing: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(ready).toHaveBeenCalledWith(true, false);
+    expect(map.jumpTo.mock.calls.length).toBe(visits);
+    rerender({ phase: 'outro', playing: false });
+    ready.mockClear();
+    rerender({ phase: 'preloading', playing: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(ready).toHaveBeenCalledWith(true, true);
+    unmount();
+  });
+  it('abandons an idle scan when the route changes and prepares the new route', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers(), blob: async () => new Blob(['tile']) }));
+    const first = [[32, 30], [32.0001, 30.0001]];
+    const second = [[33, 30], [33.0001, 30.0001]];
+    const elevations: Array<{ elevation: number }> = [];
+    const ready = vi.fn();
+    const visibleMapRef = { current: null };
+    const { rerender, unmount } = renderHook(({ route, phase, playing }) => useReplayTileWarmup({
+      allCoordinates: route, routeCoordinates: route, animationPhase: phase, cameraMode: 'follow',
+      diagnostics: NOOP_TILE_PRELOAD_OBSERVER, elevationData: elevations, enabled: true,
+      followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: playing, mapStyle: 'satellite',
+      visibleMapRef, playbackProgress: 0, playbackSpeed: 1, totalDurationMs: 1000, onStartupReadyChange: ready,
+    }), { initialProps: { route: first, phase: 'idle' as 'idle' | 'preloading', playing: false } });
+    const listeners = map.once.mock.calls.filter(([event]) => event === 'style.load');
+    await act(async () => { listeners.forEach(([, listener]) => listener()); await vi.advanceTimersByTimeAsync(2000); });
+    rerender({ route: second, phase: 'idle', playing: false });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20000); });
+    expect(map.jumpTo.mock.calls.some(([pose]) => pose.center[0] > 32.9)).toBe(true);
+    rerender({ route: second, phase: 'preloading', playing: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+    expect(ready).toHaveBeenCalledWith(true, false);
+    unmount();
+  });
   it('reuses only a recent successful warmup with unchanged route and camera settings', () => {
     const route = [[1, 2], [3, 4]];
     const previous = { values: [route, 'satellite', 60], at: 1000 };

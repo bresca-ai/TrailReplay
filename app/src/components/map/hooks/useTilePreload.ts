@@ -46,6 +46,7 @@ interface UseTilePreloadParams {
   introStartOverride?: ReplayCameraPose;
   introStageOverrides?: ReplayCameraPose[];
   backgroundWarmupReadyRef?: React.MutableRefObject<boolean>;
+  fastWarmupRef?: React.MutableRefObject<boolean>;
   skipPredictivePreload?: boolean;
 }
 
@@ -78,6 +79,7 @@ export function useTilePreload({
   introStartOverride,
   introStageOverrides,
   backgroundWarmupReadyRef,
+  fastWarmupRef,
   skipPredictivePreload = false,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
@@ -246,6 +248,12 @@ export function useTilePreload({
         await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
       }
       if (cancelled) return;
+      // A completed replay has already visited these views. The restored
+      // opening still waits for MapLibre to render before it is revealed.
+      if (fastWarmupRef?.current) {
+        restoreAndAdvance();
+        return;
+      }
       deadline = Date.now() + PRELOAD_TIMEOUT_MS;
       for (const pose of poses) {
         if (cancelled || Date.now() >= deadline) break;
@@ -277,6 +285,7 @@ export function useTilePreload({
     aerialTerrainLoading,
     aerialTerrainPlan,
     backgroundWarmupReadyRef,
+    fastWarmupRef,
     skipPredictivePreload,
     mapRef,
     setAnimationPhase,

@@ -83,6 +83,29 @@ it('keeps the opening covered until route-wide background warmup finishes', asyn
     unmount();
   } finally { vi.useRealTimers(); }
 });
+it('skips the repeated camera sweep after a verified completed replay', async () => {
+  const { act } = await import('@testing-library/react');
+  vi.useFakeTimers();
+  try {
+    const listeners = new Map<string, () => void>();
+    const map = { jumpTo: vi.fn(), cameraForBounds: () => ({ center: [0, 0], zoom: 5 }),
+      once: (event: string, handler: () => void) => listeners.set(event, handler),
+      off: (event: string) => listeners.delete(event), triggerRepaint: vi.fn() } as unknown as MapLibreMap;
+    const setAnimationPhase = vi.fn();
+    const { unmount } = renderHook(() => useTilePreload({
+      allCoordinates: [[0, 0], [0.01, 0]], animationPhase: 'preloading', cameraMode: 'follow',
+      elevationData: [], followBehindZoomLevel: 33, isMapLoaded: true, isPlaying: true, mapRef: { current: map },
+      setAnimationPhase, smoothBearingRef: { current: 0 }, targetBearingRef: { current: 0 }, totalDurationMs: 60000,
+      backgroundWarmupReadyRef: { current: true }, fastWarmupRef: { current: true },
+    }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(map.jumpTo).toHaveBeenCalledTimes(1);
+    expect(setAnimationPhase).not.toHaveBeenCalled();
+    act(() => listeners.get('idle')?.());
+    expect(setAnimationPhase).toHaveBeenCalledWith('intro');
+    unmount();
+  } finally { vi.useRealTimers(); }
+});
 it('waits for the restored place view before revealing the opening frame', async () => {
   const { act } = await import('@testing-library/react');
   vi.useFakeTimers();

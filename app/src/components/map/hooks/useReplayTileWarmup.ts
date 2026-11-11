@@ -112,7 +112,7 @@ interface UseReplayTileWarmupParams {
   diagnostics: TilePreloadObserver;
   locationFeatures?: LocationFeature[];
   zoomToPlace?: boolean;
-  onStartupReadyChange?: (ready: boolean) => void;
+  onStartupReadyChange?: (ready: boolean, previouslyPlayed?: boolean) => void;
 }
 
 /**
@@ -137,14 +137,17 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
   const discoveryOffsetRef = useRef(0);
   const discoveryScanTimeRef = useRef(0);
   const startupScannedRef = useRef(false);
+  const scannedValuesRef = useRef<unknown[] | null>(null);
   const startupCacheVersionRef = useRef(0);
-  const completedStartupRef = useRef<{ values: unknown[]; at: number; cacheVersion: number } | null>(null);
+  const completedStartupRef = useRef<{ values: unknown[]; at: number; cacheVersion: number; previouslyPlayed: boolean } | null>(null);
   useEffect(() => {
     if (animationPhase === 'preloading' && onStartupReadyChange) {
       onStartupReadyChange(false);
-      startupScannedRef.current = false;
       resetRouteTileCacheStats();
       if (import.meta.env.DEV) document.documentElement.dataset.tileWarmupMode = 'scan';
+    }
+    if ((animationPhase === 'outro' || animationPhase === 'ended') && completedStartupRef.current) {
+      completedStartupRef.current.previouslyPlayed = true;
     }
   }, [animationPhase, onStartupReadyChange]);
   useEffect(() => {
@@ -341,8 +344,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       if (
         !map
         || !warmupInitializedRef.current
-        || (!current.isPlaying && !['preloading', 'intro', 'outro'].includes(current.animationPhase))
+        || (!current.isPlaying && !['idle', 'preloading', 'intro', 'outro'].includes(current.animationPhase))
         || current.cameraMode === 'overview'
+        || current.allCoordinates.length < 2
+        || (current.animationPhase === 'idle' && current.playbackProgress >= 0.01)
         || (current.cameraMode === 'aerial-follow' && current.aerialTerrainLoading)
       ) return;
 
@@ -353,19 +358,33 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
         current.terrainExaggeration, current.locationFeatures, current.zoomToPlace,
         viewport?.clientWidth, viewport?.clientHeight];
       const previous = completedStartupRef.current;
-      if (current.animationPhase === 'preloading' && current.onStartupReadyChange && !startupScannedRef.current
+      const preparing = Boolean(current.onStartupReadyChange)
+        && (current.animationPhase === 'preloading' || (current.animationPhase === 'idle' && !current.isPlaying));
+      if (preparing && startupScannedRef.current
+        && !canReuseStartupWarmup(startupValues, scannedValuesRef.current ? { values: scannedValuesRef.current, at: performance.now() } : null, performance.now(), false)) {
+        startupScannedRef.current = false;
+        scheduler.cancelPending();
+      }
+      if (preparing && startupScannedRef.current && previous
+        && (previous.cacheVersion !== routeTileCacheVersion()
+          || !canReuseStartupWarmup(startupValues, previous, performance.now(), scheduler.hasRetainedFailures()))) {
+        startupScannedRef.current = false;
+      }
+      if (preparing && !startupScannedRef.current
         && previous?.cacheVersion === routeTileCacheVersion()
-        && canReuseStartupWarmup(startupValues, previous, performance.now(), scheduler.hasFailures())) {
+        && canReuseStartupWarmup(startupValues, previous, performance.now(), scheduler.hasRetainedFailures())) {
         startupScannedRef.current = true;
+        scannedValuesRef.current = startupValues;
         if (import.meta.env.DEV) document.documentElement.dataset.tileWarmupMode = 'reuse';
       }
 
-      if (current.animationPhase === 'preloading' && current.onStartupReadyChange && startupScannedRef.current) {
+      if (preparing && current.onStartupReadyChange && startupScannedRef.current) {
         if (scheduler.pendingRetained() === 0) {
-          if (!scheduler.hasFailures() && startupCacheVersionRef.current === routeTileCacheVersion()) {
-            completedStartupRef.current = { values: startupValues, at: performance.now(), cacheVersion: routeTileCacheVersion() };
+          if (!scheduler.hasRetainedFailures() && startupCacheVersionRef.current === routeTileCacheVersion()) {
+            const wasPlayed = Boolean(previous?.previouslyPlayed && canReuseStartupWarmup(startupValues, previous, performance.now(), false));
+            completedStartupRef.current = { values: startupValues, at: performance.now(), cacheVersion: routeTileCacheVersion(), previouslyPlayed: wasPlayed };
           }
-          current.onStartupReadyChange(true);
+          if (current.animationPhase === 'preloading') current.onStartupReadyChange(true, Boolean(completedStartupRef.current?.previouslyPlayed));
         }
         return;
       }
@@ -379,8 +398,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       discoveryScanTimeRef.current = performance.now() / 1000;
 
       const isClose3D = current.cameraMode === 'aerial-follow' || (current.cameraMode === 'follow-behind' && current.followBehindZoomLevel >= 66);
-      const startupScan = current.animationPhase === 'preloading' && Boolean(current.onStartupReadyChange);
+      const startupScan = preparing;
       if (startupScan) {
+        completedStartupRef.current = null;
+        scheduler.resetFailures();
         startupCacheVersionRef.current = routeTileCacheVersion();
         beginRouteTilePreload();
         // Camera samples can skip a narrow valley or a fast turn. Request a
@@ -524,7 +545,10 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
           discoveryOffsetRef.current = viewOffsets.get(pose) ?? 0;
           await warmPose(map, pose);
         }
-        if (startupScan && !cancelled) startupScannedRef.current = true;
+        if (startupScan && !cancelled) {
+          scannedValuesRef.current = startupValues;
+          startupScannedRef.current = true;
+        }
       } finally {
         isWarming = false;
       }
@@ -543,5 +567,8 @@ export function useReplayTileWarmup(params: UseReplayTileWarmupParams) {
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [params.enabled, params.isMapLoaded, scheduler]);
+  }, [params.diagnostics, params.enabled, params.isMapLoaded, params.mapStyle, params.terrainExaggeration,
+    params.allCoordinates, params.routeCoordinates, params.elevationData, params.aerialTerrainPlan,
+    params.cameraMode, params.cinematicKeyframes, params.cameraStability, params.followBehindZoomLevel,
+    params.followBehindPitch, params.totalDurationMs, params.locationFeatures, params.zoomToPlace, scheduler]);
 }

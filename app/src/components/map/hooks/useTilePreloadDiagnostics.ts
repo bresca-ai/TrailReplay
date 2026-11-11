@@ -97,10 +97,15 @@ export function useTilePreloadDiagnostics({
       const snapshot = diagnostics.snapshot();
       document.documentElement.dataset.tilePreloadDiagnostics = JSON.stringify(snapshot.summary);
       const map = mapRef.current;
+      // During hot reload or teardown MapLibre can exist briefly without a
+      // style; its readiness methods may throw until initialization finishes.
+      const readReadiness = (read: () => boolean): boolean | null => {
+        try { return read(); } catch { return null; }
+      };
       document.documentElement.dataset.tileRenderReadiness = JSON.stringify({
-        tilesLoaded: map ? map.areTilesLoaded() : null,
-        mapLoaded: map ? map.loaded() : null,
-        moving: map ? map.isMoving() : null,
+        tilesLoaded: map ? readReadiness(() => map.areTilesLoaded()) : null,
+        mapLoaded: map ? readReadiness(() => map.loaded()) : null,
+        moving: map ? readReadiness(() => map.isMoving()) : null,
       });
       const now = performance.now();
       const recent = snapshot.records.filter(record => record.sourceId === 'satellite' && record.neededAt !== null && now - record.neededAt < 3000);

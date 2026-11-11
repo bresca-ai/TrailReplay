@@ -7,6 +7,17 @@ import {
 } from './tileRequestScheduler';
 
 describe('TileRequestScheduler', () => {
+  it('distinguishes failures in distant tiles from required route tiles', async () => {
+    const load = vi.fn().mockRejectedValue(Object.assign(new Error('unavailable'), { retryable: false }));
+    const scheduler = new TileRequestScheduler({ concurrency: 1, load });
+    scheduler.enqueue({ key: '1/0/0', priority: 0, sourceId: 'satellite', url: 'distant' });
+    await vi.waitFor(() => expect(scheduler.hasFailures()).toBe(true));
+    expect(scheduler.hasRetainedFailures()).toBe(false);
+    scheduler.enqueue({ key: '1/0/1', priority: 0, sourceId: 'satellite', url: 'route', retain: true });
+    await vi.waitFor(() => expect(scheduler.hasRetainedFailures()).toBe(true));
+    scheduler.resetFailures();
+    expect(scheduler.hasRetainedFailures()).toBe(false);
+  });
   it('does not repeatedly request a tile that cannot be cached', async () => {
     const load = vi.fn().mockRejectedValue(Object.assign(new Error('no-store'), { retryable: false }));
     const onError = vi.fn();

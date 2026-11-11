@@ -33,6 +33,7 @@ export class TileRequestScheduler {
   private readonly activeControllers = new Map<string, AbortController>();
   private readonly completed = new Map<string, number>();
   private readonly failed = new Set<string>();
+  private readonly failedRetained = new Set<string>();
   private readonly queued = new Map<string, QueuedTileRequest>();
   private readonly retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly retryCounts = new Map<string, number>();
@@ -64,6 +65,7 @@ export class TileRequestScheduler {
     }
     this.completed.delete(id);
     this.failed.delete(id);
+    this.failedRetained.delete(id);
 
     const existing = this.queued.get(id);
     const wasStale = existing ? (this.options.isStale?.(existing) ?? false) : false;
@@ -77,6 +79,7 @@ export class TileRequestScheduler {
   clear(): void {
     this.completed.clear();
     this.failed.clear();
+    this.failedRetained.clear();
     this.cancelPending();
   }
 
@@ -101,6 +104,8 @@ export class TileRequestScheduler {
   }
 
   hasFailures(): boolean { return this.failed.size > 0; }
+  hasRetainedFailures(): boolean { return this.failedRetained.size > 0; }
+  resetFailures(): void { this.failed.clear(); this.failedRetained.clear(); }
 
   pendingRetained(): number {
     return this.activeRetainedIds.size + this.retainedRetryIds.size
@@ -145,6 +150,7 @@ export class TileRequestScheduler {
           if (retries >= 2 || (typeof error === 'object' && error !== null && 'retryable' in error && error.retryable === false)) {
             this.retryCounts.delete(id);
             this.failed.add(id);
+            if (next.retain) this.failedRetained.add(id);
             this.options.onError?.(next);
             return;
           }

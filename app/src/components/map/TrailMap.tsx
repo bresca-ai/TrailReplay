@@ -70,7 +70,11 @@ export function TrailMap(_props: TrailMapProps) {
   const loadZoomDoneRef = useRef<boolean>(false);
   const handledZoomButtonPressRef = useRef(false);
   const startupWarmupReadyRef = useRef(false);
-  const setStartupWarmupReady = useCallback((ready: boolean) => { startupWarmupReadyRef.current = ready; }, []);
+  const startupWarmupFastRef = useRef(false);
+  const setStartupWarmupReady = useCallback((ready: boolean, fast = false) => {
+    startupWarmupReadyRef.current = ready;
+    startupWarmupFastRef.current = ready && fast;
+  }, []);
   const restoredCameraKeyRef = useRef<string | null>(null);
 
   const tracks = useAppStore((state) => state.tracks);
@@ -445,7 +449,8 @@ export function TrailMap(_props: TrailMapProps) {
     // time duplicates its tile/GPU cache and caused memory to climb into
     // gigabytes during annotation slowdowns. Unmount it for the export and let
     // the recording map own tile loading until the export completes.
-    enabled: !isExporting && settings.mapStyle !== 'street' && (playback.isPlaying || animationPhase === 'preloading' || animationPhase === 'intro' || animationPhase === 'outro'),
+    enabled: !isExporting && settings.mapStyle !== 'street' && cameraMode !== 'overview' && cameraPathCoordinates.length >= 2
+      && (animationPhase === 'idle' || playback.isPlaying || animationPhase === 'preloading' || animationPhase === 'intro' || animationPhase === 'outro'),
     followBehindZoomLevel,
     followBehindPitch: cameraSettings.followBehindPitch,
     isMapLoaded,
@@ -482,6 +487,7 @@ export function TrailMap(_props: TrailMapProps) {
     introStartOverride: locationChapter.introCamera,
     introStageOverrides,
     backgroundWarmupReadyRef: !isExporting && cameraMode !== 'overview' ? startupWarmupReadyRef : undefined,
+    fastWarmupRef: startupWarmupFastRef,
     // OSM's standard tile service prohibits speculative tile prefetching.
     skipPredictivePreload: settings.mapStyle === 'street',
   });
