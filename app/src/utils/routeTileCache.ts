@@ -42,6 +42,25 @@ export function beginRouteTilePreload(): void { routeUrls.clear(); }
 export function markRouteTile(url: string): void { routeUrls.add(url); }
 export function routeTileCacheStats() { return { hits, misses, routeHits, routeMisses, entries: entries.size, bytes }; }
 
+function cacheLifetime(response: Response): number {
+  const cacheControl = response.headers?.get('cache-control') ?? '';
+  if (/\b(?:no-store|no-cache)\b/i.test(cacheControl)) return 0;
+  const maxAge = /(?:^|,)\s*max-age\s*=\s*"?(\d+)/i.exec(cacheControl);
+  const ageSeconds = Number(response.headers?.get('age') ?? 0);
+  return maxAge ? Math.min(DEFAULT_MAX_AGE_MS, Math.max(0, Number(maxAge[1]) - (Number.isFinite(ageSeconds) ? ageSeconds : 0)) * 1000) : DEFAULT_MAX_AGE_MS;
+}
+
+function storeTile(url: string, blob: Blob, maxAgeMs: number): void {
+  if (maxAgeMs <= 0 || blob.size > MAX_CACHE_BYTES || hasRetainedTile(url)) return;
+  while (bytes + blob.size > MAX_CACHE_BYTES && entries.size > 0) {
+    const oldest = [...entries.keys()].find(key => !routeUrls.has(key)) ?? entries.keys().next().value;
+    if (!oldest) break;
+    evict(oldest);
+  }
+  entries.set(url, { data: blob, size: blob.size, expiresAt: Date.now() + maxAgeMs });
+  bytes += blob.size;
+}
+
 export async function retainRouteTile(url: string, signal?: AbortSignal): Promise<void> {
   if (hasRetainedTile(url)) return;
   if (signal?.aborted) throw new Error('Tile request cancelled');
@@ -50,15 +69,11 @@ export async function retainRouteTile(url: string, signal?: AbortSignal): Promis
   signal?.addEventListener('abort', onAbort, { once: true });
   const timeout = setTimeout(() => controller.abort(), 10000);
   let blob: Blob;
-  let maxAgeMs = DEFAULT_MAX_AGE_MS;
+  let maxAgeMs: number;
   try {
     const response = await fetch(url, { mode: 'cors', signal: controller.signal });
     if (!response.ok) throw new Error(`Tile request failed (${response.status})`);
-    const cacheControl = response.headers?.get('cache-control') ?? '';
-    if (/\b(?:no-store|no-cache)\b/i.test(cacheControl)) throw new UncacheableTileError('Tile provider disallows reusable caching');
-    const maxAge = /(?:^|,)\s*max-age\s*=\s*"?(\d+)/i.exec(cacheControl);
-    const ageSeconds = Number(response.headers?.get('age') ?? 0);
-    if (maxAge) maxAgeMs = Math.min(DEFAULT_MAX_AGE_MS, Math.max(0, Number(maxAge[1]) - (Number.isFinite(ageSeconds) ? ageSeconds : 0)) * 1000);
+    maxAgeMs = cacheLifetime(response);
     if (maxAgeMs <= 0) throw new UncacheableTileError('Tile response has expired');
     blob = await response.blob();
   } finally {
@@ -67,16 +82,14 @@ export async function retainRouteTile(url: string, signal?: AbortSignal): Promis
   }
   if (signal?.aborted) throw new Error('Tile request cancelled');
   if (blob.size > MAX_CACHE_BYTES) throw new Error('Tile exceeds cache capacity');
-  // Another request can have stored the same URL while this fetch was in flight.
-  if (hasRetainedTile(url)) return;
-  while (bytes + blob.size > MAX_CACHE_BYTES && entries.size > 0) {
-    // A wide camera view must not evict route-critical tiles first.
-    const oldest = [...entries.keys()].find(key => !routeUrls.has(key)) ?? entries.keys().next().value;
-    if (!oldest) break;
-    evict(oldest);
-  }
-  entries.set(url, { data: blob, size: blob.size, expiresAt: Date.now() + maxAgeMs });
-  bytes += blob.size;
+  storeTile(url, blob, maxAgeMs);
+}
+
+function canCacheVisibleTile(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && ['server.arcgisonline.com', 'clarity.maptiles.arcgis.com', 'a.tile.opentopomap.org', 's3.amazonaws.com'].includes(parsed.hostname);
+  } catch { return false; }
 }
 
 /** Used by the visible map only; uncached tiles keep MapLibre's normal path. */
@@ -87,7 +100,7 @@ export function retainedTileRequest(url: string, resourceType?: string): { url: 
   if (routeUrls.has(url)) {
     if (retained) routeHits++; else routeMisses++;
   }
-  return { url: retained ? `trailcache://${encodeURIComponent(url)}` : url };
+  return { url: retained || canCacheVisibleTile(url) ? `trailcache://${encodeURIComponent(url)}` : url };
 }
 
 /** Return an independent buffer: MapLibre may transfer ownership to a worker. */
@@ -103,5 +116,8 @@ export async function readRetainedTile(protocolUrl: string, signal?: AbortSignal
   // An entry can expire or be evicted between transformRequest and this call.
   const response = await fetch(originalUrl, { mode: 'cors', signal });
   if (!response.ok) throw new Error(`Tile request failed (${response.status})`);
-  return { data: await response.arrayBuffer() };
+  const blob = await response.blob();
+  if (signal?.aborted) throw new Error('Tile request cancelled');
+  storeTile(originalUrl, blob, cacheLifetime(response));
+  return { data: await blob.arrayBuffer() };
 }

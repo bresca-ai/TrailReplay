@@ -55,10 +55,9 @@ describe('route tile cache', () => {
   it('falls back to the original provider if an entry expires after a map request is transformed', async () => {
     const source = 'https://tiles.example.test/race/1';
     const now = vi.spyOn(Date, 'now').mockReturnValue(100000);
-    const bytes = new TextEncoder().encode('fresh').buffer;
     const fetchTile = vi.fn()
       .mockResolvedValueOnce({ ok: true, headers: new Headers({ 'cache-control': 'max-age=1' }), blob: async () => new Blob(['cached']) })
-      .mockResolvedValueOnce({ ok: true, arrayBuffer: async () => bytes });
+      .mockResolvedValueOnce({ ok: true, blob: async () => new Blob(['fresh']) });
     vi.stubGlobal('fetch', fetchTile);
     await retainRouteTile(source);
     const request = retainedTileRequest(source, 'Tile');
@@ -66,6 +65,25 @@ describe('route tile cache', () => {
     expect(new TextDecoder().decode((await readRetainedTile(request.url)).data)).toBe('fresh');
     expect(fetchTile.mock.calls[1][0]).toBe(source);
     vi.restoreAllMocks();
+  });
+
+  it('caches tiles first encountered by the visible map for the next replay', async () => {
+    const source = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/123/456';
+    const fetchTile = vi.fn().mockResolvedValue({ ok: true, headers: new Headers(), blob: async () => new Blob(['visible']) });
+    vi.stubGlobal('fetch', fetchTile);
+    const request = retainedTileRequest(source, 'Tile');
+    expect(request.url).toMatch(/^trailcache:/);
+    expect(new TextDecoder().decode((await readRetainedTile(request.url)).data)).toBe('visible');
+    await readRetainedTile(retainedTileRequest(source, 'Tile').url);
+    expect(fetchTile).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders but does not retain visible tiles that prohibit caching', async () => {
+    const source = 'https://server.arcgisonline.com/no-store-test';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers({ 'cache-control': 'no-store' }), blob: async () => new Blob(['visible']) }));
+    const request = retainedTileRequest(source, 'Tile');
+    expect(new TextDecoder().decode((await readRetainedTile(request.url)).data)).toBe('visible');
+    expect(hasRetainedTile(source)).toBe(false);
   });
 
   it('cancels an in-flight route tile when playback is stopped', async () => {
