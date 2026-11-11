@@ -659,6 +659,11 @@ export const es = {
     noVideos: 'No hay vídeos subidos',
     noVideosHint: 'Añade vídeos para mostrarlos en el mapa',
     relinkFile: 'Volver a vincular archivo',
+    relinkFolder: {
+      pictures: '{count} foto(s) sin enlace',
+      videos: '{count} video(s) sin enlace',
+      hint: 'Haz clic aquí para vincular todos los elementos que no tienen enlace.'
+    },
     placeholderFile: 'Archivo no adjuntado (restaurado de un proyecto guardado)',
     previewPicture: 'Previsualizar foto',
     trailAlt: 'Ruta',
