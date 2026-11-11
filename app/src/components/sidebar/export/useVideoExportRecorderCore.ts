@@ -15,18 +15,20 @@ import {
   type JourneyPoint,
 } from '@/utils/journeyUtils';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { waitForAerialTerrainPlan } from '@/utils/aerialTerrainPlan';
 import { locationChapterIntroCameraRef, locationChapterIntroStagesRef } from '@/utils/locationChapterCamera';
 import {
   deduplicateCameraPoses,
   getDeterministicIntroStartPose,
+  getReplayWarmupPose,
   sampleCameraTransition,
 } from '@/utils/replayCameraWarmupPlan';
 import {
-  getIntroCameraPose,
   getOpeningPreloadProgresses,
-  getPlaybackCameraPose,
+  resolveReplayCameraMode,
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
+import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
 import { getStatAvailability, isStatAvailable } from '@/utils/statAvailability';
 import {
   formatDistance,
@@ -43,6 +45,7 @@ import { MP4_MIME_TYPES } from './exportConfig';
 import { getDeterministicHoldFrames, getDeterministicPhaseFrames } from './exportFrameTimeline';
 import { createExportMapClock } from './exportMapClock';
 import { waitForSettledFrame } from './exportMapSettle';
+import { assertMapContextAvailable } from './mapContextReadiness';
 import { getOverlayRefreshIntervalMs } from './exportOverlay';
 import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
 import { isWebCodecsMp4Supported, type Mp4CanvasEncoder } from './mp4CanvasEncoder';
@@ -120,6 +123,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     segmentTimings,
     totalDistance,
   } = useComputedJourney();
+  const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
+  const replayCameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.length);
   const journeyDistanceProfile = useMemo(
     () => computedJourney ? buildJourneyDistanceProfile(computedJourney.coordinates) : null,
     [computedJourney],
@@ -456,6 +461,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const map = mapGlobalRef.current;
       if (!map) return;
+      assertMapContextAvailable(map.getCanvas());
 
       await new Promise<void>((resolve) => {
         let resolved = false;
@@ -482,6 +488,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const renderMapOnce = useCallback(async () => {
     const map = mapGlobalRef.current;
     if (!map) return;
+    assertMapContextAvailable(map.getCanvas());
     await new Promise<void>((resolve) => {
       let resolved = false;
       const finish = () => {
@@ -611,14 +618,20 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     const map = mapGlobalRef.current;
     if (!map || cameraSettings.mode === 'overview' || cameraPathCoordinates.length === 0) return;
 
+    // Allow the map's preparation effect to register before looking it up.
+    // The plan is bounded by the same timeout as interactive playback.
+    if (replayCameraMode === 'aerial-follow') await waitForMapFrame();
+    const aerialPlan = replayCameraMode === 'aerial-follow' ? await waitForAerialTerrainPlan(cameraPathCoordinates) : null;
+    if (recordingCancelledRef.current) return;
+    if (aerialPlan) await waitForMapFrame();
+
     const routeDurationMs = useAppStore.getState().playback.totalDuration || 60_000;
-    // Tile prefetch has no cinematic-specific pose logic yet — approximate
-    // with follow-behind, which sits at a similar zoom/pitch. The actual
-    // export render loop (useTrailPlaybackCamera) does use the real
-    // cinematic poses, so this only affects which tiles get warmed early.
-    const poseCameraMode = cameraSettings.mode === 'cinematic' ? 'follow-behind' : cameraSettings.mode;
-    const introPose = getIntroCameraPose({
-      cameraMode: poseCameraMode,
+    const introPose = getReplayWarmupPose({
+      cameraMode: replayCameraMode,
+      cinematicKeyframes,
+      aerialTerrainPlan: aerialPlan,
+      cameraStability: cameraSettings.cameraStability,
+      totalDurationMs: routeDurationMs,
       coordinates: cameraPathCoordinates,
       elevationData,
       followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
@@ -638,14 +651,21 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         routeDurationMs,
         EXPORT_OPENING_WINDOW_MS,
         EXPORT_OPENING_SAMPLE_COUNT,
-      ).map((progress) => getPlaybackCameraPose({
-        cameraMode: poseCameraMode,
+      ).map((progress) => {
+        const pose = getReplayWarmupPose({
+        cameraMode: replayCameraMode,
+        cinematicKeyframes,
+        aerialTerrainPlan: aerialPlan,
+        cameraStability: cameraSettings.cameraStability,
+        totalDurationMs: routeDurationMs,
         coordinates: cameraPathCoordinates,
         elevationData,
         followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
         followBehindPitch: cameraSettings.followBehindPitch,
         progress,
-      })),
+      });
+        return pose;
+      }),
     ].filter((pose): pose is ReplayCameraPose => pose !== null));
     const deadline = Date.now() + EXPORT_TILE_PRELOAD_TIMEOUT_MS;
 
@@ -667,7 +687,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     map.jumpTo(introStartPose);
     await waitForMapFrame();
-  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.followBehindPitch, cameraSettings.mode, elevationData, waitForMapFrame]);
+  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.followBehindPitch, cameraSettings.cameraStability, cameraSettings.mode, cinematicKeyframes, replayCameraMode, elevationData, waitForMapFrame]);
 
   const captureDeterministicPhase = useCallback(async (
     durationMs: number,

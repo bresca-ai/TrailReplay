@@ -17,7 +17,7 @@ export function cameraReactivityFromStability(cameraStability: number): number {
  * stabilization as follow-behind.
  */
 export function shouldBypassProceduralCameraSmoothing(
-  cameraMode: 'overview' | 'follow' | 'follow-behind' | 'cinematic',
+  cameraMode: 'overview' | 'follow' | 'follow-behind' | 'aerial-follow' | 'cinematic',
   cinematicKeyframeCount: number,
 ): boolean {
   return cameraMode === 'follow' || (cameraMode === 'cinematic' && cinematicKeyframeCount > 0);
@@ -236,6 +236,19 @@ export function limitRateOfChange(
   const diff = target - current;
   if (Math.abs(diff) <= maxChange) return target;
   return current + Math.sign(diff) * maxChange;
+}
+
+/** Frame-rate independent aerial turns without deadband stick-slip. */
+export function smoothAerialBearing(current: number, target: number, deltaMs: number, stability = 0.5): number {
+  if (!Number.isFinite(deltaMs) || deltaMs <= 0) return target;
+  const diff = ((target - current + 540) % 360) - 180;
+  const seconds = deltaMs / 1000;
+  const reactive = Math.max(0, Math.min(1, Number.isFinite(stability) ? stability : 0.5));
+  const timeConstant = 2.7 - reactive * 1.8;
+  const maxRate = 20 + reactive * 20;
+  const requested = diff * (1 - Math.exp(-seconds / timeConstant));
+  const step = Math.max(-maxRate * seconds, Math.min(maxRate * seconds, requested));
+  return (current + step + 360) % 360;
 }
 
 export function smoothBearing(

@@ -211,6 +211,8 @@ export const ca = {
     aspectLegendNorthwest: 'Nord-oest',
     aspectLegendFooter: 'Transparent en terreny molt pla',
     cameraModes: {
+      aerialFollow: 'Vol de muntanya',
+      aerialFollowDesc: 'Seguiment aeri suau, inclinat i adaptat al terreny',
       overview: 'Panoràmica',
       overviewDesc: 'Vista fixa de tota la ruta',
       follow: 'Seguir',
@@ -218,7 +220,7 @@ export const ca = {
       followBehind: 'Seguir des del darrere',
       followBehindDesc: 'Vista cinematogràfica des del darrere',
       cinematic: 'Cinemàtica',
-      cinematicDesc: 'Plans de càmera personalitzats que col·loques a la línia de temps',
+      cinematicDesc: 'Vol suau adaptat al terreny amb plans de càmera personalitzats opcionals',
     },
     cinematicCamera: {
       title: 'Fotogrames clau de càmera',
@@ -234,7 +236,7 @@ export const ca = {
       infoEasing: 'Transició: Suau s\'apropa al següent fotograma clau. Lineal es mou a ritme constant. Mantenir es queda quieta i després talla.',
       infoStability: 'L\'estabilitat de la càmera decideix quant del zig-zag de la ruta arriba a la càmera: cap a Cinemàtica vola una línia suavitzada entre els revolts mentre el marcador es mou dins l\'enquadrament; cap a Reactiva segueix de prop el marcador.',
       capture: 'Fixar fotograma clau de càmera',
-      empty: 'Encara no hi ha fotogrames clau: la càmera es comporta com Seguir des del darrere fins que n\'afegeixis un.',
+      empty: 'La càmera vola automàticament. Afegeix fotogrames clau per crear plans personalitzats.',
       keyframeAt: 'A {time}',
       frame: 'Referència',
       frameWorld: 'Món',

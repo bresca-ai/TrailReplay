@@ -2,7 +2,9 @@ import { DEFAULT_MAP_SKY } from './mapSky';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
-export const BASEMAP_FALLBACK_MAX_ZOOM = 12;
+// A coarse, low-zoom parent layer covers the distant horizon with a small
+// number of requests, while the full-resolution layer fills in above it.
+export const BASEMAP_FALLBACK_MAX_ZOOM = 8;
 
 export const BASEMAP_PRESENTATIONS: Record<string, {
   fallbackLayerId: string;
@@ -113,7 +115,7 @@ export const MAP_STYLE = {
       ...rasterSource(MAPBOX_STREET_TILES, MAPBOX_ATTRIBUTION, 512),
     },
     // A bounded parent-tile pyramid remains renderable beneath the detail
-    // basemap. At close zoom MapLibre overscales these z12 tiles, so a late
+    // basemap. At close zoom MapLibre overscales these z8 tiles, so a late
     // detail request degrades to softer imagery instead of the base fill.
     'fallback-osm': fallbackRasterSource(OSM_TILES, OSM_ATTRIBUTION),
     'fallback-opentopomap': fallbackRasterSource(TOPO_TILES, TOPO_ATTRIBUTION),
@@ -168,7 +170,7 @@ export const MAP_STYLE = {
   ],
   terrain: {
     source: 'terrain-dem',
-    exaggeration: 1.2,
+    exaggeration: 1,
   },
 } as const;
 

@@ -237,7 +237,7 @@ export interface MapStyleConfig {
   thumbnail?: string;
 }
 
-export type CameraMode = 'overview' | 'follow' | 'follow-behind' | 'cinematic';
+export type CameraMode = 'overview' | 'follow' | 'follow-behind' | 'aerial-follow' | 'cinematic';
 
 export interface CameraSettings {
   mode: CameraMode;

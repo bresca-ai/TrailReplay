@@ -7,6 +7,9 @@ import { registerAspectProtocol, registerSlopeProtocol } from '@/components/map/
 import { MAP_STYLE } from '@/components/map/mapStyle';
 import { setupTrackSources } from '@/components/map/mapSetup';
 import { TRADITIONAL_CHINESE_FONT_FAMILY } from '@/utils/typography';
+import { readRetainedTile, retainedTileRequest } from '@/utils/routeTileCache';
+
+let routeCacheProtocolRegistered = false;
 
 interface UseMapInitializationParams {
   mapContainer: React.RefObject<HTMLDivElement | null>;
@@ -28,6 +31,10 @@ export function useMapInitialization({
 
     registerSlopeProtocol();
     registerAspectProtocol();
+    if (!routeCacheProtocolRegistered) {
+      maplibregl.addProtocol('trailcache', (request, controller) => readRetainedTile(request.url, controller.signal));
+      routeCacheProtocolRegistered = true;
+    }
     maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
     mapRef.current = new maplibregl.Map({
@@ -46,10 +53,13 @@ export function useMapInitialization({
       // successive popup snapshots piled up on top of each other.
       canvasContextAttributes: { preserveDrawingBuffer: true },
       attributionControl: false,
-      // Keep more tiles in memory than the viewport-based default so the tiles
-      // warmed during the `preloading` phase (and along the route) aren't evicted
-      // mid-flythrough, which would re-introduce white tiles. See issue #63.
-      maxTileCacheSize: 2000,
+      transformRequest: retainedTileRequest,
+      // MapLibre uses the smaller of this ceiling and viewport tile count ×
+      // maxTileCacheZoomLevels. Its default of five zoom levels leaves a very
+      // small decoded cache on narrow screens, even with a larger ceiling.
+      // Keep more recently visited tiles for replay, with a per-source bound.
+      maxTileCacheSize: 512,
+      maxTileCacheZoomLevels: 20,
       // Preserve the coarser tiles already on screen while close-follow camera
       // zooms request their detailed replacements. This trades a little extra
       // memory/network work for continuous imagery during replay motion.

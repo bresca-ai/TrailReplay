@@ -17,6 +17,7 @@ import {
 // Never hold the replay behind the preparation screen indefinitely. The opening
 // sequence gets the whole budget; each camera sample may finish sooner on idle.
 const PRELOAD_TIMEOUT_MS = 6000;
+const BACKGROUND_TIMEOUT_MS = 15000;
 const POSE_TIMEOUT_MS = 350;
 const RESTORED_VIEW_TIMEOUT_MS = 3000;
 const OPENING_WINDOW_MS = 12000;
@@ -29,6 +30,7 @@ interface UseTilePreloadParams {
   animationPhase: AnimationPhase;
   cameraMode: ReplayCameraMode | 'cinematic';
   cinematicKeyframes?: PreparedCinematicKeyframe[];
+  cameraStability?: number;
   elevationData: Array<{ elevation: number; progress?: number }>;
   followBehindZoomLevel: number;
   followBehindPitch?: number | null;
@@ -40,8 +42,14 @@ interface UseTilePreloadParams {
   targetBearingRef: React.MutableRefObject<number>;
   totalDurationMs: number;
   locationBoundariesLoading?: boolean;
+  aerialTerrainLoading?: boolean;
+  aerialTerrainPlan?: number[] | null;
   introStartOverride?: ReplayCameraPose;
   introStageOverrides?: ReplayCameraPose[];
+  backgroundWarmupReadyRef?: React.MutableRefObject<boolean>;
+  fastWarmupRef?: React.MutableRefObject<boolean>;
+  skipPredictivePreload?: boolean;
+  basemapIdentity?: string;
 }
 
 /**
@@ -56,6 +64,7 @@ export function useTilePreload({
   animationPhase,
   cameraMode,
   cinematicKeyframes,
+  cameraStability,
   elevationData,
   followBehindZoomLevel,
   followBehindPitch,
@@ -67,10 +76,17 @@ export function useTilePreload({
   targetBearingRef,
   totalDurationMs,
   locationBoundariesLoading = false,
+  aerialTerrainLoading = false,
+  aerialTerrainPlan,
   introStartOverride,
   introStageOverrides,
+  backgroundWarmupReadyRef,
+  fastWarmupRef,
+  skipPredictivePreload = false,
+  basemapIdentity,
 }: UseTilePreloadParams) {
   const hasAdvancedRef = useRef(false);
+  const visibleWarmupRef = useRef<unknown[] | null>(null);
 
   useEffect(() => {
     if (animationPhase !== 'preloading') {
@@ -84,7 +100,14 @@ export function useTilePreload({
     }
 
     // The opening reveal needs the first polygon before the fly-in starts.
-    if (locationBoundariesLoading) return;
+    if (locationBoundariesLoading || aerialTerrainLoading) return;
+
+    // Some basemap providers allow normal viewport loading but prohibit
+    // speculative scans of future viewports.
+    if (skipPredictivePreload) {
+      setAnimationPhase('intro');
+      return;
+    }
 
     const map = mapRef.current;
     if (!map || !isMapLoaded || allCoordinates.length === 0 || cameraMode === 'overview') {
@@ -96,9 +119,16 @@ export function useTilePreload({
     let cancelled = false;
     let activeTimeout: ReturnType<typeof setTimeout> | null = null;
     let pendingAdvance: (() => void) | null = null;
+    const originalPadding = cameraMode === 'aerial-follow' ? map.getPadding() : null;
+    const visibleKey = [map, allCoordinates, elevationData, cinematicKeyframes, aerialTerrainPlan, cameraMode, cameraStability, followBehindZoomLevel, followBehindPitch, totalDurationMs, introStartOverride, introStageOverrides, basemapIdentity, map.getCanvas?.().clientWidth, map.getCanvas?.().clientHeight];
+    const visibleAlreadyWarm = visibleWarmupRef.current?.length === visibleKey.length && visibleKey.every((value, index) => value === visibleWarmupRef.current?.[index]);
+    let visibleSweepSettled = true;
     const introPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
+      aerialTerrainPlan,
+      cameraStability,
+      totalDurationMs,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
@@ -120,6 +150,9 @@ export function useTilePreload({
     const finalPose = getReplayWarmupPose({
       cameraMode,
       cinematicKeyframes,
+      aerialTerrainPlan,
+      cameraStability,
+      totalDurationMs,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
@@ -129,6 +162,8 @@ export function useTilePreload({
     const openingPoses = getOpeningReplayWarmupPoses({
       cameraMode,
       cinematicKeyframes,
+      aerialTerrainPlan,
+      cameraStability,
       coordinates: allCoordinates,
       elevationData,
       followBehindZoomLevel,
@@ -155,30 +190,34 @@ export function useTilePreload({
       outroFrom: finalPose,
       outroTo: outroPose,
     });
-    // Opening is immediately visible, so spend the real idle-wait budget there
-    // first. Once the deadline expires, remaining poses are still visited with
-    // zero-delay discovery; the predictive map refreshes outro coverage later.
+    // Cover the first flight views before the zoom transition consumes the
+    // bounded wait budget. Otherwise a slow intro can use the whole budget
+    // and leave every playback pose untouched.
     const openingStages = introStageOverrides?.length ? [...introStageOverrides, introPose] : [];
     const poses = deduplicateCameraPoses([
-      ...(openingStages.length > 1 ? openingStages.slice(1).flatMap((pose, index) => sampleCameraTransition(openingStages[index], pose)) : transitions.intro),
+      introPose,
       ...openingPoses,
+      ...(openingStages.length > 1 ? openingStages.slice(1).flatMap((pose, index) => sampleCameraTransition(openingStages[index], pose)) : transitions.intro),
       ...transitions.outro,
     ]);
-    const deadline = Date.now() + PRELOAD_TIMEOUT_MS;
+    let deadline = 0;
 
-    const restoreAndAdvance = () => {
+    const restoreAndAdvance = (immediate = false) => {
       if (hasAdvancedRef.current || cancelled) return;
       hasAdvancedRef.current = true;
       if (activeTimeout) clearTimeout(activeTimeout);
-      map.jumpTo(overview);
+      map.jumpTo(originalPadding ? { ...overview, padding: originalPadding } : overview);
       if (introPose) {
         smoothBearingRef.current = introPose.bearing;
         targetBearingRef.current = introPose.bearing;
       }
-      if (!introStartOverride) { setAnimationPhase('intro'); return; }
+      if (immediate) {
+        setAnimationPhase('intro');
+        return;
+      }
       // jumpTo schedules a new render. Starting the fly-in immediately can
       // expose the last warm-up frame (or empty tiles) for the opening frame.
-      // Give the restored overview a bounded chance to settle before revealing it.
+      // Give every restored overview a bounded chance to settle before revealing it.
       const advance = () => {
         if (cancelled || pendingAdvance !== advance) return;
         pendingAdvance = null;
@@ -193,27 +232,47 @@ export function useTilePreload({
     };
 
     const warmPose = (pose: ReplayCameraPose) => new Promise<void>((resolve) => {
-      const finish = () => {
-        map.off('idle', finish);
+      const finish = (timedOut = false) => {
+        if (timedOut) visibleSweepSettled = false;
+        map.off('idle', onIdle);
         if (activeTimeout) {
           clearTimeout(activeTimeout);
           activeTimeout = null;
         }
         resolve();
       };
+      const onIdle = () => finish();
 
-      map.jumpTo(pose);
-      map.once('idle', finish);
+      const padding = originalPadding && {
+        ...originalPadding,
+        top: (originalPadding.top ?? 0) + map.getCanvas().clientHeight * 0.16,
+      };
+      map.jumpTo(padding ? { ...pose, padding } : pose);
+      map.once('idle', onIdle);
       // Do not let one slow viewport consume the whole budget: the rest of
       // the zoom path still needs to submit tile requests before playback.
-      activeTimeout = setTimeout(finish, Math.max(0, Math.min(POSE_TIMEOUT_MS, deadline - Date.now())));
+      activeTimeout = setTimeout(() => finish(true), Math.max(0, Math.min(POSE_TIMEOUT_MS, deadline - Date.now())));
     });
 
     void (async () => {
+      // Let route-critical requests finish first, before the visible map
+      // starts warming wide opening and closing views that compete for slots.
+      const backgroundDeadline = Date.now() + BACKGROUND_TIMEOUT_MS;
+      while (!cancelled && backgroundWarmupReadyRef && !backgroundWarmupReadyRef.current && Date.now() < backgroundDeadline) {
+        await new Promise<void>(resolve => { activeTimeout = setTimeout(resolve, 250); });
+      }
+      if (cancelled) return;
+      // The route-critical background warmup has completed successfully.
+      if (fastWarmupRef?.current && visibleAlreadyWarm) {
+        restoreAndAdvance(true);
+        return;
+      }
+      deadline = Date.now() + PRELOAD_TIMEOUT_MS;
       for (const pose of poses) {
-        if (cancelled || Date.now() >= deadline) break;
+        if (cancelled || Date.now() >= deadline) { visibleSweepSettled = false; break; }
         await warmPose(pose);
       }
+      if (visibleSweepSettled && !cancelled) visibleWarmupRef.current = visibleKey;
       restoreAndAdvance();
     })();
 
@@ -221,13 +280,14 @@ export function useTilePreload({
       cancelled = true;
       if (activeTimeout) clearTimeout(activeTimeout);
       if (pendingAdvance) map.off('idle', pendingAdvance);
-      if (!hasAdvancedRef.current) map.jumpTo(overview);
+      if (!hasAdvancedRef.current) map.jumpTo(originalPadding ? { ...overview, padding: originalPadding } : overview);
     };
   }, [
     allCoordinates,
     animationPhase,
     cameraMode,
     cinematicKeyframes,
+    cameraStability,
     elevationData,
     followBehindZoomLevel,
     followBehindPitch,
@@ -236,6 +296,12 @@ export function useTilePreload({
     introStartOverride,
     introStageOverrides,
     locationBoundariesLoading,
+    aerialTerrainLoading,
+    aerialTerrainPlan,
+    backgroundWarmupReadyRef,
+    fastWarmupRef,
+    skipPredictivePreload,
+    basemapIdentity,
     mapRef,
     setAnimationPhase,
     smoothBearingRef,

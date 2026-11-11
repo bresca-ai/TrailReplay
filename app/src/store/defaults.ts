@@ -26,14 +26,14 @@ export function createDefaultSettings(): AppSettings {
     mapStyle: 'satellite',
     mapFilter: 'none',
     show3DTerrain: true,
-    terrainExaggeration: 1.5,
+    terrainExaggeration: 1,
     recordedElevationPrototype: false,
     locationChapters: { level: 'off', color: '#ffbd66', width: 3, fill: false, showName: true, showFlag: true, zoomToPlace: true, durationSeconds: 4.5 },
     show3DBuildings: false,
     paint3DBuildings: true,
     showHeartRate: false,
     showPictures: true,
-    cameraMode: 'follow-behind',
+    cameraMode: 'cinematic',
     defaultAnimationSpeed: 1,
     trailStyle: {
       trailColor: '#C1652F',
@@ -87,7 +87,7 @@ export function createDefaultSettings(): AppSettings {
 
 export function createDefaultCameraSettings(): CameraSettings {
   return {
-    mode: 'follow-behind',
+    mode: 'cinematic',
     zoom: 14,
     pitch: 55,
     bearing: 0,

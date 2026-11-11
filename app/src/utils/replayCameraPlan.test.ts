@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getAerialFollowBearing,
+  getFlatTerrainBlend,
+  getPlannedAerialBearing,
   getIntroCameraPose,
   getOpeningPreloadProgresses,
   getPredictivePlaybackPoses,
   getPlaybackCameraPose,
   getRouteBearingAtProgress,
   getRouteCoordinateAtProgress,
+  resolveReplayCameraMode,
 } from './replayCameraPlan';
+import { createDefaultCameraSettings, createDefaultSettings } from '@/store/defaults';
 
 const coordinates = [[0, 0], [0.01, 0], [0.02, 0]];
 const options = {
@@ -17,6 +22,74 @@ const options = {
 };
 
 describe('replay camera plan', () => {
+  it('defaults to an automatic cinematic flight with natural terrain and supports authored shots', () => {
+    expect(createDefaultCameraSettings().mode).toBe('cinematic');
+    expect(createDefaultSettings().cameraMode).toBe(createDefaultCameraSettings().mode);
+    expect(createDefaultSettings().terrainExaggeration).toBe(1);
+    expect(resolveReplayCameraMode('cinematic', 0)).toBe('aerial-follow');
+    expect(resolveReplayCameraMode('cinematic', 1)).toBe('cinematic');
+    expect(resolveReplayCameraMode('aerial-follow', 1)).toBe('cinematic');
+    expect(resolveReplayCameraMode('follow-behind', 0)).toBe('follow-behind');
+  });
+  it('plans a turn before reaching it and stays continuous through the move', () => {
+    const route = Array.from({ length: 201 }, (_, i) => i < 100
+      ? [i * 0.0001, 0] : [0.01, (i - 100) * 0.0001]);
+    const elevations: Array<{ elevation: number; progress?: number }> = [];
+    const planned = Array.from({ length: 201 }, (_, i) => getPlannedAerialBearing(route, elevations, i / 200));
+    expect(planned[80]).toBeLessThan(90);
+    expect(planned[120]).toBeLessThan(planned[80]);
+    for (let i = 1; i < planned.length; i++) expect(Math.abs(planned[i] - planned[i - 1])).toBeLessThan(5);
+  });
+  it('gives aerial follow a stable tilted aerial pose for intro and playback', () => {
+    const input = { ...options, cameraMode: 'aerial-follow' as const };
+    const intro = getIntroCameraPose(input);
+    const playback = getPlaybackCameraPose(input);
+    expect(intro).toEqual(playback);
+    expect(playback).toMatchObject({ center: [0, 0], pitch: 50 });
+    expect(playback!.bearing).toBeCloseTo(90);
+    expect(playback!.zoom).toBeCloseTo(15.88, 1);
+    expect(getPlaybackCameraPose({ ...input, progress: 0.05 })!.pitch).toBeCloseTo(60);
+    expect(getPlaybackCameraPose({ ...input, progress: 0.10 })!.pitch).toBeCloseTo(70);
+  });
+
+  it('moves closer on sustained flat terrain and changes framing gradually', () => {
+    const route = Array.from({ length: 101 }, (_, i) => [i * 0.001, 0]);
+    const flat = route.map((_, i) => ({ progress: i / 100, elevation: 100 }));
+    const climb = route.map((_, i) => ({ progress: i / 100, elevation: 100 + i * 12 }));
+    expect(getFlatTerrainBlend(route, flat, 0.5)).toBeGreaterThan(0.9);
+    expect(getFlatTerrainBlend(route, climb, 0.5)).toBeLessThan(0.1);
+    const rolling = Array.from({ length: 1001 }, (_, i) => ({ progress: i / 1000, elevation: 100 + 35 * Math.sin(i * Math.PI / 12) }));
+    expect(getFlatTerrainBlend(route, rolling, 0.5)).toBeLessThan(0.1);
+    const common = { coordinates: route, followBehindZoomLevel: 50, cameraMode: 'aerial-follow' as const, progress: 0.5 };
+    const flatPose = getPlaybackCameraPose({ ...common, elevationData: flat })!;
+    const climbPose = getPlaybackCameraPose({ ...common, elevationData: climb })!;
+    expect(flatPose.zoom).toBeGreaterThan(climbPose.zoom);
+    expect(flatPose.pitch).toBeGreaterThan(climbPose.pitch);
+    const mixed = route.map((_, i) => ({ progress: i / 100, elevation: i < 50 ? 100 : 100 + (i - 50) * 12 }));
+    const values = Array.from({ length: 101 }, (_, i) => getFlatTerrainBlend(route, mixed, i / 100));
+    expect(Math.max(...values.slice(1).map((value, i) => Math.abs(value - values[i])))).toBeLessThan(0.3);
+    expect(getFlatTerrainBlend(route, [], 0.5)).toBe(0);
+  });
+
+  it('does not reverse the planned view just because a straight route descends', () => {
+    const descent = [{ progress: 0, elevation: 1600 }, { progress: 1, elevation: 0 }];
+    const flat = [{ progress: 0, elevation: 600 }, { progress: 1, elevation: 600 }];
+    for (const progress of [0.1, 0.5, 0.9]) {
+      expect(getPlannedAerialBearing(coordinates, descent, progress)).toBeCloseTo(
+        getPlannedAerialBearing(coordinates, flat, progress), 5,
+      );
+    }
+  });
+
+  it('looks across short switchbacks and handles route endpoints', () => {
+    const route = Array.from({ length: 201 }, (_, i) => [i * 0.0001, Math.sin(i * 0.8) * 0.0001]);
+    for (const p of [0, 0.25, 0.5, 0.75, 1]) {
+      expect(getAerialFollowBearing(route, p)).toBeGreaterThan(85);
+      expect(getAerialFollowBearing(route, p)).toBeLessThan(95);
+    }
+    expect(getAerialFollowBearing([[0, 0]], 0)).toBe(0);
+  });
+
   it('returns the camera poses used by each non-overview camera mode', () => {
     expect(getIntroCameraPose({ ...options, cameraMode: 'follow' })).toMatchObject({
       center: [0, 0], zoom: 14, pitch: 0, bearing: 0,
