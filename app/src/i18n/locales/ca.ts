@@ -657,6 +657,11 @@ export const ca = {
     noVideos: 'No hi ha vídeos pujats',
     noVideosHint: 'Afegeix vídeos per mostrar-los al mapa',
     relinkFile: 'Torna a vincular el fitxer',
+    relinkFolder: {
+      pictures: '{count} foto(s) sense enllaç',
+      videos: '{count} vídeo(s) sense enllaç',
+      hint: 'Fes clic aquí per vincular tots els elements que no tenen enllaç.'
+    },
     placeholderFile: 'Fitxer no adjuntat (restaurat d’un projecte desat)',
     previewPicture: 'Previsualitza foto',
     trailAlt: 'Ruta',

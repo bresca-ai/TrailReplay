@@ -128,7 +128,7 @@ export function VideoPopup({ video, onClose, exportFrame, exportCurrentTimeSecon
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = '';
-                if (file) relinkVideoFile(video.id, file);
+                if (file) relinkVideoFile(video.id, [file]);
               }}
             />
           </div>
