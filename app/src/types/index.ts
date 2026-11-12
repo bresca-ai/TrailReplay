@@ -502,6 +502,8 @@ export interface AppSettings {
   showLeaderboard: boolean;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
+  /** Fill the area below the elevation line. */
+  elevationProfileFilled: boolean;
   /** Height multiplier for the on-map elevation chart. */
   elevationProfileHeight: number;
   /** Optional draggable, top-down route inset. */

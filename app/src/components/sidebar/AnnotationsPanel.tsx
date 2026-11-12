@@ -652,6 +652,10 @@ export function AnnotationsPanel() {
         {settings.showElevationProfile && (
           <div className="ml-3 space-y-1.5 border-l border-[var(--evergreen)]/15 pl-3">
             <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="elevation-profile-filled" className="text-sm text-[var(--evergreen)]">{t('annotations.elevationProfileFill')}</Label>
+              <Switch id="elevation-profile-filled" checked={settings.elevationProfileFilled ?? true} onCheckedChange={(checked) => setSettings({ elevationProfileFilled: checked })} />
+            </div>
+            <div className="flex items-center justify-between gap-3">
               <Label htmlFor="elevation-profile-per-route" className="text-sm text-[var(--evergreen)]">
                 {t('annotations.elevationProfilePerRoute')}
               </Label>

@@ -77,6 +77,17 @@ describe('MapElevationProfile dynamic sections', () => {
     };
   });
 
+  it('can show only the elevation line, including the traveled portion', () => {
+    useAppStore.getState().setSettings({ elevationProfileFilled: false });
+    useAppStore.getState().setPlayback({ progress: 0.5 });
+    render(<MapElevationProfile />);
+    const svg = document.getElementById('elevationProfileSvg')!;
+    expect(svg).toHaveAttribute('data-export-elevation-filled', 'false');
+    expect(svg.querySelector('[data-export-elevation-segment]')).toHaveAttribute('fill', 'none');
+    expect(svg.querySelector('[fill="url(#progressGradient)"]')).toBeNull();
+    expect(svg.querySelector('[data-export-elevation-dynamic] path[stroke]')).not.toBeNull();
+  });
+
   it('changes the displayed profile height with the resize control', () => {
     render(<MapElevationProfile />);
     const svg = document.getElementById('elevationProfileSvg')!;

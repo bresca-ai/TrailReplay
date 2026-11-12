@@ -325,6 +325,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           dynamic={dynamicSections || settings.elevationProfilePerRoute}
           tall={isNonWideExportPreview}
           heightScale={profileHeightScale}
+          filled={settings.elevationProfileFilled ?? true}
         />
         {!isExportPreview && (
           <button

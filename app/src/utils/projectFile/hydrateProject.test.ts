@@ -332,12 +332,12 @@ describe('hydrateProject', () => {
   it('preserves the overview position and elevation height in saved projects', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
-    source.getState().setSettings({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7 });
+    source.getState().setSettings({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
     const archive = await buildReplayArchive(source.getState());
     const parsed = await parseReplayArchive(new File([archive], 'overlay.replay'));
     const target = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
-    expect(target.getState().settings).toMatchObject({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7 });
+    expect(target.getState().settings).toMatchObject({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
   });
 
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
