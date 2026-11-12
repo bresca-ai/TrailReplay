@@ -5,9 +5,9 @@ import type { TextAnnotation } from '@/types';
  * never makes the marker completely stationary. */
 const APPROACH_MS = 500;
 
-export function annotationExtraTime(routeTime: number, totalDuration: number, annotations: TextAnnotation[]): number {
+export function annotationExtraTime(routeTime: number, totalDuration: number, annotations: TextAnnotation[], defaultHoldDuration = 5000): number {
   return annotations.reduce((extra, annotation) => {
-    const duration = annotation.presentation === 'side-panel' ? Math.max(0, annotation.holdDuration ?? 0) : 0;
+    const duration = Math.max(0, annotation.holdDuration ?? defaultHoldDuration);
     if (!duration || !totalDuration) return extra;
     const arrival = annotation.progress * totalDuration;
     const start = Math.max(0, arrival - APPROACH_MS);
@@ -18,17 +18,17 @@ export function annotationExtraTime(routeTime: number, totalDuration: number, an
   }, 0);
 }
 
-export function playbackTimeForRoute(routeTime: number, totalDuration: number, annotations: TextAnnotation[]): number {
-  return routeTime + annotationExtraTime(routeTime, totalDuration, annotations);
+export function playbackTimeForRoute(routeTime: number, totalDuration: number, annotations: TextAnnotation[], defaultHoldDuration = 5000): number {
+  return routeTime + annotationExtraTime(routeTime, totalDuration, annotations, defaultHoldDuration);
 }
 
 /**
  * How many milliseconds of output time one millisecond of route time occupies.
  * It is 1 away from a field note and rises smoothly through its slowdown.
  */
-export function annotationPlaybackRate(routeTime: number, totalDuration: number, annotations: TextAnnotation[]): number {
+export function annotationPlaybackRate(routeTime: number, totalDuration: number, annotations: TextAnnotation[], defaultHoldDuration = 5000): number {
   return annotations.reduce((rate, annotation) => {
-    const duration = annotation.presentation === 'side-panel' ? Math.max(0, annotation.holdDuration ?? 0) : 0;
+    const duration = Math.max(0, annotation.holdDuration ?? defaultHoldDuration);
     if (!duration || !totalDuration) return rate;
     const arrival = annotation.progress * totalDuration;
     const start = Math.max(0, arrival - APPROACH_MS);
@@ -50,16 +50,17 @@ export function annotationExportFrameStride(
   totalDuration: number,
   annotations: TextAnnotation[],
   maximum = 2,
+  defaultHoldDuration = 5000,
 ): number {
-  return Math.max(1, Math.min(maximum, Math.floor(annotationPlaybackRate(routeTime, totalDuration, annotations))));
+  return Math.max(1, Math.min(maximum, Math.floor(annotationPlaybackRate(routeTime, totalDuration, annotations, defaultHoldDuration))));
 }
 
-export function routeTimeForPlayback(elapsed: number, totalDuration: number, annotations: TextAnnotation[]): number {
+export function routeTimeForPlayback(elapsed: number, totalDuration: number, annotations: TextAnnotation[], defaultHoldDuration = 5000): number {
   let low = 0;
   let high = totalDuration;
   for (let i = 0; i < 32; i += 1) {
     const middle = (low + high) / 2;
-    if (playbackTimeForRoute(middle, totalDuration, annotations) < elapsed) low = middle;
+    if (playbackTimeForRoute(middle, totalDuration, annotations, defaultHoldDuration) < elapsed) low = middle;
     else high = middle;
   }
   return (low + high) / 2;

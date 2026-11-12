@@ -448,7 +448,7 @@ export const es = {
   annotations: {
     waypointImportTitle: "Importar puntos de paso GPX", waypointImportDescription: "Esta ruta contiene {count} puntos de paso con nombre. ¿Cómo quieres añadirlos?", waypointImportDiscard: "Descartar puntos de paso",
     annotationEmptyPlacementHint: "Elige una posición de la ruta para añadir tu primera anotación.", noRoutePositionHint: "Carga una ruta para elegir la posición de la anotación.",
-    mapCaptionExplanation: "Texto breve sobre el mapa.", fieldNoteExplanation: "Un panel más grande que ralentiza la reproducción para leer.", positionOnRoute: "Posición en la ruta", usePlayhead: "Usar el cursor", positionTotal: "de {distance}", positionReady: "Listo para añadir en {distance}.",
+    mapCaptionExplanation: "Aparece abajo a la derecha y ralentiza la reproducción.", fieldNoteExplanation: "Aparece en el lugar del mapa y ralentiza la reproducción.", positionOnRoute: "Posición en la ruta", usePlayhead: "Usar el cursor", positionTotal: "de {distance}", positionReady: "Listo para añadir en {distance}.",
     newAnnotation: 'Nueva anotación', additionalDetails: 'Detalles adicionales',
     colorZonesMeasure: "Medir por", colorZonesDistanceHint: "Longitud de la ruta: {distance} km", colorZonesInvalid: "El final debe ser posterior al inicio.",
     noRouteSelected: 'Ninguna ruta cargada',
@@ -524,7 +524,7 @@ export const es = {
     routeAnnotationsTitle: 'Anotaciones de ruta',
     routeAnnotationsHint: 'Añade una leyenda transparente o una nota de ruta en la posición actual. Las notas ralentizan el recorrido para poder leerlas.',
     presentationLabel: 'Presentación',
-    presentationMapCard: 'Leyenda en el mapa',
+annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del marcador', annotationTextSize: 'Tamaño del texto de las anotaciones', sharedTiming: "Tiempos predeterminados para todas las anotaciones", defaultPinLead: "Mostrar marcador antes (s)", defaultSlowdown: "Ralentización (s)", pinLeadOverride: "Antelación del marcador (s)", slowdownOverride: "Ralentización personalizada (s)", timingOverrideHint: "Déjalo vacío para usar el valor general.", markerFilled: 'Rellenar marcador',     presentationMapCard: 'Leyenda en el mapa',
     presentationSidePanel: 'Nota de ruta',
     codeLabel: "Código del avituallamiento",
     routeDetailsLabel: "Datos de ruta (distancia · horario)",

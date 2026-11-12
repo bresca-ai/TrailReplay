@@ -459,7 +459,7 @@ export const en = {
   annotations: {
     waypointImportTitle: "Import GPX waypoints", waypointImportDescription: "This route contains {count} named waypoints. How would you like to add them?", waypointImportDiscard: "Discard waypoints",
     annotationEmptyPlacementHint: "Choose a position along the route to add your first annotation.", noRoutePositionHint: "Load a route to choose an annotation position.",
-    mapCaptionExplanation: "Short text displayed on the map.", fieldNoteExplanation: "A larger panel; slows playback for reading.", positionOnRoute: "Position on route", usePlayhead: "Use playhead", positionTotal: "of {distance}", positionReady: "Ready to add at {distance}.",
+    mapCaptionExplanation: "Appears at the bottom right; slows playback for reading.", fieldNoteExplanation: "Appears at the map location; slows playback for reading.", positionOnRoute: "Position on route", usePlayhead: "Use playhead", positionTotal: "of {distance}", positionReady: "Ready to add at {distance}.",
     newAnnotation: 'New annotation', additionalDetails: 'Additional details',
     colorZonesMeasure: "Measure by", colorZonesDistanceHint: "Route length: {distance} km", colorZonesInvalid: "The end must be after the start.",
     noRouteSelected: 'No route loaded',
@@ -535,7 +535,7 @@ export const en = {
     routeAnnotationsTitle: 'Route Annotations',
     routeAnnotationsHint: 'Add a transparent map caption or field note at the current playback position. Field notes slow the replay so viewers can read them.',
     presentationLabel: 'Presentation',
-    presentationMapCard: 'Map caption',
+annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotationTextSize: 'Annotation text size', sharedTiming: "Default timing for all annotations", defaultPinLead: "Pin appears before (sec)", defaultSlowdown: "Slowdown (sec)", pinLeadOverride: "Pin lead override (sec)", slowdownOverride: "Slowdown override (sec)", timingOverrideHint: "Leave blank to use the shared setting.", markerFilled: 'Fill marker',     presentationMapCard: 'Map caption',
     presentationSidePanel: 'Field note',
     codeLabel: "Station code",
     routeDetailsLabel: "Route details (distance · hours)",

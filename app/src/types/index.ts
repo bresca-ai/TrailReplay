@@ -199,10 +199,14 @@ export interface TextAnnotation {
   color: string;
   elevation?: number;
   displayDuration: number;
+  /** Optional lead time for the map pin; absent uses the shared setting. */
+  pinLeadDuration?: number;
   /** A transparent map caption or a longer field note with a route symbol. */
   presentation?: 'map-card' | 'side-panel';
   /** `map:<glyph>` selects a shared map icon; other values remain emoji. */
   logo?: string;
+  /** Fill the annotation pin with its color; false leaves the map visible. */
+  markerFilled?: boolean;
   /** Additional playback time spent easing through this point, in ms. */
   holdDuration?: number;
   /** Optional authored wording for each UI language. Missing languages use title/subtitle. */
@@ -513,6 +517,13 @@ export interface AppSettings {
   landmarkStyle: 'classic' | 'minimal';
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
+  /** Scale for route annotation markers and their text. */
+  annotationScale: number;
+  annotationPinLeadDuration: number;
+  annotationHoldDuration: number;
+  /** Independent size settings; absent values inherit the older shared scale. */
+  annotationMarkerScale?: number;
+  annotationTextScale?: number;
   inactiveAnnotationsOpacity: number;
 }
 

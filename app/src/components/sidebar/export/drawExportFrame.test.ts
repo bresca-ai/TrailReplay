@@ -116,15 +116,13 @@ it('paints location names, flags and source credits into cropped video frames', 
   useAppStore.getState().reset();
 });
 
-it('does not invent a heading or title when a field note has empty text', () => {
-  useAppStore.getState().reset();
-  useAppStore.getState().setSettings({ language: 'en' });
-  useAppStore.getState().addTextAnnotation({ id: 'empty', progress: 0.5, lat: 42, lon: 1, title: '', eyebrow: '', code: '', meta: '', description: '', logo: '★', color: '#fff', displayDuration: 4000, presentation: 'side-panel' });
-  useAppStore.setState((state) => ({ animationPhase: 'playing', playback: { ...state.playback, currentTime: 5000, totalDuration: 10000 } }));
-  const panel = document.createElement('div');
-  panel.className = 'tr-annotation-side-panel';
-  panel.getBoundingClientRect = () => new DOMRect(0, 100, 400, 220);
-  document.getElementById('map-capture-container')!.appendChild(panel);
+
+it('copies the screen annotation into the exported video frame', () => {
+  const note = document.createElement('canvas');
+  note.className = 'tr-screen-annotation';
+  note.width = 800; note.height = 160;
+  note.getBoundingClientRect = () => new DOMRect(50, 100, 200, 40);
+  document.getElementById('map-capture-container')!.appendChild(note);
   const { options } = frameOptions();
   const context = {
     fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
@@ -134,6 +132,5 @@ it('does not invent a heading or title when a field note has empty text', () => 
   };
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
   drawExportFrame(options);
-  expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(['★']);
-  useAppStore.getState().reset();
+  expect(context.drawImage).toHaveBeenCalledWith(note, 50, 100, 200, 40);
 });

@@ -1,3 +1,4 @@
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -78,6 +79,7 @@ export function TrailMap(_props: TrailMapProps) {
   const restoredCameraKeyRef = useRef<string | null>(null);
 
   const tracks = useAppStore((state) => state.tracks);
+  const annotationJourneySegments = useAppStore((state) => state.journeySegments);
   const settings = useAppStore((state) => state.settings);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
   const cameraSettings = useAppStore((state) => state.cameraSettings);
@@ -103,7 +105,8 @@ export function TrailMap(_props: TrailMapProps) {
   const selectedLandmarkId = useAppStore((state) => state.selectedLandmarkId);
   const isPlacingLandmark = useAppStore((state) => state.isPlacingLandmark);
   const revealLandmarkEditor = useAppStore((state) => state.revealLandmarkEditor);
-  const inactiveAnnotationsOpacity = useAppStore((state) => state.settings.inactiveAnnotationsOpacity);
+  const annotationMarkerScale = useAppStore((state) => state.settings.annotationMarkerScale ?? state.settings.annotationScale ?? 1);
+  const annotationTextScale = useAppStore((state) => state.settings.annotationTextScale ?? state.settings.annotationScale ?? 1);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   useTrackTrimPreview(map, isMapLoaded);
@@ -217,13 +220,16 @@ export function TrailMap(_props: TrailMapProps) {
 
   useTextAnnotationsLayer({
     activeAnnotationId: _props.activeTextAnnotationId ?? null,
-    annotations: textAnnotations,
+    annotations: resolveSharedRouteMoments(textAnnotations, annotationJourneySegments, tracks, playback.routeTimingMode),
+    currentTime: playback.currentTime, totalDuration: playback.totalDuration, phase: animationPhase,
+    defaultLeadDuration: settings.annotationPinLeadDuration ?? 5000,
     isMapLoaded,
     mapRef: map,
     unitSystem: settings.unitSystem,
     language: settings.language,
     overlayFont: trailStyle.overlayFont,
-    inactiveAnnotationsOpacity,
+    annotationMarkerScale,
+    annotationTextScale,
   });
 
   useRouteLandmarksLayer({

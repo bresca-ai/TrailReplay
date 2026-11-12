@@ -448,7 +448,7 @@ export const ca = {
   annotations: {
     waypointImportTitle: "Importa els punts de pas GPX", waypointImportDescription: "Aquesta ruta conté {count} punts de pas amb nom. Com els vols afegir?", waypointImportDiscard: "Descarta els punts de pas",
     annotationEmptyPlacementHint: "Tria una posició de la ruta per afegir la primera anotació.", noRoutePositionHint: "Carrega una ruta per triar la posició de l’anotació.",
-    mapCaptionExplanation: "Text breu sobre el mapa.", fieldNoteExplanation: "Un panell més gran que alenteix la reproducció per llegir.", positionOnRoute: "Posició a la ruta", usePlayhead: "Usa el cursor", positionTotal: "de {distance}", positionReady: "A punt per afegir a {distance}.",
+    mapCaptionExplanation: "Apareix a baix a la dreta i alenteix la reproducció.", fieldNoteExplanation: "Apareix al lloc del mapa i alenteix la reproducció.", positionOnRoute: "Posició a la ruta", usePlayhead: "Usa el cursor", positionTotal: "de {distance}", positionReady: "A punt per afegir a {distance}.",
     newAnnotation: 'Nova anotació', additionalDetails: 'Detalls addicionals',
     colorZonesMeasure: "Mesura per", colorZonesDistanceHint: "Longitud de la ruta: {distance} km", colorZonesInvalid: "El final ha de ser posterior a l’inici.",
     noRouteSelected: 'Cap ruta carregada',
@@ -524,7 +524,7 @@ export const ca = {
     routeAnnotationsTitle: 'Anotacions de ruta',
     routeAnnotationsHint: 'Afegeix una llegenda transparent o una nota de ruta a la posició actual. Les notes alenteixen el recorregut perquè es puguin llegir.',
     presentationLabel: 'Presentació',
-    presentationMapCard: 'Llegenda al mapa',
+annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcador', annotationTextSize: 'Mida del text de les anotacions', sharedTiming: "Temps per defecte de totes les anotacions", defaultPinLead: "Mostra el marcador abans (s)", defaultSlowdown: "Alentiment (s)", pinLeadOverride: "Antelació del marcador (s)", slowdownOverride: "Alentiment personalitzat (s)", timingOverrideHint: "Deixa-ho buit per usar el valor general.", markerFilled: 'Omple el marcador',     presentationMapCard: 'Llegenda al mapa',
     presentationSidePanel: 'Nota de ruta',
     codeLabel: "Codi de l’avituallament",
     routeDetailsLabel: "Dades de ruta (distància · horari)",

@@ -81,6 +81,9 @@ export function createDefaultSettings(): AppSettings {
     landmarkScale: 1,
     landmarkStyle: 'minimal',
     landmarkLabelFade: true,
+    annotationScale: 1,
+    annotationPinLeadDuration: 5000,
+    annotationHoldDuration: 5000,
     inactiveAnnotationsOpacity: 1.0,
   };
 }

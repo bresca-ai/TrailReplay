@@ -247,7 +247,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const introDuration = getIntroDuration(store.settings.locationChapters);
     const routeDurationMs = store.playback.totalDuration;
     const annotations = resolveSharedRouteMoments(store.textAnnotations, store.journeySegments, store.tracks, store.playback.routeTimingMode);
-    const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations);
+    const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations, store.settings.annotationHoldDuration ?? 5000);
     // Preview speed only affects interactive playback. Export always preserves
     // the configured journey duration on the encoded timeline.
     const frameCount = Math.ceil(outputDurationMs / frameDurationMs);
@@ -296,11 +296,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     while (frameIndex <= frameCount) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
 
-      const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations);
+      const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations, store.settings.annotationHoldDuration ?? 5000);
       const progress = routeDurationMs > 0 ? currentTime / routeDurationMs : 1;
       const frameStride = Math.min(
         frameCount - frameIndex + 1,
-        annotationExportFrameStride(currentTime, routeDurationMs, annotations),
+        annotationExportFrameStride(currentTime, routeDurationMs, annotations, 2, store.settings.annotationHoldDuration ?? 5000),
       );
       const coveredThroughFrame = frameIndex + frameStride - 1;
       setStudioMapTime(encodedDurationMs + frameDurationMs);
@@ -626,6 +626,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       const chapterSettings = useAppStore.getState().settings.locationChapters;
       if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0)) {
         await document.fonts.load(`700 24px ${overlayCanvasFontFamily(chapterFont)}`).catch(() => []);
+      }
+      const fieldNotes = useAppStore.getState().textAnnotations.filter(annotation => annotation.presentation === 'side-panel');
+      if (fieldNotes.length) {
+        const text = fieldNotes.flatMap(annotation => [annotation.title, annotation.subtitle, annotation.eyebrow, annotation.meta, annotation.description, ...Object.values(annotation.translations ?? {}).flatMap(wording => [wording.title, wording.subtitle, wording.eyebrow, wording.meta, wording.description])]).filter(Boolean).join(' ');
+        await Promise.all([500, 600, 700].map(weight => document.fonts.load(`${weight} 16px ${overlayCanvasFontFamily('modern')}`, text).catch(() => [])));
       }
       await document.fonts.ready;
       // Load saved symbols before rendering the first video frame.

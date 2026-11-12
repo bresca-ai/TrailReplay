@@ -23,8 +23,18 @@ describe('annotation slowdown', () => {
     }
   });
 
-  it('leaves legacy cards on the original timeline', () => {
-    expect(playbackTimeForRoute(60_000, 60_000, [{ ...station, presentation: 'map-card' }])).toBe(60_000);
+  it('slows both caption and map annotation presentations', () => {
+    expect(playbackTimeForRoute(60_000, 60_000, [{ ...station, presentation: 'map-card' }])).toBeCloseTo(67_000);
+  });
+
+  it('defaults to five seconds of slowdown', () => {
+    expect(playbackTimeForRoute(60000, 60000, [{ ...station, holdDuration: undefined }])).toBeCloseTo(65000);
+  });
+
+  it('uses shared slowdown unless a note overrides it, including zero', () => {
+    expect(playbackTimeForRoute(60000, 60000, [{ ...station, holdDuration: undefined }], 3000)).toBeCloseTo(63000);
+    expect(playbackTimeForRoute(60000, 60000, [{ ...station, holdDuration: 1000 }], 3000)).toBeCloseTo(61000);
+    expect(playbackTimeForRoute(60000, 60000, [{ ...station, holdDuration: 0 }], 3000)).toBeCloseTo(60000);
   });
 
   it('identifies redundant export frames only inside the annotation slowdown', () => {

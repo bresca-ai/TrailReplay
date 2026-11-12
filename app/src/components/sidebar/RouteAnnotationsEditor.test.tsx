@@ -24,10 +24,11 @@ it('creates an annotation at the playhead and keeps its editing controls availab
 
 it('offers distinct annotation types with an explanation', () => {
   render(<RouteAnnotationsEditor />);
-  expect(screen.getByText('Short text displayed on the map.')).toBeInTheDocument();
-  expect(screen.getByText('A larger panel; slows playback for reading.')).toBeInTheDocument();
+  expect(screen.getByText('Appears at the bottom right; slows playback for reading.')).toBeInTheDocument();
+  expect(screen.getByText('Appears at the map location; slows playback for reading.')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /Map caption/ }));
-  expect(screen.getByPlaceholderText('Subtitle')).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'Description' })).toBeInTheDocument();
+  expect(screen.getByRole('checkbox', { name: 'Fill marker' })).toBeInTheDocument();
 });
 
 
@@ -68,10 +69,12 @@ it('preserves spaces and allows every field of an existing annotation to be clea
   const editor = screen.getByText('Old title').closest('details')!;
   const title = within(editor).getByRole('textbox', { name: 'Title' });
   const heading = within(editor).getByPlaceholderText('Route moment');
-  const meta = within(editor).getByLabelText(/Route details/);
   const description = within(editor).getByLabelText('Description');
-  const code = within(editor).getByLabelText('Station code');
-  for (const input of [title, heading, code, meta, description]) {
+  expect(within(editor).queryByLabelText('Station code')).not.toBeInTheDocument();
+  expect(within(editor).queryByLabelText(/Route details/)).not.toBeInTheDocument();
+  expect(heading).toHaveValue('Old heading · A1');
+  expect(description).toHaveValue('Old meta\nOld description');
+  for (const input of [title, heading, description]) {
     fireEvent.change(input, { target: { value: 'Two ' } });
     expect(input).toHaveValue('Two ');
     fireEvent.change(input, { target: { value: 'Two words' } });
@@ -96,12 +99,58 @@ it('preserves spaces and empty wording when editing a map caption', () => {
   fireEvent.click(screen.getByText('Caption').closest('summary')!);
   const editor = screen.getByText('Caption').closest('details')!;
   const title = within(editor).getByRole('textbox', { name: 'Title' });
-  const subtitle = within(editor).getByPlaceholderText('Subtitle');
+  const subtitle = within(editor).getByRole('textbox', { name: 'Description' });
   for (const input of [title, subtitle]) {
     fireEvent.change(input, { target: { value: 'New ' } });
     expect(input).toHaveValue('New ');
     fireEvent.change(input, { target: { value: '' } });
     expect(input).toHaveValue('');
   }
-  expect(useAppStore.getState().textAnnotations[0].translations?.en).toMatchObject({ title: '', subtitle: '' });
+  expect(useAppStore.getState().textAnnotations[0].translations?.en).toMatchObject({ title: '', description: '' });
+});
+
+it('saves the fill choice for both annotation types', () => {
+  render(<RouteAnnotationsEditor />);
+  fireEvent.click(screen.getByRole('button', { name: /Map caption/ }));
+  expect(screen.getByRole('checkbox', { name: 'Fill marker' })).toBeChecked();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Water' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  expect(useAppStore.getState().textAnnotations[0]).toMatchObject({ presentation: 'map-card', markerFilled: true });
+  fireEvent.click(screen.getByText('Water').closest('summary')!);
+  const editor = screen.getByText('Water').closest('details')!;
+  fireEvent.click(within(editor).getByRole('checkbox', { name: 'Fill marker' }));
+  expect(useAppStore.getState().textAnnotations[0].markerFilled).toBe(false);
+});
+
+it('updates marker and annotation text sizes independently', () => {
+  render(<RouteAnnotationsEditor />);
+  fireEvent.change(screen.getByRole('slider', { name: 'Marker size' }), { target: { value: '1.5' } });
+  expect(useAppStore.getState().settings.annotationMarkerScale).toBe(1.5);
+  expect(useAppStore.getState().settings.annotationTextScale).toBeUndefined();
+  fireEvent.change(screen.getByRole('slider', { name: 'Annotation text size' }), { target: { value: '0.7' } });
+  expect(useAppStore.getState().settings.annotationTextScale).toBe(0.7);
+  expect(screen.getByText('150%')).toBeInTheDocument();
+});
+
+it('uses shared timing defaults and allows an individual override to be cleared', () => {
+  render(<RouteAnnotationsEditor />);
+  fireEvent.change(screen.getByLabelText('Pin appears before (sec)'), { target: { value: '12' } });
+  fireEvent.change(screen.getByLabelText('Slowdown (sec)'), { target: { value: '8' } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Spring' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  expect(useAppStore.getState().textAnnotations[0].holdDuration).toBeUndefined();
+  expect(useAppStore.getState().settings.annotationHoldDuration).toBe(8000);
+  fireEvent.click(screen.getByText('Spring').closest('summary')!);
+  const editor = screen.getByText('Spring').closest('details')!;
+  const lead = within(editor).getByLabelText('Pin lead override (sec)');
+  const hold = within(editor).getByLabelText('Slowdown override (sec)');
+  expect(lead).toHaveAttribute('placeholder', '12');
+  expect(hold).toHaveAttribute('placeholder', '8');
+  fireEvent.change(lead, { target: { value: '3' } });
+  fireEvent.change(hold, { target: { value: '0' } });
+  expect(useAppStore.getState().textAnnotations[0]).toMatchObject({ pinLeadDuration: 3000, holdDuration: 0 });
+  fireEvent.change(lead, { target: { value: '' } });
+  fireEvent.change(hold, { target: { value: '' } });
+  expect(useAppStore.getState().textAnnotations[0].pinLeadDuration).toBeUndefined();
+  expect(useAppStore.getState().textAnnotations[0].holdDuration).toBeUndefined();
 });

@@ -144,7 +144,7 @@ export const zhTW = {
   annotations: {
     waypointImportTitle: "匯入 GPX 航點", waypointImportDescription: "這條路線包含 {count} 個有名稱的航點。你想如何新增？", waypointImportDiscard: "捨棄航點",
     annotationEmptyPlacementHint: "選擇路線上的位置，新增第一個註記。", noRoutePositionHint: "載入路線後即可選擇註記位置。",
-    mapCaptionExplanation: "顯示在地圖上的簡短文字。", fieldNoteExplanation: "較大的側欄，並放慢播放方便閱讀。", positionOnRoute: "路線上的位置", usePlayhead: "使用播放位置", positionTotal: "共 {distance}", positionReady: "準備新增於 {distance}。",
+    mapCaptionExplanation: "顯示在右下角並減慢播放。", fieldNoteExplanation: "顯示在地圖位置並減慢播放。", positionOnRoute: "路線上的位置", usePlayhead: "使用播放位置", positionTotal: "共 {distance}", positionReady: "準備新增於 {distance}。",
     newAnnotation: '新增註記', additionalDetails: '其他詳細資訊',
     colorZonesMeasure: "測量方式", colorZonesDistanceHint: "路線長度：{distance} 公里", colorZonesInvalid: "終點必須在起點之後。",
     noRouteSelected: '尚未載入路線',
@@ -164,7 +164,7 @@ export const zhTW = {
     dynamicElevationProfileGuideTitle: '操作說明', dynamicElevationProfileGuideAutomatic: '剖面圖會標記接下來的爬升與下降，並在播放時平順地放大各路段。', dynamicElevationProfileGuideEdit: '暫停後可編輯：拖曳兩端把手以調整路段範圍。', dynamicElevationProfileGuideAddRemove: '點選 ＋，再點選剖面圖以新增路段；點選路段上的 × 可移除。',
     markerTitle: '移動標記', markerTypeIcon: '圖示', markerTypeDot: '圓點', markerTypeDotHint: '白色外框的實心圓點，類似 Strava 的活動指示標記。', markerColor: '標記顏色', markerColorSvgHint: '使用 SVG 圖示時，會同時調整圖示與標記圓圈的顏色。', markerColorEmojiHint: '使用表情符號時，只會調整標記圓圈的顏色。',
     showMarker: '顯示標記', size: '大小', activityIcon: '活動圖示', changeIcon: '更換圖示', glowCircle: '圖示外框', selectIcon: '選擇活動圖示',
-    routeAnnotationsTitle: '路線標註', routeAnnotationsHint: '在目前播放位置新增透明的地圖文字或旅途筆記。旅途筆記顯示時會放慢重播，讓觀眾有時間閱讀。', presentationLabel: '呈現方式', presentationMapCard: '地圖文字', presentationSidePanel: '旅途筆記',
+    routeAnnotationsTitle: '路線標註', routeAnnotationsHint: '在目前播放位置新增透明的地圖文字或旅途筆記。旅途筆記顯示時會放慢重播，讓觀眾有時間閱讀。', presentationLabel: '呈現方式', annotationSize: '標註大小', annotationMarkerSize: '標記大小', annotationTextSize: '標註文字大小', sharedTiming: "所有標註的預設時間", defaultPinLead: "提前顯示標記（秒）", defaultSlowdown: "減速時間（秒）", pinLeadOverride: "標記提前時間（秒）", slowdownOverride: "自訂減速時間（秒）", timingOverrideHint: "留空以使用共用設定。", markerFilled: '填滿標記', presentationMapCard: '地圖文字', presentationSidePanel: '旅途筆記',
     codeLabel: '站點代碼', routeDetailsLabel: '路線資訊（距離 · 時間）', routeDetailsPlaceholder: '10.2 公里 · 15:30–19:30', descriptionLabel: '說明', logoLabel: '符號', emojiLabel: '表情符號',
     iconSearchLabel: '搜尋地圖圖示', iconSearchPlaceholder: '搜尋超過 2,300 個圖示：山、水、帳篷…', iconSearchLoading: '正在載入圖示…', iconSearchEmpty: '找不到符合「{query}」的圖示。', iconSearchCount: '目前顯示 {shown}／{total} 個，可增加關鍵字縮小範圍。', iconSearchError: '無法載入圖示。', iconSearchRetry: '再試一次', iconSearchCredit: '圖示由 Pinhead 提供（CC0）',
     slowdownSeconds: '減速時間（秒）', textLanguage: '標註文字語言', translationFallback: '標註文字會依介面語言顯示；尚未翻譯的語言會顯示原文。', moveToPlayhead: '移至此處', moveToPlayheadHint: '拖曳時間軸至新位置，再將這則標註移到該處。',
