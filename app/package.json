@@ -43,7 +43,7 @@
     "polygon-clipping": "^0.15.7",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-dropzone": "^20.1.4",
+    "react-dropzone": "^20.2.0",
     "saxes": "^6.0.0",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
