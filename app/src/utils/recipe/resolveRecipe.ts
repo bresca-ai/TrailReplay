@@ -100,7 +100,7 @@ function annotationFrom(
   // the readable, timed treatment; map captions remain available when the
   // recipe explicitly asks for the lighter-weight option.
   const presentation = spec.presentation ?? 'side-panel';
-  const holdDuration = spec.holdDuration ?? (presentation === 'side-panel' ? 6000 : undefined);
+  const holdDuration = spec.holdDuration;
 
   return {
     id,

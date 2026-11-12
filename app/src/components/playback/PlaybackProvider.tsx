@@ -148,10 +148,10 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       const state = useAppStore.getState();
       const { currentTime, speed } = state.playback;
       const annotations = resolveSharedRouteMoments(state.textAnnotations, state.journeySegments, state.tracks, state.playback.routeTimingMode);
-      const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations) + deltaTime * speed;
-      const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations);
+      const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations, state.settings.annotationHoldDuration ?? 5000) + deltaTime * speed;
+      const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations, state.settings.annotationHoldDuration ?? 5000);
 
-      if (elapsed >= playbackTimeForRoute(totalDuration, totalDuration, annotations)) {
+      if (elapsed >= playbackTimeForRoute(totalDuration, totalDuration, annotations, state.settings.annotationHoldDuration ?? 5000)) {
         // End of playback - start outro sequence
         pause();
         setPlayback({ currentTime: totalDuration, progress: 1 });

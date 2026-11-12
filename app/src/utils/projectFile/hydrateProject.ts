@@ -10,6 +10,7 @@ import {
 import type { AppSettings, ComparisonTrack, PictureAnnotation, VideoAnnotation } from '@/types';
 import type { ParsedProject, ReplayProjectFile, SerializedPicture, SerializedVideo } from './types';
 import { normalizeRouteDivergenceThreshold } from '@/utils/routeDivergence';
+import { BASEMAP_PRESENTATIONS } from '@/components/map/mapStyle';
 
 /** Hydration is only reachable once a resolved project is known to be present. */
 export type ResolvedParsedProject = ParsedProject & { project: ReplayProjectFile };
@@ -67,6 +68,12 @@ function mergeSettings(saved: ReplayProjectFile['settings']): AppSettings {
   return {
     ...defaults,
     ...saved,
+    // Replays may reference providers unavailable in this build. Use the
+    // configured default so the map and the selected style stay in sync.
+    mapStyle: saved?.mapStyle && Object.hasOwn(BASEMAP_PRESENTATIONS, saved.mapStyle)
+      ? saved.mapStyle
+      : defaults.mapStyle,
+    annotationTextScale: saved?.annotationTextScale ?? saved?.annotationScale ?? defaults.annotationTextScale,
     trailStyle: { ...defaults.trailStyle, ...saved?.trailStyle },
     mapOverlays: { ...defaults.mapOverlays, ...saved?.mapOverlays },
   };

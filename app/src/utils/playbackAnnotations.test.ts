@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TextAnnotation } from '@/types';
-import { getActivePlaybackAnnotationId } from './playbackAnnotations';
+import { getActivePlaybackAnnotationId, getUpcomingAnnotationIndexes } from './playbackAnnotations';
 
 function createAnnotation(id: string, progress: number): TextAnnotation {
   return {
@@ -15,7 +15,7 @@ function createAnnotation(id: string, progress: number): TextAnnotation {
 }
 
 describe('getActivePlaybackAnnotationId', () => {
-  it('shows an annotation for the configured lead time before arrival', () => {
+  it('shows annotation text as the slowdown begins', () => {
     const annotations = [
       { ...createAnnotation('a', 0.2), displayDuration: 800 },
       { ...createAnnotation('b', 0.45), displayDuration: 900 },
@@ -31,21 +31,21 @@ describe('getActivePlaybackAnnotationId', () => {
     expect(result).toBe('b');
   });
 
-  it('hides the annotation immediately after the marker passes it', () => {
+  it('hides annotation text after the slowdown ends', () => {
     const annotations = [
       createAnnotation('a', 0.45),
     ];
 
     const result = getActivePlaybackAnnotationId({
       annotations,
-      currentTime: 4_501,
+      currentTime: 5_001,
       totalDuration: 10_000,
     });
 
     expect(result).toBeNull();
   });
 
-  it('clamps the visible window to the start of playback', () => {
+  it('keeps text hidden until its slowdown window', () => {
     const annotations = [
       createAnnotation('a', 0.1),
     ];
@@ -56,7 +56,7 @@ describe('getActivePlaybackAnnotationId', () => {
       totalDuration: 10_000,
     });
 
-    expect(result).toBe('a');
+    expect(result).toBeNull();
   });
 
   it('keeps the earliest active annotation when windows overlap', () => {
@@ -91,5 +91,16 @@ describe('getActivePlaybackAnnotationId', () => {
     const annotations = [createAnnotation('middle', 0.5)];
 
     expect(getActivePlaybackAnnotationId({ annotations, currentTime: 5_000, totalDuration: 10_000, phase: 'idle' })).toBe('middle');
+  });
+});
+
+describe('upcoming pins', () => {
+  it('shows pins before text, respects overrides and hides them after the moment', () => {
+    const annotations = [{ ...createAnnotation('a', 0.5), presentation: 'side-panel' as const }, { ...createAnnotation('b', 0.7), pinLeadDuration: 1000 }];
+    expect(getUpcomingAnnotationIndexes(annotations, 3900, 10000, 1000)).toEqual([]);
+    expect(getUpcomingAnnotationIndexes(annotations, 4000, 10000, 1000)).toEqual([0]);
+    expect(getActivePlaybackAnnotationId({ annotations, currentTime: 4000, totalDuration: 10000 })).toBeNull();
+    expect(getUpcomingAnnotationIndexes(annotations, 6000, 10000, 5000)).toEqual([1]);
+    expect(getUpcomingAnnotationIndexes(annotations, 8000, 10000, 5000)).toEqual([]);
   });
 });

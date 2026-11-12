@@ -34,7 +34,7 @@ export function importWaypoints(
         ...(waypoint.elevation !== undefined ? { elevation: waypoint.elevation } : {}),
         progress: progressForRouteDistance(journey.coordinates, journey.segmentTimings, routeDistance, timingMode) ?? 0,
         routeDistance, color: '#f3b133', displayDuration: 4000, presentation,
-        ...(presentation === 'side-panel' ? { logo: 'map:pin', holdDuration: 6000 } : {}),
+        ...(presentation === 'side-panel' ? { logo: 'map:pin' } : {}),
       });
     }
   }

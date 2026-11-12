@@ -18,7 +18,7 @@ describe('GPX waypoints', () => {
     expect(landmarks).toHaveLength(1);
     expect(landmarks[0]).toMatchObject({ title: 'avituallament', presentation: 'map-card', routeDistance: expect.any(Number) });
     expect(landmarks[0].progress).toBeCloseTo(0.5, 2);
-    expect(importWaypoints([track, track], [track], journey, 'side-panel', 'recorded')).toMatchObject([{ title: 'avituallament', presentation: 'side-panel', holdDuration: 6000 }]);
+    expect(importWaypoints([track, track], [track], journey, 'side-panel', 'recorded')).toMatchObject([{ title: 'avituallament', presentation: 'side-panel', logo: 'map:pin' }]);
   });
   it('preserves waypoints when parsing in a worker', async () => {
     const result = await parseRouteFileBatch([new File([gpx], 'trail.gpx')]);

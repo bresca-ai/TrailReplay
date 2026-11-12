@@ -5,6 +5,7 @@ import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useGPX } from '@/hooks/useGPX';
+import { useEditHistory } from '@/hooks/useEditHistory';
 import { useUnsavedWorkGuard } from '@/hooks/useUnsavedWorkGuard';
 import { usePictureRouteSync } from '@/hooks/usePictureRouteSync';
 import { usePlaybackMediaPopups } from '@/hooks/usePlaybackMediaPopups';
@@ -21,16 +22,13 @@ import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
 import { VideoPopup } from '@/components/annotations/VideoPopup';
-import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
-import { annotationSymbolLabel, annotationSymbolPath, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
-import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
-import { sidePanelShadeStyle } from '@/components/annotations/sidePanelShade';
-import { getSideAnnotationTypography } from '@/components/annotations/sideAnnotationTypography';
+import { ScreenAnnotation } from '@/components/annotations/ScreenAnnotation';
+import { RouteOverview } from '@/components/map/RouteOverview';
+import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
-import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
 import { useI18n } from '@/i18n/useI18n';
@@ -91,7 +89,8 @@ interface StatsResizeGuide {
 }
 
 function App() {
-  const { t, language } = useI18n();
+  useEditHistory();
+  const { t } = useI18n();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const statsScaleWrapperRef = useRef<HTMLDivElement>(null);
@@ -113,6 +112,8 @@ function App() {
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
   const [exportCropMetrics, setExportCropMetrics] = useState<CropPreviewMetrics | null>(null);
+  const [annotationCropMetrics, setAnnotationCropMetrics] = useState<CropPreviewMetrics | null>(null);
+  const [annotationContainerSize, setAnnotationContainerSize] = useState({ width: 340, height: 600 });
 
   const { parseFiles } = useGPX();
   // Installed once for the whole page, not per panel: the click that moves
@@ -286,19 +287,20 @@ function App() {
   const activeCropRatio = exportSubMode === 'image' ? socialShareAspectRatio : exportAspectRatio;
 
   useEffect(() => {
-    const shouldPreviewExportFrame = activePanel === 'export' || isExporting;
     const el = mapContainerRef.current;
-    if (!shouldPreviewExportFrame || !el) return;
+    if (!el) return;
 
     const update = () => {
       setExportCropMetrics(getCropPreviewMetrics(el.clientWidth, el.clientHeight, activeCropRatio));
+      setAnnotationCropMetrics(getCropPreviewMetrics(el.clientWidth, el.clientHeight, exportAspectRatio));
+      setAnnotationContainerSize(previous => previous.width === el.clientWidth && previous.height === el.clientHeight ? previous : { width: el.clientWidth, height: el.clientHeight });
     };
 
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [activePanel, activeCropRatio, isExporting]);
+  }, [activePanel, activeCropRatio, exportAspectRatio, isExporting]);
 
   // Stats overlay positioning only applies to video export, not image export
   const activeExportCropMetrics = (activePanel === 'export' || isExporting) && exportSubMode !== 'image'
@@ -547,52 +549,12 @@ function App() {
     totalDuration: playback.totalDuration,
     phase: animationPhase,
   }), [animationPhase, playback.currentTime, playback.totalDuration, playback.routeTimingMode, textAnnotations, journeySegments, tracks]);
-  const activeSideAnnotation = textAnnotations.find((annotation) =>
-    annotation.id === activeTextAnnotationId && annotation.presentation === 'side-panel');
-  const localizedSideAnnotation = activeSideAnnotation ? localizedAnnotation(activeSideAnnotation, language) : null;
-  const sideAnnotationCopy = localizedSideAnnotation ? sideAnnotationContent(localizedSideAnnotation) : null;
-  const sideAnnotationTypography = getSideAnnotationTypography(
-    activeExportCropMetrics ? exportAspectRatio : isNarrowScreen ? '9:16' : undefined,
-  );
-  const sideAnnotationNarrowFrame = activeExportCropMetrics
-    ? isNarrowFrame(activeExportCropMetrics.frameWidth, activeExportCropMetrics.frameHeight)
-    : false;
-  const sideAnnotationBottom = settings.showElevationProfile
-    ? sideAnnotationNarrowFrame ? 110 : 88
-    : 24;
-  // Subscribing re-renders the panel once a Pinhead library icon has loaded.
-  usePinheadIcons(needsPinheadIcons([activeSideAnnotation?.logo]));
-  const sideAnnotationSymbolPath = activeSideAnnotation ? annotationSymbolPath(activeSideAnnotation.logo) : null;
-  const sideAnnotationStyle: (CSSProperties & {
-    '--annotation-accent'?: string;
-    '--annotation-eyebrow-size'?: string;
-    '--annotation-code-size'?: string;
-    '--annotation-title-size'?: string;
-    '--annotation-meta-size'?: string;
-    '--annotation-details-size'?: string;
-  }) | undefined = activeSideAnnotation ? {
-    '--annotation-accent': activeSideAnnotation.color,
-    '--annotation-eyebrow-size': `${sideAnnotationTypography.eyebrowSize}px`,
-    '--annotation-code-size': `${sideAnnotationTypography.codeSize}px`,
-    '--annotation-title-size': `${sideAnnotationTypography.titleSize}px`,
-    '--annotation-meta-size': `${sideAnnotationTypography.metaSize}px`,
-    '--annotation-details-size': `${sideAnnotationTypography.detailsSize}px`,
-    ...sidePanelShadeStyle,
-    bottom: (activeExportCropMetrics?.bottom ?? 0) + sideAnnotationBottom,
-    ...(activeExportCropMetrics && sideAnnotationNarrowFrame
-      ? {
-          right: 'auto',
-          left: activeExportCropMetrics.frameLeft + activeExportCropMetrics.frameWidth / 2,
-          width: Math.min(activeExportCropMetrics.frameWidth - 32, 420),
-          transform: 'translateX(-50%)',
-        }
-      : activeExportCropMetrics
-        ? {
-            right: activeExportCropMetrics.right + Math.max(20, activeExportCropMetrics.frameWidth * 0.045),
-            width: Math.min(420, activeExportCropMetrics.frameWidth * 0.42),
-          }
-        : {}),
-  } : undefined;
+  const screenAnnotation = textAnnotations.find(annotation => annotation.id === activeTextAnnotationId && annotation.presentation !== 'side-panel');
+  const localizedScreenAnnotation = useMemo(() => screenAnnotation ? localizedAnnotation(screenAnnotation, settings.language) : null, [screenAnnotation, settings.language]);
+  const annotationFrame = (activePanel === 'export' || isExporting) ? annotationCropMetrics : null;
+  const annotationNarrow = annotationFrame ? isNarrowFrame(annotationFrame.frameWidth, annotationFrame.frameHeight) : isNarrowScreen;
+  const annotationBottom = settings.showElevationProfile ? (annotationNarrow ? 110 : 88) + Math.max(0, ((settings.elevationProfileHeight ?? 1) - 1) * (annotationNarrow ? 72 : 60)) : 24;
+  const annotationWidth = annotationFrame ? Math.max(64, Math.min(500, annotationNarrow ? annotationFrame.frameWidth - 32 : annotationFrame.frameWidth * 0.52)) : Math.max(64, Math.min(500, annotationContainerSize.width - 40));
   const activePendingPicturePlacement = pendingPicturePlacements[0];
   
   const hasTracks = tracks.length > 0;
@@ -654,30 +616,9 @@ function App() {
                 />
               </Suspense>
 
-              {activeSideAnnotation && sideAnnotationCopy && (
-                <div className="tr-annotation-side-panel pointer-events-none absolute z-30" style={sideAnnotationStyle}>
-                  <div className="tr-annotation-side-panel__header">
-                    <div className="tr-annotation-side-panel__logo" aria-label={annotationSymbolLabel(activeSideAnnotation.logo)} title={annotationSymbolLabel(activeSideAnnotation.logo)}>
-                      {sideAnnotationSymbolPath
-                        ? <svg viewBox="0 0 15 15" fill="currentColor"><path d={sideAnnotationSymbolPath} /></svg>
-                        : activeSideAnnotation.logo || '●'}
-                    </div>
-                    <div className="tr-annotation-side-panel__identity">
-                      {sideAnnotationCopy.eyebrow && <span className="tr-annotation-side-panel__eyebrow">{sideAnnotationCopy.eyebrow}</span>}
-                      {sideAnnotationCopy.code && <span className="tr-annotation-side-panel__code">{sideAnnotationCopy.code}</span>}
-                    </div>
-                    <span className="tr-annotation-side-panel__dash" aria-hidden="true" />
-                  </div>
-                  {sideAnnotationCopy.title && <h2 className="tr-annotation-side-panel__title">{sideAnnotationCopy.title}</h2>}
-                  {sideAnnotationCopy.meta && <p className="tr-annotation-side-panel__meta">{sideAnnotationCopy.meta}</p>}
-                  {sideAnnotationCopy.description && (
-                    <div className="tr-annotation-side-panel__details">
-                      <p>{sideAnnotationCopy.description}</p>
-                    </div>
-                  )}
-                </div>
-              )}
 
+              {localizedScreenAnnotation && <ScreenAnnotation annotation={localizedScreenAnnotation} font={settings.trailStyle.overlayFont} size={Math.max(0.5, Math.min(2, settings.annotationTextScale ?? settings.annotationScale ?? 1))} maxWidth={annotationWidth} maxHeight={Math.max(40, (annotationFrame?.frameHeight ?? annotationContainerSize.height) - annotationBottom - 24)} style={{ right: (annotationFrame?.right ?? 0) + 20, bottom: (annotationFrame?.bottom ?? 0) + annotationBottom }} />}
+              <RouteOverview containerSize={annotationContainerSize} frame={activeExportCropMetrics} />
               {!isMapReady && <AppLoadingOverlay />}
 
               {/* Aspect ratio crop preview when in Export panel */}

@@ -22,18 +22,18 @@ export function getActivePlaybackAnnotationId(params: {
   const sortedAnnotations = [...annotations].sort((a, b) => a.progress - b.progress);
 
   for (const annotation of sortedAnnotations) {
-    if (annotation.presentation === 'side-panel') {
-      if (sidePanelVisible(annotation, currentTime, totalDuration)) return annotation.id;
-      continue;
-    }
-    const arrivalTime = annotation.progress * totalDuration;
-    const leadTime = Math.max(0, annotation.displayDuration);
-    const windowStart = Math.max(0, arrivalTime - leadTime);
-
-    if (currentTime >= windowStart && currentTime <= arrivalTime) {
-      return annotation.id;
-    }
+    if (sidePanelVisible(annotation, currentTime, totalDuration)) return annotation.id;
   }
 
   return null;
+}
+
+/** Pins appear ahead of the text and remain through the annotation slowdown. */
+export function getUpcomingAnnotationIndexes(annotations: TextAnnotation[], currentTime: number, totalDuration: number, defaultLeadDuration: number, phase?: string): number[] {
+  if (totalDuration <= 0 || phase === 'preloading' || phase === 'intro' || phase === 'outro' || phase === 'ended') return [];
+  return annotations.flatMap((annotation, index) => {
+    const arrival = annotation.progress * totalDuration;
+    const lead = Math.max(500, annotation.pinLeadDuration ?? defaultLeadDuration);
+    return currentTime >= Math.max(0, arrival - lead) && currentTime <= Math.min(totalDuration, arrival + 500) ? [index] : [];
+  });
 }

@@ -23,7 +23,7 @@ export function createDefaultSettings(): AppSettings {
   return {
     language: getInitialLanguage(),
     unitSystem: 'metric',
-    mapStyle: 'satellite',
+    mapStyle: 'esri-clarity',
     mapFilter: 'none',
     show3DTerrain: true,
     terrainExaggeration: 1,
@@ -73,6 +73,10 @@ export function createDefaultSettings(): AppSettings {
     showLeaderboard: true,
     paceMode: 'per-km' as const,
     showElevationProfile: true,
+    elevationProfileFilled: true,
+    elevationProfileHeight: 1,
+    showRouteOverview: false,
+    routeOverviewPosition: null,
     dynamicElevationProfile: false,
     elevationProfilePerRoute: false,
     elevationSectionOverrides: [],
@@ -81,6 +85,10 @@ export function createDefaultSettings(): AppSettings {
     landmarkScale: 1,
     landmarkStyle: 'minimal',
     landmarkLabelFade: true,
+    annotationScale: 1,
+    annotationTextScale: 1.2,
+    annotationPinLeadDuration: 5000,
+    annotationHoldDuration: 5000,
     inactiveAnnotationsOpacity: 1.0,
   };
 }
