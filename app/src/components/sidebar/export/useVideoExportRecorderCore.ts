@@ -585,7 +585,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (!map) return;
 
     studioMapPresentationRestoreRef.current?.();
-    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map);
+    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, { highDetail: useAppStore.getState().videoExportSettings.qualityMode === 'studio', mapStyle: useAppStore.getState().settings.mapStyle });
   }, []);
 
   const restoreStudioMapSettings = useCallback(() => {
@@ -710,7 +710,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         // exact transition pose for this output frame. The clock stays frozen
         // here for however long its tiles need to become ready.
         setStudioMapTime(frame.timestampMs);
-        if (relaxedTransition && useAppStore.getState().settings.show3DBuildings) {
+        if (relaxedTransition && !studioQualityRef.current && useAppStore.getState().settings.show3DBuildings) {
           if (frameIndex % TRANSITION_SETTLE_INTERVAL_FRAMES === 0) {
             await waitForMapSettled(true, TRANSITION_SETTLE_TIMEOUT_MS, false);
           } else {
