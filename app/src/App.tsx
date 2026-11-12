@@ -1,5 +1,6 @@
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { ExportAwareSidebar } from '@/components/sidebar/ExportAwareSidebar';
+import { WaypointImportDialog } from '@/components/app/WaypointImportDialog';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -662,12 +663,12 @@ function App() {
                         : activeSideAnnotation.logo || '●'}
                     </div>
                     <div className="tr-annotation-side-panel__identity">
-                      <span className="tr-annotation-side-panel__eyebrow">{sideAnnotationCopy.eyebrow || t('annotations.sidePanelEyebrow')}</span>
+                      {sideAnnotationCopy.eyebrow && <span className="tr-annotation-side-panel__eyebrow">{sideAnnotationCopy.eyebrow}</span>}
                       {sideAnnotationCopy.code && <span className="tr-annotation-side-panel__code">{sideAnnotationCopy.code}</span>}
                     </div>
                     <span className="tr-annotation-side-panel__dash" aria-hidden="true" />
                   </div>
-                  <h2 className="tr-annotation-side-panel__title">{sideAnnotationCopy.title}</h2>
+                  {sideAnnotationCopy.title && <h2 className="tr-annotation-side-panel__title">{sideAnnotationCopy.title}</h2>}
                   {sideAnnotationCopy.meta && <p className="tr-annotation-side-panel__meta">{sideAnnotationCopy.meta}</p>}
                   {sideAnnotationCopy.description && (
                     <div className="tr-annotation-side-panel__details">
@@ -910,6 +911,7 @@ function App() {
           )}
         </main>
         
+        <WaypointImportDialog />
         <Toaster 
           position="bottom-right"
           toastOptions={{

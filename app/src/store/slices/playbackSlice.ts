@@ -108,14 +108,16 @@ export const createPlaybackSlice: AppSliceCreator<PlaybackSlice> = (set) => ({
       state.exportVideoHoldTimeSeconds = seconds;
     }),
 
-  resetPlayback: () =>
+  resetPlayback: (options) =>
     set((state) => {
+      const speed = state.playback.speed;
       const routeTimingMode = state.playback.routeTimingMode;
       const totalDuration = state.playback.totalDuration;
       state.playback = {
         ...createDefaultPlayback(),
         routeTimingMode,
         totalDuration,
+        ...(options?.preserveSpeed ? { speed } : {}),
       };
       state.cinematicPlayed = false;
       state.animationPhase = 'idle';

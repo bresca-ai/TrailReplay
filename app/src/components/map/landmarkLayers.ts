@@ -49,7 +49,7 @@ export function landmarkEmojiLayer(scale: number): LayerSpecification {
   } as LayerSpecification;
 }
 
-export function landmarkLabelLayer(scale: number, labelFade: boolean): LayerSpecification {
+export function landmarkLabelLayer(scale: number, labelFade: boolean, style: 'classic' | 'minimal' = 'classic'): LayerSpecification {
   return {
     id: LANDMARK_LABEL_LAYER_ID,
     type: 'symbol',
@@ -57,8 +57,8 @@ export function landmarkLabelLayer(scale: number, labelFade: boolean): LayerSpec
     layout: {
       'icon-image': ['get', 'labelImageId'],
       'icon-size': landmarkLabelIconSizeExpression(scale),
-      'icon-offset': [0, 18],
-      'icon-anchor': 'top',
+      'icon-offset': style === 'minimal' ? [16, -12] : [0, 18],
+      'icon-anchor': style === 'minimal' ? 'right' : 'top',
       'icon-pitch-alignment': 'viewport',
       'icon-rotation-alignment': 'viewport',
       // Labels, unlike icons, drop out when they cannot be placed without

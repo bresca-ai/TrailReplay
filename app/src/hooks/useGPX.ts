@@ -15,6 +15,7 @@ import { groupTracksBySpatialSimilarity } from '@/utils/trackSpatialSimilarity';
 import { COMPARISON_COLORS } from '@/components/sidebar/tracks/constants';
 import { createId } from '@/utils/id';
 import type { GPXTrack } from '@/types';
+import { useWaypointImportQueue } from '@/utils/gpx/waypointImportQueue';
 
 export type RouteInputMethod = 'file_picker' | 'dropzone';
 
@@ -57,6 +58,11 @@ export function useGPX() {
       );
       const coverImageUrls = await resolveCoverPhotos(recipe, fileArray);
       applyRecipe(recipe, resolved, useAppStore.getState(), coverImageUrls);
+      const journeyTrackIds = new Set(resolved.journeySegments.flatMap((segment) => segment.type === 'track' ? [segment.trackId] : []));
+      const waypointTracks = resolved.tracks.filter((track) => journeyTrackIds.has(track.id) && track.waypoints?.length);
+      if (waypointTracks.length) {
+        useWaypointImportQueue.getState().enqueue({ tracks: waypointTracks, groups: [] });
+      }
       useAppStore.getState().setRecipeReport(resolved.report);
 
       trackEvent('recipe_import_completed', {
@@ -204,6 +210,12 @@ export function useGPX() {
       });
 
       addImportedTracks(primaryTracks, comparisonTracks);
+      if (tracks.some((track) => track.waypoints?.length)) {
+        useWaypointImportQueue.getState().enqueue({
+          tracks,
+          groups: comparisonTracks.filter((entry) => entry.groupId).map((entry) => [entry.track.id, entry.groupId!]),
+        });
+      }
 
       if (groupedByTimeCount > 0) {
         toast.success(t('tracks.autoGroupedToast', { count: String(groupedByTimeCount) }));

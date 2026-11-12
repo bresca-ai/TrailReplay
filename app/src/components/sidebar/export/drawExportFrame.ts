@@ -1,4 +1,5 @@
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
+import { drawBuildingsAttribution } from './mapAttribution';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -188,7 +189,6 @@ export function drawExportFrame({
   overlayFramesSinceRefreshRef,
   overlayRefreshIntervalMs,
   updateOverlayAsync,
-  t,
 }: DrawExportFrameOptions) {
     if (!recordingCanvasRef.current || !recordingContextRef.current) return;
     const { width: recordW, height: recordH } = videoExportSettings.resolution;
@@ -299,7 +299,7 @@ export function drawExportFrame({
         context.textAlign = 'left';
         context.font = `600 ${typography.eyebrowSize * scale}px ${overlayFamily}`;
         context.fillStyle = '#f8f6f0';
-        context.fillText((copy.eyebrow || t('annotations.sidePanelEyebrow')).toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
+        if (copy.eyebrow) context.fillText(copy.eyebrow.toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
         if (copy.code) {
           context.font = `700 ${typography.codeSize * scale}px ${overlayFamily}`;
           context.fillStyle = sideAnnotation.color;
@@ -489,6 +489,8 @@ export function drawExportFrame({
       context.drawImage(cachedLogoRef.current, box.x, box.y, box.w, box.h);
       context.restore();
     }
+
+    if (currentState.settings.show3DBuildings) drawBuildingsAttribution(context, recordW, recordH);
 
     overlayFramesSinceRefreshRef.current += 1;
     const overlayDue = overlayLastUpdateRef.current === 0

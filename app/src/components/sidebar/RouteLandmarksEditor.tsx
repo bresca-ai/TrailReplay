@@ -61,10 +61,6 @@ export function RouteLandmarksEditor() {
           </button>)}
         </div>
       </fieldset>
-      <a className="inline-block text-xs underline text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]"
-        href={`https://github.com/bresca-ai/TrailReplay/discussions/new?${new URLSearchParams({ category: 'general', title: 'Landmark style feedback', body: `I prefer the ${landmarkStyle} landmark style.\n\nMy feedback: ` })}`}
-        target="_blank" rel="noreferrer">{t('routeLandmarks.shareStyleFeedback')}</a>
-      <p className="text-[11px] text-[var(--evergreen-60)]">{t('routeLandmarks.shareStyleFeedbackHint')}</p>
       <div className="flex items-baseline justify-between"><span className="text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.landmarkSize')}</span><span className="text-[11px] text-[var(--evergreen-60)]">{Math.round(clampLandmarkScale(landmarkScale) * 100)}%</span></div>
       <input aria-label={t('routeLandmarks.landmarkSize')} type="range" min={MIN_LANDMARK_SCALE} max={MAX_LANDMARK_SCALE} step={0.1} value={clampLandmarkScale(landmarkScale)} onChange={(event) => { const scale = Number(event.target.value); setSettings({ landmarkScale: scale }); trackEvent('settings_changed', { setting_name: 'landmark_scale', setting_value: scale }); }} className="w-full accent-[var(--trail-orange)]" />
       <label className="flex cursor-pointer items-start justify-between gap-3"><span><span className="block text-xs font-medium text-[var(--evergreen)]">{t('routeLandmarks.fadeLabels')}</span><span className="block pt-0.5 text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t('routeLandmarks.fadeLabelsDescription')}</span></span><input className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--trail-orange)]" type="checkbox" checked={labelFade} onChange={(event) => { const enabled = event.target.checked; setSettings({ landmarkLabelFade: enabled }); trackEvent('feature_enabled', { feature_name: 'landmark_label_fade', feature_state: enabled ? 'enabled' : 'disabled', feature_context: 'landmarks' }); }} /></label>

@@ -183,6 +183,16 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
     };
   }, [playback.isPlaying, animationPhase, calculateTotalDuration, isDeterministicExport, pause, setPlayback, setAnimationPhase, resetPlayback]);
 
+  // A manual restart can interrupt the outro or its delayed reset. Do not let
+  // callbacks from the previous run change the new playback state.
+  useEffect(() => {
+    if (animationPhase === 'outro' || animationPhase === 'ended') return;
+    if (outroTimeoutRef.current) clearTimeout(outroTimeoutRef.current);
+    if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+    outroTimeoutRef.current = null;
+    resetTimeoutRef.current = null;
+  }, [animationPhase]);
+
   // Update total duration when track or journey changes
   useEffect(() => {
     const totalDuration = calculateTotalDuration();

@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import type { AppSettings, TrailStyleSettings } from '@/types';
+import { satelliteRoofs } from '@/components/map/satelliteRoofs';
 import { applyBasemapFilter } from '@/components/map/mapFilters';
 import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
+import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
 import {
   BASEMAP_FALLBACK_MAX_ZOOM,
   BASEMAP_PRESENTATIONS,
@@ -44,6 +46,10 @@ export function useBaseMapPresentation({
       }
     }
 
+    if (map.getLayer('buildings-3d')) {
+      map.setLayoutProperty('buildings-3d', 'visibility', settings.show3DBuildings ? 'visible' : 'none');
+    }
+
     if (map.getLayer('ski-pistes')) {
       map.setLayoutProperty('ski-pistes', 'visibility', settings.mapOverlays?.skiPistes ? 'visible' : 'none');
     }
@@ -69,7 +75,23 @@ export function useBaseMapPresentation({
     settings.mapOverlays?.skiPistes,
     settings.mapOverlays?.slopeOverlay,
     settings.mapStyle,
+    settings.show3DBuildings,
   ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded || !settings.show3DBuildings || settings.paint3DBuildings === false) return;
+    const template = settings.mapStyle === 'satellite'
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+      : settings.mapStyle === 'esri-clarity'
+        ? 'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+        : settings.mapStyle === 'wayback' && settings.waybackItemURL
+          ? settings.waybackItemURL.replace('{level}', '{z}').replace('{row}', '{y}').replace('{col}', '{x}')
+          : null;
+    if (!template) return;
+    map.addLayer(satelliteRoofs(map, template, settings.mapFilter ?? 'none'), 'carto-labels');
+    return () => { if (map.getLayer('satellite-building-roofs')) map.removeLayer('satellite-building-roofs'); };
+  }, [isMapLoaded, mapRef, settings.show3DBuildings, settings.paint3DBuildings, settings.mapStyle, settings.waybackItemURL]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -107,7 +129,7 @@ export function useBaseMapPresentation({
         layout: { visibility: isWaybackActive ? 'visible' : 'none' },
         paint: { 'raster-fade-duration': 0 },
       },
-      'carto-labels',
+      'buildings-3d',
     );
     map.addLayer(
       {
@@ -117,7 +139,7 @@ export function useBaseMapPresentation({
         layout: { visibility: isWaybackActive ? 'visible' : 'none' },
         paint: { 'raster-fade-duration': 0 },
       },
-      'carto-labels'
+      'buildings-3d'
     );
   }, [isMapLoaded, mapRef, settings.mapStyle, settings.waybackItemURL]);
 
@@ -182,7 +204,7 @@ export function useBaseMapPresentation({
       if (map.getSource('terrain-dem')) {
         map.setTerrain({
           source: 'terrain-dem',
-          exaggeration: settings.recordedElevationPrototype ? 1 : Math.max(0.5, Math.min(3, settings.terrainExaggeration ?? 1.5))
+          exaggeration: effectiveTerrainExaggeration(settings)
         });
       }
       return;

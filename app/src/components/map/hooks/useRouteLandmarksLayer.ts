@@ -269,7 +269,7 @@ export function useRouteLandmarksLayer({
       const beforeAnnotations = ANNOTATION_LAYER_IDS.find((layerId) => map.getLayer(layerId));
       if (!map.getLayer(ICON)) map.addLayer(landmarkIconLayer(scale), beforeAnnotations);
       if (!map.getLayer(LANDMARK_EMOJI_LAYER_ID)) map.addLayer(landmarkEmojiLayer(scale), beforeAnnotations);
-      if (!map.getLayer(LABEL)) map.addLayer(landmarkLabelLayer(scale, labelFade), beforeAnnotations);
+      if (!map.getLayer(LABEL)) map.addLayer(landmarkLabelLayer(scale, labelFade, landmarkStyle), beforeAnnotations);
       // Keep the source populated during the intro. Toggling layer visibility
       // avoids waiting for source tiles to become idle during playback.
       for (const landmark of landmarks) {

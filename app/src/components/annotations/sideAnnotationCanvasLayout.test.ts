@@ -25,6 +25,13 @@ describe('side annotation canvas layout', () => {
     expect(long.panelHeight).toBeGreaterThan(short.panelHeight);
   });
 
+  it('omits empty fields when laying out exported text', () => {
+    const result = layoutSideAnnotationCanvasText({ title: '', meta: '', description: '' }, SIDE_ANNOTATION_TYPOGRAPHY.wide, 200, measure);
+    expect(result.title).toEqual([]);
+    expect(result.meta).toEqual([]);
+    expect(result.description).toEqual([]);
+  });
+
   it('accounts for wrapped titles and metadata in the shade height', () => {
     const compact = layoutSideAnnotationCanvasText(
       { title: 'Stop', meta: 'Km 1', description: null },

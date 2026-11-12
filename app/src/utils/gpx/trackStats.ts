@@ -1,4 +1,4 @@
-import type { GPXPoint, GPXTrack } from '@/types';
+import type { GPXPoint, GPXTrack, GPXWaypoint } from '@/types';
 import { DEFAULT_ACTIVITY_ICON } from '@/utils/activityIcons';
 import { calculateElevationGain, calculateElevationLoss } from './elevationGain';
 export { calculateElevationGain, calculateElevationLoss, DEFAULT_ELEVATION_THRESHOLD_METERS } from './elevationGain';
@@ -38,6 +38,7 @@ export function buildTrackFromRawPoints(params: {
   idPrefix: 'track' | 'kml' | 'fit';
   name: string;
   rawPoints: RawTrackPoint[];
+  waypoints?: GPXWaypoint[];
 }): GPXTrack {
   const { idPrefix, name, rawPoints } = params;
 
@@ -127,6 +128,7 @@ export function buildTrackFromRawPoints(params: {
     name,
     activityIcon: DEFAULT_ACTIVITY_ICON,
     points: trackPoints,
+    ...(params.waypoints?.length ? { waypoints: params.waypoints } : {}),
     totalDistance,
     totalTime,
     movingTime,

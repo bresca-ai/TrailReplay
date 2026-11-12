@@ -1,3 +1,4 @@
+import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
 import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useI18n } from '@/i18n/useI18n';
@@ -14,18 +15,20 @@ import {
   type JourneyPoint,
 } from '@/utils/journeyUtils';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { waitForAerialTerrainPlan } from '@/utils/aerialTerrainPlan';
 import { locationChapterIntroCameraRef, locationChapterIntroStagesRef } from '@/utils/locationChapterCamera';
 import {
   deduplicateCameraPoses,
   getDeterministicIntroStartPose,
+  getReplayWarmupPose,
   sampleCameraTransition,
 } from '@/utils/replayCameraWarmupPlan';
 import {
-  getIntroCameraPose,
   getOpeningPreloadProgresses,
-  getPlaybackCameraPose,
+  resolveReplayCameraMode,
   type ReplayCameraPose,
 } from '@/utils/replayCameraPlan';
+import { usePreparedCinematicCameraKeyframes } from '@/hooks/useCinematicCameraKeyframes';
 import { getStatAvailability, isStatAvailable } from '@/utils/statAvailability';
 import {
   formatDistance,
@@ -42,6 +45,7 @@ import { MP4_MIME_TYPES } from './exportConfig';
 import { getDeterministicHoldFrames, getDeterministicPhaseFrames } from './exportFrameTimeline';
 import { createExportMapClock } from './exportMapClock';
 import { waitForSettledFrame } from './exportMapSettle';
+import { assertMapContextAvailable } from './mapContextReadiness';
 import { getOverlayRefreshIntervalMs } from './exportOverlay';
 import { isExportProfilingEnabled, markExportProfileStage } from './exportProfiler';
 import { isWebCodecsMp4Supported, type Mp4CanvasEncoder } from './mp4CanvasEncoder';
@@ -57,6 +61,10 @@ const EXPORT_OPENING_SAMPLE_COUNT = 8;
 // strand a 1800-frame export. Measured worst-case settle on satellite + terrain
 // at 4K was 1.27s, so this leaves an order of magnitude of headroom.
 const STUDIO_FRAME_SETTLE_TIMEOUT_MS = 10_000;
+// Opening/closing flyovers change pose quickly, so waiting for every distant
+// tile on every frame is expensive and brings little visible benefit.
+const TRANSITION_SETTLE_TIMEOUT_MS = 120;
+const TRANSITION_SETTLE_INTERVAL_FRAMES = 8;
 
 export type StudioDeliveryStatus = 'idle' | 'registering' | 'uploading' | 'emailing' | 'sent' | 'failed';
 
@@ -115,6 +123,8 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     segmentTimings,
     totalDistance,
   } = useComputedJourney();
+  const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
+  const replayCameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.length);
   const journeyDistanceProfile = useMemo(
     () => computedJourney ? buildJourneyDistanceProfile(computedJourney.coordinates) : null,
     [computedJourney],
@@ -451,6 +461,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const map = mapGlobalRef.current;
       if (!map) return;
+      assertMapContextAvailable(map.getCanvas());
 
       await new Promise<void>((resolve) => {
         let resolved = false;
@@ -477,6 +488,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const renderMapOnce = useCallback(async () => {
     const map = mapGlobalRef.current;
     if (!map) return;
+    assertMapContextAvailable(map.getCanvas());
     await new Promise<void>((resolve) => {
       let resolved = false;
       const finish = () => {
@@ -500,7 +512,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
    * flight. This trades wall clock (roughly 6x) for a video in which no frame
    * shows the fallback basemap.
    */
-  const waitForMapSettled = useCallback(async (allowMoving = false) => {
+  const waitForMapSettled = useCallback(async (allowMoving = false, timeoutMs = STUDIO_FRAME_SETTLE_TIMEOUT_MS, requireBuildings = true) => {
     const map = mapGlobalRef.current;
     if (!map) {
       await waitForMapFrame();
@@ -512,14 +524,28 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       nextTask: () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
       now: () => performance.now(),
       renderOnce: renderMapOnce,
-      timeoutMs: STUDIO_FRAME_SETTLE_TIMEOUT_MS,
+      timeoutMs,
       allowMoving,
+      additionalReady: useAppStore.getState().settings.show3DBuildings && useAppStore.getState().settings.paint3DBuildings !== false
+        ? () => {
+          const settings = useAppStore.getState().settings;
+          const textured = settings.mapStyle === 'satellite' || settings.mapStyle === 'esri-clarity'
+            || (settings.mapStyle === 'wayback' && !!settings.waybackItemURL);
+          return prepareBuildingFrame(map, textured);
+        }
+        : undefined,
     });
 
-    const stats = studioStatsRef.current;
-    stats.frames += 1;
-    stats.waitedMs += result.waitedMs;
-    if (result.timedOut) stats.timedOutFrames += 1;
+    if (result.timedOut && requireBuildings && useAppStore.getState().settings.show3DBuildings) {
+      throw new Error('Could not load the 3D buildings and their imagery in time. Check your connection and try exporting again.');
+    }
+
+    if (requireBuildings) {
+      const stats = studioStatsRef.current;
+      stats.frames += 1;
+      stats.waitedMs += result.waitedMs;
+      if (result.timedOut) stats.timedOutFrames += 1;
+    }
     // A slow or unavailable tile must not abort the whole export. Capture the
     // best frame MapLibre currently has and report the count in the completed
     // Studio status, so a timeout is visible without losing the finished video.
@@ -533,7 +559,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
    * frozen so their moving pose cannot advance while tiles load.
    */
   const waitForExportFrame = useCallback(async () => {
-    if (studioQualityRef.current) {
+    if (studioQualityRef.current || useAppStore.getState().settings.show3DBuildings) {
       await waitForMapSettled();
       return;
     }
@@ -541,7 +567,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, [waitForMapFrame, waitForMapSettled]);
 
   const setStudioMapTime = useCallback((timestampMs: number) => {
-    if (!studioQualityRef.current) return;
+    if (!studioQualityRef.current && !useAppStore.getState().settings.show3DBuildings) return;
     studioMapClockRef.current.setOutputTime(timestampMs);
   }, []);
 
@@ -592,14 +618,20 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     const map = mapGlobalRef.current;
     if (!map || cameraSettings.mode === 'overview' || cameraPathCoordinates.length === 0) return;
 
+    // Allow the map's preparation effect to register before looking it up.
+    // The plan is bounded by the same timeout as interactive playback.
+    if (replayCameraMode === 'aerial-follow') await waitForMapFrame();
+    const aerialPlan = replayCameraMode === 'aerial-follow' ? await waitForAerialTerrainPlan(cameraPathCoordinates) : null;
+    if (recordingCancelledRef.current) return;
+    if (aerialPlan) await waitForMapFrame();
+
     const routeDurationMs = useAppStore.getState().playback.totalDuration || 60_000;
-    // Tile prefetch has no cinematic-specific pose logic yet — approximate
-    // with follow-behind, which sits at a similar zoom/pitch. The actual
-    // export render loop (useTrailPlaybackCamera) does use the real
-    // cinematic poses, so this only affects which tiles get warmed early.
-    const poseCameraMode = cameraSettings.mode === 'cinematic' ? 'follow-behind' : cameraSettings.mode;
-    const introPose = getIntroCameraPose({
-      cameraMode: poseCameraMode,
+    const introPose = getReplayWarmupPose({
+      cameraMode: replayCameraMode,
+      cinematicKeyframes,
+      aerialTerrainPlan: aerialPlan,
+      cameraStability: cameraSettings.cameraStability,
+      totalDurationMs: routeDurationMs,
       coordinates: cameraPathCoordinates,
       elevationData,
       followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
@@ -619,14 +651,21 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         routeDurationMs,
         EXPORT_OPENING_WINDOW_MS,
         EXPORT_OPENING_SAMPLE_COUNT,
-      ).map((progress) => getPlaybackCameraPose({
-        cameraMode: poseCameraMode,
+      ).map((progress) => {
+        const pose = getReplayWarmupPose({
+        cameraMode: replayCameraMode,
+        cinematicKeyframes,
+        aerialTerrainPlan: aerialPlan,
+        cameraStability: cameraSettings.cameraStability,
+        totalDurationMs: routeDurationMs,
         coordinates: cameraPathCoordinates,
         elevationData,
         followBehindZoomLevel: cameraSettings.followBehindZoomLevel,
         followBehindPitch: cameraSettings.followBehindPitch,
         progress,
-      })),
+      });
+        return pose;
+      }),
     ].filter((pose): pose is ReplayCameraPose => pose !== null));
     const deadline = Date.now() + EXPORT_TILE_PRELOAD_TIMEOUT_MS;
 
@@ -648,12 +687,13 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     map.jumpTo(introStartPose);
     await waitForMapFrame();
-  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.followBehindPitch, cameraSettings.mode, elevationData, waitForMapFrame]);
+  }, [cameraPathCoordinates, cameraSettings.followBehindZoomLevel, cameraSettings.followBehindPitch, cameraSettings.cameraStability, cameraSettings.mode, cinematicKeyframes, replayCameraMode, elevationData, waitForMapFrame]);
 
   const captureDeterministicPhase = useCallback(async (
     durationMs: number,
     timestampOffsetMs: number,
     includeStartFrame: boolean,
+    relaxedTransition = false,
   ) => {
     const phaseStartTime = performance.now();
     const frames = getDeterministicPhaseFrames(
@@ -665,19 +705,27 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
 
     for (const [frameIndex, frame] of frames.entries()) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      if (studioQualityRef.current) {
+      if (studioQualityRef.current || useAppStore.getState().settings.show3DBuildings) {
         // Advancing the MapLibre clock to the encoded timestamp produces the
         // exact transition pose for this output frame. The clock stays frozen
         // here for however long its tiles need to become ready.
         setStudioMapTime(frame.timestampMs);
-        await waitForMapSettled(true);
+        if (relaxedTransition && useAppStore.getState().settings.show3DBuildings) {
+          if (frameIndex % TRANSITION_SETTLE_INTERVAL_FRAMES === 0) {
+            await waitForMapSettled(true, TRANSITION_SETTLE_TIMEOUT_MS, false);
+          } else {
+            await waitForMapFrame();
+          }
+        } else {
+          await waitForMapSettled(true);
+        }
       } else {
         await waitForMapFrame();
       }
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
       captureFrame();
       await encodeWebCodecsFrame(frame.timestampMs * 1000);
-      if (!studioQualityRef.current && frameIndex < frames.length - 1) {
+      if (!studioQualityRef.current && !useAppStore.getState().settings.show3DBuildings && frameIndex < frames.length - 1) {
         // Map rendering already consumes part of this frame's budget. Waiting a
         // full additional frame interval made the intro/outro take roughly twice
         // as long to export, while the encoded timestamps and pixels stayed the

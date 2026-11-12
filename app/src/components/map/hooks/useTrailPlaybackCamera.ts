@@ -25,6 +25,7 @@ import {
   MAX_CENTER_ELEVATION_RATE_M_PER_S,
   TERRAIN_SAMPLE_INDEX_OFFSETS,
   smoothBearing,
+  smoothAerialBearing,
   smoothCoordinate,
   smoothPitch,
   smoothZoom,
@@ -37,13 +38,15 @@ import {
   getPlaybackCameraPose,
   getRouteBearingAtProgress,
 } from '@/utils/replayCameraPlan';
-import { getCinematicCenterElevation } from '@/utils/cinematicCameraElevation';
+import { getCinematicCenterElevation, settleCinematicElevation } from '@/utils/cinematicCameraElevation';
+import { terrainPlanBearing } from '@/utils/aerialTerrainPlan';
 import { getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
 import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
 import {
   getSmoothedCameraAnchor,
   getSmoothedRouteHeadingDeg,
+  smoothRoutePosition,
   visibleWidthMetersAtZoom,
 } from '@/utils/cinematicCameraAnchor';
 
@@ -57,8 +60,9 @@ interface UseTrailPlaybackCameraParams {
   activeTextAnnotationId: string | null;
   allCoordinates: number[][];
   cameraCoordinates: number[][];
+  aerialTerrainPlan?: number[] | null;
   animationPhase: 'idle' | 'preloading' | 'intro' | 'playing' | 'outro' | 'ended';
-  cameraMode: 'overview' | 'follow' | 'follow-behind' | 'cinematic';
+  cameraMode: 'overview' | 'follow' | 'follow-behind' | 'aerial-follow' | 'cinematic';
   /** 0 = maximally stable/smooth camera, 1 = maximally reactive/tight tracking. */
   cameraStability: number;
   /**
@@ -218,6 +222,7 @@ export function useTrailPlaybackCamera({
   activeTextAnnotationId,
   allCoordinates,
   cameraCoordinates,
+  aerialTerrainPlan,
   animationPhase,
   cameraMode,
   cameraStability,
@@ -295,7 +300,7 @@ export function useTrailPlaybackCamera({
     };
   }, [isMapLoaded, mapRef, markerRef, recordedElevationEnabled]);
 
-  const ownsCinematicElevation = (cameraMode === 'cinematic' || recordedElevationEnabled)
+  const ownsCinematicElevation = (cameraMode === 'cinematic' || cameraMode === 'aerial-follow' || recordedElevationEnabled)
     && animationPhase === 'playing' && (isPlaying || isExporting);
   useEffect(() => {
     const map = mapRef.current;
@@ -307,6 +312,20 @@ export function useTrailPlaybackCamera({
     map.setCenterClampedToGround(false);
     return () => { map.setCenterClampedToGround(wasClamped); };
   }, [isMapLoaded, mapRef, ownsCinematicElevation]);
+
+  // Aerial follow reserves headroom so the route sits below the horizon, as it
+  // would in a filmed shot. Restore the previous padding for every other mode.
+  const aerialHeadroomActive = cameraMode === 'aerial-follow'
+    && (animationPhase === 'intro' || animationPhase === 'playing');
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isMapLoaded || !aerialHeadroomActive) return;
+    const previous = map.getPadding();
+    const update = () => map.setPadding({ ...previous, top: (previous.top ?? 0) + map.getCanvas().clientHeight * 0.16 });
+    update();
+    map.on('resize', update);
+    return () => { map.off('resize', update); map.setPadding(previous); };
+  }, [mapRef, isMapLoaded, aerialHeadroomActive]);
 
   // Explicit distance/mode changes should take effect immediately instead of
   // being mistaken for terrain noise by the cinematic target filter.
@@ -514,7 +533,7 @@ export function useTrailPlaybackCamera({
     }
 
     if (isCameraTransition && currentSegment && (animationPhase === 'playing' || animationPhase === 'idle')) {
-      const segment = currentSegment.segment;
+        const segment = currentSegment.segment;
       const to = allCoordinates[segment.endCoordIndex] as [number, number] | undefined;
       if (to) {
         if (!transitionStartRef.current || transitionStartRef.current.segmentIndex !== segment.segmentIndex) {
@@ -615,6 +634,9 @@ export function useTrailPlaybackCamera({
             progress: playbackProgress,
           });
       if (!targetPose) return;
+      if (cameraMode === 'aerial-follow' && aerialTerrainPlan?.length) {
+        targetPose.bearing = terrainPlanBearing(aerialTerrainPlan, playbackProgress);
+      }
 
       // Cinematic mode's pose is already smooth by construction (it comes
       // from a spline through authored keyframes, not a noisy input) — the
@@ -648,17 +670,19 @@ export function useTrailPlaybackCamera({
       const frameTimeMultiplier = deltaMs !== null ? frameTimeMultiplierFromDeltaMs(deltaMs) : 1;
 
       targetBearingRef.current = targetPose.bearing;
-      smoothBearingRef.current = smoothBearing(
-        smoothBearingRef.current,
-        targetPose.bearing,
-        undefined,
-        undefined,
-        reactivity,
-        frameTimeMultiplier,
-      );
+      smoothBearingRef.current = cameraMode === 'aerial-follow' && deltaMs !== null
+        ? smoothAerialBearing(smoothBearingRef.current, targetPose.bearing, deltaMs, cameraStability)
+        : smoothBearing(
+            smoothBearingRef.current,
+            targetPose.bearing,
+            undefined,
+            undefined,
+            reactivity,
+            frameTimeMultiplier,
+          );
 
       const cue = locationChapterCameraCue?.current ?? null;
-      const currentZoom = chapterBasePoseRef.current?.zoom ?? mapRef.current.getZoom();
+      const currentZoom = (chapterBasePoseRef.current?.zoom ?? mapRef.current.getZoom());
       const stabilizedZoomTarget = smoothedZoomTargetRef.current === null || deltaMs === null
         ? targetPose.zoom
         : smoothZoomTarget(
@@ -684,10 +708,13 @@ export function useTrailPlaybackCamera({
       // can't be used directly during export). Compute it by hand here so both
       // paths land on the same rendered position.
       const targetCenter: [number, number] = [currentPosition.lon, currentPosition.lat];
-      const centerChaseDuration = cameraCenterChaseDurationFromStability(cameraStability);
+      const centerChaseDuration = cameraMode === 'aerial-follow' ? 900 : cameraCenterChaseDurationFromStability(cameraStability);
+      const aerialAim = cameraMode === 'aerial-follow'
+        ? smoothRoutePosition(cameraCoordinates, playbackProgress, 0.3 / Math.max(1, totalDurationMs / 1000)) ?? targetCenter
+        : targetCenter;
       const chasedCenter = smoothedCenterRef.current === null || deltaMs === null
-        ? targetCenter
-        : smoothCoordinate(smoothedCenterRef.current, targetCenter, deltaMs, centerChaseDuration);
+        ? aerialAim
+        : smoothCoordinate(smoothedCenterRef.current, aerialAim, deltaMs, centerChaseDuration);
       // Cinematic mode does not chase the marker at all. A chase is a lag
       // filter, and a lagged centre falls out of step with a pose that jumps
       // straight to its spline value — that mismatch is what made the marker
@@ -701,7 +728,7 @@ export function useTrailPlaybackCamera({
       // could never do, and which costs no lag precisely because it is
       // symmetric. The marker stays exactly on its trace and weaves inside
       // the frame; the frame itself glides. See cinematicCameraAnchor.ts.
-      const smoothedCenter = cameraMode === 'cinematic'
+      const smoothedCenter = cameraMode === 'cinematic' || cameraMode === 'aerial-follow'
         ? getSmoothedCameraAnchor({
             coordinates: cameraCoordinates,
             progress: playbackProgress,
@@ -738,8 +765,7 @@ export function useTrailPlaybackCamera({
       let elevationSamples = 0;
 
       // Cinematic height follows a symmetric spatial average on the planned
-      // anchor path. Raw terrain under one point makes the view bob over mesh
-      // detail; a time chase instead lags behind genuine sustained climbs.
+      // anchor path, followed by a rate limit for changing DEM tile data.
       if (cameraMode === 'cinematic') {
         const halfWindowSeconds = 0.15 + 0.75 * (1 - Math.max(0, Math.min(1, cameraStability)));
         const sampled = getCinematicCenterElevation({
@@ -776,10 +802,19 @@ export function useTrailPlaybackCamera({
 
       let centerElevation: { elevation?: number } = {};
 
-      if (elevationSamples > 0) {
+      if (cameraMode === 'cinematic') {
+        const settled = settleCinematicElevation(
+          smoothedElevationRef.current,
+          elevationSamples > 0 ? elevationSum / elevationSamples : null,
+          deltaMs,
+          Boolean(mapRef.current.getTerrain()),
+        );
+        smoothedElevationRef.current = settled;
+        if (settled !== null) centerElevation = { elevation: settled };
+      } else if (elevationSamples > 0) {
         const averaged = elevationSum / elevationSamples;
         const previousElevation = smoothedElevationRef.current;
-        const settled = usesRawPose || cameraMode === 'cinematic' || previousElevation === null || deltaMs === null
+        const settled = usesRawPose || previousElevation === null || deltaMs === null
           ? averaged
           : limitRateOfChange(previousElevation, averaged, deltaMs, MAX_CENTER_ELEVATION_RATE_M_PER_S);
 
@@ -806,9 +841,9 @@ export function useTrailPlaybackCamera({
         ...targetPose,
         ...centerElevation,
         center: smoothedCenter,
-        zoom: usesRawPose ? targetPose.zoom : newZoom,
+        zoom: (usesRawPose ? targetPose.zoom : newZoom),
         pitch: usesRawPose ? targetPose.pitch : newPitch,
-        bearing: usesRawPose ? targetPose.bearing : smoothBearingRef.current,
+        bearing: usesRawPose || cameraMode === 'aerial-follow' ? targetPose.bearing : smoothBearingRef.current,
       };
       mapRef.current.jumpTo(composeChapterPose(playbackPose, cue));
       chapterBasePoseRef.current = cue || chapterHandoffRef.current ? playbackPose : null;
@@ -841,6 +876,7 @@ export function useTrailPlaybackCamera({
     cameraMode,
     cameraStability,
     cameraCoordinates,
+    aerialTerrainPlan,
     cinematicKeyframes,
     cinematicElevationPath,
     completedCoordinates,
@@ -909,6 +945,10 @@ export function useTrailPlaybackCamera({
           followBehindPitch,
           progress: 0,
         });
+
+    if (introPose && cameraMode === 'aerial-follow' && aerialTerrainPlan?.length) {
+      introPose.bearing = terrainPlanBearing(aerialTerrainPlan, 0);
+    }
 
     if (animationPhase === 'intro' && introPose) {
       locationChapterIntroProgressRef.current = 0;
@@ -980,6 +1020,7 @@ export function useTrailPlaybackCamera({
     introStageOverrides,
     locationChapters,
     cameraCoordinates,
+    aerialTerrainPlan,
     cinematicKeyframes,
     elevationData,
     exportFrame,

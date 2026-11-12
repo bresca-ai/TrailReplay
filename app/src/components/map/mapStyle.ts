@@ -2,7 +2,9 @@ import { DEFAULT_MAP_SKY } from './mapSky';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
-export const BASEMAP_FALLBACK_MAX_ZOOM = 12;
+// A coarse, low-zoom parent layer covers the distant horizon with a small
+// number of requests, while the full-resolution layer fills in above it.
+export const BASEMAP_FALLBACK_MAX_ZOOM = 8;
 
 export const BASEMAP_PRESENTATIONS: Record<string, {
   fallbackLayerId: string;
@@ -113,13 +115,18 @@ export const MAP_STYLE = {
       ...rasterSource(MAPBOX_STREET_TILES, MAPBOX_ATTRIBUTION, 512),
     },
     // A bounded parent-tile pyramid remains renderable beneath the detail
-    // basemap. At close zoom MapLibre overscales these z12 tiles, so a late
+    // basemap. At close zoom MapLibre overscales these z8 tiles, so a late
     // detail request degrades to softer imagery instead of the base fill.
     'fallback-osm': fallbackRasterSource(OSM_TILES, OSM_ATTRIBUTION),
     'fallback-opentopomap': fallbackRasterSource(TOPO_TILES, TOPO_ATTRIBUTION),
     'fallback-satellite': fallbackRasterSource(SATELLITE_TILES, SATELLITE_ATTRIBUTION),
     'fallback-esri-clarity': fallbackRasterSource(CLARITY_TILES, CLARITY_ATTRIBUTION),
     'fallback-mapbox-streets': fallbackRasterSource(MAPBOX_STREET_TILES, MAPBOX_ATTRIBUTION, 512),
+    'buildings-vector': {
+      type: 'vector',
+      url: 'https://tiles.openfreemap.org/planet',
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> · © <a href="https://openmaptiles.org/">OpenMapTiles</a>',
+    },
     'terrain-dem': {
       type: 'raster-dem',
       tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
@@ -141,10 +148,21 @@ export const MAP_STYLE = {
     { id: 'fallback-mapbox-streets', type: 'raster', source: 'fallback-mapbox-streets', layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 0 } },
     { id: 'background', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 0 } },
     { id: 'esri-clarity', type: 'raster', source: 'esri-clarity', layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 0 } },
-    { id: 'carto-labels', type: 'raster', source: 'carto-labels', layout: { visibility: 'none' } },
     { id: 'opentopomap', type: 'raster', source: 'opentopomap', layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 0 } },
     { id: 'street', type: 'raster', source: 'osm', layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 0 } },
     { id: 'mapbox-streets', type: 'raster', source: 'mapbox-streets', layout: { visibility: 'none' }, paint: { 'raster-fade-duration': 0 } },
+    {
+      id: 'buildings-3d', type: 'fill-extrusion', source: 'buildings-vector', 'source-layer': 'building',
+      minzoom: 13, layout: { visibility: 'none' },
+      filter: ['!=', ['get', 'hide_3d'], true],
+      paint: {
+        'fill-extrusion-color': '#c9c3b9',
+        'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 14, ['coalesce', ['get', 'render_height'], 0]],
+        'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 13, 0, 14, ['coalesce', ['get', 'render_min_height'], 0]],
+        'fill-extrusion-opacity': 1,
+      },
+    },
+    { id: 'carto-labels', type: 'raster', source: 'carto-labels', layout: { visibility: 'none' } },
     { id: 'enhanced-hillshade', type: 'raster', source: 'enhanced-hillshade', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.6 } },
     { id: 'ski-pistes', type: 'raster', source: 'opensnowmap', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.9 } },
     { id: 'slope-overlay', type: 'raster', source: 'slope', layout: { visibility: 'none' }, paint: { 'raster-opacity': 0.7 } },
@@ -152,7 +170,7 @@ export const MAP_STYLE = {
   ],
   terrain: {
     source: 'terrain-dem',
-    exaggeration: 1.2,
+    exaggeration: 1,
   },
 } as const;
 

@@ -14,11 +14,20 @@ export interface GPXPoint {
   speed: number;
 }
 
+export interface GPXWaypoint {
+  lat: number;
+  lon: number;
+  name: string;
+  description?: string;
+  elevation?: number;
+}
+
 export interface GPXTrack {
   id: string;
   name: string;
   activityIcon: string;
   points: GPXPoint[];
+  waypoints?: GPXWaypoint[];
   totalDistance: number;
   totalTime: number;
   movingTime: number;
@@ -237,7 +246,7 @@ export interface MapStyleConfig {
   thumbnail?: string;
 }
 
-export type CameraMode = 'overview' | 'follow' | 'follow-behind' | 'cinematic';
+export type CameraMode = 'overview' | 'follow' | 'follow-behind' | 'aerial-follow' | 'cinematic';
 
 export interface CameraSettings {
   mode: CameraMode;
@@ -465,6 +474,8 @@ export interface AppSettings {
   show3DTerrain: boolean;
   terrainExaggeration: number;
   recordedElevationPrototype: boolean;
+  show3DBuildings?: boolean;
+  paint3DBuildings?: boolean;
   showHeartRate: boolean;
   showPictures: boolean;
   cameraMode: CameraMode;

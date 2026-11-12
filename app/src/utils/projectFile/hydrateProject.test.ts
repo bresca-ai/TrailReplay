@@ -18,6 +18,17 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves 3D building and imagery settings when a replay is saved and reopened', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setSettings({ show3DBuildings: true, paint3DBuildings: false });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'buildings.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings).toMatchObject({ show3DBuildings: true, paint3DBuildings: false });
+  });
+
   it('preserves camera transitions and their duration through a saved project', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'first.gpx'));
@@ -58,6 +69,17 @@ describe('hydrateProject', () => {
     target.getState().ungroupComparisonTrack(second.id);
     expect(target.getState().journeySegments).toEqual(originalSegments);
     expect(target.getState().tracks[1].activityIcon).toBe('svg-biking');
+  });
+
+  it('preserves intentionally blank annotation text through save and reopen', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().addTextAnnotation({ id: 'empty', lat: 42.1, lon: 1.2, progress: 0.5, title: '', eyebrow: '', code: '', color: '#fff', displayDuration: 4000, presentation: 'side-panel', translations: { en: { title: '', eyebrow: '', meta: '', description: '' } } });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'empty.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().textAnnotations[0]).toMatchObject({ title: '', eyebrow: '', code: '', translations: { en: { title: '', eyebrow: '', meta: '', description: '' } } });
   });
 
   it('preserves the Taiwan locale and authored Chinese annotations through save and reopen', async () => {

@@ -12,7 +12,6 @@ import {
 import { useI18n } from '@/i18n/useI18n';
 import { formatDuration } from '@/utils/units';
 import { getProgressBucket, trackEvent } from '@/utils/analytics';
-import { getCameraUsageAnalyticsParams, trackConfigurationUsage } from '@/utils/configurationAnalytics';
 import { usePlaybackToggle } from '@/hooks/usePlaybackToggle';
 import { usePlayPauseShortcut } from '@/hooks/usePlayPauseShortcut';
 
@@ -22,15 +21,9 @@ export function PlaybackControls() {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const playback = useAppStore((state) => state.playback);
-  const play = useAppStore((state) => state.play);
+  const resetPlayback = useAppStore((state) => state.resetPlayback);
   const seekToProgress = useAppStore((state) => state.seekToProgress);
   const setSpeed = useAppStore((state) => state.setSpeed);
-  const tracks = useAppStore((state) => state.tracks);
-  const pictures = useAppStore((state) => state.pictures);
-  const textAnnotations = useAppStore((state) => state.textAnnotations);
-  const cameraSettings = useAppStore((state) => state.cameraSettings);
-  const mapStyle = useAppStore((state) => state.settings.mapStyle);
-  const show3DTerrain = useAppStore((state) => state.settings.show3DTerrain);
   
   const handleSliderChange = useCallback((value: number[]) => {
     seekToProgress(value[0] / 100);
@@ -59,21 +52,8 @@ export function PlaybackControls() {
   };
   
   const restart = () => {
-    seekToProgress(0);
-    play();
+    resetPlayback({ preserveSpeed: true });
     trackSeek('restart', 0);
-    trackEvent('playback_started', {
-      playback_source: 'restart_button',
-      has_pictures: pictures.length > 0,
-      has_annotations: textAnnotations.length > 0,
-      track_count: tracks.length,
-      camera_mode: cameraSettings.mode,
-      ...getCameraUsageAnalyticsParams(cameraSettings),
-      camera_preset: cameraSettings.mode === 'follow-behind' ? cameraSettings.followBehindPreset : 'not_applicable',
-      map_style: mapStyle,
-      terrain_3d_enabled: show3DTerrain,
-    });
-    trackConfigurationUsage('playback', useAppStore.getState());
   };
 
   const togglePlayback = usePlaybackToggle();

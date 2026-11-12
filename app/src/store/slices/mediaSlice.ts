@@ -33,6 +33,12 @@ type MediaSlice = Pick<
   | 'relinkVideoFile'
 >;
 
+function findFileByNameInFiles(files: File[], name: string|null|undefined): File|undefined {
+  if (!name) return undefined;
+
+  return files.find((fileToCheck: File) => fileToCheck.name === name);
+}
+
 export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   pictures: [],
   pendingPicturePlacements: [],
@@ -118,11 +124,9 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       if (!video) return;
 
       video.progress = progress;
-      if (routeAnchor) {
-        video.routeDistance = routeAnchor.routeDistance;
-        video.routeSegmentId = routeAnchor.routeSegmentId;
-        video.routeSegmentDistance = routeAnchor.routeSegmentDistance;
-      }
+      video.routeDistance = routeAnchor?.routeDistance;
+      video.routeSegmentId = routeAnchor?.routeSegmentId;
+      video.routeSegmentDistance = routeAnchor?.routeSegmentDistance;
     }),
 
   setSelectedVideoId: (videoId) =>
@@ -169,10 +173,15 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       state.selectedPictureId = pictureId;
     }),
 
-  relinkPictureFile: (pictureId, file, asset) =>
+  relinkPictureFile: (pictureId, files, asset) =>
     set((state) => {
+      if (files.length === 0) return;
+
       const picture = state.pictures.find((entry) => entry.id === pictureId);
       if (!picture) return;
+
+      const file = files.length === 1 ? files[0] : findFileByNameInFiles(files, picture.originalFileName);
+      if (!file) return;
 
       const previousUrl = picture.url;
       const nextUrl = asset?.url ?? URL.createObjectURL(file);
@@ -187,10 +196,15 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
       }
     }),
 
-  relinkVideoFile: (videoId, file) =>
+  relinkVideoFile: (videoId, files) =>
     set((state) => {
+      if (files.length === 0) return;
+
       const video = state.videos.find((entry) => entry.id === videoId);
       if (!video) return;
+
+      const file = files.length === 1 ? files[0] : findFileByNameInFiles(files, video.originalFileName);
+      if (!file) return;
 
       video.file = file;
       video.url = URL.createObjectURL(file);
