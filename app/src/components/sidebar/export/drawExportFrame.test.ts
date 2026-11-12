@@ -115,3 +115,25 @@ it('paints location names, flags and source credits into cropped video frames', 
   expect(context.fillText.mock.calls.some(call => String(call[0]).includes('geoBoundaries'))).toBe(true);
   useAppStore.getState().reset();
 });
+
+it('does not invent a heading or title when a field note has empty text', () => {
+  useAppStore.getState().reset();
+  useAppStore.getState().setSettings({ language: 'en' });
+  useAppStore.getState().addTextAnnotation({ id: 'empty', progress: 0.5, lat: 42, lon: 1, title: '', eyebrow: '', code: '', meta: '', description: '', logo: '★', color: '#fff', displayDuration: 4000, presentation: 'side-panel' });
+  useAppStore.setState((state) => ({ animationPhase: 'playing', playback: { ...state.playback, currentTime: 5000, totalDuration: 10000 } }));
+  const panel = document.createElement('div');
+  panel.className = 'tr-annotation-side-panel';
+  panel.getBoundingClientRect = () => new DOMRect(0, 100, 400, 220);
+  document.getElementById('map-capture-container')!.appendChild(panel);
+  const { options } = frameOptions();
+  const context = {
+    fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
+    beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(),
+    measureText: (value: string) => ({ width: value.length * 10 }),
+    createLinearGradient: () => ({ addColorStop: vi.fn() }),
+  };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  drawExportFrame(options);
+  expect(context.fillText.mock.calls.map((call) => call[0])).toEqual(['★']);
+  useAppStore.getState().reset();
+});

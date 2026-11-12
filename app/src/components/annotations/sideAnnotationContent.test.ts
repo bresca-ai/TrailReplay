@@ -15,6 +15,12 @@ describe('side annotation content', () => {
     expect(sideAnnotationContent(localizedAnnotation(annotation, 'en'))).toEqual({ eyebrow: null, code: 'B2', title: 'Oranges', meta: 'Km 33.1 · 17:50–1:10', description: 'Oranges' });
   });
 
+  it('respects intentionally empty localized fields and removes legacy code', () => {
+    const annotation: TextAnnotation = { ...base, code: '', translations: { en: { title: '', subtitle: '', eyebrow: '', meta: '', description: '' } } };
+    expect(sideAnnotationContent(localizedAnnotation(annotation, 'en'))).toEqual({ eyebrow: null, code: null, title: '', meta: '', description: '' });
+    expect(sideAnnotationContent({ ...base, code: '' }).code).toBeNull();
+  });
+
   it('uses an authored small heading when available', () => {
     expect(sideAnnotationContent({ ...base, eyebrow: 'Water stop' }).eyebrow).toBe('Water stop');
   });

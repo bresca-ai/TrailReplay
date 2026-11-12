@@ -189,7 +189,6 @@ export function drawExportFrame({
   overlayFramesSinceRefreshRef,
   overlayRefreshIntervalMs,
   updateOverlayAsync,
-  t,
 }: DrawExportFrameOptions) {
     if (!recordingCanvasRef.current || !recordingContextRef.current) return;
     const { width: recordW, height: recordH } = videoExportSettings.resolution;
@@ -300,7 +299,7 @@ export function drawExportFrame({
         context.textAlign = 'left';
         context.font = `600 ${typography.eyebrowSize * scale}px ${overlayFamily}`;
         context.fillStyle = '#f8f6f0';
-        context.fillText((copy.eyebrow || t('annotations.sidePanelEyebrow')).toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
+        if (copy.eyebrow) context.fillText(copy.eyebrow.toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
         if (copy.code) {
           context.font = `700 ${typography.codeSize * scale}px ${overlayFamily}`;
           context.fillStyle = sideAnnotation.color;

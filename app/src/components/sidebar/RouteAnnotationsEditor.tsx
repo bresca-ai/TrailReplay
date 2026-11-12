@@ -95,7 +95,7 @@ export function RouteAnnotationsEditor() {
   }, [composerOpen, placement?.lat, placement?.lon]);
 
   const handleAddAnnotation = () => {
-    if (!placement || !draftAnnotationTitle.trim()) return;
+    if (!placement) return;
 
     const annotationId = crypto.randomUUID();
     addTextAnnotation({
@@ -162,7 +162,7 @@ export function RouteAnnotationsEditor() {
                     <input value={annotation.translations?.[language]?.eyebrow ?? annotation.eyebrow ?? ''} onChange={(e) => updateWording(annotation, { eyebrow: e.target.value })} placeholder={t('annotations.sidePanelEyebrow')} maxLength={36} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
                   </label>}
                   {isSidePanel && <label className="block text-xs text-[var(--evergreen)]">{t('annotations.codeLabel')}
-                    <input value={content.code ?? ''} onChange={(e) => updateTextAnnotation(annotation.id, { code: e.target.value })} maxLength={12} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                    <input value={annotation.code ?? content.code ?? ''} onChange={(e) => updateTextAnnotation(annotation.id, { code: e.target.value })} maxLength={12} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
                   </label>}
                   <div className="flex items-center gap-2">
                     <span
@@ -170,7 +170,7 @@ export function RouteAnnotationsEditor() {
                       style={{ backgroundColor: annotation.color }}
                     />
                     <input
-                      value={isSidePanel ? content.title : localizedAnnotation(annotation, language).title}
+                      value={annotation.translations?.[language]?.title ?? (isSidePanel ? content.title : annotation.title)}
                       onChange={(e) => updateWording(annotation, { title: e.target.value })}
                       aria-label={t('annotations.routeAnnotationTitlePlaceholder')}
                       className="flex-1 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
@@ -180,10 +180,10 @@ export function RouteAnnotationsEditor() {
 
                   {isSidePanel ? <>
                     <label className="block text-xs text-[var(--evergreen)]">{t('annotations.routeDetailsLabel')}
-                      <input value={content.meta ?? ''} onChange={(e) => updateWording(annotation, { meta: e.target.value })} maxLength={100} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                      <input value={annotation.translations?.[language]?.meta ?? annotation.meta ?? content.meta ?? ''} onChange={(e) => updateWording(annotation, { meta: e.target.value })} maxLength={100} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
                     </label>
                     <label className="block text-xs text-[var(--evergreen)]">{t('annotations.descriptionLabel')}
-                      <textarea value={content.description} onChange={(e) => updateWording(annotation, { description: e.target.value })} maxLength={600} className="mt-1 w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+                      <textarea value={annotation.translations?.[language]?.description ?? annotation.description ?? content.description} onChange={(e) => updateWording(annotation, { description: e.target.value })} maxLength={600} className="mt-1 w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
                     </label>
                   </> : <textarea
                     value={localizedAnnotation(annotation, language).subtitle ?? ''}
@@ -428,7 +428,7 @@ export function RouteAnnotationsEditor() {
             <button
               type="button"
               onClick={handleAddAnnotation}
-              disabled={!canAddAnnotation || !draftAnnotationTitle.trim()}
+              disabled={!canAddAnnotation}
               className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--trail-orange)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Plus className="w-4 h-4" />
