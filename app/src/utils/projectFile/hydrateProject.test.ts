@@ -316,6 +316,19 @@ describe('hydrateProject', () => {
     expect(target.getState().settings.annotationTextScale).toBe(1.5);
   });
 
+  it('preserves annotation appearance and timing defaults and overrides', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setSettings({ annotationMarkerScale: 1.5, annotationTextScale: 0.8, annotationPinLeadDuration: 9000, annotationHoldDuration: 4000 });
+    source.getState().addTextAnnotation({ id: 'water', lat: 42.1, lon: 1.2, progress: 0.5, title: 'Water', eyebrow: 'Trail', description: 'Refill here', color: '#123456', displayDuration: 4000, presentation: 'map-card', logo: 'map:water', markerFilled: false, pinLeadDuration: 3000, holdDuration: 2000 });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'annotation-settings.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings).toMatchObject({ annotationMarkerScale: 1.5, annotationTextScale: 0.8, annotationPinLeadDuration: 9000, annotationHoldDuration: 4000 });
+    expect(target.getState().textAnnotations[0]).toMatchObject({ id: 'water', title: 'Water', eyebrow: 'Trail', description: 'Refill here', color: '#123456', presentation: 'map-card', logo: 'map:water', markerFilled: false, pinLeadDuration: 3000, holdDuration: 2000 });
+  });
+
   it('preserves the overview position and elevation height in saved projects', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
