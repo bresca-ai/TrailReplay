@@ -3,13 +3,11 @@ import * as maplibregl from 'maplibre-gl';
 import type { AppSettings, TrailStyleSettings } from '@/types';
 import { satelliteRoofs } from '@/components/map/satelliteRoofs';
 import { applyBasemapFilter } from '@/components/map/mapFilters';
+import { applyBasemapVisibility } from '@/components/map/basemapVisibility';
 import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
 import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
 import {
   BASEMAP_FALLBACK_MAX_ZOOM,
-  BASEMAP_PRESENTATIONS,
-  STATIC_BASEMAP_LAYER_IDS,
-  STATIC_FALLBACK_LAYER_IDS,
 } from '@/components/map/mapStyle';
 
 interface UseBaseMapPresentationOptions {
@@ -31,20 +29,8 @@ export function useBaseMapPresentation({
     const map = mapRef.current;
     if (!map || !isMapLoaded) return;
 
-    const presentation = BASEMAP_PRESENTATIONS[settings.mapStyle]
-      ?? BASEMAP_PRESENTATIONS.satellite;
-
-    [...STATIC_BASEMAP_LAYER_IDS, ...STATIC_FALLBACK_LAYER_IDS, 'enhanced-hillshade', 'wayback', 'fallback-wayback'].forEach((layerId) => {
-      if (map.getLayer(layerId)) {
-        map.setLayoutProperty(layerId, 'visibility', 'none');
-      }
-    });
-
-    for (const layerId of [presentation.fallbackLayerId, presentation.layerId]) {
-      if (map.getLayer(layerId)) {
-        map.setLayoutProperty(layerId, 'visibility', 'visible');
-      }
-    }
+    applyBasemapVisibility(map, settings.mapStyle);
+    if (map.getLayer('enhanced-hillshade')) map.setLayoutProperty('enhanced-hillshade', 'visibility', 'none');
 
     if (map.getLayer('buildings-3d')) {
       map.setLayoutProperty('buildings-3d', 'visibility', settings.show3DBuildings ? 'visible' : 'none');

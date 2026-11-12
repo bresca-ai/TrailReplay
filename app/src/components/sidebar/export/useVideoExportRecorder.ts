@@ -1,3 +1,5 @@
+import { mapGlobalRef } from '@/utils/mapRef';
+import { applyBasemapVisibility } from '@/components/map/basemapVisibility';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { VIDEO_LOGO_URL } from './videoExportBrand';
 import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
@@ -669,6 +671,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
 
       setExportStage(t('export.stagePreparing'));
+      const exportMap = mapGlobalRef.current;
+      if (exportMap) applyBasemapVisibility(exportMap, useAppStore.getState().settings.mapStyle);
       await preloadExportOpeningTiles();
 
       // Let MapLibre complete its reset pose before starting the intro and its

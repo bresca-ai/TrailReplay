@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAppStore } from '@/store/createAppStore';
+import { createDefaultSettings } from '@/store/defaults';
 import { parseGPX } from '@/utils/gpxParser';
 import { buildReplayArchive } from './buildReplayArchive';
 import { parseReplayArchive } from './parseReplayArchive';
@@ -18,6 +19,20 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('restores supported map styles and falls back for unavailable providers', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setMapStyle('satellite');
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'map.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.mapStyle).toBe('satellite');
+    parsed.project!.settings!.mapStyle = 'unavailable-provider' as typeof parsed.project.settings.mapStyle;
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.mapStyle).toBe(createDefaultSettings().mapStyle);
+  });
+
   it('preserves 3D building and imagery settings when a replay is saved and reopened', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
