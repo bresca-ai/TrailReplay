@@ -237,13 +237,13 @@ interface StatItemProps {
 function StatItem({ statId, icon, label, value, reserve, compact = false, exportCompact = false, gridColumnStart }: StatItemProps) {
   return (
     <div
-      className={`min-w-max text-center ${exportCompact ? 'px-0.5 py-0.5' : compact ? 'px-1 py-0.5' : 'px-1 py-0.5'}`}
+      className={`min-w-max text-left ${exportCompact ? 'px-0.5 py-0.5' : compact ? 'px-1 py-0.5' : 'px-1 py-0.5'}`}
       style={gridColumnStart ? { gridColumnStart } : undefined}
     >
-      <div data-export-stat-header className={`flex items-center justify-center min-w-0 ${
+      <div data-export-stat-header className={`flex items-center justify-start min-w-0 ${
         exportCompact ? 'gap-1 mb-0.5' : compact ? 'gap-1 mb-1' : 'gap-1.5 mb-1.5'
       }`}>
-        <span className={`flex items-center justify-center ${
+        <span className={`flex items-center justify-start ${
           exportCompact ? 'text-white/95 w-4.5 h-4.5' : `text-white/92 ${compact ? 'w-5 h-5' : 'w-6 h-6'}`
         }`}>
           {icon}
@@ -255,7 +255,7 @@ function StatItem({ statId, icon, label, value, reserve, compact = false, export
         </span>
       </div>
       <div
-        className={`tr-stat-value grid min-h-[1.2rem] items-center justify-items-center whitespace-nowrap px-0.5 text-center font-semibold tabular-nums tracking-[-0.03em] ${
+        className={`tr-stat-value grid min-h-[1.2rem] items-center justify-items-start whitespace-nowrap text-left font-semibold tabular-nums tracking-[-0.03em] ${
           exportCompact ? 'text-[9px] leading-[1.05] text-white' : compact ? 'text-[11px] leading-[1.1]' : 'text-[12px] leading-[1.1]'
         }`}
         title={value}
