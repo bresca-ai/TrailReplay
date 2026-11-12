@@ -11,6 +11,8 @@ import { AnnotationSymbolPicker } from '@/components/sidebar/AnnotationSymbolPic
 import { annotationSymbolLabel, annotationSymbolPath } from '@/components/annotations/annotationSymbol';
 import { OverlayFontPicker } from '@/components/sidebar/OverlayFontPicker';
 import { useAppStore } from '@/store/useAppStore';
+import { enterCoverHistory } from '@/hooks/useEditHistory';
+import { historyShortcut, isTextEditingTarget } from '@/store/editHistory';
 import { compressCoverPhoto } from './socialShareMedia';
 import { createAddedPhotoSlot, createPhotoSlot, PRESET_ORDER, presetSettings } from './socialSharePresets';
 import { getPosterSize } from './socialShareRenderer';
@@ -75,11 +77,25 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     resolvedTitle,
   } = exportController;
   const historyRef = useRef<Array<{ settings: typeof settings; mapStyle: typeof mapStyle; overlayFont: typeof overlayFont; camera: { center: [number, number]; zoom: number; pitch: number; bearing: number } | null }>>([]);
+  const redoRef = useRef<typeof historyRef.current>([]);
   const applyingUndoRef = useRef(false);
+  const nativeTextHistoryRef = useRef(false);
+  useEffect(() => {
+    const beforeInput = (event: Event) => {
+      const type = (event as InputEvent).inputType;
+      if (type === 'historyUndo' || type === 'historyRedo') { nativeTextHistoryRef.current = true; window.setTimeout(() => { nativeTextHistoryRef.current = false; }, 0); }
+    };
+    const afterInput = () => { nativeTextHistoryRef.current = false; };
+    window.addEventListener('beforeinput', beforeInput, true);
+    window.addEventListener('input', afterInput);
+    return () => { window.removeEventListener('beforeinput', beforeInput, true); window.removeEventListener('input', afterInput); };
+  }, []);
+  useEffect(() => enterCoverHistory(), []);
   const lastHistoryRef = useRef<{ key: string; time: number } | null>(null);
   const [undoCount, setUndoCount] = useState(0);
   const captureHistory = (state = useAppStore.getState(), key = '') => {
-    if (applyingUndoRef.current) return;
+    if (applyingUndoRef.current || nativeTextHistoryRef.current) return;
+    redoRef.current = [];
     const now = Date.now();
     if (key && lastHistoryRef.current?.key === key && now - lastHistoryRef.current.time < 600) {
       lastHistoryRef.current.time = now;
@@ -107,14 +123,22 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
       ? `input:${active.id || active.getAttribute('aria-label') || active.outerHTML.slice(0, 100)}` : '';
     captureHistoryRef.current(previous, group);
   }), []);
-  const undo = () => {
-    const entry = historyRef.current.pop();
+  const restoreHistory = (direction: 'undo' | 'redo') => {
+    const source = direction === 'undo' ? historyRef.current : redoRef.current;
+    const destination = direction === 'undo' ? redoRef.current : historyRef.current;
+    const entry = source.pop();
     if (!entry) return;
+    const state = useAppStore.getState();
+    const map = mapGlobalRef.current;
+    const center = map?.getCenter();
+    destination.push({ settings: state.socialShareSettings, mapStyle: state.settings.mapStyle,
+      overlayFont: state.settings.trailStyle.overlayFont,
+      camera: map && center ? { center: [center.lng, center.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() } : null });
     applyingUndoRef.current = true;
     lastHistoryRef.current = null;
     try {
-      if (onAspectRatioChange && entry.settings.aspectRatio !== useAppStore.getState().socialShareSettings.aspectRatio) onAspectRatioChange(entry.settings.aspectRatio);
-      useAppStore.setState((state) => ({ socialShareSettings: entry.settings, settings: { ...state.settings, mapStyle: entry.mapStyle, trailStyle: { ...state.settings.trailStyle, overlayFont: entry.overlayFont } } }));
+      if (onAspectRatioChange && entry.settings.aspectRatio !== state.socialShareSettings.aspectRatio) onAspectRatioChange(entry.settings.aspectRatio);
+      useAppStore.setState((current) => ({ socialShareSettings: entry.settings, settings: { ...current.settings, mapStyle: entry.mapStyle, trailStyle: { ...current.settings.trailStyle, overlayFont: entry.overlayFont } } }));
       if (entry.camera && mapGlobalRef.current) {
         mapGlobalRef.current.jumpTo(entry.camera);
         setPitch(Math.round(entry.camera.pitch));
@@ -126,14 +150,19 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
       setUndoCount(historyRef.current.length);
     }
   };
-  const undoRef = useRef(undo);
-  useEffect(() => { undoRef.current = undo; });
+  const undo = () => restoreHistory('undo');
+  const historyActionRef = useRef(restoreHistory);
+  useEffect(() => { historyActionRef.current = restoreHistory; });
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        undoRef.current();
+      const action = historyShortcut(event);
+      if (!action || event.defaultPrevented || event.isComposing) return;
+      if (isTextEditingTarget(event.target)) {
+        if (event.key.toLowerCase() === 'r') { event.preventDefault(); document.execCommand?.('redo'); }
+        return;
       }
+      event.preventDefault();
+      historyActionRef.current(action);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);

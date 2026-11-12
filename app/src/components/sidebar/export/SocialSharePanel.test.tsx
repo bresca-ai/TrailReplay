@@ -93,6 +93,10 @@ describe('cover title and places controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show places' }));
     fireEvent.keyDown(window, { key: 'z', metaKey: true });
     expect(useAppStore.getState().socialShareSettings.showMapPlaces).toBe(false);
+    fireEvent.keyDown(window, { key: 'r', metaKey: true });
+    expect(useAppStore.getState().socialShareSettings.showMapPlaces).toBe(true);
+    fireEvent.keyDown(window, { key: 'z', metaKey: true });
+    expect(useAppStore.getState().socialShareSettings.showMapPlaces).toBe(false);
     expect(undo).toBeDisabled();
     expect(host).toContainElement(undo);
     expect(host.querySelector('[aria-label="Zoom out"]')).toBeInTheDocument();

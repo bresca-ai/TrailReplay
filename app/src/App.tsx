@@ -5,6 +5,7 @@ import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useGPX } from '@/hooks/useGPX';
+import { useEditHistory } from '@/hooks/useEditHistory';
 import { useUnsavedWorkGuard } from '@/hooks/useUnsavedWorkGuard';
 import { usePictureRouteSync } from '@/hooks/usePictureRouteSync';
 import { usePlaybackMediaPopups } from '@/hooks/usePlaybackMediaPopups';
@@ -88,6 +89,7 @@ interface StatsResizeGuide {
 }
 
 function App() {
+  useEditHistory();
   const { t } = useI18n();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
