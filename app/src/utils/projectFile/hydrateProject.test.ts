@@ -301,6 +301,21 @@ describe('hydrateProject', () => {
     expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
   });
 
+  it('keeps a saved annotation size and defaults new projects to 120 percent', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'annotation-size.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.annotationTextScale).toBe(1.2);
+    const saved = parsed.project!.settings as Record<string, unknown>;
+    delete saved.annotationTextScale;
+    saved.annotationScale = 1.5;
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.annotationTextScale).toBe(1.5);
+  });
+
   it('preserves the overview position and elevation height in saved projects', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));

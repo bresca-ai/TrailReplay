@@ -67,6 +67,7 @@ function mergeSettings(saved: ReplayProjectFile['settings']): AppSettings {
   return {
     ...defaults,
     ...saved,
+    annotationTextScale: saved?.annotationTextScale ?? saved?.annotationScale ?? defaults.annotationTextScale,
     trailStyle: { ...defaults.trailStyle, ...saved?.trailStyle },
     mapOverlays: { ...defaults.mapOverlays, ...saved?.mapOverlays },
   };

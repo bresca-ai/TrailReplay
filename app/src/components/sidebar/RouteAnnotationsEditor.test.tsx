@@ -126,7 +126,7 @@ it('updates marker and annotation text sizes independently', () => {
   render(<RouteAnnotationsEditor />);
   fireEvent.change(screen.getByRole('slider', { name: 'Marker size' }), { target: { value: '1.5' } });
   expect(useAppStore.getState().settings.annotationMarkerScale).toBe(1.5);
-  expect(useAppStore.getState().settings.annotationTextScale).toBeUndefined();
+  expect(useAppStore.getState().settings.annotationTextScale).toBe(1.2);
   fireEvent.change(screen.getByRole('slider', { name: 'Annotation text size' }), { target: { value: '0.7' } });
   expect(useAppStore.getState().settings.annotationTextScale).toBe(0.7);
   expect(screen.getByText('150%')).toBeInTheDocument();
