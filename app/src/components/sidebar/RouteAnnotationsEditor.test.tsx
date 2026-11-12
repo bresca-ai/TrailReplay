@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { RouteAnnotationsEditor } from './RouteAnnotationsEditor';
@@ -58,4 +58,50 @@ it('saves and edits the matching-routes option on a single moment', () => {
   const editor = screen.getByText('Water').closest('details')!;
   fireEvent.click(editor.querySelector('input[type=checkbox]')!);
   expect(useAppStore.getState().textAnnotations[0].showOnMatchingRoutes).toBe(false);
+});
+
+
+it('preserves spaces and allows every field of an existing annotation to be cleared', () => {
+  useAppStore.getState().addTextAnnotation({ id: 'edit', progress: 0, lat: 42, lon: 1, title: 'Old title', subtitle: 'Old subtitle', code: 'A1', meta: 'Old meta', description: 'Old description', eyebrow: 'Old heading', color: '#fff', displayDuration: 4000, presentation: 'side-panel' });
+  render(<RouteAnnotationsEditor />);
+  fireEvent.click(screen.getByText('Old title').closest('summary')!);
+  const editor = screen.getByText('Old title').closest('details')!;
+  const title = within(editor).getByRole('textbox', { name: 'Title' });
+  const heading = within(editor).getByPlaceholderText('Route moment');
+  const meta = within(editor).getByLabelText(/Route details/);
+  const description = within(editor).getByLabelText('Description');
+  const code = within(editor).getByLabelText('Station code');
+  for (const input of [title, heading, code, meta, description]) {
+    fireEvent.change(input, { target: { value: 'Two ' } });
+    expect(input).toHaveValue('Two ');
+    fireEvent.change(input, { target: { value: 'Two words' } });
+    expect(input).toHaveValue('Two words');
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input).toHaveValue('');
+  }
+  expect(useAppStore.getState().textAnnotations[0].code).toBe('');
+  expect(useAppStore.getState().textAnnotations[0].translations?.en).toMatchObject({ title: '', eyebrow: '', meta: '', description: '' });
+});
+
+it('allows creating an annotation without a title', () => {
+  render(<RouteAnnotationsEditor />);
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  expect(useAppStore.getState().textAnnotations[0].title).toBe('');
+});
+
+
+it('preserves spaces and empty wording when editing a map caption', () => {
+  useAppStore.getState().addTextAnnotation({ id: 'map', progress: 0, lat: 42, lon: 1, title: 'Caption', subtitle: 'Details', color: '#fff', displayDuration: 4000, presentation: 'map-card' });
+  render(<RouteAnnotationsEditor />);
+  fireEvent.click(screen.getByText('Caption').closest('summary')!);
+  const editor = screen.getByText('Caption').closest('details')!;
+  const title = within(editor).getByRole('textbox', { name: 'Title' });
+  const subtitle = within(editor).getByPlaceholderText('Subtitle');
+  for (const input of [title, subtitle]) {
+    fireEvent.change(input, { target: { value: 'New ' } });
+    expect(input).toHaveValue('New ');
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input).toHaveValue('');
+  }
+  expect(useAppStore.getState().textAnnotations[0].translations?.en).toMatchObject({ title: '', subtitle: '' });
 });

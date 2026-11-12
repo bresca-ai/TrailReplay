@@ -15,7 +15,7 @@ export function createDefaultPlayback(): PlaybackState {
     speed: 1,
     currentSegmentIndex: 0,
     segmentProgress: 0,
-    routeTimingMode: 'recorded',
+    routeTimingMode: 'uniform',
   };
 }
 

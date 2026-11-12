@@ -3,7 +3,6 @@ import type { FeatureCollection, Point } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
 import type { LanguageCode, OverlayFont, TextAnnotation, UnitSystem } from '@/types';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
-import { convertElevation } from '@/utils/units';
 import { drawAnnotationSymbol, needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
 import {
@@ -112,7 +111,6 @@ function buildActiveAnnotationFeatureCollection(annotation: TextAnnotation | nul
  */
 function createAnnotationCardImage(
   annotation: TextAnnotation,
-  unitSystem: UnitSystem,
   layout: CardLayout,
   overlayFont: OverlayFont,
 ) {
@@ -123,11 +121,8 @@ function createAnnotationCardImage(
   const titleFont = `800 ${layout.titleSize}px ${family}`;
   const detailFont = `700 ${layout.detailSize}px ${family}`;
 
-  const title = annotation.title.trim() || 'Annotation';
-  const detail = annotation.subtitle?.trim()
-    || (annotation.elevation !== undefined
-      ? `${Math.round(convertElevation(annotation.elevation, unitSystem)).toLocaleString()} ${unitSystem === 'metric' ? 'm' : 'ft'}`
-      : `${Math.round(annotation.progress * 100)}%`);
+  const title = annotation.title.trim();
+  const detail = annotation.subtitle?.trim() ?? '';
 
   measure.font = titleFont;
   const titleWidth = measure.measureText(title).width;
@@ -141,7 +136,7 @@ function createAnnotationCardImage(
   const textWidth = width - layout.padding * 2;
 
   measure.font = titleFont;
-  const titleLines = wrapText(measure, title, textWidth, 2);
+  const titleLines = title ? wrapText(measure, title, textWidth, 2) : [];
   measure.font = detailFont;
   const detailLines = detail ? wrapText(measure, detail, textWidth, 2) : [];
 
@@ -150,7 +145,7 @@ function createAnnotationCardImage(
   // taken from a source usually is.
   const headerPadding = 14;
   const detailPadding = 16;
-  const headerHeight = Math.round(headerPadding * 2 + titleLines.length * layout.titleLineHeight);
+  const headerHeight = titleLines.length ? Math.round(headerPadding * 2 + titleLines.length * layout.titleLineHeight) : 0;
   const bodyHeight = Math.round(headerHeight
     + (detailLines.length > 0 ? detailPadding * 2 + detailLines.length * layout.detailLineHeight : 0));
   const height = Math.round(bodyHeight + 12);
@@ -377,15 +372,16 @@ export function useTextAnnotationsLayer({
       : null;
 
     const activeSource = map.getSource(ACTIVE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-    activeSource?.setData(buildActiveAnnotationFeatureCollection(activeAnnotation));
+    const activeCopy = activeAnnotation ? localizedAnnotation(activeAnnotation, language) : null;
+    const hasCardContent = !activeCopy || activeCopy.presentation === 'side-panel' || Boolean(activeCopy.title.trim() || activeCopy.subtitle?.trim());
+    activeSource?.setData(buildActiveAnnotationFeatureCollection(hasCardContent ? activeAnnotation : null));
 
     if (activeAnnotation) {
       const layout = cardLayoutForMapWidth(mapWidth || map.getCanvas().clientWidth);
       const imageData = activeAnnotation.presentation === 'side-panel'
         ? createLogoImage(activeAnnotation)
         : createAnnotationCardImage(
-            localizedAnnotation(activeAnnotation, language),
-            unitSystem,
+            activeCopy!,
             layout,
             overlayFont,
           );

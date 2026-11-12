@@ -304,6 +304,31 @@ export function getFlatTerrainBlend(coordinates: number[][], elevations: CameraP
   return plan[lo] + (plan[hi] - plan[lo]) * (index - lo);
 }
 
+// Automatic flight keeps one conservative framing for the whole route.
+// Per-frame terrain and latitude corrections make the lens pulse on climbs.
+const aerialZoomCache = new WeakMap<number[][], WeakMap<CameraPlanOptions['elevationData'], number>>();
+function automaticFlightZoom(coordinates: number[][], elevationData: CameraPlanOptions['elevationData']): number {
+  let byElevation = aerialZoomCache.get(coordinates);
+  if (!byElevation) { byElevation = new WeakMap(); aerialZoomCache.set(coordinates, byElevation); }
+  const cached = byElevation.get(elevationData);
+  if (cached !== undefined) return cached;
+  let zoom = Infinity;
+  for (let i = 0; i <= 100; i++) {
+    const progress = i / 100;
+    const center = getRouteCoordinateAtProgress(coordinates, progress);
+    if (!center) continue;
+    const elevationIndex = Math.round(progress * Math.max(0, elevationData.length - 1));
+    const elevation = elevationData[elevationIndex]?.elevation ?? 0;
+    const correction = calculateTerrainAwareAdjustments(elevation, elevationData, progress);
+    const latitude = clamp(center[1], -85, 85) * Math.PI / 180;
+    const distanceZoom = Math.log2(METERS_PER_PIXEL_AT_ZOOM_0 * Math.cos(latitude) / (1400 / (720 * 1.5)));
+    zoom = Math.min(zoom, Math.max(TERRAIN_CAMERA_SETTINGS.MIN_ZOOM, distanceZoom - correction.zoomAdjust));
+  }
+  const result = Number.isFinite(zoom) ? zoom : TERRAIN_CAMERA_SETTINGS.MIN_ZOOM;
+  byElevation.set(elevationData, result);
+  return result;
+}
+
 function aerialFollowPose(options: CameraPlanOptions, center: [number, number]): ReplayCameraPose {
   const elevationIndex = Math.round(clamp(options.progress, 0, 1) * Math.max(0, options.elevationData.length - 1));
   const elevation = options.elevationData[elevationIndex]?.elevation ?? 0;
@@ -311,9 +336,6 @@ function aerialFollowPose(options: CameraPlanOptions, center: [number, number]):
   // MapLibre's default 36.87° vertical field of view places its camera
   // approximately 1.5 viewport heights from the target. Calibrate against a
   // 720px reference frame so this behaves consistently across output sizes.
-  const metresPerPixel = 1400 / (720 * 1.5);
-  const latitude = clamp(center[1], -85, 85) * Math.PI / 180;
-  const distanceZoom = Math.log2(METERS_PER_PIXEL_AT_ZOOM_0 * Math.cos(latitude) / metresPerPixel);
   // Start higher over the terrain while flying into the route, then ease down
   // into the immersive angle through the first stretch. Staying higher for
   // longer gives the camera room to cross the first ridge and look into a
@@ -322,7 +344,7 @@ function aerialFollowPose(options: CameraPlanOptions, center: [number, number]):
   const easedOpening = opening * opening * (3 - 2 * opening);
   const flat = getFlatTerrainBlend(options.coordinates, options.elevationData, options.progress) * easedOpening;
   return { center, bearing: getPlannedAerialBearing(options.coordinates, options.elevationData, options.progress),
-    zoom: Math.max(TERRAIN_CAMERA_SETTINGS.MIN_ZOOM, distanceZoom - correction.zoomAdjust + flat * 0.3),
+    zoom: automaticFlightZoom(options.coordinates, options.elevationData),
     pitch: 50 + 20 * easedOpening - correction.pitchAdjust * 0.2 + flat * 4 };
 }
 

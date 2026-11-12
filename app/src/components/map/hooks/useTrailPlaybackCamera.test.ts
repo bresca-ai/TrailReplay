@@ -180,3 +180,22 @@ it('starts the intro at the selected place before flying to the route', () => {
   once.mock.calls[0][1]();
   expect(flyTo).toHaveBeenLastCalledWith(expect.objectContaining({ center: [2, 41], duration: 6000 }));
 });
+
+
+it.each([false, true])('keeps automatic cinematic terrain height stable during export=%s', (isExporting) => {
+  const setCenterClampedToGround = vi.fn();
+  const map = { getCenterClampedToGround: () => true, setCenterClampedToGround, on: vi.fn(), off: vi.fn(),
+    getPadding: () => ({ top: 0, bottom: 0, left: 0, right: 0 }), setPadding: vi.fn(),
+    getCanvas: () => ({ clientHeight: 720 }) };
+  const props = { mapRef: { current: map }, markerRef: { current: null }, isMapLoaded: true,
+    cameraMode: 'aerial-follow', animationPhase: 'playing', isPlaying: !isExporting, isExporting,
+    currentPosition: null, cameraCoordinates: [], allCoordinates: [], elevationData: [],
+    cameraStability: 0.5, totalDurationMs: 60000, recordedElevationEnabled: false,
+  } as unknown as Parameters<typeof useTrailPlaybackCamera>[0];
+  // With a normal ground-following route (not the recorded-elevation mode),
+  // automatic cinematic flight must still own its target elevation.
+  const { unmount } = renderHook(() => useTrailPlaybackCamera(props));
+  expect(setCenterClampedToGround).toHaveBeenCalledWith(false);
+  unmount();
+  expect(setCenterClampedToGround).toHaveBeenLastCalledWith(true);
+});

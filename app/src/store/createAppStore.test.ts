@@ -156,6 +156,15 @@ describe('createAppStore', () => {
     expect(useStore.getState().error).toContain('Time comparison is unavailable');
   });
 
+  it('defaults new journeys to constant pace while allowing recorded timing', () => {
+    const store = createAppStore();
+    expect(store.getState().playback.routeTimingMode).toBe('uniform');
+    store.getState().setRouteTimingMode('recorded');
+    expect(store.getState().playback.routeTimingMode).toBe('recorded');
+    store.getState().reset();
+    expect(store.getState().playback.routeTimingMode).toBe('uniform');
+  });
+
   it('defaults to the satellite map style', () => {
     const useStore = createAppStore();
 

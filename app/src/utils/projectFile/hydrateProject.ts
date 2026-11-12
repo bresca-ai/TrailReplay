@@ -144,7 +144,7 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     nearbyPlaceTypes: project.nearbyPlaceTypes ?? null,
     showAutomaticLandmarks: project.showAutomaticLandmarks ?? false,
     // Older saved projects predate routeTimingMode; fall back to 'recorded'
-    // (the app default) rather than leaving it undefined. Built from the
+    // to preserve their original timing rather than leaving it undefined. Built from the
     // defaults rather than `store.playback`, since `store` was captured
     // before `store.reset()` above and still holds the pre-reset value.
     playback: { ...createDefaultPlayback(), routeTimingMode: project.routeTimingMode ?? 'recorded' },

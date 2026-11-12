@@ -39,7 +39,7 @@ import {
   getRouteBearingAtProgress,
 } from '@/utils/replayCameraPlan';
 import { getCinematicCenterElevation, settleCinematicElevation } from '@/utils/cinematicCameraElevation';
-import { terrainPlanBearing, terrainPlanZoomOffset } from '@/utils/aerialTerrainPlan';
+import { terrainPlanBearing } from '@/utils/aerialTerrainPlan';
 import { getCinematicCameraPose } from '@/utils/cinematicCameraPlan';
 import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
@@ -259,7 +259,6 @@ export function useTrailPlaybackCamera({
   const smoothedCenterRef = useRef<[number, number] | null>(null);
   const smoothedElevationRef = useRef<number | null>(null);
   const smoothedZoomTargetRef = useRef<number | null>(null);
-  const appliedAerialZoomOffsetRef = useRef(0);
   const trailRevisionRef = useRef(0);
   const transitionStartRef = useRef<{ segmentIndex: number | undefined; pose: TransitionCameraPose } | null>(null);
   const chapterBasePoseRef = useRef<TransitionCameraPose | null>(null);
@@ -301,7 +300,7 @@ export function useTrailPlaybackCamera({
     };
   }, [isMapLoaded, mapRef, markerRef, recordedElevationEnabled]);
 
-  const ownsCinematicElevation = (cameraMode === 'cinematic' || recordedElevationEnabled)
+  const ownsCinematicElevation = (cameraMode === 'cinematic' || cameraMode === 'aerial-follow' || recordedElevationEnabled)
     && animationPhase === 'playing' && (isPlaying || isExporting);
   useEffect(() => {
     const map = mapRef.current;
@@ -332,7 +331,6 @@ export function useTrailPlaybackCamera({
   // being mistaken for terrain noise by the cinematic target filter.
   useEffect(() => {
     smoothedZoomTargetRef.current = null;
-    appliedAerialZoomOffsetRef.current = 0;
   }, [cameraMode, followBehindZoomLevel]);
 
   useEffect(() => {
@@ -535,8 +533,7 @@ export function useTrailPlaybackCamera({
     }
 
     if (isCameraTransition && currentSegment && (animationPhase === 'playing' || animationPhase === 'idle')) {
-      appliedAerialZoomOffsetRef.current = 0;
-      const segment = currentSegment.segment;
+        const segment = currentSegment.segment;
       const to = allCoordinates[segment.endCoordIndex] as [number, number] | undefined;
       if (to) {
         if (!transitionStartRef.current || transitionStartRef.current.segmentIndex !== segment.segmentIndex) {
@@ -637,10 +634,8 @@ export function useTrailPlaybackCamera({
             progress: playbackProgress,
           });
       if (!targetPose) return;
-      let aerialZoomOffset = 0;
       if (cameraMode === 'aerial-follow' && aerialTerrainPlan?.length) {
         targetPose.bearing = terrainPlanBearing(aerialTerrainPlan, playbackProgress);
-        aerialZoomOffset = terrainPlanZoomOffset(aerialTerrainPlan, playbackProgress);
       }
 
       // Cinematic mode's pose is already smooth by construction (it comes
@@ -687,7 +682,7 @@ export function useTrailPlaybackCamera({
           );
 
       const cue = locationChapterCameraCue?.current ?? null;
-      const currentZoom = (chapterBasePoseRef.current?.zoom ?? mapRef.current.getZoom()) - appliedAerialZoomOffsetRef.current;
+      const currentZoom = (chapterBasePoseRef.current?.zoom ?? mapRef.current.getZoom());
       const stabilizedZoomTarget = smoothedZoomTargetRef.current === null || deltaMs === null
         ? targetPose.zoom
         : smoothZoomTarget(
@@ -846,14 +841,10 @@ export function useTrailPlaybackCamera({
         ...targetPose,
         ...centerElevation,
         center: smoothedCenter,
-        // The independently planned distance and bearing describe the same
-        // camera position. Apply the distance offset after the base zoom's
-        // noise filter so it does not lag behind the planned bearing.
-        zoom: (usesRawPose ? targetPose.zoom : newZoom) + aerialZoomOffset,
+        zoom: (usesRawPose ? targetPose.zoom : newZoom),
         pitch: usesRawPose ? targetPose.pitch : newPitch,
         bearing: usesRawPose || cameraMode === 'aerial-follow' ? targetPose.bearing : smoothBearingRef.current,
       };
-      appliedAerialZoomOffsetRef.current = aerialZoomOffset;
       mapRef.current.jumpTo(composeChapterPose(playbackPose, cue));
       chapterBasePoseRef.current = cue || chapterHandoffRef.current ? playbackPose : null;
     } else {
@@ -957,7 +948,6 @@ export function useTrailPlaybackCamera({
 
     if (introPose && cameraMode === 'aerial-follow' && aerialTerrainPlan?.length) {
       introPose.bearing = terrainPlanBearing(aerialTerrainPlan, 0);
-      introPose.zoom += terrainPlanZoomOffset(aerialTerrainPlan, 0);
     }
 
     if (animationPhase === 'intro' && introPose) {

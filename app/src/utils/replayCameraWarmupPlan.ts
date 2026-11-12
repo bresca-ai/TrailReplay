@@ -1,7 +1,7 @@
 import { getCinematicCameraPose, type PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
 import { getSmoothedCameraAnchor, getSmoothedRouteHeadingDeg } from '@/utils/cinematicCameraAnchor';
 import { cinematicAnchorSmoothingHalfWindow, cinematicHeadingBaselineHalfWidth } from '@/components/map/cameraUtils';
-import { terrainPlanBearing, terrainPlanZoomOffset } from '@/utils/aerialTerrainPlan';
+import { terrainPlanBearing } from '@/utils/aerialTerrainPlan';
 import {
   getOpeningPreloadProgresses,
   getPlaybackCameraPose,
@@ -151,7 +151,6 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
     });
     if (options.aerialTerrainPlan?.length) {
       pose.bearing = terrainPlanBearing(options.aerialTerrainPlan, options.progress);
-      pose.zoom += terrainPlanZoomOffset(options.aerialTerrainPlan, options.progress);
     }
   }
   return pose;
