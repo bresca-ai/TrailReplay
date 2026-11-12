@@ -182,13 +182,13 @@ it('starts the intro at the selected place before flying to the route', () => {
 });
 
 
-it('keeps automatic cinematic flight in control of its filtered terrain height during playback', () => {
+it.each([false, true])('keeps automatic cinematic terrain height stable during export=%s', (isExporting) => {
   const setCenterClampedToGround = vi.fn();
   const map = { getCenterClampedToGround: () => true, setCenterClampedToGround, on: vi.fn(), off: vi.fn(),
     getPadding: () => ({ top: 0, bottom: 0, left: 0, right: 0 }), setPadding: vi.fn(),
     getCanvas: () => ({ clientHeight: 720 }) };
   const props = { mapRef: { current: map }, markerRef: { current: null }, isMapLoaded: true,
-    cameraMode: 'aerial-follow', animationPhase: 'playing', isPlaying: true, isExporting: false,
+    cameraMode: 'aerial-follow', animationPhase: 'playing', isPlaying: !isExporting, isExporting,
     currentPosition: null, cameraCoordinates: [], allCoordinates: [], elevationData: [],
     cameraStability: 0.5, totalDurationMs: 60000, recordedElevationEnabled: false,
   } as unknown as Parameters<typeof useTrailPlaybackCamera>[0];

@@ -112,6 +112,12 @@ function blackmanWeight(offset: number, halfTaps: number): number {
   return 0.42 - 0.5 * Math.cos(angle) + 0.08 * Math.cos(2 * angle);
 }
 
+// The kernel shape never changes. Recomputing 33 cosine weights for each of
+// 16 framing candidates on every playback frame wastes main-thread time.
+const KERNEL_HALF_TAPS = (KERNEL_TAPS - 1) / 2;
+const KERNEL_WEIGHTS = Array.from({ length: KERNEL_TAPS }, (_, index) =>
+  blackmanWeight(index - KERNEL_HALF_TAPS, KERNEL_HALF_TAPS));
+
 export interface CinematicAnchorOptions {
   /** `cameraPathCoordinates`: the route resampled evenly in *replay time*. */
   coordinates: number[][];
@@ -197,7 +203,7 @@ export function smoothRoutePosition(
   let latSum = 0;
   let weightSum = 0;
 
-  const halfTaps = (KERNEL_TAPS - 1) / 2;
+  const halfTaps = KERNEL_HALF_TAPS;
   for (let tap = -halfTaps; tap <= halfTaps; tap++) {
     // Sample positions are fractional and move continuously with `progress`,
     // so the average never steps: see getInterpolatedRouteCoordinate on why a
@@ -206,7 +212,7 @@ export function smoothRoutePosition(
     const coordinate = getInterpolatedRouteCoordinate(coordinates, sampleIndex);
     if (!coordinate) continue;
 
-    const weight = blackmanWeight(tap, halfTaps);
+    const weight = KERNEL_WEIGHTS[tap + halfTaps];
     lonSum += coordinate[0] * weight;
     latSum += coordinate[1] * weight;
     weightSum += weight;
