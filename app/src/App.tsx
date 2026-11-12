@@ -27,7 +27,7 @@ import { RouteOverview } from '@/components/map/RouteOverview';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
-import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
+import { constrainOverlayToFrame, getCropPreviewMetrics, getVideoCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
@@ -114,6 +114,7 @@ function App() {
   const [exportCropMetrics, setExportCropMetrics] = useState<CropPreviewMetrics | null>(null);
   const [annotationCropMetrics, setAnnotationCropMetrics] = useState<CropPreviewMetrics | null>(null);
   const [annotationContainerSize, setAnnotationContainerSize] = useState({ width: 340, height: 600 });
+  const [statsOverlaySize, setStatsOverlaySize] = useState({ width: 0, height: 0 });
 
   const { parseFiles } = useGPX();
   // Installed once for the whole page, not per panel: the click that moves
@@ -292,8 +293,8 @@ function App() {
     if (!el) return;
 
     const update = () => {
-      setExportCropMetrics(getCropPreviewMetrics(el.clientWidth, el.clientHeight, activeCropRatio));
-      setAnnotationCropMetrics(getCropPreviewMetrics(el.clientWidth, el.clientHeight, exportAspectRatio));
+      setExportCropMetrics((exportSubMode === 'image' ? getCropPreviewMetrics : getVideoCropPreviewMetrics)(el.clientWidth, el.clientHeight, activeCropRatio));
+      setAnnotationCropMetrics(getVideoCropPreviewMetrics(el.clientWidth, el.clientHeight, exportAspectRatio));
       setAnnotationContainerSize(previous => previous.width === el.clientWidth && previous.height === el.clientHeight ? previous : { width: el.clientWidth, height: el.clientHeight });
     };
 
@@ -301,7 +302,7 @@ function App() {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [activePanel, activeCropRatio, exportAspectRatio, isExporting]);
+  }, [activePanel, activeCropRatio, exportAspectRatio, exportSubMode, isExporting]);
 
   // Stats overlay positioning only applies to video export, not image export
   const activeExportCropMetrics = (activePanel === 'export' || isExporting) && exportSubMode !== 'image'
@@ -351,9 +352,12 @@ function App() {
   const statsOverlayStyle = (() => {
     if (settings.statsPosition) {
       const { x, y } = settings.statsPosition;
+      const constrained = activeExportCropMetrics && constrainOverlayToFrame({ x, y }, annotationContainerSize, activeExportCropMetrics, {
+        width: statsOverlaySize.width * settings.statsScale, height: statsOverlaySize.height * settings.statsScale,
+      });
       return {
-        top: `${y * 100}%`,
-        left: `${x * 100}%`,
+        top: constrained?.top ?? `${y * 100}%`,
+        left: constrained?.left ?? `${x * 100}%`,
         width: 'auto',
         maxWidth: isNarrowScreen ? 'min(calc(100% - 24px), 312px)' : 'min(calc(100% - 32px), 408px)',
       } satisfies CSSProperties;
@@ -408,7 +412,10 @@ function App() {
     setStatsDragFrame(activeExportCropMetrics ?? {
       frameLeft: 0, frameTop: 0, frameWidth: rect.width, frameHeight: rect.height,
     });
-    const pos = settings.statsPosition ?? { x: 0.02, y: 0.04 };
+    const overlayRect = statsScaleWrapperRef.current?.getBoundingClientRect();
+    const pos = overlayRect && rect.width && rect.height
+      ? { x: (overlayRect.left - rect.left) / rect.width, y: (overlayRect.top - rect.top) / rect.height }
+      : settings.statsPosition ?? { x: 0.02, y: 0.04 };
     statsDragStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, startX: pos.x, startY: pos.y };
     setIsDraggingStats(true);
   }, [activeExportCropMetrics, settings.statsPosition]);
@@ -561,6 +568,20 @@ function App() {
   const hasTracks = tracks.length > 0;
 
   useEffect(() => {
+    const wrapper = statsScaleWrapperRef.current;
+    if (!wrapper) return;
+    const measure = () => {
+      const width = wrapper.offsetWidth;
+      const height = wrapper.offsetHeight;
+      setStatsOverlaySize(previous => previous.width === width && previous.height === height ? previous : { width, height });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [hasTracks]);
+
+  useEffect(() => {
     const updateViewport = () => {
       setIsNarrowScreen(window.innerWidth < 900);
     };
@@ -624,7 +645,7 @@ function App() {
 
               {/* Aspect ratio crop preview when in Export panel */}
               {activePanel === 'export' && (
-                <CropPreviewBars ratio={activeCropRatio} containerRef={mapContainerRef} />
+                <CropPreviewBars ratio={activeCropRatio} containerRef={mapContainerRef} videoCrop={exportSubMode !== 'image'} />
               )}
 
               {hasTracks && activeExportCropMetrics && (

@@ -1,5 +1,5 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { getCropRegion } from '@/utils/crop';
+import { getVideoCropRegion } from '@/utils/crop';
 
 
 /** Verify the actual backing buffer, including after a browser resize. */
@@ -8,7 +8,7 @@ export function assertExportCanvasResolution(map: MapLibreMap, resolution: { wid
   if (!(canvas.clientWidth > 0 && canvas.clientHeight > 0 && resolution.width > 0 && resolution.height > 0)) {
     throw new Error('The map does not have a valid size for video export.');
   }
-  const crop = getCropRegion({ width: canvas.clientWidth, height: canvas.clientHeight }, resolution.width, resolution.height);
+  const crop = getVideoCropRegion({ width: canvas.clientWidth, height: canvas.clientHeight }, resolution.width, resolution.height);
   const actualCropWidth = crop.cropW * canvas.width / canvas.clientWidth;
   const actualCropHeight = crop.cropH * canvas.height / canvas.clientHeight;
   if (!Number.isFinite(actualCropWidth) || !Number.isFinite(actualCropHeight)
@@ -24,7 +24,7 @@ export function setExportCanvasResolution(map: MapLibreMap, resolution: { width:
   if (clientWidth <= 0 || clientHeight <= 0 || resolution.width <= 0 || resolution.height <= 0) {
     throw new Error('The map does not have a valid size for video export.');
   }
-  const crop = getCropRegion({ width: clientWidth, height: clientHeight }, resolution.width, resolution.height);
+  const crop = getVideoCropRegion({ width: clientWidth, height: clientHeight }, resolution.width, resolution.height);
   const previousRatio = map.getPixelRatio();
   const targetRatio = Math.max(previousRatio, resolution.width / crop.cropW, resolution.height / crop.cropH);
   let changed = false;

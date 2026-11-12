@@ -719,7 +719,7 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
   },
   export: {
     studioNeedsMp4: 'Studio-Rendering erfordert MP4.',
-    resolution: 'Auflösung', estimatedSize: 'Geschätzte Größe',
+    resolution: 'Auflösung', estimatedSize: 'Geschätzte Größe', selectedEncodingUnsupported: 'Dieser Browser kann die gewählte Auflösung und Bildrate im Studio-Modus nicht kodieren. Wähle eine niedrigere Auflösung oder Bildrate.',
     saveProjectTitle: 'Projekt speichern',
     saveProjectBody: 'Lade eine .replay-Datei mit Deinen Routen, Deinem Reiseverlauf und Deinen Einstellungen herunter, um später dort weiterzumachen, wo Du aufgehört hast.',
     projectNameLabel: 'Projektname',

@@ -719,7 +719,7 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
   },
   export: {
     studioNeedsMp4: 'Le rendu Studio nécessite le format MP4.',
-    resolution: 'Résolution', estimatedSize: 'Taille estimée',
+    resolution: 'Résolution', estimatedSize: 'Taille estimée', selectedEncodingUnsupported: 'Ce navigateur ne peut pas encoder la résolution et la fréquence sélectionnées en mode Studio. Essayez une résolution ou une fréquence inférieure.',
     saveProjectTitle: 'Enregistrez votre projet',
     saveProjectBody: 'Téléchargez un fichier .replay avec vos itinéraires, votre parcours et vos réglages pour reprendre plus tard là où vous en étiez.',
     projectNameLabel: 'Nom du projet',

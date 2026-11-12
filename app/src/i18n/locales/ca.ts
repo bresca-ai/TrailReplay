@@ -719,7 +719,7 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
   },
   export: {
     studioNeedsMp4: 'La renderització Estudi requereix MP4.',
-    resolution: 'Resolució', estimatedSize: 'Mida aprox.',
+    resolution: 'Resolució', estimatedSize: 'Mida aprox.', selectedEncodingUnsupported: 'Aquest navegador no pot codificar la resolució i els fotogrames per segon seleccionats en mode Estudi. Prova una resolució o una freqüència més baixes.',
     saveProjectTitle: 'Desa el teu projecte',
     saveProjectBody: 'Descarrega un fitxer .replay amb les teves rutes, itinerari i ajustos per poder continuar més tard on ho vas deixar.',
     projectNameLabel: 'Nom del projecte',

@@ -45,7 +45,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
-    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
+    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize, estimatedDurationMs,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
@@ -732,7 +732,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
 
       if (videoExportSettings.qualityMode === 'studio' && !useWebCodecsRef.current) {
-        throw new Error(t('export.qualityModeStudioUnavailable'));
+        throw new Error(t('export.selectedEncodingUnsupported'));
       }
 
       if (!useWebCodecsRef.current && useAppStore.getState().settings.show3DBuildings) {
@@ -928,6 +928,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   return {
     actualFormat,
     estimatedSize,
+    estimatedDurationMs,
     exportProgress,
     exportError,
     exportStage,

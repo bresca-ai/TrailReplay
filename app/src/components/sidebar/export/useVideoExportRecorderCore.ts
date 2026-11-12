@@ -38,7 +38,10 @@ import {
   formatSpeedFromKmh,
   formatStatsDuration,
 } from '@/utils/units';
-import { estimateFileSize } from '@/utils/videoExport';
+import { estimateFileSize, estimateVideoDuration } from '@/utils/videoExport';
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
+import { getIntroDuration } from '@/utils/locationChapterCamera';
+import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { now as maplibreNow, restoreNow, setNow } from 'maplibre-gl';
 import { drawExportFrame } from './drawExportFrame';
@@ -101,6 +104,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
   const journeySegments = useAppStore((state) => state.journeySegments);
+  const textAnnotations = useAppStore((state) => state.textAnnotations);
+  const annotationHoldDuration = useAppStore((state) => state.settings.annotationHoldDuration);
+  const locationChapters = useAppStore((state) => state.settings.locationChapters);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
   const cameraSettings = useAppStore((state) => state.cameraSettings);
   const playback = useAppStore((state) => state.playback);
@@ -141,7 +147,11 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     [studioSupported]
   );
   const actualFormat = videoExportSettings.format === 'mp4' && !mp4Supported ? 'webm' : videoExportSettings.format;
-  const estimatedSize = estimateFileSize(playback.totalDuration, videoExportSettings);
+  const annotations = resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode);
+  const estimatedDurationMs = estimateVideoDuration({ routeDuration: playback.totalDuration, annotations, annotationHoldDuration: annotationHoldDuration ?? 5000,
+    introDuration: getIntroDuration(locationChapters), outroDuration: OUTRO_DELAY + OUTRO_DURATION,
+    includeCover: videoExportSettings.includeCover ?? false, pictures, videos });
+  const estimatedSize = estimateFileSize(estimatedDurationMs, videoExportSettings);
   const includeStats = visibleStats.length > 0;
   const includeElevation = showElevationProfile;
   const overlayRefreshIntervalMs = useMemo(() => getOverlayRefreshIntervalMs(videoExportSettings.fps), [videoExportSettings.fps]);
@@ -880,7 +890,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     visibleStats, pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
-    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
+    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize, estimatedDurationMs,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,

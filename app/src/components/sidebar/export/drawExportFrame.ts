@@ -4,7 +4,7 @@ import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { DEFAULT_SKY_COLOR } from '@/components/map/mapSky';
-import { getCropRegion } from '@/utils/crop';
+import { getVideoCropRegion } from '@/utils/crop';
 import type { VideoExportSettings } from '@/types';
 import { markerIconContrastFilter } from '@/utils/activityIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
@@ -194,7 +194,7 @@ export function drawExportFrame({
     if (!mapCanvas || !container) return;
 
     const containerRect = container.getBoundingClientRect();
-    const { cropX, cropY, cropW, cropH } = getCropRegion(containerRect, recordW, recordH);
+    const { cropX, cropY, cropW, cropH } = getVideoCropRegion(containerRect, recordW, recordH);
     const pixelScaleX = mapCanvas.width / containerRect.width;
     const pixelScaleY = mapCanvas.height / containerRect.height;
 

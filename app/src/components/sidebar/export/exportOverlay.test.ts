@@ -30,7 +30,7 @@ describe('exportOverlay', () => {
     const metrics = getExportOverlayMetrics({ width: 1200, height: 800 }, 1080, 1920);
 
     expect(metrics.cropX).toBeGreaterThan(0);
-    expect(metrics.cropY).toBe(0);
+    expect(metrics.cropY).toBe(62.5);
     expect(metrics.cropW).toBeLessThan(1200);
     expect(metrics.scaleToRecording).toBeGreaterThan(1);
   });

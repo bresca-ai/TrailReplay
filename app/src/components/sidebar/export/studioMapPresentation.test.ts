@@ -25,7 +25,7 @@ describe('studio map presentation', () => {
     const { map, source, original, calls } = createMap();
     const restore = applyStudioMapPresentation(map, { highDetail: true, mapStyle: 'esri-clarity', resolution: { width: 1080, height: 1920 } });
     expect(source.calculateTileZoom).not.toBe(original);
-    expect(calls.setPixelRatio).toHaveBeenCalledWith(2.4);
+    expect(calls.setPixelRatio).toHaveBeenCalledWith(1920 / 562.5);
     expect(calls.setPaintProperty).toHaveBeenCalledWith('background', 'raster-fade-duration', 0);
     restore();
     expect(source.calculateTileZoom).toBe(original);
@@ -44,7 +44,7 @@ describe('studio map presentation', () => {
   it('renders Standard exports at the requested size without changing tile detail or fades', () => {
     const { map, source, original, calls } = createMap();
     const restore = applyStudioMapPresentation(map, { highDetail: false, disableRasterFade: false, mapStyle: 'esri-clarity', resolution: { width: 1080, height: 1920 } });
-    expect(calls.setPixelRatio).toHaveBeenCalledWith(2.4);
+    expect(calls.setPixelRatio).toHaveBeenCalledWith(1920 / 562.5);
     expect(source.calculateTileZoom).toBe(original);
     expect(calls.setPaintProperty).not.toHaveBeenCalled();
     restore();
