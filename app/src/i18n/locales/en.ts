@@ -511,7 +511,7 @@ export const en = {
     paceMode: 'Pace mode',
     paceModeCumulative: 'Overall',
     paceModePerKm: 'Per km',
-    routeOverview: "Route overview", routeOverviewHint: "A north-up route inset. Drag it to reposition.", resizeElevationProfile: "Resize elevation profile", elevationProfileFill: "Fill below profile", showElevationProfile: 'Elevation profile',
+    routeOverview: "Route overview", routeOverviewHint: "A north-up route inset. Drag it to reposition.", resizeElevationProfile: "Resize elevation profile", elevationProfileColor: "Profile color", elevationProfileFollowRoute: "Use route color", showElevationProfile: 'Elevation profile',
     elevationProfilePerRoute: 'Per-route profile', elevationProfilePerRouteHint: 'Show each route separately during playback.',
     dynamicElevationProfile: 'Dynamic sections',
     dynamicElevationProfileHint: 'Automatically focuses the strongest sustained climbs and descents during playback.',

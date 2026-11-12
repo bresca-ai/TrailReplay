@@ -32,6 +32,7 @@ export function buildElevationProfileGeometry(
   segmentTimings: SegmentTiming[],
   trailColor: string,
   tracks: GPXTrack[],
+  colorOverride?: string | null,
 ): ElevationProfileGeometry | null {
   if (elevationData.length === 0) return null;
 
@@ -86,7 +87,7 @@ export function buildElevationProfileGeometry(
     segmentPaths.push({
       pathD,
       ridgeD,
-      color: timing.type === 'transport' ? '#888888' : (track?.color || trailColor),
+      color: colorOverride || (timing.type === 'transport' ? '#888888' : (track?.color || trailColor)),
       segmentIndex: timing.segmentIndex,
       type: timing.type,
     });

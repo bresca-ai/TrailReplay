@@ -500,7 +500,7 @@ export const fr = {
     paceMode: 'Mode allure',
     paceModeCumulative: 'Globale',
     paceModePerKm: 'Par km',
-    routeOverview: "Vue générale du parcours", routeOverviewHint: "Vue du parcours orientée au nord. Faites-la glisser pour la déplacer.", resizeElevationProfile: "Redimensionner le profil", elevationProfileFill: "Remplir sous le profil", showElevationProfile: 'Profil d\'altitude',
+    routeOverview: "Vue générale du parcours", routeOverviewHint: "Vue du parcours orientée au nord. Faites-la glisser pour la déplacer.", resizeElevationProfile: "Redimensionner le profil", elevationProfileColor: "Couleur du profil", elevationProfileFollowRoute: "Utiliser la couleur du parcours", showElevationProfile: 'Profil d\'altitude',
     elevationProfilePerRoute: 'Profil par parcours', elevationProfilePerRouteHint: 'Affiche chaque parcours séparément pendant la lecture.',
     dynamicElevationProfile: 'Sections dynamiques',
     dynamicElevationProfileHint: 'Cadre automatiquement les montées et descentes soutenues les plus marquantes pendant la lecture.',

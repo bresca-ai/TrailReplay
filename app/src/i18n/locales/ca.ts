@@ -500,7 +500,7 @@ export const ca = {
     paceMode: 'Mode ritme',
     paceModeCumulative: 'Global',
     paceModePerKm: 'Per km',
-    routeOverview: "Vista general de la ruta", routeOverviewHint: "Vista de la ruta orientada al nord. Arrossega-la per moure-la.", resizeElevationProfile: "Canvia l’alçada del perfil", elevationProfileFill: "Omple sota el perfil", showElevationProfile: 'Perfil d\'altitud',
+    routeOverview: "Vista general de la ruta", routeOverviewHint: "Vista de la ruta orientada al nord. Arrossega-la per moure-la.", resizeElevationProfile: "Canvia l’alçada del perfil", elevationProfileColor: "Color del perfil", elevationProfileFollowRoute: "Usa el color de la ruta", showElevationProfile: 'Perfil d\'altitud',
     elevationProfilePerRoute: 'Perfil per ruta', elevationProfilePerRouteHint: 'Mostra cada ruta per separat durant la reproducció.',
     dynamicElevationProfile: 'Seccions dinàmiques',
     dynamicElevationProfileHint: 'Enfoca automàticament les pujades i baixades sostingudes més destacades durant la reproducció.',

@@ -77,15 +77,15 @@ describe('MapElevationProfile dynamic sections', () => {
     };
   });
 
-  it('can show only the elevation line, including the traveled portion', () => {
-    useAppStore.getState().setSettings({ elevationProfileFilled: false });
+  it('uses the selected profile color in both the chart and exported progress', () => {
+    useAppStore.getState().setSettings({ elevationProfileColor: '#2a8bd4' });
     useAppStore.getState().setPlayback({ progress: 0.5 });
     render(<MapElevationProfile />);
     const svg = document.getElementById('elevationProfileSvg')!;
-    expect(svg).toHaveAttribute('data-export-elevation-filled', 'false');
-    expect(svg.querySelector('[data-export-elevation-segment]')).toHaveAttribute('fill', 'none');
-    expect(svg.querySelector('[fill="url(#progressGradient)"]')).toBeNull();
-    expect(svg.querySelector('[data-export-elevation-dynamic] path[stroke]')).not.toBeNull();
+    expect(svg).toHaveAttribute('data-export-elevation-progress-color', '#2a8bd4');
+    expect(svg.querySelector('[data-export-elevation-segment]')).toHaveAttribute('data-export-elevation-color', '#2a8bd4');
+    act(() => useAppStore.getState().setSettings({ elevationProfileColor: null }));
+    expect(svg).toHaveAttribute('data-export-elevation-progress-color', '#cc6633');
   });
 
   it('changes the displayed profile height with the resize control', () => {

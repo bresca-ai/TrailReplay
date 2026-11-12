@@ -331,12 +331,5 @@ describe('dynamic elevation export', () => {
     for (const label of ['+210 m', '100 m', '310 m', '1.40 km']) {
       expect(fillText).toHaveBeenCalledWith(label, expect.any(Number), expect.any(Number));
     }
-
-    // Outline-only must omit both the base and progress fills in video frames.
-    svg.dataset.exportElevationFilled = 'false';
-    fill.mockClear(); stroke.mockClear();
-    result.current.drawElevationProgress(context, { recordW: 1920, recordH: 1080, scaleToRecording: 1.92 });
-    expect(fill).not.toHaveBeenCalled();
-    expect(stroke).toHaveBeenCalledTimes(5);
   });
 });
