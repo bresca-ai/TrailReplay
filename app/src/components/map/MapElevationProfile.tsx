@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { convertElevation, formatDistance, formatElevation } from '@/utils/units';
@@ -19,6 +20,8 @@ interface MapElevationProfileProps {
 }
 
 export function MapElevationProfile({ className = '', exportFrame = null }: MapElevationProfileProps) {
+  const { t } = useI18n();
+  const resizeStart = useRef<{ y: number; height: number } | null>(null);
   const playback = useAppStore((state) => state.playback);
   const settings = useAppStore((state) => state.settings);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
@@ -268,6 +271,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
         distance: formatDistance(focusedSection.distance, settings.unitSystem),
       }
     : null;
+  const profileHeightScale = Math.max(0.5, Math.min(3, settings.elevationProfileHeight ?? 1));
   const isNonWideExportPreview = isExportPreview && exportAspectRatio !== '16:9';
   const labelOverflowPadding = isNonWideExportPreview ? 24 : 18;
   const exportProfileStyle = exportFrame
@@ -320,7 +324,20 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           routeTimingMode={routeTimingMode}
           dynamic={dynamicSections || settings.elevationProfilePerRoute}
           tall={isNonWideExportPreview}
+          heightScale={profileHeightScale}
         />
+        {!isExportPreview && (
+          <button
+            type="button" role="slider" aria-label={t('annotations.resizeElevationProfile')}
+            aria-valuemin={50} aria-valuemax={300} aria-valuenow={Math.round(profileHeightScale * 100)}
+            className="absolute -top-3 left-1/2 z-30 flex h-6 w-14 -translate-x-1/2 cursor-ns-resize touch-none items-center justify-center rounded-full border border-white/40 bg-[#17251f]/80 text-white/90 opacity-60 transition hover:opacity-100 focus-visible:opacity-100"
+            onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); resizeStart.current = { y: event.clientY, height: profileHeightScale }; }}
+            onPointerMove={(event) => { if (!resizeStart.current) return; const scale = resizeStart.current.height + (resizeStart.current.y - event.clientY) / 60; setSettings({ elevationProfileHeight: Math.max(0.5, Math.min(3, scale)) }); }}
+            onPointerUp={() => { resizeStart.current = null; }}
+            onPointerCancel={() => { resizeStart.current = null; }}
+            onKeyDown={(event) => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); setSettings({ elevationProfileHeight: Math.max(0.5, Math.min(3, profileHeightScale + (event.key === 'ArrowUp' ? 0.1 : -0.1))) }); } }}
+          ><span aria-hidden="true" className="h-1 w-7 rounded-full bg-white/80" /></button>
+        )}
         {isEditingSections && (
           <ElevationSectionEditor
             sections={focusSections}

@@ -77,6 +77,15 @@ describe('MapElevationProfile dynamic sections', () => {
     };
   });
 
+  it('changes the displayed profile height with the resize control', () => {
+    render(<MapElevationProfile />);
+    const svg = document.getElementById('elevationProfileSvg')!;
+    expect(svg).toHaveStyle({ height: '60px' });
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Resize elevation profile' }), { key: 'ArrowUp' });
+    expect(useAppStore.getState().settings.elevationProfileHeight).toBeCloseTo(1.1);
+    expect(svg).toHaveStyle({ height: '66px' });
+  });
+
   it('shows the active route separately and holds it during a connection', () => {
     const first = { ...timing, progressEndRatio: 0.4, distanceEndRatio: 0.4 };
     const connection: SegmentTiming = { ...timing, segmentId: 'connection', segmentIndex: 1, type: 'transport', trackId: undefined, transportMode: 'camera', progressStartRatio: 0.4, progressEndRatio: 0.6 };

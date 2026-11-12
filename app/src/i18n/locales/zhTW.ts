@@ -159,7 +159,7 @@ export const zhTW = {
     ghostTrailTitle: '全程路線預覽', ghostTrailOpacityLabel: '不透明度', ghostTrailOpacityHint: '設為 0 可隱藏完整路線，僅隨播放進度逐步顯示。',
     statsTitle: '統計資訊', statsHint: '拖曳地圖上的統計資訊方塊，即可調整位置。', statsBackground: '統計資訊背景', statsBackgroundPanel: '底板', statsBackgroundTransparent: '透明',
     statsNeedTiming: '時間、配速與速度需要記錄時間戳記，但這條路線沒有時間資料。', statsNeedHeartRate: '心率需要感測器記錄，但這條路線沒有心率資料。',
-    paceMode: '配速模式', paceModeCumulative: '全程平均', paceModePerKm: '每公里', showElevationProfile: '海拔剖面圖', elevationProfilePerRoute: '各路線海拔剖面', elevationProfilePerRouteHint: '播放時分別顯示各條路線。',
+    paceMode: '配速模式', paceModeCumulative: '全程平均', paceModePerKm: '每公里', routeOverview: "路線總覽", routeOverviewHint: "朝北的路線總覽，可拖曳調整位置。", resizeElevationProfile: "調整海拔剖面高度", showElevationProfile: '海拔剖面圖', elevationProfilePerRoute: '各路線海拔剖面', elevationProfilePerRouteHint: '播放時分別顯示各條路線。',
     dynamicElevationProfile: '動態路段', dynamicElevationProfileHint: '播放時，自動聚焦主要的持續爬升與下降路段。',
     dynamicElevationProfileGuideTitle: '操作說明', dynamicElevationProfileGuideAutomatic: '剖面圖會標記接下來的爬升與下降，並在播放時平順地放大各路段。', dynamicElevationProfileGuideEdit: '暫停後可編輯：拖曳兩端把手以調整路段範圍。', dynamicElevationProfileGuideAddRemove: '點選 ＋，再點選剖面圖以新增路段；點選路段上的 × 可移除。',
     markerTitle: '移動標記', markerTypeIcon: '圖示', markerTypeDot: '圓點', markerTypeDotHint: '白色外框的實心圓點，類似 Strava 的活動指示標記。', markerColor: '標記顏色', markerColorSvgHint: '使用 SVG 圖示時，會同時調整圖示與標記圓圈的顏色。', markerColorEmojiHint: '使用表情符號時，只會調整標記圓圈的顏色。',

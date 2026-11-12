@@ -29,6 +29,7 @@ interface ElevationProfileChartProps {
   routeTimingMode: 'recorded' | 'uniform';
   dynamic: boolean;
   tall: boolean;
+  heightScale?: number;
 }
 
 export function ElevationProfileChart({
@@ -44,13 +45,15 @@ export function ElevationProfileChart({
   routeTimingMode,
   dynamic,
   tall,
+  heightScale = 1,
 }: ElevationProfileChartProps) {
   const { svgWidth, svgHeight, segmentPaths } = geometry;
   return (
     <svg
       viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
       preserveAspectRatio="none"
-      className={`w-full ${tall ? 'h-[72px]' : 'h-[60px]'}`}
+      className="w-full"
+      style={{ height: (tall ? 72 : 60) * heightScale }}
       id="elevationProfileSvg"
       data-export-elevation-progress-color={currentColor}
       data-export-elevation-marker-x={markerX}

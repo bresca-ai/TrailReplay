@@ -234,6 +234,15 @@ export function drawExportFrame({
       context.restore();
     }
 
+    // The overview canvas contains both the route and its current moving marker.
+    const overview = container.querySelector('.tr-route-overview') as HTMLCanvasElement | null;
+    if (overview && overview.width && overview.height) {
+      const rect = overview.getBoundingClientRect();
+      const scale = recordW / cropW;
+      context.drawImage(overview, (rect.left - containerRect.left - cropX) * scale,
+        (rect.top - containerRect.top - cropY) * scale, rect.width * scale, rect.height * scale);
+    }
+
     // Screen annotations are DOM overlays; copy their exact drawing into the export crop.
     const screenNote = container.querySelector('.tr-screen-annotation') as HTMLCanvasElement | null;
     if (screenNote && screenNote.width && screenNote.height) {

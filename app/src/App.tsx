@@ -22,6 +22,7 @@ import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
 import { VideoPopup } from '@/components/annotations/VideoPopup';
 import { ScreenAnnotation } from '@/components/annotations/ScreenAnnotation';
+import { RouteOverview } from '@/components/map/RouteOverview';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
@@ -550,7 +551,7 @@ function App() {
   const localizedScreenAnnotation = useMemo(() => screenAnnotation ? localizedAnnotation(screenAnnotation, settings.language) : null, [screenAnnotation, settings.language]);
   const annotationFrame = (activePanel === 'export' || isExporting) ? annotationCropMetrics : null;
   const annotationNarrow = annotationFrame ? isNarrowFrame(annotationFrame.frameWidth, annotationFrame.frameHeight) : isNarrowScreen;
-  const annotationBottom = settings.showElevationProfile ? (annotationNarrow ? 110 : 88) : 24;
+  const annotationBottom = settings.showElevationProfile ? (annotationNarrow ? 110 : 88) + Math.max(0, ((settings.elevationProfileHeight ?? 1) - 1) * (annotationNarrow ? 72 : 60)) : 24;
   const annotationWidth = annotationFrame ? Math.max(64, Math.min(500, annotationNarrow ? annotationFrame.frameWidth - 32 : annotationFrame.frameWidth * 0.52)) : Math.max(64, Math.min(500, annotationContainerSize.width - 40));
   const activePendingPicturePlacement = pendingPicturePlacements[0];
   
@@ -615,6 +616,7 @@ function App() {
 
 
               {localizedScreenAnnotation && <ScreenAnnotation annotation={localizedScreenAnnotation} font={settings.trailStyle.overlayFont} size={Math.max(0.5, Math.min(2, settings.annotationTextScale ?? settings.annotationScale ?? 1))} maxWidth={annotationWidth} maxHeight={Math.max(40, (annotationFrame?.frameHeight ?? annotationContainerSize.height) - annotationBottom - 24)} style={{ right: (annotationFrame?.right ?? 0) + 20, bottom: (annotationFrame?.bottom ?? 0) + annotationBottom }} />}
+              <RouteOverview containerSize={annotationContainerSize} frame={activeExportCropMetrics} />
               {!isMapReady && <AppLoadingOverlay />}
 
               {/* Aspect ratio crop preview when in Export panel */}

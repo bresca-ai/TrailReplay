@@ -631,6 +631,10 @@ export function AnnotationsPanel() {
             ))}
           </div>
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <div><Label htmlFor="route-overview-toggle" className="text-sm text-[var(--evergreen)]">{t('annotations.routeOverview')}</Label><p className="text-xs text-[var(--evergreen-60)]">{t('annotations.routeOverviewHint')}</p></div>
+          <Switch id="route-overview-toggle" checked={settings.showRouteOverview ?? false} onCheckedChange={(checked) => setSettings({ showRouteOverview: checked })} />
+        </div>
         <div className="flex items-center justify-between">
           <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showElevationProfile')}</Label>
           <Switch

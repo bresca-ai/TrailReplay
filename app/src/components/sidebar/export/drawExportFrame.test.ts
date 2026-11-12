@@ -134,3 +134,21 @@ it('copies the screen annotation into the exported video frame', () => {
   drawExportFrame(options);
   expect(context.drawImage).toHaveBeenCalledWith(note, 50, 100, 200, 40);
 });
+
+it('copies the live route overview to its position in the export', () => {
+  const overview = document.createElement('canvas');
+  overview.className = 'tr-route-overview';
+  overview.width = 400; overview.height = 288;
+  overview.getBoundingClientRect = () => new DOMRect(70, 120, 200, 144);
+  document.getElementById('map-capture-container')!.appendChild(overview);
+  const { options } = frameOptions();
+  const context = {
+    fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
+    beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(),
+    measureText: (value: string) => ({ width: value.length * 10 }),
+    createLinearGradient: () => ({ addColorStop: vi.fn() }),
+  };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  drawExportFrame(options);
+  expect(context.drawImage).toHaveBeenCalledWith(overview, 70, 120, 200, 144);
+});

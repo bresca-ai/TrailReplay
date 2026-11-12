@@ -301,6 +301,17 @@ describe('hydrateProject', () => {
     expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
   });
 
+  it('preserves the overview position and elevation height in saved projects', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setSettings({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7 });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'overlay.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings).toMatchObject({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7 });
+  });
+
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));

@@ -500,7 +500,7 @@ export const es = {
     paceMode: 'Modo ritmo',
     paceModeCumulative: 'Global',
     paceModePerKm: 'Por km',
-    showElevationProfile: 'Perfil de elevación',
+    routeOverview: "Vista general de la ruta", routeOverviewHint: "Vista de la ruta orientada al norte. Arrástrala para moverla.", resizeElevationProfile: "Cambiar altura del perfil", showElevationProfile: 'Perfil de elevación',
     elevationProfilePerRoute: 'Perfil por ruta', elevationProfilePerRouteHint: 'Muestra cada ruta por separado durante la reproducción.',
     dynamicElevationProfile: 'Tramos dinámicos',
     dynamicElevationProfileHint: 'Enfoca automáticamente las subidas y bajadas sostenidas más destacadas durante la reproducción.',
