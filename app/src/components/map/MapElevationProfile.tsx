@@ -56,9 +56,8 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       segmentTimings,
       trailStyle.trailColor,
       tracks,
-      settings.elevationProfileColor,
     ),
-    [elevationData, segmentTimings, trailStyle.trailColor, tracks, settings.elevationProfileColor],
+    [elevationData, segmentTimings, trailStyle.trailColor, tracks],
   );
 
   // Keep the preceding route visible during a connection; before the first
@@ -122,7 +121,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   // SVG `d` string rebuild on every animation frame.
   const progressData = useMemo(() => {
     if (!profileData || playback.progress <= 0) {
-      return { currentElevation: 0, markerX: 0, currentColor: settings.elevationProfileColor || trailStyle.trailColor };
+      return { currentElevation: 0, markerX: 0, currentColor: trailStyle.trailColor };
     }
 
     const { svgWidth, pointsBySegment } = profileData;
@@ -133,8 +132,6 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     if (isInTransport) {
       currentColor = routeTiming?.color || (routeTiming?.trackId ? tracks.find((track) => track.id === routeTiming.trackId)?.color : undefined) || (routeTiming ? trailStyle.trailColor : '#888888');
     }
-
-    if (settings.elevationProfileColor) currentColor = settings.elevationProfileColor;
 
     let currentPoints = currentSegment
       ? pointsBySegment.get(currentSegment.segment.segmentIndex)
@@ -152,7 +149,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       : 0;
 
     return { currentElevation, markerX: progressX, currentColor };
-  }, [profileData, playback.progress, currentTrackColor, trailStyle.trailColor, isInTransport, currentSegment, routeTiming, tracks, settings.elevationProfileColor]);
+  }, [profileData, playback.progress, currentTrackColor, trailStyle.trailColor, isInTransport, currentSegment, routeTiming, tracks]);
 
   const routeBounds = useMemo(() => {
     if (!routeTiming || !profileData) return null;
@@ -328,6 +325,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           dynamic={dynamicSections || settings.elevationProfilePerRoute}
           tall={isNonWideExportPreview}
           heightScale={profileHeightScale}
+          filled={settings.elevationProfileFilled ?? true}
         />
         {!isExportPreview && (
           <button

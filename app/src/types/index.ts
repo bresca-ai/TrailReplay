@@ -502,8 +502,8 @@ export interface AppSettings {
   showLeaderboard: boolean;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
-  /** Null follows the route color; otherwise use this color for the profile. */
-  elevationProfileColor: string | null;
+  /** Fill the area below the elevation line. */
+  elevationProfileFilled: boolean;
   /** Height multiplier for the on-map elevation chart. */
   elevationProfileHeight: number;
   /** Optional draggable, top-down route inset. */

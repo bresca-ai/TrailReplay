@@ -189,7 +189,7 @@ export function AnnotationsPanel() {
 
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [zoneUnit, setZoneUnit] = useState<'percent' | 'km'>('percent');
-  const { allCoordinates, currentTrackColor } = useComputedJourney();
+  const { allCoordinates } = useComputedJourney();
   const zoneDistances = useMemo(() => colorZoneDistances(allCoordinates), [allCoordinates]);
   const routeLengthKm = zoneDistances[zoneDistances.length - 1] ?? 0;
   const distanceMode = zoneUnit === 'km' && routeLengthKm > 0;
@@ -651,15 +651,9 @@ export function AnnotationsPanel() {
         </div>
         {settings.showElevationProfile && (
           <div className="ml-3 space-y-1.5 border-l border-[var(--evergreen)]/15 pl-3">
-            <div className="space-y-2 pb-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="elevation-profile-color" className="text-sm text-[var(--evergreen)]">{t('annotations.elevationProfileColor')}</Label>
-                <button type="button" aria-pressed={!settings.elevationProfileColor} onClick={() => setSettings({ elevationProfileColor: null })} className="rounded-md border border-[var(--evergreen)]/20 px-2 py-1 text-xs font-medium text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 aria-pressed:bg-[var(--evergreen)] aria-pressed:text-[var(--canvas)]">{t('annotations.elevationProfileFollowRoute')}</button>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <input id="elevation-profile-color" type="color" value={settings.elevationProfileColor || currentTrackColor || trailStyle.trailColor} onChange={(event) => setSettings({ elevationProfileColor: event.target.value })} className="h-7 w-7 cursor-pointer rounded border border-[var(--evergreen)]/20" />
-                {COLOR_PRESETS.map(({ color, labelKey }) => <button key={color} type="button" title={t(labelKey)} aria-label={`${t('annotations.elevationProfileColor')}: ${t(labelKey)}`} aria-pressed={settings.elevationProfileColor?.toLowerCase() === color.toLowerCase()} onClick={() => setSettings({ elevationProfileColor: color })} className="h-5 w-5 rounded-full border-2 border-transparent hover:scale-110 aria-pressed:border-[var(--evergreen)]" style={{ backgroundColor: color }} />)}
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="elevation-profile-filled" className="text-sm text-[var(--evergreen)]">{t('annotations.elevationProfileFill')}</Label>
+              <Switch id="elevation-profile-filled" checked={settings.elevationProfileFilled ?? true} onCheckedChange={(checked) => setSettings({ elevationProfileFilled: checked })} />
             </div>
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="elevation-profile-per-route" className="text-sm text-[var(--evergreen)]">

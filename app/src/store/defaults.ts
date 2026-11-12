@@ -73,7 +73,7 @@ export function createDefaultSettings(): AppSettings {
     showLeaderboard: true,
     paceMode: 'per-km' as const,
     showElevationProfile: true,
-    elevationProfileColor: null,
+    elevationProfileFilled: true,
     elevationProfileHeight: 1,
     showRouteOverview: false,
     routeOverviewPosition: null,

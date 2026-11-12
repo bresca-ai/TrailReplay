@@ -709,6 +709,7 @@ export function useExportOverlayCapture({
     const drawHeight = svgRect.height * elementScaleY;
     const progress = Math.max(0, Math.min(1, useAppStore.getState().playback.progress));
 
+    const filled = svg.dataset.exportElevationFilled !== 'false';
     const markerX = Number(svg.dataset.exportElevationMarkerX);
     const markerPosition = Number.isFinite(markerX)
       ? markerX
@@ -769,9 +770,11 @@ export function useExportOverlayCapture({
         Math.min(1, Number(svg.dataset.exportElevationFocusAmount) || 0),
       );
       drawableSegments.forEach(({ color, drawPath, drawRidge, transport }) => {
-        context.globalAlpha = transport ? 0.09 : 0.18;
-        context.fillStyle = color;
-        context.fill(drawPath);
+        if (filled) {
+          context.globalAlpha = transport ? 0.09 : 0.18;
+          context.fillStyle = color;
+          context.fill(drawPath);
+        }
         context.globalAlpha = transport ? 0.3 : 0.55;
         context.strokeStyle = color;
         context.lineWidth = Math.max(1, elementScaleY);
@@ -819,9 +822,11 @@ export function useExportOverlayCapture({
       const color = svg.dataset.exportElevationProgressColor
         || segmentColor
         || '#c1652f';
-      context.globalAlpha = 0.7;
-      context.fillStyle = color;
-      context.fill(drawPath);
+      if (filled) {
+        context.globalAlpha = 0.7;
+        context.fillStyle = color;
+        context.fill(drawPath);
+      }
       context.globalAlpha = 1;
       context.strokeStyle = color;
       context.lineWidth = Math.max(1, 2 * elementScaleY);
