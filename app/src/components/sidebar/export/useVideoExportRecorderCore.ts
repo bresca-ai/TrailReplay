@@ -585,7 +585,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (!map) return;
 
     studioMapPresentationRestoreRef.current?.();
-    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, { highDetail: useAppStore.getState().videoExportSettings.qualityMode === 'studio', mapStyle: useAppStore.getState().settings.mapStyle });
+    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, { highDetail: useAppStore.getState().videoExportSettings.qualityMode === 'studio', mapStyle: useAppStore.getState().settings.mapStyle, resolution: useAppStore.getState().videoExportSettings.resolution });
   }, []);
 
   const restoreStudioMapSettings = useCallback(() => {
