@@ -13,8 +13,10 @@ export function annotationExtraTime(routeTime: number, totalDuration: number, an
     const start = Math.max(0, arrival - APPROACH_MS);
     const end = Math.min(totalDuration, arrival + APPROACH_MS);
     if (end <= start) return extra;
+    // Include the route time already occupied by the visible interval.
+    const addedDuration = Math.max(0, duration - (end - start));
     const x = Math.max(0, Math.min(1, (routeTime - start) / (end - start)));
-    return extra + duration * (x - Math.sin(2 * Math.PI * x) / (2 * Math.PI));
+    return extra + addedDuration * (x - Math.sin(2 * Math.PI * x) / (2 * Math.PI));
   }, 0);
 }
 
@@ -35,7 +37,8 @@ export function annotationPlaybackRate(routeTime: number, totalDuration: number,
     const end = Math.min(totalDuration, arrival + APPROACH_MS);
     if (end <= start || routeTime <= start || routeTime >= end) return rate;
     const x = (routeTime - start) / (end - start);
-    return rate + (duration / (end - start)) * (1 - Math.cos(2 * Math.PI * x));
+    const addedDuration = Math.max(0, duration - (end - start));
+    return rate + (addedDuration / (end - start)) * (1 - Math.cos(2 * Math.PI * x));
   }, 1);
 }
 
