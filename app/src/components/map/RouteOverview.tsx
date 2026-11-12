@@ -3,7 +3,7 @@ import type { CropPreviewMetrics } from '@/utils/crop';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
-import { buildRouteOverviewGeometry } from './routeOverviewGeometry';
+import { buildRouteOverviewGeometry, projectRouteOverviewProgress, routeOverviewColors } from './routeOverviewGeometry';
 
 interface Props { containerSize: { width: number; height: number }; frame: CropPreviewMetrics | null }
 const WIDTH = 200, HEIGHT = 144;
@@ -17,7 +17,7 @@ export function RouteOverview({ containerSize, frame }: Props) {
   const setSettings = useAppStore(state => state.setSettings);
   const isExporting = useAppStore(state => state.isExporting);
   const phase = useAppStore(state => state.animationPhase);
-  const { allCoordinates, currentPosition, currentTrackColor } = useComputedJourney();
+  const { allCoordinates, completedCoordinates, currentTrackColor } = useComputedJourney();
   const geometry = useMemo(() => buildRouteOverviewGeometry(allCoordinates, WIDTH, HEIGHT), [allCoordinates]);
   const color = currentTrackColor || settings.trailStyle.trailColor;
   const frameWidth = frame?.frameWidth ?? containerSize.width;
@@ -37,13 +37,16 @@ export function RouteOverview({ containerSize, frame }: Props) {
     ctx.scale(resolution, resolution);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
     geometry.path.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
-    ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 6; ctx.stroke();
-    ctx.strokeStyle = color; ctx.globalAlpha = .88; ctx.lineWidth = 2.6; ctx.stroke(); ctx.globalAlpha = 1;
-    const marker = currentPosition ? geometry.project(currentPosition.lon, currentPosition.lat) : geometry.path[0];
-    ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(marker.x, marker.y, 5.5, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowBlur = 0; ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-  }, [geometry, currentPosition, color, settings.showRouteOverview, phase]);
+    const colors = routeOverviewColors(color);
+    ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = colors.remaining; ctx.lineWidth = 2.5; ctx.stroke();
+    const completed = projectRouteOverviewProgress(completedCoordinates, geometry.project);
+    if (completed.length > 1) {
+      ctx.beginPath();
+      completed.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
+      ctx.strokeStyle = colors.completed; ctx.lineWidth = 3; ctx.stroke();
+    }
+  }, [geometry, completedCoordinates, color, settings.showRouteOverview, phase]);
 
   if (!settings.showRouteOverview || !geometry || (phase !== 'idle' && phase !== 'playing')) return null;
   return <canvas ref={canvas} className="tr-route-overview absolute z-20" role="img" aria-label={t('annotations.routeOverview')} tabIndex={isExporting ? -1 : 0}

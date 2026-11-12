@@ -16,3 +16,23 @@ export function buildRouteOverviewGeometry(coordinates: number[][], width: numbe
   const path = valid.filter((_, index) => index % step === 0 || index === valid.length - 1).map(([lon, lat]) => project(lon, lat));
   return { path, project };
 }
+
+/** Use the same projected coordinates as the live route marker, including its interpolated endpoint. */
+export function projectRouteOverviewProgress(coordinates: number[][], project: (lon: number, lat: number) => { x: number; y: number }) {
+  const valid = coordinates.filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat));
+  const step = Math.max(1, Math.ceil(valid.length / 1000));
+  return valid.filter((_, index) => index % step === 0 || index === valid.length - 1).map(([lon, lat]) => project(lon, lat));
+}
+
+/** Derive light and dark versions without changing the chosen route hue. */
+export function routeOverviewColors(color: string) {
+  const short = /^#([\da-f]{3})$/i.exec(color);
+  const hex = short ? [...short[1]].map(char => char + char).join('') : /^#([\da-f]{6})$/i.exec(color)?.[1];
+  if (!hex) return { remaining: color, completed: color };
+  const channels = [0, 2, 4].map(offset => parseInt(hex.slice(offset, offset + 2), 16));
+  const rgb = (values: number[]) => `rgb(${values.map(value => Math.round(value)).join(', ')})`;
+  return {
+    remaining: rgb(channels.map(value => value + (255 - value) * 0.55)),
+    completed: rgb(channels.map(value => value * 0.72)),
+  };
+}
