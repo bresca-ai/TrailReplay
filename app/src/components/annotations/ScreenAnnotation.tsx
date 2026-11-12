@@ -6,8 +6,8 @@ import { needsPinheadIcons } from './annotationSymbol';
 import { usePinheadIcons } from './pinheadIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 
-export function ScreenAnnotation({ annotation, font, maxWidth, maxHeight, size, style }: {
-  annotation: TextAnnotation; font: OverlayFont; maxWidth: number; maxHeight: number; size: number; style: CSSProperties;
+export function ScreenAnnotation({ annotation, font, maxWidth, maxHeight, size, style, exportPixelRatio }: {
+  annotation: TextAnnotation; font: OverlayFont; maxWidth: number; maxHeight: number; size: number; style: CSSProperties; exportPixelRatio?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const icons = usePinheadIcons(needsPinheadIcons([annotation.logo]));
@@ -16,7 +16,7 @@ export function ScreenAnnotation({ annotation, font, maxWidth, maxHeight, size, 
     const paint = () => {
       const canvas = canvasRef.current;
       if (!canvas || cancelled) return;
-      const drawing = drawFieldNote(annotation, font, maxWidth / size, 'text');
+      const drawing = drawFieldNote(annotation, font, maxWidth / size, 'text', 1, 1, exportPixelRatio === undefined ? undefined : exportPixelRatio * size);
       if (!drawing) return;
       canvas.width = drawing.canvas.width;
       canvas.height = drawing.canvas.height;
@@ -32,6 +32,6 @@ export function ScreenAnnotation({ annotation, font, maxWidth, maxHeight, size, 
       void Promise.all([500, 600, 700].map(weight => document.fonts.load(`${weight} 16px ${overlayCanvasFontFamily('modern')}`, text))).then(paint).catch(() => {});
     }
     return () => { cancelled = true; };
-  }, [annotation, font, icons, maxWidth, maxHeight, size]);
+  }, [annotation, font, icons, maxWidth, maxHeight, size, exportPixelRatio]);
   return <canvas ref={canvasRef} className="tr-screen-annotation pointer-events-none absolute z-30" style={style} role="note" aria-label={[annotation.eyebrow, annotation.title, annotation.description].filter(Boolean).join('. ')} />;
 }

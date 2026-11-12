@@ -146,6 +146,7 @@ function App() {
   const clearPendingPicturePlacements = useAppStore((state) => state.clearPendingPicturePlacements);
   const activePanel = useAppStore((state) => state.activePanel);
   const exportAspectRatio = useAppStore((state) => state.videoExportSettings.aspectRatio);
+  const exportResolution = useAppStore((state) => state.videoExportSettings.resolution);
   const socialShareAspectRatio = useAppStore((state) => state.socialShareSettings.aspectRatio);
   const exportSubMode = useAppStore((state) => state.exportSubMode);
   const isExporting = useAppStore((state) => state.isExporting);
@@ -617,7 +618,7 @@ function App() {
               </Suspense>
 
 
-              {localizedScreenAnnotation && <ScreenAnnotation annotation={localizedScreenAnnotation} font={settings.trailStyle.overlayFont} size={Math.max(0.5, Math.min(2, settings.annotationTextScale ?? settings.annotationScale ?? 1))} maxWidth={annotationWidth} maxHeight={Math.max(40, (annotationFrame?.frameHeight ?? annotationContainerSize.height) - annotationBottom - 24)} style={{ right: (annotationFrame?.right ?? 0) + 20, bottom: (annotationFrame?.bottom ?? 0) + annotationBottom }} />}
+              {localizedScreenAnnotation && <ScreenAnnotation exportPixelRatio={isExporting ? exportResolution.width / Math.max(1, annotationFrame?.frameWidth ?? annotationContainerSize.width) : undefined} annotation={localizedScreenAnnotation} font={settings.trailStyle.overlayFont} size={Math.max(0.5, Math.min(2, settings.annotationTextScale ?? settings.annotationScale ?? 1))} maxWidth={annotationWidth} maxHeight={Math.max(40, (annotationFrame?.frameHeight ?? annotationContainerSize.height) - annotationBottom - 24)} style={{ right: (annotationFrame?.right ?? 0) + 20, bottom: (annotationFrame?.bottom ?? 0) + annotationBottom }} />}
               <RouteOverview containerSize={annotationContainerSize} frame={activeExportCropMetrics} />
               {!isMapReady && <AppLoadingOverlay />}
 

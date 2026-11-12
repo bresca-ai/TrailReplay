@@ -2,7 +2,7 @@ import type { OverlayFont, TextAnnotation } from '@/types';
 import { drawAnnotationSymbol } from './annotationSymbol';
 import { layoutFieldNote } from './fieldNoteLayout';
 
-export function drawFieldNote(annotation: TextAnnotation, font: OverlayFont, maxWidth: number, mode: 'all' | 'pin' | 'text' = 'all', markerSize = 1, textSize = 1) {
+export function drawFieldNote(annotation: TextAnnotation, font: OverlayFont, maxWidth: number, mode: 'all' | 'pin' | 'text' = 'all', markerSize = 1, textSize = 1, exportPixelRatio?: number) {
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) return null;
@@ -12,7 +12,9 @@ export function drawFieldNote(annotation: TextAnnotation, font: OverlayFont, max
   }, mode === 'text', markerSize, textSize);
   // Four source pixels per CSS pixel preserve sharp video text when the
   // visible export crop is enlarged to a 1080p or 4K output.
-  const resolution = Math.min(4, 1024 / Math.max(layout.width, layout.height));
+  const resolution = exportPixelRatio === undefined
+    ? Math.min(4, 1024 / Math.max(layout.width, layout.height))
+    : Math.max(1, Math.min(exportPixelRatio, 8192 / Math.max(layout.width, layout.height)));
   canvas.width = Math.ceil(layout.width * resolution);
   canvas.height = Math.ceil(layout.height * resolution);
   context.scale(resolution, resolution);

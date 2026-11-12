@@ -464,6 +464,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     };
 
     recorder.onstop = async () => {
+      restoreStudioMapSettings();
       // A cancelled export still fires onstop; don't save or download it.
       if (recordingCancelledRef.current) {
         finishExportProfile('cancelled', exportProfileMetadata('mediarecorder'));
@@ -548,7 +549,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     };
 
     recorder.start(100);
-  }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
+  }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
 
   const handleStartExport = useCallback(async () => {
     const chapterStatus = document.querySelector('[data-location-chapters-status]')?.getAttribute('data-location-chapters-status');
@@ -683,11 +684,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       setSpeed(exportSpeed);
       setCinematicPlayed(false);
 
-      // Disable Studio raster fades before preloading so cached opening tiles
-      // are painted immediately when the encoder starts.
-      if (videoExportSettings.qualityMode === 'studio' || useAppStore.getState().settings.show3DBuildings) {
-        applyStudioMapSettings();
-      }
+      // Render the map at the requested output resolution in either mode.
+      // Studio also disables raster fades and requests additional tile detail.
+      applyStudioMapSettings();
 
       setExportStage(t('export.stagePreparing'));
       const exportMap = mapGlobalRef.current;
@@ -802,9 +801,15 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           restoreStudioMapTime();
         });
       } else {
-        startFrameCapture();
+        startFrameCapture((error) => {
+          recordingCancelledRef.current = true;
+          finishRecording();
+          setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
+          setExportError(t('export.stageFailedWithError', { error: (error as Error).message }));
+        });
         const waitMs = videoExportSettings.includeCover ? 1000 : 200;
         await new Promise((resolve) => setTimeout(resolve, waitMs));
+        if (recordingCancelledRef.current) return;
         coverFrameStartTimeRef.current = null;
         play();
       }

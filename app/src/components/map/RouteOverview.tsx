@@ -16,6 +16,7 @@ export function RouteOverview({ containerSize, frame }: Props) {
   const settings = useAppStore(state => state.settings);
   const setSettings = useAppStore(state => state.setSettings);
   const isExporting = useAppStore(state => state.isExporting);
+  const exportResolution = useAppStore(state => state.videoExportSettings.resolution);
   const phase = useAppStore(state => state.animationPhase);
   const { allCoordinates, completedCoordinates, currentTrackColor } = useComputedJourney();
   const geometry = useMemo(() => buildRouteOverviewGeometry(allCoordinates, WIDTH, HEIGHT), [allCoordinates]);
@@ -32,7 +33,7 @@ export function RouteOverview({ containerSize, frame }: Props) {
     if (!element || !geometry || !settings.showRouteOverview) return;
     const ctx = element.getContext('2d');
     if (!ctx) return;
-    const resolution = 2;
+    const resolution = isExporting ? Math.max(2, width * exportResolution.width / Math.max(1, frameWidth) / WIDTH) : 2;
     element.width = WIDTH * resolution; element.height = HEIGHT * resolution;
     ctx.scale(resolution, resolution);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
@@ -46,7 +47,7 @@ export function RouteOverview({ containerSize, frame }: Props) {
       completed.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
       ctx.strokeStyle = colors.completed; ctx.lineWidth = 3; ctx.stroke();
     }
-  }, [geometry, completedCoordinates, color, settings.showRouteOverview, phase]);
+  }, [geometry, completedCoordinates, color, settings.showRouteOverview, phase, isExporting, width, frameWidth, exportResolution.width]);
 
   if (!settings.showRouteOverview || !geometry || (phase !== 'idle' && phase !== 'playing')) return null;
   return <canvas ref={canvas} className="tr-route-overview absolute z-20" role="img" aria-label={t('annotations.routeOverview')} tabIndex={isExporting ? -1 : 0}

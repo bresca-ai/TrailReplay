@@ -6,12 +6,13 @@ function createMap() {
   const paint = new Map([['background:raster-fade-duration', 250]]);
   const original = () => 10;
   const source = { calculateTileZoom: original };
+  const canvas = { clientWidth: 1000, clientHeight: 800, width: 1000, height: 800 };
   const map = {
     getSource: vi.fn((id: string) => id === 'esri-clarity' ? source : undefined),
     setSourceTileLodParams: vi.fn(() => { source.calculateTileZoom = original; }),
-    getCanvas: () => ({ clientWidth: 1000, clientHeight: 800 }),
+    getCanvas: () => canvas,
     getPixelRatio: () => 1,
-    setPixelRatio: vi.fn(),
+    setPixelRatio: vi.fn((ratio: number) => { canvas.width = 1000 * ratio; canvas.height = 800 * ratio; }),
     getStyle: () => ({ layers: [{ id: 'background', type: 'raster' }, { id: 'route', type: 'line' }] }),
     getPaintProperty: vi.fn((id: string, property: string) => paint.get(`${id}:${property}`)),
     setPaintProperty: vi.fn((id: string, property: string, value: number) => { paint.set(`${id}:${property}`, value); }),
@@ -38,6 +39,16 @@ describe('studio map presentation', () => {
     expect(source.calculateTileZoom).toBe(original);
     expect(calls.setPixelRatio).not.toHaveBeenCalled();
     expect(calls.setSourceTileLodParams).not.toHaveBeenCalled();
+  });
+
+  it('renders Standard exports at the requested size without changing tile detail or fades', () => {
+    const { map, source, original, calls } = createMap();
+    const restore = applyStudioMapPresentation(map, { highDetail: false, disableRasterFade: false, mapStyle: 'esri-clarity', resolution: { width: 1080, height: 1920 } });
+    expect(calls.setPixelRatio).toHaveBeenCalledWith(2.4);
+    expect(source.calculateTileZoom).toBe(original);
+    expect(calls.setPaintProperty).not.toHaveBeenCalled();
+    restore();
+    expect(calls.setPixelRatio).toHaveBeenLastCalledWith(1);
   });
 
   it('adds detail near the camera target but not to distant horizon tiles', () => {

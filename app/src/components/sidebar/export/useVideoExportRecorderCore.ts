@@ -1,3 +1,4 @@
+import { assertExportCanvasResolution } from './exportCanvasResolution';
 import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
 import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -374,6 +375,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       && performance.now() - coverStartedAt < 1000
       && drawVideoCoverFrame()
     ) return;
+    if (mapGlobalRef.current) {
+      assertExportCanvasResolution(mapGlobalRef.current, videoExportSettings.resolution);
+    }
     const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     drawExportFrame({
       recordingCanvasRef,
@@ -414,16 +418,20 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     }
   }, []);
 
-  const startFrameCapture = useCallback(() => {
+  const startFrameCapture = useCallback((onFailure: (error: unknown) => void) => {
     const map = mapGlobalRef.current;
     const targetFrameInterval = 1000 / videoExportSettings.fps;
     let lastCaptureTime = 0;
     const captureAtFrameRate = () => {
       const now = performance.now();
       if (now - lastCaptureTime < targetFrameInterval) return;
-      captureFrame();
-      void encodeWebCodecsFrame();
-      lastCaptureTime = now;
+      try {
+        captureFrame();
+        void encodeWebCodecsFrame();
+        lastCaptureTime = now;
+      } catch (error) {
+        onFailure(error);
+      }
     };
 
     if (!map) {
@@ -585,7 +593,13 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (!map) return;
 
     studioMapPresentationRestoreRef.current?.();
-    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, { highDetail: useAppStore.getState().videoExportSettings.qualityMode === 'studio', mapStyle: useAppStore.getState().settings.mapStyle, resolution: useAppStore.getState().videoExportSettings.resolution });
+    const state = useAppStore.getState();
+    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, {
+      highDetail: state.videoExportSettings.qualityMode === 'studio',
+      disableRasterFade: state.videoExportSettings.qualityMode === 'studio' || state.settings.show3DBuildings,
+      mapStyle: state.settings.mapStyle,
+      resolution: state.videoExportSettings.resolution,
+    });
   }, []);
 
   const restoreStudioMapSettings = useCallback(() => {
