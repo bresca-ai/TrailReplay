@@ -28,7 +28,7 @@ describe('hydrateProject', () => {
     const target = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
     expect(target.getState().settings.mapStyle).toBe('satellite');
-    parsed.project!.settings!.mapStyle = 'unavailable-provider' as typeof parsed.project.settings.mapStyle;
+    parsed.project!.settings!.mapStyle = 'unavailable-provider' as never;
     hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
     expect(target.getState().settings.mapStyle).toBe(createDefaultSettings().mapStyle);
   });
