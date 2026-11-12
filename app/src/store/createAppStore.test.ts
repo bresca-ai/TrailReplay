@@ -165,10 +165,10 @@ describe('createAppStore', () => {
     expect(store.getState().playback.routeTimingMode).toBe('uniform');
   });
 
-  it('defaults to the satellite map style', () => {
+  it('defaults to the Esri Clarity map style', () => {
     const useStore = createAppStore();
 
-    expect(useStore.getState().settings.mapStyle).toBe('satellite');
+    expect(useStore.getState().settings.mapStyle).toBe('esri-clarity');
   });
 
   it('creates the expected journey state when the first imported track is added', () => {
@@ -313,7 +313,7 @@ describe('createAppStore', () => {
     useStore.getState().reset();
 
     const state = useStore.getState();
-    expect(state.settings.mapStyle).toBe('satellite');
+    expect(state.settings.mapStyle).toBe('esri-clarity');
     expect(state.settings.trailStyle.currentIcon).toBe(DEFAULT_ACTIVITY_ICON);
     expect(state.settings.trailStyle.markerColor).toBe('#56C596');
     expect(state.settings.trailStyle.trackLabel).toBe('Track 1');
