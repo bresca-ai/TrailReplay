@@ -301,7 +301,7 @@ export function useTrailPlaybackCamera({
     };
   }, [isMapLoaded, mapRef, markerRef, recordedElevationEnabled]);
 
-  const ownsCinematicElevation = (cameraMode === 'cinematic' || recordedElevationEnabled)
+  const ownsCinematicElevation = (cameraMode === 'cinematic' || cameraMode === 'aerial-follow' || recordedElevationEnabled)
     && animationPhase === 'playing' && (isPlaying || isExporting);
   useEffect(() => {
     const map = mapRef.current;
