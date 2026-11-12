@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aerialBearingDifference, aerialCameraDimensions, aerialLookAheadPoint, aerialSightlineObstruction, buildTerrainCameraPlan, getReadyAerialTerrainPlan, limitGlideWeights, trailingFlightBearing, planAerialBearingIndices, registerAerialTerrainPlan, terrainPlanBearing, terrainPlanZoomOffset, terrainTileCoverage, unregisterAerialTerrainPlan, waitForAerialTerrainPlan } from './aerialTerrainPlan';
+import { aerialBearingDifference, aerialCameraDimensions, aerialLookAheadPoint, aerialSightlineObstruction, buildTerrainCameraPlan, getReadyAerialTerrainPlan, limitGlideWeights, trailingFlightBearing, planAerialBearingIndices, registerAerialTerrainPlan, terrainPlanBearing, terrainTileCoverage, unregisterAerialTerrainPlan, waitForAerialTerrainPlan } from './aerialTerrainPlan';
 import { getAerialFollowBearing } from './replayCameraPlan';
 import { effectiveTerrainExaggeration } from './terrainExaggeration';
 
@@ -124,20 +124,15 @@ describe('route-wide aerial terrain plan', () => {
     }
     expect(stalled).toBeLessThan(10);
   });
-  it('plans a separate camera path on a clear bend', () => {
+  it('plans smooth, finite camera bearings on a clear bend', () => {
     const curve = Array.from({ length: 101 }, (_, i) => {
       const angle = Math.PI * i / 200;
       return [0.04 * (1 - Math.cos(angle)), 0.04 * Math.sin(angle)];
     });
     const geometry = { elevationData: curve.map(() => ({ elevation: 0 })), viewportHeight: 720 };
     const plan = buildTerrainCameraPlan(curve, () => 0, 1, 0.01, geometry)!;
-    const offsets = plan.map((_, i) => terrainPlanZoomOffset(plan, i / 100));
-    expect(offsets.every(Number.isFinite)).toBe(true);
-    expect(Math.max(...offsets.map(Math.abs))).toBeGreaterThan(0.001);
-    expect(Math.max(...offsets.map(Math.abs))).toBeLessThan(0.25);
-    const slower = buildTerrainCameraPlan(curve, () => 0, 1, 0.01, { ...geometry, durationSeconds: 120 })!;
-    const faster = buildTerrainCameraPlan(curve, () => 0, 1, 0.01, { ...geometry, durationSeconds: 30 })!;
-    expect(faster.some((_, i) => Math.abs(terrainPlanZoomOffset(faster, i / 100) - terrainPlanZoomOffset(slower, i / 100)) > 0.001)).toBe(true);
+    expect(plan.every(Number.isFinite)).toBe(true);
+    expect(plan.slice(1).every((bearing, i) => Math.abs(bearing - plan[i]) < 20)).toBe(true);
   });
   it('eases the camera adjustment down before a restricted view and back up afterwards', () => {
     const limits = [1, 1, 1, 0, 1, 1, 1];

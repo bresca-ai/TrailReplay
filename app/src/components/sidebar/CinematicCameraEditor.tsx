@@ -19,7 +19,7 @@ import { mapGlobalRef } from '@/utils/mapRef';
 import { formatDuration } from '@/utils/units';
 import { trackEvent } from '@/utils/analytics';
 import { getPlaybackCameraPose, getRouteBearingAtProgress } from '@/utils/replayCameraPlan';
-import { getReadyAerialTerrainPlan, terrainPlanBearing, terrainPlanZoomOffset } from '@/utils/aerialTerrainPlan';
+import { getReadyAerialTerrainPlan, terrainPlanBearing } from '@/utils/aerialTerrainPlan';
 import {
   CINEMATIC_BEARING_MAX,
   CINEMATIC_BEARING_MIN,
@@ -274,7 +274,6 @@ export function CinematicCameraEditor() {
       const automaticPlan = !cinematicPose ? getReadyAerialTerrainPlan(cameraPathCoordinates) : null;
       if (automaticPlan?.length) {
         pose.bearing = terrainPlanBearing(automaticPlan, playback.progress);
-        pose.zoom += terrainPlanZoomOffset(automaticPlan, playback.progress);
       }
       setDraftPose({ bearingDeg: pose.bearing, pitchDeg: pose.pitch, zoom: pose.zoom });
     }

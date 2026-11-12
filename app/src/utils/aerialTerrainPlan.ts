@@ -13,7 +13,6 @@ const DIRECTIONS = 24;
 const RADIUS = 1450;
 const pendingPlans = new WeakMap<number[][], Promise<number[] | null>>();
 const readyPlans = new WeakMap<number[][], number[]>();
-const glideDistances = new WeakMap<number[], number[]>();
 
 /** Share preparation with export so a cold export cannot race the planner. */
 export function registerAerialTerrainPlan(coordinates: number[][], plan: Promise<number[] | null>): void {
@@ -338,8 +337,12 @@ export function buildTerrainCameraPlan(coordinates: number[][], elevation: Eleva
     const baseObstruction = obstruction(positions[i]);
     const safe = (point: Point) => {
       const ratio = distance(point) / v.radius;
-      const candidateObstruction = obstruction(point);
-      return ratio >= 0.85 && ratio <= 1.15 && Number.isFinite(baseObstruction) && Number.isFinite(candidateObstruction) && candidateObstruction <= baseObstruction + 10;
+      if (ratio < 0.85 || ratio > 1.15) return false;
+      // Playback keeps a fixed zoom. Test the actual camera position at that
+      // radius, rather than the unprojected glide candidate.
+      const projected: Point = [anchor[0] + (point[0] - anchor[0]) / ratio, anchor[1] + (point[1] - anchor[1]) / ratio];
+      const candidateObstruction = obstruction(projected);
+      return Number.isFinite(baseObstruction) && Number.isFinite(candidateObstruction) && candidateObstruction <= baseObstruction + 10;
     };
     let limit = 0;
     for (let step = 1; step <= 4; step++) {
@@ -354,20 +357,16 @@ export function buildTerrainCameraPlan(coordinates: number[][], elevation: Eleva
   }
   const secondsPerSample = Math.max(1, geometry.durationSeconds ?? 60) / (COUNT - 1);
   const weights = limitGlideWeights(limits, Math.min(1, secondsPerSample / 2.4));
-  const distances: number[] = [];
   const bearings: number[] = [];
   for (let i = 0; i < COUNT; i++) {
-    const v = views[i], anchor = anchors[i];
+    const anchor = anchors[i];
     const scale = 111320 * Math.max(0.01, Math.cos(anchor[1] * Math.PI / 180));
-    const distance = (point: Point) => Math.hypot((point[0] - anchor[0]) * scale, (point[1] - anchor[1]) * 111320);
     const point: Point = [positions[i][0] + (candidates[i][0] - positions[i][0]) * weights[i], positions[i][1] + (candidates[i][1] - positions[i][1]) * weights[i]];
     const chosen = weights[i] > 0 && checks[i](point) ? point : positions[i];
     const east = (anchor[0] - chosen[0]) * scale, north = (anchor[1] - chosen[1]) * 111320;
     const rawBearing = Math.atan2(east, north) * 180 / Math.PI;
     bearings.push(smoothed[i] + aerialBearingDifference(rawBearing, smoothed[i]));
-    distances.push(Math.log2(v.radius / Math.max(1, distance(chosen))));
   }
-  glideDistances.set(bearings, distances);
   return bearings;
 }
 
@@ -377,13 +376,6 @@ export function limitGlideWeights(limits: number[], maxChange = 0.25): number[] 
   for (let i = 1; i < result.length; i++) result[i] = Math.min(result[i], result[i - 1] + maxChange);
   for (let i = result.length - 2; i >= 0; i--) result[i] = Math.min(result[i], result[i + 1] + maxChange);
   return result;
-}
-
-/** Zoom correction for the independently planned camera position. */
-export function terrainPlanZoomOffset(plan: number[], progress: number): number {
-  const distances = glideDistances.get(plan);
-  if (!distances?.length) return 0;
-  return terrainPlanBearing(distances, progress);
 }
 
 export function terrainPlanBearing(plan: number[], progress: number): number {

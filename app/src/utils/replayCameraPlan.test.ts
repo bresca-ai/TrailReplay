@@ -52,7 +52,7 @@ describe('replay camera plan', () => {
     expect(getPlaybackCameraPose({ ...input, progress: 0.10 })!.pitch).toBeCloseTo(70);
   });
 
-  it('moves closer on sustained flat terrain and changes framing gradually', () => {
+  it('keeps automatic zoom constant while adapting pitch to terrain', () => {
     const route = Array.from({ length: 101 }, (_, i) => [i * 0.001, 0]);
     const flat = route.map((_, i) => ({ progress: i / 100, elevation: 100 }));
     const climb = route.map((_, i) => ({ progress: i / 100, elevation: 100 + i * 12 }));
@@ -63,7 +63,11 @@ describe('replay camera plan', () => {
     const common = { coordinates: route, followBehindZoomLevel: 50, cameraMode: 'aerial-follow' as const, progress: 0.5 };
     const flatPose = getPlaybackCameraPose({ ...common, elevationData: flat })!;
     const climbPose = getPlaybackCameraPose({ ...common, elevationData: climb })!;
-    expect(flatPose.zoom).toBeGreaterThan(climbPose.zoom);
+    for (const elevationData of [flat, climb, rolling]) {
+      const zooms = Array.from({ length: 601 }, (_, i) => getPlaybackCameraPose({ ...common, elevationData, progress: i / 600 })!.zoom);
+      expect(Math.max(...zooms) - Math.min(...zooms)).toBeLessThan(1e-10);
+    }
+    expect(flatPose.zoom).toBeGreaterThanOrEqual(climbPose.zoom);
     expect(flatPose.pitch).toBeGreaterThan(climbPose.pitch);
     const mixed = route.map((_, i) => ({ progress: i / 100, elevation: i < 50 ? 100 : 100 + (i - 50) * 12 }));
     const values = Array.from({ length: 101 }, (_, i) => getFlatTerrainBlend(route, mixed, i / 100));
