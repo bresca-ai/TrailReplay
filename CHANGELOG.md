@@ -2,6 +2,30 @@
 
 All notable user-facing changes are recorded here. TrailReplay follows [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-11-13
+
+This release expands the ways you can tell a route's story, with place animations, more control over the camera and media, and sharper video exports.
+
+### Added
+
+- **Places and borders:** Reveal locations and their boundaries at the start or as the route travels, with controls for administrative levels, camera movement and styling. Coverage varies by location.
+- **GPX waypoints:** Import named waypoints as route annotations.
+- **Media timeline:** Arrange media along the route, place multiple unlocated items together, and set photo durations in bulk. Relink missing media from a local folder.
+- **Map and camera controls:** Add 3D buildings, adjust terrain exaggeration and follow-camera tilt, and use route-specific elevation profiles and camera transitions. Winter satellite imagery is also available.
+
+### Improved
+
+- **Video export:** Studio renders at the selected output resolution, and disk-backed MP4 export reduces memory use on supported browsers during long exports.
+- **Cinematic playback:** Terrain-aware camera planning, improved framing and tile preparation make flights and repeated playback smoother. New journeys default to constant pace.
+- **Editing:** Cover controls and undo have been refined, annotation designs are more consistent, and GPX files are easier to discover.
+- Updated application and development dependencies.
+
+### Fixed
+
+- Keep events aligned during constant-pace playback, preserve spaces in annotation headings, and allow blank annotation text.
+- Restart playback paused with the opening sequence, and keep compact landmark pins anchored correctly.
+- Bound landmark coordinates and tile enumeration to avoid excessive allocation.
+
 ## [1.4.0] - 2026-10-28
 
 This release makes it easier to compare routes, arrange a replay, and prepare a video or shareable image. It also refreshes the editor from route import through export.
