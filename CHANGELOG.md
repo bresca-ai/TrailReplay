@@ -4,27 +4,37 @@ All notable user-facing changes are recorded here. TrailReplay follows [Semantic
 
 ## [1.5.0] - 2026-11-13
 
-This release expands the ways you can tell a route's story, with place animations, more control over the camera and media, and sharper video exports.
+Create richer route stories with place and border animations, a new media timeline, more flexible overlays, and sharper video exports.
 
 ### Added
 
-- **Places and borders:** Reveal locations and their boundaries at the start or as the route travels, with controls for administrative levels, camera movement and styling. Coverage varies by location.
-- **GPX waypoints:** Import named waypoints as route annotations.
-- **Media timeline:** Arrange media along the route, place multiple unlocated items together, and set photo durations in bulk. Relink missing media from a local folder.
-- **Map and camera controls:** Add 3D buildings, adjust terrain exaggeration and follow-camera tilt, and use route-specific elevation profiles and camera transitions. Winter satellite imagery is also available.
+- **Places and borders:** Reveal countries, regions and local places during the opening or as the route travels. Choose boundary levels, camera movement, timing, borders and labels. Coverage varies by location; boundary requests disclose route countries to geoBoundaries and GitHub.
+- **GPX waypoints:** Turn named waypoints into map captions or route notes when importing a GPX file.
+- **Media timeline:** See and edit photos, videos and annotations along the route, zoom and navigate the timeline, and adjust the length of annotation moments. Place several unlocated media items together on the map, at the playhead or by coordinates; set photo durations in bulk.
+- **Media recovery:** Relink missing project media from a local folder in one step.
+- **Map and journey controls:** Add optional 3D buildings, adjust terrain exaggeration and follow-camera tilt, and use a minimal landmark style. Animate camera transitions between journey routes and display elevation profiles for individual routes.
+- **Overlay controls:** Move the route overview, resize the elevation profile, and choose its colour and fill or outline appearance. The overview can show route progress without a marker.
+- **Undo and redo:** Use project-wide keyboard shortcuts and undo in the cover editor.
 
 ### Improved
 
-- **Video export:** Studio renders at the selected output resolution, and disk-backed MP4 export reduces memory use on supported browsers during long exports.
-- **Cinematic playback:** Terrain-aware camera planning, improved framing and tile preparation make flights and repeated playback smoother. New journeys default to constant pace.
-- **Editing:** Cover controls and undo have been refined, annotation designs are more consistent, and GPX files are easier to discover.
-- Updated application and development dependencies.
+- **Annotations:** Redesigned annotation and timing controls support shared defaults and per-annotation timing. Map captions and field notes have more consistent designs in previews and exports, with clearer default text sizing.
+- **Video export:** Studio renders the map and overlays at the selected output resolution, with improved map detail and crop alignment. Disk-backed MP4 export reduces memory use for long exports on supported browsers.
+- **Cinematic playback:** Terrain-aware camera planning, steadier framing and tile preparation improve flight and repeated playback. New journeys default to constant pace.
+- **Map presentation:** Esri Clarity is the default satellite imagery; map filters and landmark colours are more consistent. Selecting a landmark on the map opens its editor, and landmark priority can be adjusted.
+- **Cover editing:** Improved controls and undo make cover layouts easier to refine.
+- **Languages and discovery:** Localized home, help and GPX/Strava landing pages make the website easier to find and navigate in supported languages.
+- **Reliability:** A sidebar panel failing to load no longer makes the whole app unusable. Winter satellite imagery endpoints and cached imagery were also updated.
+- **Dependencies and documentation:** Updated application and development dependencies, including icon, upload and state-management libraries. Refreshed the README demo video.
 
 ### Fixed
 
-- Keep events aligned during constant-pace playback, preserve spaces in annotation headings, and allow blank annotation text.
+- Keep manually placed media and annotations aligned during constant-pace playback, including annotation slowdown and timeline display.
+- Preserve typed spaces in annotation headings and allow blank annotation text.
 - Restart playback paused with the opening sequence, and keep compact landmark pins anchored correctly.
-- Bound landmark coordinates and tile enumeration to avoid excessive allocation.
+- Preserve the selected basemap during export and improve cropped video and overlay placement.
+- Bound landmark coordinates and tile enumeration before allocation to avoid excessive memory use.
+- Updated the minimatch dependency to address a regular-expression denial-of-service vulnerability.
 
 ## [1.4.0] - 2026-10-28
 
