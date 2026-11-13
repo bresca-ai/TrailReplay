@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 // Served as a static asset and fetched on demand: ~2,300 icon paths are far too
 // many to put in the main bundle for a picker most sessions never open.
 import pinheadIndexUrl from '@waysidemapping/pinhead/dist/icons/index.complete.json?url';
+import pinheadUpgradesUrl from '@waysidemapping/pinhead/dist/id_upgrades.json?url';
 
 /** Pinhead map icons (CC0): https://pinhead.ink — pinned in package.json. */
 export interface PinheadIcon {
@@ -120,15 +121,26 @@ let pathById = new Map<string, string>();
 let loading: Promise<PinheadIcon[]> | null = null;
 const listeners = new Set<() => void>();
 
+/** Preserve the paths of renamed icons referenced by older saved projects. */
+export function buildPinheadPathMap(loadedIcons: PinheadIcon[], upgrades: Record<string, string>) {
+  const paths = new Map(loadedIcons.map((icon) => [icon.id, icon.path]));
+  for (const [oldId, newId] of Object.entries(upgrades)) {
+    const path = paths.get(newId);
+    if (path && !paths.has(oldId)) paths.set(oldId, path);
+  }
+  return paths;
+}
+
 export function loadPinheadIcons(): Promise<PinheadIcon[]> {
-  loading ??= fetch(pinheadIndexUrl)
-    .then((response) => {
-      if (!response.ok) throw new Error(`Pinhead icons failed to load (${response.status})`);
-      return response.json() as Promise<PinheadIndex>;
-    })
-    .then((index) => {
+  const fetchJson = async (url: string) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Pinhead icons failed to load (${response.status})`);
+    return response.json();
+  };
+  loading ??= Promise.all([fetchJson(pinheadIndexUrl), fetchJson(pinheadUpgradesUrl)])
+    .then(([index, upgrades]: [PinheadIndex, Record<string, string>]) => {
       icons = parsePinheadIndex(index);
-      pathById = new Map(icons.map((icon) => [icon.id, icon.path]));
+      pathById = buildPinheadPathMap(icons, upgrades);
       listeners.forEach((listener) => listener());
       return icons;
     })

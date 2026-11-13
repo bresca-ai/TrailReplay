@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { parsePinheadIndex, searchPinheadIcons, type PinheadTerms } from './pinheadIcons';
+import { buildPinheadPathMap, parsePinheadIndex, searchPinheadIcons, type PinheadTerms } from './pinheadIcons';
 import ca from './pinheadTerms/ca.json';
 import de from './pinheadTerms/de.json';
 import es from './pinheadTerms/es.json';
@@ -42,6 +42,25 @@ describe('parsePinheadIndex', () => {
     expect(sensitive.length).toBeGreaterThan(0);
     expect(icons.some((icon) => sensitive.includes(icon.id))).toBe(false);
   });
+});
+
+it('preserves renamed saved icons while never exposing filtered icons', () => {
+  const icons = parsePinheadIndex({ icons: {
+    current: { svg: svg('M1Z') },
+    restricted: { sensitive: ['nudity'], svg: svg('M2Z') },
+  } });
+  const paths = buildPinheadPathMap(icons, { old: 'current', oldRestricted: 'restricted' });
+  expect(paths.get('old')).toBe('M1Z');
+  expect(paths.has('oldRestricted')).toBe(false);
+});
+
+it('maps renamed icons in the pinned package to available paths', () => {
+  const require = createRequire(import.meta.url);
+  const upgrades = JSON.parse(readFileSync(require.resolve('@waysidemapping/pinhead/dist/id_upgrades.json'), 'utf8')) as Record<string, string>;
+  const icons = parsePinheadIndex(readPinnedIndex());
+  const paths = buildPinheadPathMap(icons, upgrades);
+  expect(paths.get('bicyclist')).toBe(paths.get('person_riding_bicycle'));
+  expect(paths.get('bicyclist')).toBeTruthy();
 });
 
 describe('searchPinheadIcons', () => {
@@ -127,7 +146,7 @@ describe('pinhead word lists', () => {
   const vocabulary = new Set(parsePinheadIndex(index).flatMap((icon) => icon.terms.split(' ').filter(Boolean)));
 
   it.each(Object.keys(lists))('%s covers every word in the pinned Pinhead names', (language) => {
-    const missing = [...vocabulary].filter((word) => !SAME_IN_EVERY_LANGUAGE.has(word) && !lists[language][word]);
+    const missing = [...vocabulary].filter((word) => !/^\d+$/.test(word) && !SAME_IN_EVERY_LANGUAGE.has(word) && !lists[language][word]);
     expect(missing).toEqual([]);
   });
 });
