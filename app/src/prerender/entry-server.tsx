@@ -1,4 +1,5 @@
 import { renderToString } from 'react-dom/server';
+import { releaseCopy } from '@/releases/releaseCopy';
 import { ReleasePage } from '@/releases/ReleasePage';
 import { GpxDownloadGuidePage } from '@/help/GpxDownloadGuidePage';
 import { TutorialPage } from '@/help/TutorialPage';
@@ -38,7 +39,7 @@ const pages: Record<string, () => string> = {
 
 export function renderAllPages(): Record<string, string> {
   const result = Object.fromEntries(Object.entries(pages).map(([file, render]) => [file, render()]));
-  const helpComponents = { tutorial: TutorialPage, 'gpx-download-guide': GpxDownloadGuidePage, agents: AgentsPage };
+  const helpComponents = { releases: ReleasePage, tutorial: TutorialPage, 'gpx-download-guide': GpxDownloadGuidePage, agents: AgentsPage };
   for (const language of LANGUAGE_CODES.filter((code) => code !== 'en')) {
     result[`${language.toLowerCase()}/index.html`] = renderToString(<HomeStaticContent language={language} />);
     for (const [slug, Component] of Object.entries(helpComponents)) {
@@ -58,6 +59,7 @@ export function renderAllPages(): Record<string, string> {
 }
 
 export function localizedHelpMetadata(language: (typeof LANGUAGE_CODES)[number], slug: string) {
+  if (slug === 'releases') return { title: releaseCopy[language].title, description: releaseCopy[language].metadata };
   const key = slug === 'gpx-download-guide' ? 'gpxGuide' : slug;
   return {
     title: translate(language, `help.${key}.title`),

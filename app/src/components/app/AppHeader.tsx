@@ -54,7 +54,7 @@ export function AppHeader({
 
       <div className="ml-2 flex shrink-0 items-center gap-1 sm:gap-2">
         <SupportButton />
-        <a href="/releases" className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white/85 hover:bg-white/10 hover:text-white xl:inline-flex"><History className="h-3.5 w-3.5" /> {releaseLabels[language].title}</a>
+        <a href={localizedSitePath('/releases', language)} className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white/85 hover:bg-white/10 hover:text-white xl:inline-flex"><History className="h-3.5 w-3.5" /> {releaseLabels[language].title}</a>
         <a
           href={localizedSitePath('/tutorial', language)}
           onClick={() => trackEvent('help_cta_clicked', {

@@ -40,6 +40,8 @@ export default defineConfig(({ command, mode }) => {
       '@radix-ui/react-switch',
       'fix-webm-duration',
       'mp4-muxer',
+      'maplibre-gl',
+      'next-themes',
     ],
   },
   plugins: [

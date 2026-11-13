@@ -64,7 +64,7 @@ export function InfoPanel({ onClose }: InfoPanelProps) {
             {t('info.learnBody')}
           </p>
           <div className="space-y-2">
-            <InfoCard href="/releases" icon={<History className="w-4 h-4" />} label={releaseLabels[language].title} description={releaseLabels[language].description} />
+            <InfoCard href={localizedSitePath('/releases', language)} icon={<History className="w-4 h-4" />} label={releaseLabels[language].title} description={releaseLabels[language].description} />
             <InfoCard
               href={localizedSitePath('/tutorial', language)}
               icon={<BookOpen className="w-4 h-4" />}

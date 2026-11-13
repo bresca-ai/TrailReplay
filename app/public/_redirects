@@ -16,7 +16,6 @@
 /app/ / 301
 /app/tutorial /tutorial 301
 /app/tutorial.html /tutorial 301
-/releases.html /releases 301
 /app/agents /agents 301
 /app/agents.html /agents 301
 /app/gpx-download-guide /gpx-download-guide 301

@@ -1,3 +1,4 @@
+import { releaseCopy } from '@/releases/releaseCopy';
 import { HOME_TRANSLATIONS } from './homeTranslations';
 import type { LanguageCode } from '@/i18n/languages';
 import { seoLocalizedPath } from '@/seo/seoLocale';
@@ -25,6 +26,7 @@ export function HomeStaticContent({ language = 'en' }: { language?: LanguageCode
       <p className="mt-4 leading-7">{copy.description}</p><p className="mt-4 leading-7">{copy.privacy}</p>
       <h2 className="mt-10 text-xl font-bold">{copy.how}</h2><ol>{copy.steps.map((step) => <li key={step}>{step}</li>)}</ol>
       <h2 className="mt-10 text-xl font-bold">{copy.guides}</h2><ul>
+        <li><a href={seoLocalizedPath('/releases', language)}>{releaseCopy[language].title}</a></li>
         <li><a href={seoLocalizedPath('/tutorial', language)}>{copy.tutorial}</a></li>
         <li><a href={seoLocalizedPath('/gpx-download-guide', language)}>{copy.guide}</a></li>
       </ul>
