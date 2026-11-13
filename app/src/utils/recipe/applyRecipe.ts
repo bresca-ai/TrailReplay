@@ -1,3 +1,4 @@
+import { normalizeVideoExportResolution } from '@/components/sidebar/export/exportConfig';
 import type { AppState } from '@/store/storeTypes';
 import type { AppSettings, CameraSettings } from '@/types';
 import {
@@ -138,7 +139,7 @@ export function applyRecipe(recipe: Recipe, resolved: ResolvedRecipe, store: App
     },
     settings: mergeSettings(recipe, activeTrack.color, activeTrack.activityIcon),
     cameraSettings: mergeRecipeCameraSettings(recipe),
-    videoExportSettings: { ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings },
+    videoExportSettings: normalizeVideoExportResolution({ ...createDefaultVideoExportSettings(), ...recipe.videoExportSettings }),
     socialShareSettings: {
       ...mergedCover,
       ...(authoredSlots ? { photoSlots: authoredSlots } : {}),

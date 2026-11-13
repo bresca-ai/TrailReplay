@@ -61,6 +61,7 @@ export function ExportPanel() {
 
   const {
     estimatedSize,
+    estimatedDurationMs,
     exportError,
     exportProgress,
     exportStage,
@@ -194,7 +195,7 @@ export function ExportPanel() {
           <VideoSettingsInline
             settings={videoExportSettings} onChange={setVideoExportSettings} disabled={isExporting}
             mp4Supported={mp4Supported} studioSupported={studioSupported} estimatedSize={estimatedSize}
-            durationSeconds={Math.round(playback.totalDuration / 1000)} studioDeliveryEmail={studioDeliveryEmail}
+            durationSeconds={Math.round(estimatedDurationMs / 1000)} studioDeliveryEmail={studioDeliveryEmail}
             onStudioDeliveryEmailChange={setStudioDeliveryEmail} marketingConsent={marketingConsent} consentDefaultsLoaded={consentDefaultsLoaded}
             onMarketingConsentChange={(checked) => { consentTouchedRef.current = true; setMarketingConsent(checked); }} t={t}
           />

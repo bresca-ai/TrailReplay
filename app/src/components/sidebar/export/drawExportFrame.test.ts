@@ -121,7 +121,7 @@ it('copies the screen annotation into the exported video frame', () => {
   const note = document.createElement('canvas');
   note.className = 'tr-screen-annotation';
   note.width = 800; note.height = 160;
-  note.getBoundingClientRect = () => new DOMRect(50, 100, 200, 40);
+  note.getBoundingClientRect = () => new DOMRect(400, 700, 200, 40);
   document.getElementById('map-capture-container')!.appendChild(note);
   const { options } = frameOptions();
   const context = {
@@ -132,14 +132,15 @@ it('copies the screen annotation into the exported video frame', () => {
   };
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
   drawExportFrame(options);
-  expect(context.drawImage).toHaveBeenCalledWith(note, 50, 100, 200, 40);
+  const scale = 1920 / 607.5;
+  expect(context.drawImage).toHaveBeenCalledWith(note, (400 - 369.140625) * scale, (700 - 656.25) * scale, 200 * scale, 40 * scale);
 });
 
 it('copies the live route overview to its position in the export', () => {
   const overview = document.createElement('canvas');
   overview.className = 'tr-route-overview';
   overview.width = 400; overview.height = 288;
-  overview.getBoundingClientRect = () => new DOMRect(70, 120, 200, 144);
+  overview.getBoundingClientRect = () => new DOMRect(420, 720, 200, 144);
   document.getElementById('map-capture-container')!.appendChild(overview);
   const { options } = frameOptions();
   const context = {
@@ -150,5 +151,6 @@ it('copies the live route overview to its position in the export', () => {
   };
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
   drawExportFrame(options);
-  expect(context.drawImage).toHaveBeenCalledWith(overview, 70, 120, 200, 144);
+  const scale = 1920 / 607.5;
+  expect(context.drawImage).toHaveBeenCalledWith(overview, (420 - 369.140625) * scale, (720 - 656.25) * scale, 200 * scale, 144 * scale);
 });

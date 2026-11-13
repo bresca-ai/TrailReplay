@@ -68,26 +68,34 @@ export function getResolution(
   quality: VideoQuality,
   aspectRatio: AspectRatio
 ): VideoExportSettings['resolution'] {
-  const longEdge = QUALITY_LONG_EDGE[quality] ?? QUALITY_LONG_EDGE.medium;
-
+  const width = QUALITY_LONG_EDGE[quality] ?? QUALITY_LONG_EDGE.medium;
+  const height = Math.round(width * 9 / 16);
+  // All formats are crops of the same 16:9 frame. H.264 encoders generally
+  // require even dimensions, so round the narrow edge to the nearest pair.
+  const even = (value: number) => Math.round(value / 2) * 2;
   switch (aspectRatio) {
-    case '16:9':
-      return { width: longEdge, height: Math.round((longEdge * 9) / 16) };
-    case '1:1': {
-      const size = Math.round((longEdge * 9) / 16);
-      return { width: size, height: size };
-    }
-    case '4:5': {
-      const height = longEdge;
-      const width = Math.round((longEdge * 4) / 5);
-      return { width, height };
-    }
-    case '9:16': {
-      const height = longEdge;
-      const width = Math.round((longEdge * 9) / 16);
-      return { width, height };
-    }
+    case '16:9': return { width, height };
+    case '1:1': return { width: height, height };
+    case '4:5': return { width: even(height * 4 / 5), height };
+    case '9:16': return { width: even(height * 9 / 16), height };
   }
+}
+
+export function getQualityOptionLabel(quality: VideoQuality, aspectRatio: AspectRatio): string {
+  const { width, height } = getResolution(quality, aspectRatio);
+  const label = quality === 'ultra' && aspectRatio !== '16:9'
+    ? '2160p'
+    : QUALITY_OPTIONS.find((option) => option.value === quality)?.label ?? quality;
+  return `${label} · ${width}×${height}`;
+}
+
+/** Upgrade saved portrait presets from the old long-edge scheme; retain custom sizes. */
+export function normalizeVideoExportResolution(settings: VideoExportSettings): VideoExportSettings {
+  const edge = QUALITY_LONG_EDGE[settings.quality];
+  if (!edge || (settings.aspectRatio !== '4:5' && settings.aspectRatio !== '9:16')) return settings;
+  const oldWidth = Math.round(edge * (settings.aspectRatio === '4:5' ? 4 / 5 : 9 / 16));
+  if (settings.resolution?.width !== oldWidth || settings.resolution?.height !== edge) return settings;
+  return { ...settings, resolution: getResolution(settings.quality, settings.aspectRatio) };
 }
 
 export interface VideoBitrateOptions {

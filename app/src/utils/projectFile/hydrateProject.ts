@@ -1,3 +1,4 @@
+import { normalizeVideoExportResolution } from '@/components/sidebar/export/exportConfig';
 import type { AppState } from '@/store/storeTypes';
 import { parseGPX } from '@/utils/gpxParser';
 import {
@@ -164,7 +165,7 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     // Older saved projects predate cameraStability; backfill it so an
     // undefined value doesn't turn the camera smoothing math into NaN.
     cameraSettings: { ...createDefaultCameraSettings(), ...project.cameraSettings },
-    videoExportSettings: { ...createDefaultVideoExportSettings(), ...project.videoExportSettings },
+    videoExportSettings: normalizeVideoExportResolution({ ...createDefaultVideoExportSettings(), ...project.videoExportSettings }),
     socialShareSettings: { ...createDefaultSocialShareSettings(), ...project.socialShareSettings },
     activePanel: 'tracks',
   });

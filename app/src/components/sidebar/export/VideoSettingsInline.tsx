@@ -1,5 +1,5 @@
 import type { VideoExportSettings } from '@/types';
-import { ASPECT_RATIO_OPTIONS, FPS_OPTIONS, getResolution, QUALITY_OPTIONS } from './exportConfig';
+import { ASPECT_RATIO_OPTIONS, FPS_OPTIONS, getQualityOptionLabel, getResolution, QUALITY_OPTIONS } from './exportConfig';
 import { localStudioDownload } from './studioDelivery';
 
 type Props = {
@@ -19,7 +19,7 @@ type Props = {
 };
 
 export function VideoSettingsInline({ settings, onChange, disabled, mp4Supported, studioSupported, estimatedSize, durationSeconds, studioDeliveryEmail, onStudioDeliveryEmailChange, marketingConsent, consentDefaultsLoaded, onMarketingConsentChange, t }: Props) {
-  const selectClass = 'min-w-0 w-28 rounded-md border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-2 text-xs font-semibold text-[var(--evergreen)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:opacity-50';
+  const selectClass = 'min-w-0 w-44 max-w-[70%] rounded-md border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-2 text-xs font-semibold text-[var(--evergreen)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:opacity-50';
   const rowClass = 'flex min-h-11 items-center justify-between gap-2 border-b border-[var(--evergreen)]/10 py-1 text-xs text-[var(--evergreen)]';
   const studioDisabled = !studioSupported || settings.format !== 'mp4';
   const effectiveQuality = QUALITY_OPTIONS.find((option) => {
@@ -54,7 +54,7 @@ export function VideoSettingsInline({ settings, onChange, disabled, mp4Supported
       <label className={rowClass}><span>{t('export.quality')}</span><select aria-label={t('export.quality')} className={selectClass} value={selectedQuality} disabled={disabled} onChange={(event) => {
         const quality = event.target.value as VideoExportSettings['quality'];
         onChange({ quality, resolution: getResolution(quality, settings.aspectRatio) });
-      }}>{!effectiveQuality && <option value="custom" disabled>{settings.resolution.width}×{settings.resolution.height}</option>}{QUALITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+      }}>{!effectiveQuality && <option value="custom" disabled>{settings.resolution.width}×{settings.resolution.height}</option>}{QUALITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{getQualityOptionLabel(option.value, settings.aspectRatio)}</option>)}</select></label>
       <label className={rowClass}><span>{t('export.frameRate')}</span><select aria-label={t('export.frameRate')} className={selectClass} value={settings.fps} disabled={disabled} onChange={(event) => onChange({ fps: Number(event.target.value) as VideoExportSettings['fps'] })}>{FPS_OPTIONS.map((fps) => <option key={fps} value={fps}>{t('export.fpsLabel', { fps })}</option>)}</select></label>
     </section>
     <section className="space-y-2" aria-label={t('export.qualityMode')}>
@@ -74,7 +74,7 @@ export function VideoSettingsInline({ settings, onChange, disabled, mp4Supported
     </section>
     <div className="grid grid-cols-3 gap-2 rounded-lg bg-[var(--evergreen)]/5 px-3 py-2 text-[10px] text-[var(--evergreen-60)]">
       <div><span className="block">{t('export.resolution')}</span><strong className="text-xs text-[var(--evergreen)]">{settings.resolution.width}×{settings.resolution.height}</strong></div>
-      <div><span className="block">{t('export.duration')}</span><strong className="text-xs text-[var(--evergreen)]">{durationSeconds}s</strong></div>
+      <div><span className="block">{t('export.duration')}</span><strong className="text-xs text-[var(--evergreen)]">≈ {durationSeconds}s</strong></div>
       <div><span className="block">{t('export.estimatedSize')}</span><strong className="text-xs text-[var(--evergreen)]">≈ {estimatedSize}</strong></div>
     </div>
   </div>;

@@ -7,6 +7,7 @@ import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { drawFieldNote } from '@/components/annotations/drawFieldNote';
 import { usePinheadIcons } from '@/components/annotations/pinheadIcons';
+import { getVideoCropRegion, type CropPreviewMetrics } from '@/utils/crop';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 
 const UPCOMING_SOURCE_ID = 'route-annotations-upcoming';
@@ -14,6 +15,14 @@ const UPCOMING_LAYER_ID = 'route-annotations-upcoming-pins';
 const ACTIVE_SOURCE_ID = 'route-annotations-active';
 const CARD_LAYER_ID = 'route-annotations-card';
 const CARD_IMAGE_ID = 'route-annotations-card-image';
+const CARD_LEFT_IMAGE_ID = 'route-annotations-card-image-left';
+
+/** Prefer the side with less text outside the visible frame. */
+export function annotationTextOnLeft(x: number, left: number, right: number, width: number, pinX: number): boolean {
+  const rightOverflow = Math.max(0, x - pinX + width - right);
+  const leftOverflow = Math.max(0, left - (x - (width - pinX)));
+  return leftOverflow + 2 < rightOverflow;
+}
 
 /**
  * Bottom to top, the order the annotation layers must keep.
@@ -63,6 +72,8 @@ interface UseTextAnnotationsLayerParams {
   overlayFont: OverlayFont;
   annotationMarkerScale: number;
   annotationTextScale: number;
+  exportFrame?: CropPreviewMetrics | null;
+  exportResolution?: { width: number; height: number };
 }
 
 export function useTextAnnotationsLayer({
@@ -76,6 +87,8 @@ export function useTextAnnotationsLayer({
   overlayFont,
   annotationMarkerScale,
   annotationTextScale,
+  exportFrame,
+  exportResolution,
 }: UseTextAnnotationsLayerParams) {
   // The card is sized for the map it sits on, so a resize has to redraw it.
   const [mapWidth, setMapWidth] = useState(0);
@@ -118,10 +131,14 @@ export function useTextAnnotationsLayer({
     }, map.getLayer(CARD_LAYER_ID) ? CARD_LAYER_ID : undefined);
     const features: FeatureCollection<Point>['features'] = [];
     const imageIds: string[] = [];
+    const canvas = map.getCanvas();
+    const exportPixelRatio = exportResolution && canvas.clientWidth && canvas.clientHeight
+      ? exportResolution.width / getVideoCropRegion({ width: canvas.clientWidth, height: canvas.clientHeight }, exportResolution.width, exportResolution.height).cropW
+      : undefined;
     const markerSize = Math.max(0.5, Math.min(2, annotationMarkerScale ?? 1));
     for (const [index, annotation] of upcoming.entries()) {
       const copy = { ...annotation, title: '', eyebrow: '', code: '', subtitle: '', meta: '', description: '' };
-      const note = drawFieldNote(copy, overlayFont, Math.max(160, Math.min(500, (mapWidth || map.getCanvas().clientWidth) * 0.52)), 'pin', markerSize);
+      const note = drawFieldNote(copy, overlayFont, Math.max(160, Math.min(500, (mapWidth || map.getCanvas().clientWidth) * 0.52)), 'pin', markerSize, 1, exportPixelRatio);
       const data = note?.canvas.getContext('2d')?.getImageData(0, 0, note.canvas.width, note.canvas.height);
       if (!note || !data) continue;
       const image = `route-annotation-upcoming-${index}`;
@@ -134,7 +151,7 @@ export function useTextAnnotationsLayer({
     (map.getSource(UPCOMING_SOURCE_ID) as maplibregl.GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
     for (const image of upcomingImages.current) if (!imageIds.includes(image) && map.getImage(image)) map.removeImage(image);
     upcomingImages.current = imageIds;
-  }, [mapRef, isMapLoaded, upcoming, mapWidth, overlayFont, annotationMarkerScale, pinheadIcons]);
+  }, [mapRef, isMapLoaded, upcoming, mapWidth, overlayFont, annotationMarkerScale, pinheadIcons, exportResolution]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -180,6 +197,10 @@ export function useTextAnnotationsLayer({
       if (map.getLayer(layerId)) map.moveLayer(layerId);
     });
 
+    const canvas = map.getCanvas();
+    const exportPixelRatio = exportResolution && canvas.clientWidth && canvas.clientHeight
+      ? exportResolution.width / getVideoCropRegion({ width: canvas.clientWidth, height: canvas.clientHeight }, exportResolution.width, exportResolution.height).cropW
+      : undefined;
     const markerSize = Math.max(0.5, Math.min(2, annotationMarkerScale ?? 1));
     const textSize = Math.max(0.5, Math.min(2, annotationTextScale ?? 1));
     map.setLayoutProperty(CARD_LAYER_ID, 'icon-size', 1);
@@ -189,20 +210,43 @@ export function useTextAnnotationsLayer({
 
     const activeSource = map.getSource(ACTIVE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
     const activeCopy = activeAnnotation ? localizedAnnotation(activeAnnotation, language) : null;
+    let updateCardSide: (() => void) | undefined;
     if (activeCopy) {
       const isScreen = activeCopy.presentation !== 'side-panel';
       const mapCopy = isScreen ? { ...activeCopy, title: '', eyebrow: '', code: '', subtitle: '', meta: '', description: '' } : activeCopy;
-      const note = drawFieldNote(mapCopy, overlayFont, Math.max(160, Math.min(500, (mapWidth || map.getCanvas().clientWidth) * 0.52)), isScreen ? 'pin' : 'all', markerSize, textSize);
+      const maxWidth = Math.max(64, Math.min(500, (mapWidth || canvas.clientWidth) * 0.52, exportFrame ? exportFrame.frameWidth / 2 : Infinity));
+      const note = drawFieldNote(mapCopy, overlayFont, maxWidth, isScreen ? 'pin' : 'all', markerSize, textSize, exportPixelRatio);
       const imageData = note?.canvas.getContext('2d')?.getImageData(0, 0, note.canvas.width, note.canvas.height);
       if (note && imageData) {
         if (map.getImage(CARD_IMAGE_ID)) map.removeImage(CARD_IMAGE_ID);
         map.addImage(CARD_IMAGE_ID, imageData, { pixelRatio: note.resolution });
-        map.setLayoutProperty(CARD_LAYER_ID, 'icon-offset', [-note.anchorX, note.anchorBottom]);
+        const leftNote = !isScreen ? drawFieldNote(mapCopy, overlayFont, maxWidth, 'all', markerSize, textSize, exportPixelRatio, true) : null;
+        const leftData = leftNote?.canvas.getContext('2d')?.getImageData(0, 0, leftNote.canvas.width, leftNote.canvas.height);
+        if (leftNote && leftData) {
+          if (map.getImage(CARD_LEFT_IMAGE_ID)) map.removeImage(CARD_LEFT_IMAGE_ID);
+          map.addImage(CARD_LEFT_IMAGE_ID, leftData, { pixelRatio: leftNote.resolution });
+        }
+        let currentSide: boolean | null = null;
+        updateCardSide = () => {
+          if (!map.getLayer(CARD_LAYER_ID)) return;
+          const projected = map.project([activeCopy.lon, activeCopy.lat]);
+          const left = exportFrame?.frameLeft ?? 0;
+          const right = left + (exportFrame?.frameWidth ?? canvas.clientWidth);
+          const useLeft = !!leftNote && !!leftData && annotationTextOnLeft(projected.x, left, right, note.canvas.width / note.resolution, note.anchorX);
+          if (useLeft === currentSide) return;
+          currentSide = useLeft;
+          const selected = useLeft && leftNote ? leftNote : note;
+          map.setLayoutProperty(CARD_LAYER_ID, 'icon-image', useLeft ? CARD_LEFT_IMAGE_ID : CARD_IMAGE_ID);
+          map.setLayoutProperty(CARD_LAYER_ID, 'icon-offset', [-selected.anchorX, selected.anchorBottom]);
+        };
+        updateCardSide();
+        map.on('render', updateCardSide);
       }
     }
     activeSource?.setData(buildActiveAnnotationFeatureCollection(activeAnnotation));
 
     return () => {
+      if (updateCardSide) map.off('render', updateCardSide);
     };
   }, [
     activeAnnotationId,
@@ -217,5 +261,7 @@ export function useTextAnnotationsLayer({
     language,
       annotationMarkerScale,
   annotationTextScale,
+    exportResolution,
+    exportFrame,
   ]);
 }

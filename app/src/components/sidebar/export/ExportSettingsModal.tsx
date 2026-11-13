@@ -5,6 +5,7 @@ import {
   FPS_OPTIONS,
   getResolution,
   QUALITY_OPTIONS,
+  getQualityOptionLabel,
 } from './exportConfig';
 import { localStudioDownload } from './studioDelivery';
 
@@ -139,7 +140,7 @@ export function ExportSettingsModal({
                   }
                 `}
               >
-                {qualityOption.label}
+                {getQualityOptionLabel(qualityOption.value, videoExportSettings.aspectRatio)}
               </button>
             ))}
           </div>

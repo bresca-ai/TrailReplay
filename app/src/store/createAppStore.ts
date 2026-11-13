@@ -47,6 +47,8 @@ export function createAppStore() {
           state.cinematicCameraKeyframes = [];
           state.pictures = [];
           state.pendingPicturePlacements = [];
+          state.selectedPendingMediaIds = [];
+          state.pendingMediaMapPlacementActive = false;
           state.videos = [];
           state.iconChanges = [];
           state.textAnnotations = [];
