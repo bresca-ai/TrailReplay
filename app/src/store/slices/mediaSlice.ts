@@ -5,6 +5,10 @@ type MediaSlice = Pick<
   AppState,
   | 'pictures'
   | 'pendingPicturePlacements'
+  | 'selectedPendingMediaIds'
+  | 'pendingMediaMapPlacementActive'
+  | 'setPendingMediaMapPlacementActive'
+  | 'setSelectedPendingMediaIds'
   | 'videos'
   | 'iconChanges'
   | 'textAnnotations'
@@ -18,6 +22,7 @@ type MediaSlice = Pick<
   | 'updatePicturePosition'
   | 'updatePictureMetadata'
   | 'updatePictureDuration'
+  | 'updateAllPictureDurations'
   | 'addVideo'
   | 'removeVideo'
   | 'updateVideoPosition'
@@ -42,6 +47,10 @@ function findFileByNameInFiles(files: File[], name: string|null|undefined): File
 export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   pictures: [],
   pendingPicturePlacements: [],
+  selectedPendingMediaIds: [],
+  pendingMediaMapPlacementActive: false,
+  setPendingMediaMapPlacementActive: (active) => set((state) => { state.pendingMediaMapPlacementActive = active; }),
+  setSelectedPendingMediaIds: (ids) => set((state) => { state.selectedPendingMediaIds = ids; }),
   videos: [],
   iconChanges: [],
   textAnnotations: [],
@@ -61,11 +70,15 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
   removePendingPicturePlacement: (pictureId) =>
     set((state) => {
       state.pendingPicturePlacements = state.pendingPicturePlacements.filter((picture) => picture.id !== pictureId);
+      state.selectedPendingMediaIds = state.selectedPendingMediaIds.filter((id) => id !== pictureId);
+      if (!state.pendingPicturePlacements.length) state.pendingMediaMapPlacementActive = false;
     }),
 
   clearPendingPicturePlacements: () =>
     set((state) => {
       state.pendingPicturePlacements = [];
+      state.selectedPendingMediaIds = [];
+      state.pendingMediaMapPlacementActive = false;
     }),
 
   removePicture: (pictureId) =>
@@ -103,6 +116,15 @@ export const createMediaSlice: AppSliceCreator<MediaSlice> = (set) => ({
     set((state) => {
       const picture = state.pictures.find((entry) => entry.id === pictureId);
       if (picture) picture.displayDuration = duration;
+    }),
+
+  updateAllPictureDurations: (duration) =>
+    set((state) => {
+      if (!Number.isFinite(duration) || duration < 500 || duration > 60_000) return;
+      state.pictures.forEach((picture) => { picture.displayDuration = duration; });
+      state.pendingPicturePlacements.forEach((item) => {
+        if (item.mediaKind !== 'video') item.displayDuration = duration;
+      });
     }),
 
   addVideo: (video) =>

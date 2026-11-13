@@ -1,4 +1,5 @@
-import { useEffect, type MutableRefObject } from 'react';
+import { useEffect, useSyncExternalStore, type MutableRefObject } from 'react';
+import { getTimelineDraggedPicture, subscribeTimelineDraggedPicture } from '@/utils/timelineDragPicture';
 import * as maplibregl from 'maplibre-gl';
 import type { PictureAnnotation } from '@/types';
 
@@ -29,6 +30,7 @@ export function usePictureMarkers({
   setSelectedPictureId,
   showPictures,
 }: UsePictureMarkersParams) {
+  const draggedPictureId = useSyncExternalStore(subscribeTimelineDraggedPicture, getTimelineDraggedPicture, getTimelineDraggedPicture);
   useEffect(() => {
     if (!mapRef.current || !isMapLoaded) return;
 
@@ -38,7 +40,7 @@ export function usePictureMarkers({
     if (!showPictures) return;
 
     pictures.forEach((picture) => {
-      if (!picture.lat || !picture.lon) return;
+      if (picture.id === draggedPictureId || picture.lat === undefined || picture.lon === undefined) return;
 
       const element = document.createElement('div');
       element.className = picture.isPlaceholder ? 'tr-picture-marker tr-picture-marker--placeholder' : 'tr-picture-marker';
@@ -82,5 +84,5 @@ export function usePictureMarkers({
         .setLngLat([picture.lon, picture.lat])
         .addTo(mapRef.current!);
     });
-  }, [isMapLoaded, mapRef, pictures, setSelectedPictureId, showPictures]);
+  }, [isMapLoaded, mapRef, pictures, setSelectedPictureId, showPictures, draggedPictureId]);
 }
