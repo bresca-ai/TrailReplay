@@ -1,4 +1,5 @@
 import { renderToString } from 'react-dom/server';
+import { ReleasePage } from '@/releases/ReleasePage';
 import { GpxDownloadGuidePage } from '@/help/GpxDownloadGuidePage';
 import { TutorialPage } from '@/help/TutorialPage';
 import { AgentsPage } from '@/help/AgentsPage';
@@ -23,6 +24,7 @@ const seoSlugs = Object.keys(SEO_LANDING_PAGES) as SeoLandingSlug[];
 
 const pages: Record<string, () => string> = {
   'index.html': () => renderToString(<HomeStaticContent />),
+  'releases.html': () => renderToString(<ReleasePage />),
   'tutorial.html': () => renderToString(<TutorialPage />),
   'agents.html': () => renderToString(<AgentsPage />),
   'gpx-download-guide.html': () => renderToString(<GpxDownloadGuidePage />),

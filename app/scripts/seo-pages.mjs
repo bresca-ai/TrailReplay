@@ -1,5 +1,6 @@
 export const SEO_PAGES = [
   { path: '/', file: 'index.html' },
+  { path: '/releases', file: 'releases.html' },
   { path: '/tutorial', file: 'tutorial.html' },
   { path: '/agents', file: 'agents.html' },
   { path: '/gpx-download-guide', file: 'gpx-download-guide.html' },

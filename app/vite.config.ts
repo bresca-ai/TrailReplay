@@ -78,6 +78,7 @@ export default defineConfig(({ command, mode }) => {
       input: {
         main: path.resolve(import.meta.dirname, 'index.html'),
         tutorial: path.resolve(import.meta.dirname, 'tutorial.html'),
+        releases: path.resolve(import.meta.dirname, 'releases.html'),
         agents: path.resolve(import.meta.dirname, 'agents.html'),
         gpxGuide: path.resolve(import.meta.dirname, 'gpx-download-guide.html'),
         stravaToVideo: path.resolve(import.meta.dirname, 'strava-to-video.html'),

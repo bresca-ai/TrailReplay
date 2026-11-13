@@ -5,6 +5,7 @@ import { landingLanguage } from '@/seo/seoTranslations';
 import { SEO_LANDING_PAGES, type SeoLandingSlug } from '@/seo/seoPages';
 
 const HELP_LINKS = [
+  { href: '/releases', label: 'What’s new in TrailReplay', body: 'Explore release notes, new features and fixes.' },
   { href: '/tutorial', label: 'How to turn a GPX file into a video', body: 'The full TrailReplay workflow, from import to a finished export.' },
   { href: '/gpx-download-guide', label: 'How to import a route', body: 'Use one bookmark for Strava and Wikiloc, or follow the manual GPX steps for other platforms.' },
 ];
