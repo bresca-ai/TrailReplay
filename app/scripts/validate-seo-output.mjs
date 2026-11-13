@@ -111,7 +111,7 @@ for (const locale of ['es', 'ca', 'de', 'fr', 'zh-tw']) {
 
 // Every published help translation must have its own language, canonical and reciprocal alternates.
 for (const locale of ['es', 'ca', 'de', 'fr', 'zh-tw']) {
-  for (const slug of ['tutorial', 'gpx-download-guide', 'agents']) {
+  for (const slug of ['releases', 'tutorial', 'gpx-download-guide', 'agents']) {
     const file = `${locale}/${slug}.html`;
     const html = await readFile(path.join(distRoot, file), 'utf8');
     const lang = locale === 'zh-tw' ? 'zh-TW' : locale;

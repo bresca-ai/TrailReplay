@@ -32,7 +32,7 @@ export function rememberSeoLanguage(language: LanguageCode): void {
 /** Localize links only where a corresponding page has actually been published. */
 export function localizedSitePath(href: string, language: LanguageCode): string {
   const [path, fragment] = href.split('#', 2);
-  const allLanguages = ['/tutorial', '/gpx-download-guide', '/agents', '/gpx-animation', '/strava-to-video'];
+  const allLanguages = ['/releases', '/tutorial', '/gpx-download-guide', '/agents', '/gpx-animation', '/strava-to-video'];
   const germanOnly = ['/garmin-to-video', '/cycling-route-animation', '/running-route-animation', '/cinematic-camera'];
   const supported = allLanguages.includes(path) || (germanOnly.includes(path) && language === 'de');
   const localized = supported ? seoLocalizedPath(path, language) : path;

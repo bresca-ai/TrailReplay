@@ -1,3 +1,4 @@
+import { releaseCopy } from '@/releases/releaseCopy';
 import { HOME_TRANSLATIONS } from './homeTranslations';
 import type { LanguageCode } from '@/i18n/languages';
 import { seoLocalizedPath } from '@/seo/seoLocale';
@@ -5,6 +6,7 @@ import { landingLanguage } from '@/seo/seoTranslations';
 import { SEO_LANDING_PAGES, type SeoLandingSlug } from '@/seo/seoPages';
 
 const HELP_LINKS = [
+  { href: '/releases', label: 'What’s new in TrailReplay', body: 'Explore release notes, new features and fixes.' },
   { href: '/tutorial', label: 'How to turn a GPX file into a video', body: 'The full TrailReplay workflow, from import to a finished export.' },
   { href: '/gpx-download-guide', label: 'How to import a route', body: 'Use one bookmark for Strava and Wikiloc, or follow the manual GPX steps for other platforms.' },
 ];
@@ -24,6 +26,7 @@ export function HomeStaticContent({ language = 'en' }: { language?: LanguageCode
       <p className="mt-4 leading-7">{copy.description}</p><p className="mt-4 leading-7">{copy.privacy}</p>
       <h2 className="mt-10 text-xl font-bold">{copy.how}</h2><ol>{copy.steps.map((step) => <li key={step}>{step}</li>)}</ol>
       <h2 className="mt-10 text-xl font-bold">{copy.guides}</h2><ul>
+        <li><a href={seoLocalizedPath('/releases', language)}>{releaseCopy[language].title}</a></li>
         <li><a href={seoLocalizedPath('/tutorial', language)}>{copy.tutorial}</a></li>
         <li><a href={seoLocalizedPath('/gpx-download-guide', language)}>{copy.guide}</a></li>
       </ul>

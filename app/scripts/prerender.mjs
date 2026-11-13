@@ -34,7 +34,7 @@ try {
 }
 
 const locales = ['en', 'es', 'ca', 'de', 'fr', 'zh-TW'];
-const helpSlugs = ['tutorial', 'gpx-download-guide', 'agents'];
+const helpSlugs = ['releases', 'tutorial', 'gpx-download-guide', 'agents'];
 const landingSlugs = ['strava-to-video', 'garmin-to-video', 'gpx-animation', 'cycling-route-animation', 'running-route-animation', 'cinematic-camera'];
 const templates = new Map();
 for (const file of Object.keys(rendered)) {

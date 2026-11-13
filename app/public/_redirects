@@ -1,6 +1,7 @@
 # Legacy V1 and /app aliases
 /index.html / 301
 /tutorial.html /tutorial 301
+/releases.html /releases 301
 /agents.html /agents 301
 /gpx-download-guide.html /gpx-download-guide 301
 /strava-to-video.html /strava-to-video 301
