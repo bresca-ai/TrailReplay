@@ -3,16 +3,18 @@ import { BASEMAP_PRESENTATIONS } from '@/components/map/mapStyle';
 import { BASEMAP_MAX_TILE_ZOOM_LEVELS, BASEMAP_TILE_COUNT_RATIO } from '@/components/map/basemapTileLod';
 
 import { withStudioForegroundDetail, type TileZoomCalculator } from './studioTileDetail';
-import { getCropRegion } from '@/utils/crop';
+import { setExportCanvasResolution } from './exportCanvasResolution';
 
 /** Applies reversible, export-only raster quality settings. */
 export function applyStudioMapPresentation(
   map: MapLibreMap,
-  options: { highDetail?: boolean; mapStyle?: string; resolution?: { width: number; height: number } } = {},
+  options: { highDetail?: boolean; disableRasterFade?: boolean; mapStyle?: string; resolution?: { width: number; height: number } } = {},
 ): () => void {
   const restores: Array<() => void> = [];
   const layers = map.getStyle()?.layers ?? [];
 
+  // Apply native pixel dimensions for both Standard and Studio.
+  if (options.resolution) restores.push(setExportCanvasResolution(map, options.resolution));
   if (options.highDetail) {
     const sourceId = BASEMAP_PRESENTATIONS[options.mapStyle ?? '']?.sourceId;
     const source = sourceId ? map.getSource(sourceId) as { calculateTileZoom?: TileZoomCalculator } | undefined : undefined;
@@ -32,25 +34,10 @@ export function applyStudioMapPresentation(
         });
       } catch { /* A custom source may not support tile LOD. */ }
     }
-
-
-    // Export crops the live map canvas. Avoid enlarging that crop after render,
-    // which would blur already-loaded imagery and labels in the final video.
-    const canvas = map.getCanvas();
-    const resolution = options.resolution;
-    if (resolution && canvas.clientWidth > 0 && canvas.clientHeight > 0) {
-      const crop = getCropRegion({ width: canvas.clientWidth, height: canvas.clientHeight }, resolution.width, resolution.height);
-      const previousRatio = map.getPixelRatio();
-      const targetRatio = Math.max(previousRatio, Math.min(3, Math.max(resolution.width / crop.cropW, resolution.height / crop.cropH)));
-      if (targetRatio > previousRatio) {
-        map.setPixelRatio(targetRatio);
-        restores.push(() => map.setPixelRatio(previousRatio));
-      }
-    }
   }
 
   layers.forEach((layer) => {
-    if (layer.type !== 'raster') return;
+    if (layer.type !== 'raster' || options.disableRasterFade === false) return;
     try {
       const previous = map.getPaintProperty(layer.id, 'raster-fade-duration');
       map.setPaintProperty(layer.id, 'raster-fade-duration', 0);

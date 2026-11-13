@@ -45,7 +45,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
-    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
+    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize, estimatedDurationMs,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
@@ -464,6 +464,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     };
 
     recorder.onstop = async () => {
+      restoreStudioMapSettings();
       // A cancelled export still fires onstop; don't save or download it.
       if (recordingCancelledRef.current) {
         finishExportProfile('cancelled', exportProfileMetadata('mediarecorder'));
@@ -548,7 +549,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     };
 
     recorder.start(100);
-  }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
+  }, [exportProfileMetadata, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, playback.totalDuration, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingStartTimeRef, resetPlayback, restoreStudioMapSettings, setExportProgress, setExportStage, setExportedBlob, setIsExporting, t, videoExportSettings]);
 
   const handleStartExport = useCallback(async () => {
     const chapterStatus = document.querySelector('[data-location-chapters-status]')?.getAttribute('data-location-chapters-status');
@@ -683,11 +684,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       setSpeed(exportSpeed);
       setCinematicPlayed(false);
 
-      // Disable Studio raster fades before preloading so cached opening tiles
-      // are painted immediately when the encoder starts.
-      if (videoExportSettings.qualityMode === 'studio' || useAppStore.getState().settings.show3DBuildings) {
-        applyStudioMapSettings();
-      }
+      // Render the map at the requested output resolution in either mode.
+      // Studio also disables raster fades and requests additional tile detail.
+      applyStudioMapSettings();
 
       setExportStage(t('export.stagePreparing'));
       const exportMap = mapGlobalRef.current;
@@ -733,7 +732,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
 
       if (videoExportSettings.qualityMode === 'studio' && !useWebCodecsRef.current) {
-        throw new Error(t('export.qualityModeStudioUnavailable'));
+        throw new Error(t('export.selectedEncodingUnsupported'));
       }
 
       if (!useWebCodecsRef.current && useAppStore.getState().settings.show3DBuildings) {
@@ -802,9 +801,15 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           restoreStudioMapTime();
         });
       } else {
-        startFrameCapture();
+        startFrameCapture((error) => {
+          recordingCancelledRef.current = true;
+          finishRecording();
+          setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
+          setExportError(t('export.stageFailedWithError', { error: (error as Error).message }));
+        });
         const waitMs = videoExportSettings.includeCover ? 1000 : 200;
         await new Promise((resolve) => setTimeout(resolve, waitMs));
+        if (recordingCancelledRef.current) return;
         coverFrameStartTimeRef.current = null;
         play();
       }
@@ -923,6 +928,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
   return {
     actualFormat,
     estimatedSize,
+    estimatedDurationMs,
     exportProgress,
     exportError,
     exportStage,

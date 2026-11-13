@@ -1,4 +1,4 @@
-import { getCropRegion } from '@/utils/crop';
+import { getVideoCropRegion } from '@/utils/crop';
 
 type Size = {
   width: number;
@@ -31,7 +31,7 @@ export function getExportOverlayMetrics(
   recordW: number,
   recordH: number
 ) {
-  const { cropX, cropY, cropW, cropH } = getCropRegion(containerRect, recordW, recordH);
+  const { cropX, cropY, cropW, cropH } = getVideoCropRegion(containerRect, recordW, recordH);
 
   return {
     cropX,
@@ -105,8 +105,8 @@ export function getStatsOverlayDrawRect(params: {
     const drawX = (params.elementRect.left - params.containerRect.left - params.cropX) * posScale;
     const drawY = (params.elementRect.top - params.containerRect.top - params.cropY) * posScale;
     return {
-      drawX: Math.max(0, drawX),
-      drawY: Math.max(0, drawY),
+      drawX: Math.max(0, Math.min(params.recordW - drawWidth, drawX)),
+      drawY: Math.max(0, Math.min(params.recordH - drawHeight, drawY)),
       drawWidth,
       drawHeight,
     };

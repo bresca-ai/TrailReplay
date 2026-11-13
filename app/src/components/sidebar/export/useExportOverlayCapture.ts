@@ -378,9 +378,10 @@ export function useExportOverlayCapture({
         const elevationElement = document.getElementById('mapElevationProfile') as HTMLElement | null;
         if (elevationElement) {
           try {
+            const elevationCaptureScale = Math.max(1, scaleToRecording);
             const captureCanvas = await capture(elevationElement, {
               backgroundColor: null,
-              scale: 1,
+              scale: elevationCaptureScale,
               logging: false,
               useCORS: true,
               // The progress fill and elevation label are drawn directly onto
@@ -388,7 +389,10 @@ export function useExportOverlayCapture({
               // expensive DOM snapshot prevents a stale 12fps copy underneath.
               ignoreElements: (element) => element.hasAttribute('data-export-elevation-dynamic'),
             });
-            const rect = getElevationOverlayDrawRect({ captureCanvas, scaleToRecording, recordW, recordH, margin });
+            const rect = getElevationOverlayDrawRect({
+              captureCanvas: { width: captureCanvas.width / elevationCaptureScale, height: captureCanvas.height / elevationCaptureScale },
+              scaleToRecording, recordW, recordH, margin,
+            });
             overlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, rect.drawX, rect.drawY, rect.drawWidth, rect.drawHeight);
           } catch { /* Skip overlay when capture fails. */ }
         }

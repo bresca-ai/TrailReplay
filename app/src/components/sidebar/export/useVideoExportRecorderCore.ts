@@ -1,3 +1,4 @@
+import { assertExportCanvasResolution } from './exportCanvasResolution';
 import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
 import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -37,7 +38,10 @@ import {
   formatSpeedFromKmh,
   formatStatsDuration,
 } from '@/utils/units';
-import { estimateFileSize } from '@/utils/videoExport';
+import { estimateFileSize, estimateVideoDuration } from '@/utils/videoExport';
+import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
+import { getIntroDuration } from '@/utils/locationChapterCamera';
+import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { now as maplibreNow, restoreNow, setNow } from 'maplibre-gl';
 import { drawExportFrame } from './drawExportFrame';
@@ -100,6 +104,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
   const journeySegments = useAppStore((state) => state.journeySegments);
+  const textAnnotations = useAppStore((state) => state.textAnnotations);
+  const annotationHoldDuration = useAppStore((state) => state.settings.annotationHoldDuration);
+  const locationChapters = useAppStore((state) => state.settings.locationChapters);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
   const cameraSettings = useAppStore((state) => state.cameraSettings);
   const playback = useAppStore((state) => state.playback);
@@ -140,7 +147,11 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     [studioSupported]
   );
   const actualFormat = videoExportSettings.format === 'mp4' && !mp4Supported ? 'webm' : videoExportSettings.format;
-  const estimatedSize = estimateFileSize(playback.totalDuration, videoExportSettings);
+  const annotations = resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode);
+  const estimatedDurationMs = estimateVideoDuration({ routeDuration: playback.totalDuration, annotations, annotationHoldDuration: annotationHoldDuration ?? 5000,
+    introDuration: getIntroDuration(locationChapters), outroDuration: OUTRO_DELAY + OUTRO_DURATION,
+    includeCover: videoExportSettings.includeCover ?? false, pictures, videos });
+  const estimatedSize = estimateFileSize(estimatedDurationMs, videoExportSettings);
   const includeStats = visibleStats.length > 0;
   const includeElevation = showElevationProfile;
   const overlayRefreshIntervalMs = useMemo(() => getOverlayRefreshIntervalMs(videoExportSettings.fps), [videoExportSettings.fps]);
@@ -374,6 +385,9 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       && performance.now() - coverStartedAt < 1000
       && drawVideoCoverFrame()
     ) return;
+    if (mapGlobalRef.current) {
+      assertExportCanvasResolution(mapGlobalRef.current, videoExportSettings.resolution);
+    }
     const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     drawExportFrame({
       recordingCanvasRef,
@@ -414,16 +428,20 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     }
   }, []);
 
-  const startFrameCapture = useCallback(() => {
+  const startFrameCapture = useCallback((onFailure: (error: unknown) => void) => {
     const map = mapGlobalRef.current;
     const targetFrameInterval = 1000 / videoExportSettings.fps;
     let lastCaptureTime = 0;
     const captureAtFrameRate = () => {
       const now = performance.now();
       if (now - lastCaptureTime < targetFrameInterval) return;
-      captureFrame();
-      void encodeWebCodecsFrame();
-      lastCaptureTime = now;
+      try {
+        captureFrame();
+        void encodeWebCodecsFrame();
+        lastCaptureTime = now;
+      } catch (error) {
+        onFailure(error);
+      }
     };
 
     if (!map) {
@@ -585,7 +603,13 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     if (!map) return;
 
     studioMapPresentationRestoreRef.current?.();
-    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, { highDetail: useAppStore.getState().videoExportSettings.qualityMode === 'studio', mapStyle: useAppStore.getState().settings.mapStyle, resolution: useAppStore.getState().videoExportSettings.resolution });
+    const state = useAppStore.getState();
+    studioMapPresentationRestoreRef.current = applyStudioMapPresentation(map, {
+      highDetail: state.videoExportSettings.qualityMode === 'studio',
+      disableRasterFade: state.videoExportSettings.qualityMode === 'studio' || state.settings.show3DBuildings,
+      mapStyle: state.settings.mapStyle,
+      resolution: state.videoExportSettings.resolution,
+    });
   }, []);
 
   const restoreStudioMapSettings = useCallback(() => {
@@ -866,7 +890,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     visibleStats, pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
     isExporting, exportProgress, exportStage, setIsExporting, setIsDeterministicExport, setExportProgress, setExportStage,
     resetPlayback, setSpeed, play, setCinematicPlayed, exportedBlob, setExportedBlob, studioDeliveryStatus,
-    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize,
+    setStudioDeliveryStatus, studioDeliveryError, setStudioDeliveryError, studioSupported, mp4Supported, actualFormat, estimatedSize, estimatedDurationMs,
     includeStats, includeElevation, loadHtml2Canvas, resetOverlayCapture, updateOverlayAsync, recordingCanvasRef, recordingContextRef,
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,

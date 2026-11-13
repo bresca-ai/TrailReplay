@@ -248,7 +248,7 @@ export const zhTW = {
   },
   export: {
     studioNeedsMp4: '工作室轉譯需要 MP4。',
-    resolution: '解析度', estimatedSize: '預估大小',
+    resolution: '解析度', estimatedSize: '預估大小', selectedEncodingUnsupported: '此瀏覽器無法在精細模式下編碼所選的解析度與影格率。請嘗試較低的解析度或影格率。',
     saveProjectTitle: '儲存專案', saveProjectBody: '下載包含路線、旅程與設定的 .replay 檔案，日後可接續編輯。', projectNameLabel: '專案名稱', projectNamePlaceholder: '我的旅程', generateVideo: '製作影片',
     addVideoCover: '為影片加入封面', addVideoCoverHint: '為 Instagram 製作精美的開場畫面，在動畫開始前顯示 1 秒。', editVideoCover: '編輯封面', designVideoCover: '設計封面', designCoverBeforeExport: '請先設計封面，再匯出影片。', videoCoverMissing: '找不到影片封面圖片。', videoCoverLoadFailed: '無法載入影片封面圖片。',
     title: '匯出設定', format: '格式', ratio: '比例', quality: '畫質', duration: '時間', fallbackWebm: '(WebM)', howItWorksTitle: '運作方式：', howItWorksBody: '錄製會完整擷取地圖畫面，包括統計資訊、海拔剖面圖與軌跡動畫，呈現效果與畫面所見一致。開始錄製前，動畫會回到起點。',

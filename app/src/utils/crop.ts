@@ -20,6 +20,15 @@ export type CropRegion = {
   cropH: number;
 };
 
+/** Keep a user-positioned overlay inside the currently selected video frame. */
+export function constrainOverlayToFrame(position: { x: number; y: number }, container: { width: number; height: number }, frame: CropPreviewMetrics, size: { width: number; height: number }) {
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, Math.max(min, max)));
+  return {
+    left: clamp(position.x * container.width, frame.frameLeft, frame.frameLeft + frame.frameWidth - size.width),
+    top: clamp(position.y * container.height, frame.frameTop, frame.frameTop + frame.frameHeight - size.height),
+  };
+}
+
 export type CropFitPadding = {
   top: number;
   right: number;
@@ -95,6 +104,22 @@ export function getCropRegion(
   }
 
   return { cropX, cropY, cropW, cropH };
+}
+
+/** Crop each video format inside the same centered landscape composition. */
+export function getVideoCropRegion(container: { width: number; height: number }, recordW: number, recordH: number): CropRegion {
+  const base = getCropRegion(container, 16, 9);
+  const inner = getCropRegion({ width: base.cropW, height: base.cropH }, recordW, recordH);
+  return { cropX: base.cropX + inner.cropX, cropY: base.cropY + inner.cropY, cropW: inner.cropW, cropH: inner.cropH };
+}
+
+export function getVideoCropPreviewMetrics(width: number, height: number, ratio: CropRatio): CropPreviewMetrics {
+  const crop = getVideoCropRegion({ width, height }, getAspectRatioValue(ratio), 1);
+  return {
+    left: crop.cropX, right: width - crop.cropX - crop.cropW,
+    top: crop.cropY, bottom: height - crop.cropY - crop.cropH,
+    frameLeft: crop.cropX, frameTop: crop.cropY, frameWidth: crop.cropW, frameHeight: crop.cropH,
+  };
 }
 
 /**

@@ -760,7 +760,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
   },
   export: {
     studioNeedsMp4: 'La renderización Estudio requiere MP4.',
-    resolution: 'Resolución', estimatedSize: 'Tamaño aprox.',
+    resolution: 'Resolución', estimatedSize: 'Tamaño aprox.', selectedEncodingUnsupported: 'Este navegador no puede codificar la resolución y los fotogramas por segundo seleccionados en modo Estudio. Prueba una resolución o frecuencia menores.',
     saveProjectTitle: 'Guarda tu proyecto',
     saveProjectBody: 'Descarga un archivo .replay con tus rutas, itinerario y ajustes para poder continuar más tarde donde lo dejaste.',
     projectNameLabel: 'Nombre del proyecto',

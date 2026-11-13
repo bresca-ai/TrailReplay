@@ -230,6 +230,8 @@ export function TrailMap(_props: TrailMapProps) {
     overlayFont: trailStyle.overlayFont,
     annotationMarkerScale,
     annotationTextScale,
+    exportFrame: _props.exportFrame,
+    exportResolution: isExporting ? useAppStore.getState().videoExportSettings.resolution : undefined,
   });
 
   useRouteLandmarksLayer({

@@ -46,6 +46,9 @@ export function useMapInitialization({
       bearing: 0,
       localIdeographFontFamily: TRADITIONAL_CHINESE_FONT_FAMILY,
       maxPitch: REPLAY_CAMERA_MAX_PITCH,
+      // Allow a Studio export to render a high-resolution crop on small screens.
+      // MapLibre still clamps to the device's actual WebGL limits.
+      maxCanvasSize: [8192, 8192],
       // MapLibre 5+ ignores the top-level `preserveDrawingBuffer`
       // option; it must be passed as a WebGL context attribute. Without it the
       // map canvas reads back as transparent outside MapLibre's own render

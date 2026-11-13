@@ -1,12 +1,14 @@
 import { useEffect, useState, type RefObject } from 'react';
-import { getCropPreviewMetrics, type CropRatio } from '@/utils/crop';
+import { getCropPreviewMetrics, getVideoCropPreviewMetrics, type CropRatio } from '@/utils/crop';
 import { useI18n } from '@/i18n/useI18n';
 
 export function CropPreviewBars({
   ratio,
   containerRef,
+  videoCrop = false,
 }: {
   ratio: CropRatio;
+  videoCrop?: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
 }) {
   const { t } = useI18n();
@@ -26,14 +28,14 @@ export function CropPreviewBars({
     if (!element) return;
 
     const update = () => {
-      setCropPreview(getCropPreviewMetrics(element.clientWidth, element.clientHeight, ratio));
+      setCropPreview((videoCrop ? getVideoCropPreviewMetrics : getCropPreviewMetrics)(element.clientWidth, element.clientHeight, ratio));
     };
 
     update();
     const resizeObserver = new ResizeObserver(update);
     resizeObserver.observe(element);
     return () => resizeObserver.disconnect();
-  }, [containerRef, ratio]);
+  }, [containerRef, ratio, videoCrop]);
 
   if (!cropPreview) return null;
 
