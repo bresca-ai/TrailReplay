@@ -18,6 +18,8 @@ import { CropPreviewBars } from '@/components/app/CropPreviewBars';
 import { PendingPicturePlacementBanner } from '@/components/app/PendingPicturePlacementBanner';
 import { WelcomeOverlay } from '@/components/app/WelcomeOverlay';
 import { PlaybackControls } from '@/components/playback/PlaybackControls';
+import { MediaTimeline } from '@/components/playback/MediaTimeline';
+import { setMediaHoldClock } from '@/utils/mediaHoldClock';
 import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
@@ -141,9 +143,6 @@ function App() {
   const setSettings = useAppStore((state) => state.setSettings);
   const error = useAppStore((state) => state.error);
   const setError = useAppStore((state) => state.setError);
-  const addPicture = useAppStore((state) => state.addPicture);
-  const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
-  const clearPendingPicturePlacements = useAppStore((state) => state.clearPendingPicturePlacements);
   const activePanel = useAppStore((state) => state.activePanel);
   const exportAspectRatio = useAppStore((state) => state.videoExportSettings.aspectRatio);
   const socialShareAspectRatio = useAppStore((state) => state.socialShareSettings.aspectRatio);
@@ -541,7 +540,9 @@ function App() {
     };
   }, [availableStats.length, isResizingStats, setSettings]);
 
-  const { activePicture, activeVideo, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
+  const { activePicture, activeVideo, autoPictureId, autoVideoId, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
+  const onPictureElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoPictureId ? null : { kind: 'picture', id: autoPictureId, elapsedMs }); }, [autoPictureId]);
+  const onVideoElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoVideoId ? null : { kind: 'video', id: autoVideoId, elapsedMs }); }, [autoVideoId]);
 
   const activeTextAnnotationId = useMemo(() => getActivePlaybackAnnotationId({
     annotations: resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode),
@@ -600,12 +601,12 @@ function App() {
           </ExportAwareSidebar>
           
           {/* Map Area */}
-          <div className="flex-1 flex flex-col relative">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col relative">
             {/* Map Container */}
             <div
               id="map-capture-container"
               ref={mapContainerRef}
-              className="flex-1 relative"
+              className="flex-1 min-w-0 min-h-0 relative"
             >
               <Suspense fallback={<AppLoadingOverlay />}>
                 <TrailMap
@@ -745,41 +746,7 @@ function App() {
               )}
 
               {activePendingPicturePlacement && (
-                <PendingPicturePlacementBanner
-                  pendingPlacement={activePendingPicturePlacement}
-                  totalPendingPlacements={pendingPicturePlacements.length}
-                  onCancelAll={clearPendingPicturePlacements}
-                  onSkip={() => removePendingPicturePlacement(activePendingPicturePlacement.id)}
-                  onUseTimestamp={activePendingPicturePlacement.timestampAlternative
-                    ? () => {
-                        const timestampPlacement = activePendingPicturePlacement.timestampAlternative;
-                        if (!timestampPlacement) {
-                          return;
-                        }
-
-                        addPicture({
-                          id: activePendingPicturePlacement.id,
-                          file: activePendingPicturePlacement.file,
-                          displayFile: activePendingPicturePlacement.displayFile,
-                          url: activePendingPicturePlacement.url,
-                          isPlaceholder: false,
-                          lat: timestampPlacement.lat,
-                          lon: timestampPlacement.lon,
-                          timestamp: activePendingPicturePlacement.timestamp,
-                          progress: timestampPlacement.progress,
-                          position: timestampPlacement.progress,
-                          routeDistance: timestampPlacement.routeDistance,
-                          routeSegmentId: timestampPlacement.routeSegmentId,
-                          routeSegmentDistance: timestampPlacement.routeSegmentDistance,
-                          placementSource: 'timestamp',
-                          title: activePendingPicturePlacement.title,
-                          description: activePendingPicturePlacement.description,
-                          displayDuration: activePendingPicturePlacement.displayDuration,
-                        });
-                        removePendingPicturePlacement(activePendingPicturePlacement.id);
-                      }
-                    : undefined}
-                />
+                <PendingPicturePlacementBanner />
               )}
               
               {/* Picture Popup */}
@@ -788,6 +755,7 @@ function App() {
                   key={activePicture.id}
                   picture={activePicture} 
                   onClose={closeActivePicture}
+                  onElapsedChange={autoPictureId ? onPictureElapsed : undefined}
                   exportFrame={activeExportCropMetrics}
                   playbackCurrentTime={isDeterministicExport ? (exportPictureHoldElapsedMs ?? playback.currentTime) : undefined}
                 />
@@ -799,6 +767,7 @@ function App() {
                   key={activeVideo.id}
                   video={activeVideo}
                   onClose={closeActiveVideo}
+                  onElapsedChange={autoVideoId ? onVideoElapsed : undefined}
                   exportFrame={activeExportCropMetrics}
                   exportCurrentTimeSeconds={isDeterministicExport ? exportVideoHoldTimeSeconds : undefined}
                 />
@@ -836,8 +805,9 @@ function App() {
             
             {/* Playback Controls */}
             {hasTracks && (
-              <div className="h-20 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
-                <PlaybackControls />
+              <div className="shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
+                {activePanel === 'pictures' && showSidebar && !isExporting && <MediaTimeline />}
+                <div className="h-20"><PlaybackControls /></div>
               </div>
             )}
           </div>

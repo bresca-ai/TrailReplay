@@ -48,6 +48,10 @@ export interface AppState {
   cinematicCameraKeyframes: CinematicCameraKeyframe[];
   pictures: PictureAnnotation[];
   pendingPicturePlacements: PendingPicturePlacement[];
+  selectedPendingMediaIds: string[];
+  pendingMediaMapPlacementActive: boolean;
+  setPendingMediaMapPlacementActive: (active: boolean) => void;
+  setSelectedPendingMediaIds: (ids: string[]) => void;
   videos: VideoAnnotation[];
   iconChanges: IconChange[];
   textAnnotations: TextAnnotation[];
@@ -146,6 +150,7 @@ export interface AppState {
   ) => void;
   updatePictureMetadata: (pictureId: string, title: string, description: string) => void;
   updatePictureDuration: (pictureId: string, duration: number) => void;
+  updateAllPictureDurations: (duration: number) => void;
   addVideo: (video: VideoAnnotation) => void;
   removeVideo: (videoId: string) => void;
   updateVideoPosition: (
