@@ -159,7 +159,7 @@ describe('createMp4CanvasEncoder', () => {
     expect(encoder?.config).toEqual(muxerState.configuredConfig);
   });
 
-  it('caps 4K30 at H.264 Level 5.1 and rejects 4K60', async () => {
+  it('uses Level 5.1 for 4K30 and probes Level 5.2 for 4K60', async () => {
     const compatible = await createMp4CanvasEncoder({
       width: 3840,
       height: 2160,
@@ -176,8 +176,8 @@ describe('createMp4CanvasEncoder', () => {
       fps: 60,
       bitrate: 120_000_000,
     });
-    expect(unsupported).toBeNull();
-    expect(muxerState.probedConfigs).toEqual([]);
+    expect(unsupported?.config.codec).toBe('avc1.640034');
+    expect(muxerState.probedConfigs[0].codec).toBe('avc1.640034');
   });
 
   it('throws instead of silently skipping duplicate frames', async () => {

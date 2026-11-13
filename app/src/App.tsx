@@ -18,6 +18,8 @@ import { CropPreviewBars } from '@/components/app/CropPreviewBars';
 import { PendingPicturePlacementBanner } from '@/components/app/PendingPicturePlacementBanner';
 import { WelcomeOverlay } from '@/components/app/WelcomeOverlay';
 import { PlaybackControls } from '@/components/playback/PlaybackControls';
+import { MediaTimeline } from '@/components/playback/MediaTimeline';
+import { setMediaHoldClock } from '@/utils/mediaHoldClock';
 import { PlaybackProvider } from '@/components/playback/PlaybackProvider';
 import { StatsOverlay } from '@/components/stats/StatsOverlay';
 import { PicturePopup } from '@/components/annotations/PicturePopup';
@@ -27,7 +29,7 @@ import { RouteOverview } from '@/components/map/RouteOverview';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
-import { getCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
+import { constrainOverlayToFrame, getCropPreviewMetrics, getVideoCropPreviewMetrics, type CropPreviewMetrics } from '@/utils/crop';
 import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
 import { installProbeBridge, isProbeEnabled } from '@/utils/probeBridge';
 import { trackEvent } from '@/utils/analytics';
@@ -114,6 +116,7 @@ function App() {
   const [exportCropMetrics, setExportCropMetrics] = useState<CropPreviewMetrics | null>(null);
   const [annotationCropMetrics, setAnnotationCropMetrics] = useState<CropPreviewMetrics | null>(null);
   const [annotationContainerSize, setAnnotationContainerSize] = useState({ width: 340, height: 600 });
+  const [statsOverlaySize, setStatsOverlaySize] = useState({ width: 0, height: 0 });
 
   const { parseFiles } = useGPX();
   // Installed once for the whole page, not per panel: the click that moves
@@ -141,11 +144,9 @@ function App() {
   const setSettings = useAppStore((state) => state.setSettings);
   const error = useAppStore((state) => state.error);
   const setError = useAppStore((state) => state.setError);
-  const addPicture = useAppStore((state) => state.addPicture);
-  const removePendingPicturePlacement = useAppStore((state) => state.removePendingPicturePlacement);
-  const clearPendingPicturePlacements = useAppStore((state) => state.clearPendingPicturePlacements);
   const activePanel = useAppStore((state) => state.activePanel);
   const exportAspectRatio = useAppStore((state) => state.videoExportSettings.aspectRatio);
+  const exportResolution = useAppStore((state) => state.videoExportSettings.resolution);
   const socialShareAspectRatio = useAppStore((state) => state.socialShareSettings.aspectRatio);
   const exportSubMode = useAppStore((state) => state.exportSubMode);
   const isExporting = useAppStore((state) => state.isExporting);
@@ -291,8 +292,8 @@ function App() {
     if (!el) return;
 
     const update = () => {
-      setExportCropMetrics(getCropPreviewMetrics(el.clientWidth, el.clientHeight, activeCropRatio));
-      setAnnotationCropMetrics(getCropPreviewMetrics(el.clientWidth, el.clientHeight, exportAspectRatio));
+      setExportCropMetrics((exportSubMode === 'image' ? getCropPreviewMetrics : getVideoCropPreviewMetrics)(el.clientWidth, el.clientHeight, activeCropRatio));
+      setAnnotationCropMetrics(getVideoCropPreviewMetrics(el.clientWidth, el.clientHeight, exportAspectRatio));
       setAnnotationContainerSize(previous => previous.width === el.clientWidth && previous.height === el.clientHeight ? previous : { width: el.clientWidth, height: el.clientHeight });
     };
 
@@ -300,7 +301,7 @@ function App() {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [activePanel, activeCropRatio, exportAspectRatio, isExporting]);
+  }, [activePanel, activeCropRatio, exportAspectRatio, exportSubMode, isExporting]);
 
   // Stats overlay positioning only applies to video export, not image export
   const activeExportCropMetrics = (activePanel === 'export' || isExporting) && exportSubMode !== 'image'
@@ -350,9 +351,12 @@ function App() {
   const statsOverlayStyle = (() => {
     if (settings.statsPosition) {
       const { x, y } = settings.statsPosition;
+      const constrained = activeExportCropMetrics && constrainOverlayToFrame({ x, y }, annotationContainerSize, activeExportCropMetrics, {
+        width: statsOverlaySize.width * settings.statsScale, height: statsOverlaySize.height * settings.statsScale,
+      });
       return {
-        top: `${y * 100}%`,
-        left: `${x * 100}%`,
+        top: constrained?.top ?? `${y * 100}%`,
+        left: constrained?.left ?? `${x * 100}%`,
         width: 'auto',
         maxWidth: isNarrowScreen ? 'min(calc(100% - 24px), 312px)' : 'min(calc(100% - 32px), 408px)',
       } satisfies CSSProperties;
@@ -407,7 +411,10 @@ function App() {
     setStatsDragFrame(activeExportCropMetrics ?? {
       frameLeft: 0, frameTop: 0, frameWidth: rect.width, frameHeight: rect.height,
     });
-    const pos = settings.statsPosition ?? { x: 0.02, y: 0.04 };
+    const overlayRect = statsScaleWrapperRef.current?.getBoundingClientRect();
+    const pos = overlayRect && rect.width && rect.height
+      ? { x: (overlayRect.left - rect.left) / rect.width, y: (overlayRect.top - rect.top) / rect.height }
+      : settings.statsPosition ?? { x: 0.02, y: 0.04 };
     statsDragStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, startX: pos.x, startY: pos.y };
     setIsDraggingStats(true);
   }, [activeExportCropMetrics, settings.statsPosition]);
@@ -541,7 +548,9 @@ function App() {
     };
   }, [availableStats.length, isResizingStats, setSettings]);
 
-  const { activePicture, activeVideo, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
+  const { activePicture, activeVideo, autoPictureId, autoVideoId, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
+  const onPictureElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoPictureId ? null : { kind: 'picture', id: autoPictureId, elapsedMs }); }, [autoPictureId]);
+  const onVideoElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoVideoId ? null : { kind: 'video', id: autoVideoId, elapsedMs }); }, [autoVideoId]);
 
   const activeTextAnnotationId = useMemo(() => getActivePlaybackAnnotationId({
     annotations: resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode),
@@ -558,6 +567,20 @@ function App() {
   const activePendingPicturePlacement = pendingPicturePlacements[0];
   
   const hasTracks = tracks.length > 0;
+
+  useEffect(() => {
+    const wrapper = statsScaleWrapperRef.current;
+    if (!wrapper) return;
+    const measure = () => {
+      const width = wrapper.offsetWidth;
+      const height = wrapper.offsetHeight;
+      setStatsOverlaySize(previous => previous.width === width && previous.height === height ? previous : { width, height });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [hasTracks]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -600,12 +623,12 @@ function App() {
           </ExportAwareSidebar>
           
           {/* Map Area */}
-          <div className="flex-1 flex flex-col relative">
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col relative">
             {/* Map Container */}
             <div
               id="map-capture-container"
               ref={mapContainerRef}
-              className="flex-1 relative"
+              className="flex-1 min-w-0 min-h-0 relative"
             >
               <Suspense fallback={<AppLoadingOverlay />}>
                 <TrailMap
@@ -617,13 +640,13 @@ function App() {
               </Suspense>
 
 
-              {localizedScreenAnnotation && <ScreenAnnotation annotation={localizedScreenAnnotation} font={settings.trailStyle.overlayFont} size={Math.max(0.5, Math.min(2, settings.annotationTextScale ?? settings.annotationScale ?? 1))} maxWidth={annotationWidth} maxHeight={Math.max(40, (annotationFrame?.frameHeight ?? annotationContainerSize.height) - annotationBottom - 24)} style={{ right: (annotationFrame?.right ?? 0) + 20, bottom: (annotationFrame?.bottom ?? 0) + annotationBottom }} />}
+              {localizedScreenAnnotation && <ScreenAnnotation exportPixelRatio={isExporting ? exportResolution.width / Math.max(1, annotationFrame?.frameWidth ?? annotationContainerSize.width) : undefined} annotation={localizedScreenAnnotation} font={settings.trailStyle.overlayFont} size={Math.max(0.5, Math.min(2, settings.annotationTextScale ?? settings.annotationScale ?? 1))} maxWidth={annotationWidth} maxHeight={Math.max(40, (annotationFrame?.frameHeight ?? annotationContainerSize.height) - annotationBottom - 24)} style={{ right: (annotationFrame?.right ?? 0) + 20, bottom: (annotationFrame?.bottom ?? 0) + annotationBottom }} />}
               <RouteOverview containerSize={annotationContainerSize} frame={activeExportCropMetrics} />
               {!isMapReady && <AppLoadingOverlay />}
 
               {/* Aspect ratio crop preview when in Export panel */}
               {activePanel === 'export' && (
-                <CropPreviewBars ratio={activeCropRatio} containerRef={mapContainerRef} />
+                <CropPreviewBars ratio={activeCropRatio} containerRef={mapContainerRef} videoCrop={exportSubMode !== 'image'} />
               )}
 
               {hasTracks && activeExportCropMetrics && (
@@ -745,41 +768,7 @@ function App() {
               )}
 
               {activePendingPicturePlacement && (
-                <PendingPicturePlacementBanner
-                  pendingPlacement={activePendingPicturePlacement}
-                  totalPendingPlacements={pendingPicturePlacements.length}
-                  onCancelAll={clearPendingPicturePlacements}
-                  onSkip={() => removePendingPicturePlacement(activePendingPicturePlacement.id)}
-                  onUseTimestamp={activePendingPicturePlacement.timestampAlternative
-                    ? () => {
-                        const timestampPlacement = activePendingPicturePlacement.timestampAlternative;
-                        if (!timestampPlacement) {
-                          return;
-                        }
-
-                        addPicture({
-                          id: activePendingPicturePlacement.id,
-                          file: activePendingPicturePlacement.file,
-                          displayFile: activePendingPicturePlacement.displayFile,
-                          url: activePendingPicturePlacement.url,
-                          isPlaceholder: false,
-                          lat: timestampPlacement.lat,
-                          lon: timestampPlacement.lon,
-                          timestamp: activePendingPicturePlacement.timestamp,
-                          progress: timestampPlacement.progress,
-                          position: timestampPlacement.progress,
-                          routeDistance: timestampPlacement.routeDistance,
-                          routeSegmentId: timestampPlacement.routeSegmentId,
-                          routeSegmentDistance: timestampPlacement.routeSegmentDistance,
-                          placementSource: 'timestamp',
-                          title: activePendingPicturePlacement.title,
-                          description: activePendingPicturePlacement.description,
-                          displayDuration: activePendingPicturePlacement.displayDuration,
-                        });
-                        removePendingPicturePlacement(activePendingPicturePlacement.id);
-                      }
-                    : undefined}
-                />
+                <PendingPicturePlacementBanner />
               )}
               
               {/* Picture Popup */}
@@ -788,6 +777,7 @@ function App() {
                   key={activePicture.id}
                   picture={activePicture} 
                   onClose={closeActivePicture}
+                  onElapsedChange={autoPictureId ? onPictureElapsed : undefined}
                   exportFrame={activeExportCropMetrics}
                   playbackCurrentTime={isDeterministicExport ? (exportPictureHoldElapsedMs ?? playback.currentTime) : undefined}
                 />
@@ -799,6 +789,7 @@ function App() {
                   key={activeVideo.id}
                   video={activeVideo}
                   onClose={closeActiveVideo}
+                  onElapsedChange={autoVideoId ? onVideoElapsed : undefined}
                   exportFrame={activeExportCropMetrics}
                   exportCurrentTimeSeconds={isDeterministicExport ? exportVideoHoldTimeSeconds : undefined}
                 />
@@ -836,8 +827,9 @@ function App() {
             
             {/* Playback Controls */}
             {hasTracks && (
-              <div className="h-20 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
-                <PlaybackControls />
+              <div className="shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
+                {activePanel === 'pictures' && showSidebar && !isExporting && <MediaTimeline />}
+                <div className="h-20"><PlaybackControls /></div>
               </div>
             )}
           </div>

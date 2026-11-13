@@ -42,9 +42,8 @@ interface AvcLevel {
   maxMacroblocksPerSecond: number;
 }
 
-// Windows' native H.264 decoder supports up to Level 5.1. Do not advertise
-// 5.2: even when a browser encoder accepts it, the resulting MP4 is not part of
-// our Windows compatibility contract.
+// Prefer widely supported levels first. Level 5.2 is probed only when needed
+// (such as 4K60), and remains subject to the browser's capability check.
 const WINDOWS_AVC_LEVELS: AvcLevel[] = [
   { idc: 0x1f, maxMacroblocksPerFrame: 3_600, maxMacroblocksPerSecond: 108_000 }, // 3.1
   { idc: 0x20, maxMacroblocksPerFrame: 5_120, maxMacroblocksPerSecond: 216_000 }, // 3.2
@@ -52,11 +51,12 @@ const WINDOWS_AVC_LEVELS: AvcLevel[] = [
   { idc: 0x2a, maxMacroblocksPerFrame: 8_704, maxMacroblocksPerSecond: 522_240 }, // 4.2
   { idc: 0x32, maxMacroblocksPerFrame: 22_080, maxMacroblocksPerSecond: 589_824 }, // 5.0
   { idc: 0x33, maxMacroblocksPerFrame: 36_864, maxMacroblocksPerSecond: 983_040 }, // 5.1
+  { idc: 0x34, maxMacroblocksPerFrame: 36_864, maxMacroblocksPerSecond: 2_073_600 }, // 5.2
 ];
 
 // H.264 codec strings from the lowest valid level upward, probing High, Main,
-// then Constrained Baseline at each level. A request outside Level 5.1 limits
-// (notably 4K60) returns no candidates instead of producing a misleading file.
+// then Constrained Baseline at each level. Unsupported configurations are
+// rejected by the browser capability check before encoding.
 export function getAvcCodecCandidates(width: number, height: number, fps: number): string[] {
   if (![width, height, fps].every((value) => Number.isFinite(value) && value > 0)) return [];
 
