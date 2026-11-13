@@ -100,7 +100,7 @@ it('moves the playhead through the current media hold and displays annotations',
   const line = lane.firstElementChild as HTMLElement;
   expect(parseFloat(line.style.left)).toBeCloseTo(0);
   act(() => setMediaHoldClock({ kind: 'picture', id: 'a', elapsedMs: 2000 }));
-  expect(parseFloat(line.style.left)).toBeCloseTo(14 / 64 * 100);
+  expect(parseFloat(line.style.left)).toBeCloseTo(14 / 68 * 100);
   act(() => setMediaHoldClock(null));
 });
 
@@ -144,8 +144,8 @@ it('drags an annotation to a new point without changing it until release', () =>
   const move = createEvent.pointerMove(annotation); Object.defineProperty(move, 'clientX', { value: 140 }); fireEvent(annotation, move);
   expect(useAppStore.getState().textAnnotations[0].progress).toBe(0.5);
   const up = createEvent.pointerUp(annotation); Object.defineProperty(up, 'clientX', { value: 140 }); fireEvent(annotation, up);
-  expect(useAppStore.getState().textAnnotations[0].progress).toBeCloseTo(0.6, 3);
-  expect(useAppStore.getState().textAnnotations[0].lat).toBeCloseTo(42.06, 3);
+  expect(useAppStore.getState().textAnnotations[0].progress).toBeCloseTo(0.60667, 3);
+  expect(useAppStore.getState().textAnnotations[0].lat).toBeCloseTo(42.06067, 3);
 });
 
 it('follows playback until manually scrolled, then recenters on the next play', () => {
@@ -164,19 +164,17 @@ it('follows playback until manually scrolled, then recenters on the next play', 
   expect(scroller.scrollLeft).toBeCloseTo(1528);
 });
 
-it('resizes a map annotation from either edge and updates its route anchor when its end moves', () => {
+it('resizes a map annotation slowdown using the configured default', () => {
   setup();
   act(() => useAppStore.setState((state) => {
+    state.settings.annotationHoldDuration = 7000;
     state.textAnnotations = [{ id: 'note', title: 'Summit', lat: 42.05, lon: 2, progress: 0.5, color: '#345', displayDuration: 3000 }];
   }));
   fireEvent.keyDown(screen.getByLabelText('Adjust start of Summit'), { key: 'ArrowLeft' });
-  expect(useAppStore.getState().textAnnotations[0].displayDuration).toBeCloseTo(3500, -1);
-  expect(useAppStore.getState().textAnnotations[0].progress).toBe(0.5);
+  expect(useAppStore.getState().textAnnotations[0].holdDuration).toBe(7500);
   fireEvent.keyDown(screen.getByLabelText('Adjust end of Summit'), { key: 'ArrowRight' });
-  const note = useAppStore.getState().textAnnotations[0];
-  expect(note.progress).toBeCloseTo(30.5 / 60, 4);
-  expect(note.displayDuration).toBeCloseTo(4000, -1);
-  expect(note.lat).toBeCloseTo(42.05083, 4);
+  expect(useAppStore.getState().textAnnotations[0].holdDuration).toBe(8000);
+  expect(useAppStore.getState().textAnnotations[0].displayDuration).toBe(3000);
 });
 
 it('adjusts a field note hold when its edge is resized', () => {
@@ -188,7 +186,7 @@ it('adjusts a field note hold when its edge is resized', () => {
   expect(useAppStore.getState().textAnnotations[0].holdDuration).toBe(4500);
 });
 
-it('resizes a map annotation by dragging its left handle', () => {
+it('resizes a map annotation slowdown by dragging its left handle', () => {
   setup();
   act(() => useAppStore.setState((state) => {
     state.textAnnotations = [{ id: 'note', title: 'Summit', lat: 42.05, lon: 2, progress: 0.5, color: '#345', displayDuration: 3000 }];
@@ -197,6 +195,6 @@ it('resizes a map annotation by dragging its left handle', () => {
   Object.defineProperty(handle, 'setPointerCapture', { value: vi.fn() });
   const down = createEvent.pointerDown(handle); Object.defineProperties(down, { clientX: { value: 100 }, button: { value: 0 } }); fireEvent(handle, down);
   const up = createEvent.pointerUp(handle); Object.defineProperty(up, 'clientX', { value: 90 }); fireEvent(handle, up);
-  expect(useAppStore.getState().textAnnotations[0].displayDuration).toBeCloseTo(4500, -1);
-  expect(useAppStore.getState().textAnnotations[0].progress).toBe(0.5);
+  expect(useAppStore.getState().textAnnotations[0].holdDuration).toBeGreaterThan(5000);
+  expect(useAppStore.getState().textAnnotations[0].progress).toBeLessThan(0.5);
 });
