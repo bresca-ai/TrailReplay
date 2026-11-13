@@ -632,8 +632,8 @@ export function useExportOverlayCapture({
 
       const rect = valueElement.getBoundingClientRect();
       const style = getComputedStyle(valueElement);
-      const centerX = drawRect.drawX
-        + (rect.left + rect.width / 2 - statsRect.left) * elementScaleX;
+      const leftX = drawRect.drawX
+        + (rect.left - statsRect.left) * elementScaleX;
       const centerY = drawRect.drawY
         + (rect.top + rect.height / 2 - statsRect.top) * elementScaleY;
       // The labels in the cached html2canvas bitmap scale from the overlay's
@@ -649,7 +649,7 @@ export function useExportOverlayCapture({
 
       context.save();
       context.font = `${style.fontWeight || '600'} ${fontSize}px ${style.fontFamily || 'sans-serif'}`;
-      context.textAlign = 'center';
+      context.textAlign = 'left';
       context.textBaseline = 'middle';
       context.fillStyle = style.color || '#ffffff';
       // With no panel behind them the values sit straight on the map, where a
@@ -661,7 +661,7 @@ export function useExportOverlayCapture({
         context.shadowBlur = Math.max(2, fontSize * 0.25);
         context.shadowOffsetY = Math.max(1, fontSize * 0.06);
       }
-      context.fillText(value, centerX, centerY);
+      context.fillText(value, leftX, centerY);
       context.restore();
     });
   }, [getStatsValues, includeStats]);
@@ -709,6 +709,7 @@ export function useExportOverlayCapture({
     const drawHeight = svgRect.height * elementScaleY;
     const progress = Math.max(0, Math.min(1, useAppStore.getState().playback.progress));
 
+    const filled = svg.dataset.exportElevationFilled !== 'false';
     const markerX = Number(svg.dataset.exportElevationMarkerX);
     const markerPosition = Number.isFinite(markerX)
       ? markerX
@@ -769,9 +770,11 @@ export function useExportOverlayCapture({
         Math.min(1, Number(svg.dataset.exportElevationFocusAmount) || 0),
       );
       drawableSegments.forEach(({ color, drawPath, drawRidge, transport }) => {
-        context.globalAlpha = transport ? 0.09 : 0.18;
-        context.fillStyle = color;
-        context.fill(drawPath);
+        if (filled) {
+          context.globalAlpha = transport ? 0.09 : 0.18;
+          context.fillStyle = color;
+          context.fill(drawPath);
+        }
         context.globalAlpha = transport ? 0.3 : 0.55;
         context.strokeStyle = color;
         context.lineWidth = Math.max(1, elementScaleY);
@@ -819,9 +822,11 @@ export function useExportOverlayCapture({
       const color = svg.dataset.exportElevationProgressColor
         || segmentColor
         || '#c1652f';
-      context.globalAlpha = 0.7;
-      context.fillStyle = color;
-      context.fill(drawPath);
+      if (filled) {
+        context.globalAlpha = 0.7;
+        context.fillStyle = color;
+        context.fill(drawPath);
+      }
       context.globalAlpha = 1;
       context.strokeStyle = color;
       context.lineWidth = Math.max(1, 2 * elementScaleY);

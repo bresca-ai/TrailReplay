@@ -117,7 +117,7 @@ it('switches between classic layers and a single compact icon-and-label sprite',
   expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-emoji', 'visibility', 'none');
   expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'visibility', 'visible');
   expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-label', 'icon-offset', [16, -12]);
-  expect(context.fillText).toHaveBeenCalledWith('Puig Alt | 2,431 m', expect.any(Number), expect.any(Number), expect.any(Number));
+  expect(context.fillText).toHaveBeenCalledWith(`Puig Alt | ${Number(2431).toLocaleString()} m`, expect.any(Number), expect.any(Number), expect.any(Number));
   await waitFor(() => expect(source.setData.mock.lastCall?.[0].features[0].properties.labelImageId).toContain('minimal-'));
   rerender({ style: 'classic' });
   expect(map.setLayoutProperty).toHaveBeenCalledWith('route-landmarks-icon', 'visibility', 'visible');

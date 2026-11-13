@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAppStore } from '@/store/createAppStore';
+import { createDefaultSettings } from '@/store/defaults';
 import { parseGPX } from '@/utils/gpxParser';
 import { buildReplayArchive } from './buildReplayArchive';
 import { parseReplayArchive } from './parseReplayArchive';
@@ -18,6 +19,20 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('restores supported map styles and falls back for unavailable providers', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setMapStyle('satellite');
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'map.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.mapStyle).toBe('satellite');
+    parsed.project!.settings!.mapStyle = 'unavailable-provider' as never;
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.mapStyle).toBe(createDefaultSettings().mapStyle);
+  });
+
   it('preserves 3D building and imagery settings when a replay is saved and reopened', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
@@ -69,6 +84,17 @@ describe('hydrateProject', () => {
     target.getState().ungroupComparisonTrack(second.id);
     expect(target.getState().journeySegments).toEqual(originalSegments);
     expect(target.getState().tracks[1].activityIcon).toBe('svg-biking');
+  });
+
+  it('preserves intentionally blank annotation text through save and reopen', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().addTextAnnotation({ id: 'empty', lat: 42.1, lon: 1.2, progress: 0.5, title: '', eyebrow: '', code: '', color: '#fff', displayDuration: 4000, presentation: 'side-panel', translations: { en: { title: '', eyebrow: '', meta: '', description: '' } } });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'empty.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().textAnnotations[0]).toMatchObject({ title: '', eyebrow: '', code: '', translations: { en: { title: '', eyebrow: '', meta: '', description: '' } } });
   });
 
   it('preserves the Taiwan locale and authored Chinese annotations through save and reopen', async () => {
@@ -288,6 +314,45 @@ describe('hydrateProject', () => {
     hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
     expect(restored.getState().landmarkPriorityIds).toEqual([]);
     expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
+  });
+
+  it('keeps a saved annotation size and defaults new projects to 120 percent', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'annotation-size.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.annotationTextScale).toBe(1.2);
+    const saved = parsed.project!.settings as Record<string, unknown>;
+    delete saved.annotationTextScale;
+    saved.annotationScale = 1.5;
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings.annotationTextScale).toBe(1.5);
+  });
+
+  it('preserves annotation appearance and timing defaults and overrides', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setSettings({ annotationMarkerScale: 1.5, annotationTextScale: 0.8, annotationPinLeadDuration: 9000, annotationHoldDuration: 4000 });
+    source.getState().addTextAnnotation({ id: 'water', lat: 42.1, lon: 1.2, progress: 0.5, title: 'Water', eyebrow: 'Trail', description: 'Refill here', color: '#123456', displayDuration: 4000, presentation: 'map-card', logo: 'map:water', markerFilled: false, pinLeadDuration: 3000, holdDuration: 2000 });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'annotation-settings.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings).toMatchObject({ annotationMarkerScale: 1.5, annotationTextScale: 0.8, annotationPinLeadDuration: 9000, annotationHoldDuration: 4000 });
+    expect(target.getState().textAnnotations[0]).toMatchObject({ id: 'water', title: 'Water', eyebrow: 'Trail', description: 'Refill here', color: '#123456', presentation: 'map-card', logo: 'map:water', markerFilled: false, pinLeadDuration: 3000, holdDuration: 2000 });
+  });
+
+  it('preserves the overview position and elevation height in saved projects', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().setSettings({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'overlay.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().settings).toMatchObject({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
   });
 
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {

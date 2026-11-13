@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PreparedCinematicKeyframe } from './cinematicCameraPlan';
+import { getSmoothedCameraAnchor, getSmoothedRouteHeadingDeg } from './cinematicCameraAnchor';
+import { cinematicAnchorSmoothingHalfWindow, cinematicHeadingBaselineHalfWidth } from '@/components/map/cameraUtils';
+import { getRouteCoordinateAtProgress } from './replayCameraPlan';
 import {
   deduplicateCameraPoses,
   getDeterministicIntroStartPose,
@@ -17,6 +20,19 @@ const baseOptions = {
 };
 
 describe('replay camera warmup plan', () => {
+  it('warms the planned automatic camera through the opening, not its generic heading', () => {
+    const poses = getOpeningReplayWarmupPoses({
+      ...baseOptions,
+      cameraMode: 'aerial-follow',
+      aerialTerrainPlan: [30, 130],
+      cameraStability: 0.5,
+      totalDurationMs: 60000,
+      windowMs: 12000,
+      sampleCount: 5,
+    });
+    expect(poses[0].bearing).toBeCloseTo(30);
+    expect(poses.at(-1)!.bearing).toBeCloseTo(50);
+  });
   it('derives a stable country-scale intro start', () => {
     expect(getDeterministicIntroStartPose({
       coordinates,
@@ -82,6 +98,18 @@ describe('replay camera warmup plan', () => {
       cinematicKeyframes: [],
       progress: 0,
     })).toMatchObject({ bearing: 90, pitch: 56, zoom: 16.5 });
+  });
+
+  it('uses the same smoothed anchor and heading as cinematic playback', () => {
+    const route = [[0, 0], [0.01, 0], [0.01, 0.01], [0.02, 0.01], [0.02, 0.02]];
+    const progress = 0.5;
+    const halfWindow = cinematicAnchorSmoothingHalfWindow(0.8, 60);
+    const pose = getReplayWarmupPose({ coordinates: route, elevationData: [], followBehindZoomLevel: 100,
+      cameraMode: 'cinematic', cinematicKeyframes: [], cameraStability: 0.8, totalDurationMs: 60000, progress })!;
+    expect(pose.bearing).toBeCloseTo(getSmoothedRouteHeadingDeg({ coordinates: route, progress, smoothingHalfWindow: halfWindow,
+      baselineHalfWidth: cinematicHeadingBaselineHalfWidth(halfWindow) })!);
+    expect(pose.center).toEqual(getSmoothedCameraAnchor({ coordinates: route, progress, smoothingHalfWindow: halfWindow,
+      markerPosition: getRouteCoordinateAtProgress(route, progress)!, zoom: pose.zoom }));
   });
 
   it('samples every zoom band crossed by intro and outro without exceeding its cap', () => {

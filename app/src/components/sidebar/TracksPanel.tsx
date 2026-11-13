@@ -1,4 +1,3 @@
-import { localizedSitePath } from '@/seo/seoLocale';
 import { useCallback } from 'react';
 import { useDropzone, type DropEvent } from 'react-dropzone';
 import { useAppStore } from '@/store/useAppStore';
@@ -10,7 +9,7 @@ import { RecipeReportCard } from '@/components/sidebar/tracks/RecipeReportCard';
 import { trackEvent } from '@/utils/analytics';
 
 export function TracksPanel() {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const { parseFiles, isParsing } = useGPX();
   const tracks = useAppStore((state) => state.tracks);
   const activeTrackId = useAppStore((state) => state.activeTrackId);
@@ -20,8 +19,6 @@ export function TracksPanel() {
   const updateTrackName = useAppStore((state) => state.updateTrackName);
   const toggleTrackVisibility = useAppStore((state) => state.toggleTrackVisibility);
   const settings = useAppStore((state) => state.settings);
-  const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
-  const setExploreMode = useAppStore((state) => state.setExploreMode);
   const onDrop = useCallback(async (
     acceptedFiles: File[],
     _fileRejections: unknown[],
@@ -119,25 +116,6 @@ export function TracksPanel() {
         </section>
       )}
       
-      {/* Empty State */}
-      {tracks.length === 0 && !isParsing && (
-        <div className="text-center py-8 text-[var(--evergreen-60)]">
-          <p className="text-sm">{t('tracks.emptyTitle')}</p>
-          <p className="text-xs mt-1">{t('tracks.emptySubtitle')}</p>
-          <a href={localizedSitePath('/gpx-animation', language)} className="mt-3 inline-block text-xs font-semibold text-[var(--evergreen)] underline hover:text-[var(--trail-orange)]">
-            {t('info.gpxAnimator')}
-          </a>
-          <button
-            onClick={() => {
-              setExploreMode(true);
-              setSidebarOpen(false);
-            }}
-            className="tr-btn tr-btn-secondary w-full text-sm mt-4"
-          >
-            {t('tracks.explore')}
-          </button>
-        </div>
-      )}
     </div>
   );
 }

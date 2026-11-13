@@ -12,7 +12,7 @@ describe('terrain presentation', () => {
     const { rerender } = renderHook(({ value }) => useBaseMapPresentation({
       currentTrackColor: null, isMapLoaded: true, mapRef: { current: map }, settings: value, trailStyle: value.trailStyle,
     }), { initialProps: { value: settings } });
-    expect(setTerrain).toHaveBeenLastCalledWith({ source: 'terrain-dem', exaggeration: 1.5 });
+    expect(setTerrain).toHaveBeenLastCalledWith({ source: 'terrain-dem', exaggeration: 1 });
     rerender({ value: { ...settings, terrainExaggeration: 2.4 } });
     expect(setTerrain).toHaveBeenLastCalledWith({ source: 'terrain-dem', exaggeration: 2.4 });
     rerender({ value: { ...settings, terrainExaggeration: 2.4, recordedElevationPrototype: true } });

@@ -13,9 +13,9 @@ export function sideAnnotationContent(annotation: TextAnnotation) {
 
   return {
     eyebrow: annotation.eyebrow?.trim() || null,
-    code: annotation.code?.trim() || (hasCode ? titleParts[0] : null),
+    code: annotation.code !== undefined ? annotation.code.trim() || null : (hasCode ? titleParts[0] : null),
     title: hasCode ? titleParts[1] : title,
-    meta: annotation.meta ?? (hasMeta ? subtitleLines[0] : null),
-    description: annotation.description ?? (hasMeta ? subtitleLines.slice(1) : subtitleLines).join(' '),
+    meta: annotation.meta?.trim() ?? (hasMeta ? subtitleLines[0] : null),
+    description: annotation.description?.trim() ?? (hasMeta ? subtitleLines.slice(1) : subtitleLines).join(' '),
   };
 }

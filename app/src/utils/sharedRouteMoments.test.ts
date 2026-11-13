@@ -23,7 +23,8 @@ describe('shared route moments', () => {
     expect(appearances).toHaveLength(2);
     expect(appearances.map((item) => item.id)).toEqual(['water', 'water']);
     expect(appearances[0].progress).toBeLessThan(appearances[1].progress);
-    expect(playbackTimeForRoute(40000, 40000, appearances)).toBeCloseTo(44000);
+    // Each two-second visible interval includes one second of original route time.
+    expect(playbackTimeForRoute(40000, 40000, appearances)).toBeCloseTo(42000);
     for (const appearance of appearances) {
       expect(getActivePlaybackAnnotationId({ annotations: appearances, currentTime: appearance.progress * 40000, totalDuration: 40000, phase: 'playing' })).toBe('water');
     }

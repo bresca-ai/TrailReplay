@@ -1,3 +1,5 @@
+import { mapGlobalRef } from '@/utils/mapRef';
+import { applyBasemapVisibility } from '@/components/map/basemapVisibility';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { VIDEO_LOGO_URL } from './videoExportBrand';
 import { OUTRO_DELAY, OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
@@ -18,11 +20,11 @@ import {
 } from '@/utils/annotationTiming';
 import { getTriggeredPlaybackItems, getTriggeredPlaybackPictures } from '@/utils/playbackPictures';
 import fixWebmDuration from 'fix-webm-duration';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { startExportTiming } from './exportTiming';
 import { getSupportedMimeType, getVideoBitrate } from './exportConfig';
 import { finishExportProfile, startExportProfile } from './exportProfiler';
-import { createMp4CanvasEncoder } from './mp4CanvasEncoder';
+import { createMp4CanvasEncoder, isWebCodecsMp4Supported } from './mp4CanvasEncoder';
 import { needsPinheadIcons } from '@/components/annotations/annotationSymbol';
 import { loadPinheadIcons } from '@/components/annotations/pinheadIcons';
 import {
@@ -37,6 +39,7 @@ import { useVideoExportRecorderCore, type UseVideoExportRecorderOptions } from '
 const EXPORT_MAP_SETTLE_MS = 150;
 
 export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = {}) {
+  const [exportError, setExportError] = useState<string | null>(null);
   const {
     t, language, studioDelivery, videoExportSettings, mapStyle, show3DTerrain, tracks,
     pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
@@ -110,7 +113,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           export_studio_timed_out_frames: studioStats.timedOutFrames,
         });
 
-        if (shouldAutoDownloadVideo(wasStudioQuality ? 'studio' : 'standard', localStudioDownload)) {
+        if (!encoder.diskBacked && shouldAutoDownloadVideo(wasStudioQuality ? 'studio' : 'standard', localStudioDownload)) {
           const url = URL.createObjectURL(blob);
           const anchor = document.createElement('a');
           anchor.href = url;
@@ -150,6 +153,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       } else {
         finishExportProfile('failed', exportProfileMetadata('webcodecs'));
         setExportStage(t('export.stageFailedNoData'));
+        setExportError(t('export.stageFailedNoData'));
         trackEvent('export_failed', {
           export_failure_scope: 'no_data',
           export_format: 'mp4',
@@ -160,6 +164,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       finishExportProfile('failed', exportProfileMetadata('webcodecs'));
       console.error('WebCodecs export failed', error);
       setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
+      setExportError(t('export.stageFailedWithError', { error: (error as Error).message }));
       trackEvent('export_failed', {
         export_failure_scope: 'encoder_finalize',
         export_format: 'mp4',
@@ -244,7 +249,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const introDuration = getIntroDuration(store.settings.locationChapters);
     const routeDurationMs = store.playback.totalDuration;
     const annotations = resolveSharedRouteMoments(store.textAnnotations, store.journeySegments, store.tracks, store.playback.routeTimingMode);
-    const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations);
+    const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations, store.settings.annotationHoldDuration ?? 5000);
     // Preview speed only affects interactive playback. Export always preserves
     // the configured journey duration on the encoded timeline.
     const frameCount = Math.ceil(outputDurationMs / frameDurationMs);
@@ -293,11 +298,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     while (frameIndex <= frameCount) {
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
 
-      const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations);
+      const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations, store.settings.annotationHoldDuration ?? 5000);
       const progress = routeDurationMs > 0 ? currentTime / routeDurationMs : 1;
       const frameStride = Math.min(
         frameCount - frameIndex + 1,
-        annotationExportFrameStride(currentTime, routeDurationMs, annotations),
+        annotationExportFrameStride(currentTime, routeDurationMs, annotations, 2, store.settings.annotationHoldDuration ?? 5000),
       );
       const coveredThroughFrame = frameIndex + frameStride - 1;
       setStudioMapTime(encodedDurationMs + frameDurationMs);
@@ -568,12 +573,32 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
     }
 
+    // The picker must run directly from the user's click, before preparation
+    // awaits. Studio delivery can upload the resulting disk-backed File.
+    let fileHandle: FileSystemFileHandle | undefined;
+    const picker = (window as Window & { showSaveFilePicker?: (options: {
+      suggestedName: string; types: Array<{ description: string; accept: Record<string, string[]> }>;
+    }) => Promise<FileSystemFileHandle> }).showSaveFilePicker;
+    if (videoExportSettings.format === 'mp4' && isWebCodecsMp4Supported() && picker) {
+      try {
+        fileHandle = await picker.call(window, {
+          suggestedName: `trail-replay-${Date.now()}.mp4`,
+          types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }],
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
+        return;
+      }
+    }
+
     exportTimingRef.current?.();
     exportTimingRef.current = startExportTiming();
     startExportProfile();
     setIsExporting(true);
     setExportProgress(0);
     setExportStage(t('export.stagePreparing'));
+    setExportError(null);
     setExportedBlob(null);
     setStudioDeliveryStatus('idle');
     setStudioDeliveryError(null);
@@ -623,6 +648,11 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       if (chapterSettings && (chapterSettings.level !== 'off' || getIntroLevels(chapterSettings).length > 0)) {
         await document.fonts.load(`700 24px ${overlayCanvasFontFamily(chapterFont)}`).catch(() => []);
       }
+      const fieldNotes = useAppStore.getState().textAnnotations.filter(annotation => annotation.presentation === 'side-panel');
+      if (fieldNotes.length) {
+        const text = fieldNotes.flatMap(annotation => [annotation.title, annotation.subtitle, annotation.eyebrow, annotation.meta, annotation.description, ...Object.values(annotation.translations ?? {}).flatMap(wording => [wording.title, wording.subtitle, wording.eyebrow, wording.meta, wording.description])]).filter(Boolean).join(' ');
+        await Promise.all([500, 600, 700].map(weight => document.fonts.load(`${weight} 16px ${overlayCanvasFontFamily('modern')}`, text).catch(() => [])));
+      }
       await document.fonts.ready;
       // Load saved symbols before rendering the first video frame.
       const exportState = useAppStore.getState();
@@ -660,12 +690,15 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
 
       setExportStage(t('export.stagePreparing'));
+      const exportMap = mapGlobalRef.current;
+      if (exportMap) applyBasemapVisibility(exportMap, useAppStore.getState().settings.mapStyle);
       await preloadExportOpeningTiles();
 
       // Let MapLibre complete its reset pose before starting the intro and its
       // first encoded frame. This avoids a recording that begins mid-reframe.
       await new Promise((resolve) => setTimeout(resolve, EXPORT_MAP_SETTLE_MS));
 
+      if (recordingCancelledRef.current) return;
       setExportStage(t('export.stageSetupRecorder'));
 
       // Preferred path: encode MP4 with WebCodecs + mp4-muxer. This produces a
@@ -676,6 +709,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           mp4EncoderRef.current = await createMp4CanvasEncoder({
             width,
             height,
+            fileHandle,
             fps: videoExportSettings.fps,
             bitrate: getVideoBitrate({
               width,
@@ -684,8 +718,14 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
               qualityMode: videoExportSettings.qualityMode,
             }),
           });
+          if (recordingCancelledRef.current) {
+            mp4EncoderRef.current?.close();
+            mp4EncoderRef.current = null;
+            return;
+          }
           setUseWebCodecs(mp4EncoderRef.current !== null);
         } catch (encoderError) {
+          if (fileHandle) throw encoderError;
           console.warn('WebCodecs MP4 encoder unavailable, falling back to MediaRecorder', encoderError);
           mp4EncoderRef.current = null;
           setUseWebCodecs(false);
@@ -757,6 +797,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
           recordingCancelledRef.current = true;
           finishRecording();
           setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
+          setExportError(t('export.stageFailedWithError', { error: (error as Error).message }));
         }).finally(() => {
           restoreStudioMapTime();
         });
@@ -777,6 +818,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         export_encoder_path: useWebCodecsRef.current ? 'webcodecs' : 'unknown',
       });
       setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));
+      setExportError(t('export.stageFailedWithError', { error: (error as Error).message }));
       restoreStudioMapSettings();
       studioDeliveryJobRef.current = null;
       studioQualityRef.current = false;
@@ -853,6 +895,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     setIsExporting(false);
     setExportProgress(0);
     setExportStage('');
+    setExportError(null);
     resetPlayback();
   }, [actualFormat, exportProfileMetadata, exportProgress, frameCleanupRef, frameRequestRef, isRecordingRef, mediaRecorderRef, mp4EncoderRef, recordingCancelledRef, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, restoreStudioMapTime, setExportProgress, setExportStage, setIsDeterministicExport, setIsExporting, setUseWebCodecs, studioDeliveryJobRef, studioQualityRef, useWebCodecsRef]);
 
@@ -881,6 +924,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     actualFormat,
     estimatedSize,
     exportProgress,
+    exportError,
     exportStage,
     exportedBlob,
     handleCancelExport,

@@ -169,6 +169,13 @@ While cinematic playback owns elevation, temporarily disable MapLibre's
 filtered height with raw DEM height after the pose is applied. Restore the prior
 setting when playback releases ownership. Native camera collision remains active.
 
+Automatic cinematic flight (`aerial-follow`) also owns the filtered look-at
+height during playback and export, so it must disable and restore the same
+ground clamp. It uses a single route-wide conservative zoom for the whole
+flight; the terrain planner still chooses safe bearings at that fixed camera
+distance. Preview, export, the shot editor and tile warmup must use the same
+zoom. Authored cinematic keyframes can still intentionally change zoom.
+
 Cinematic height is a fixed symmetric Blackman average along the planned camera
 anchor path (`cinematicCameraElevation.ts`), with a soft framing bound for close
 shots. It is spatial, not a wall-clock chase: a constant climb has no lag.

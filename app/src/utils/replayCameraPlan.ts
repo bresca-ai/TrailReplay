@@ -1,10 +1,16 @@
-import { getFollowBehindCameraTarget } from '@/utils/followBehindCamera';
+import { getFollowBehindCameraTarget, METERS_PER_PIXEL_AT_ZOOM_0 } from '@/utils/followBehindCamera';
 import {
   calculateTerrainAwareAdjustments,
   TERRAIN_CAMERA_SETTINGS,
 } from '@/components/map/cameraUtils';
 
-export type ReplayCameraMode = 'overview' | 'follow' | 'follow-behind';
+export type ReplayCameraMode = 'overview' | 'follow' | 'follow-behind' | 'aerial-follow';
+
+/** Cinematic uses the automatic flight until the user adds authored shots. */
+export function resolveReplayCameraMode(mode: ReplayCameraMode | 'cinematic', authoredShotCount: number): ReplayCameraMode | 'cinematic' {
+  if (mode === 'cinematic' || mode === 'aerial-follow') return authoredShotCount > 0 ? 'cinematic' : 'aerial-follow';
+  return mode;
+}
 
 export interface ReplayCameraPose {
   bearing: number;
@@ -186,7 +192,163 @@ export function getRouteBearingAtProgress(
   return bearingBetween(from, to);
 }
 
-/** Camera pose at the end of the cinematic intro. */
+/** A wide route chord ignores local switchbacks while following the overall direction. */
+export function getAerialFollowBearing(coordinates: number[][], progress: number): number {
+  if (coordinates.length < 2) return 0;
+  const index = clamp(progress, 0, 1) * (coordinates.length - 1);
+  const origin = getInterpolatedRouteCoordinate(coordinates, index)!;
+  const distance = (a: number[], b: number[]) => Math.hypot(
+    (a[0] - b[0]) * 111320 * Math.cos(origin[1] * Math.PI / 180),
+    (a[1] - b[1]) * 111320,
+  );
+  const seek = (direction: number) => {
+    let previous: number[] = origin, accumulated = 0;
+    for (let i = direction > 0 ? Math.ceil(index) : Math.floor(index); i >= 0 && i < coordinates.length; i += direction) {
+      const point = coordinates[i];
+      const segment = distance(previous, point);
+      if (accumulated + segment >= 500 && segment > 0) {
+        const fraction = (500 - accumulated) / segment;
+        return [previous[0] + (point[0] - previous[0]) * fraction, previous[1] + (point[1] - previous[1]) * fraction];
+      }
+      accumulated += segment; previous = point;
+    }
+    return previous;
+  };
+  const before = seek(-1), after = seek(1);
+  return distance(before, after) < 1 ? getRouteBearingAtProgress(coordinates, progress) : bearingBetween(before, after);
+}
+
+// Plan the entire turn sequence once. A symmetric window sees upcoming turns
+// as well as previous ones, so playback does not have to chase a moving target.
+const aerialPlans = new WeakMap<number[][], WeakMap<CameraPlanOptions['elevationData'], number[]>>();
+export function getPlannedAerialBearing(coordinates: number[][], elevations: CameraPlanOptions['elevationData'], progress: number): number {
+  let byElevation = aerialPlans.get(coordinates);
+  if (!byElevation) { byElevation = new WeakMap(); aerialPlans.set(coordinates, byElevation); }
+  let plan = byElevation.get(elevations);
+  if (!plan) {
+    const count = 201;
+    const raw: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const p = i / (count - 1);
+      // Keep the direction of a broad route section through a descent. A
+      // grade-triggered half-turn sends the camera orbiting around the marker
+      // even when the underlying route continues in the same direction.
+      const angle = getAerialFollowBearing(coordinates, p);
+      const previous = raw[i - 1];
+      raw.push(previous === undefined ? angle : previous + ((((angle - previous) % 360) + 540) % 360) - 180);
+    }
+    plan = raw.map((_, i) => {
+      let sum = 0, weight = 0;
+      for (let j = Math.max(0, i - 12); j <= Math.min(count - 1, i + 12); j++) {
+        const w = Math.exp(-0.5 * ((j - i) / 5) ** 2);
+        sum += raw[j] * w; weight += w;
+      }
+      return sum / weight;
+    });
+    byElevation.set(elevations, plan);
+  }
+  const index = clamp(progress, 0, 1) * (plan.length - 1);
+  const lower = Math.floor(index), upper = Math.min(plan.length - 1, lower + 1);
+  return plan[lower] + (plan[upper] - plan[lower]) * (index - lower);
+}
+
+const flatTerrainPlans = new WeakMap<number[][], WeakMap<CameraPlanOptions['elevationData'], number[]>>();
+
+/** Smoothly identify sustained flat sections; missing elevation leaves framing unchanged. */
+export function getFlatTerrainBlend(coordinates: number[][], elevations: CameraPlanOptions['elevationData'], progress: number): number {
+  if (coordinates.length < 2 || elevations.length < 2) return 0;
+  let byElevation = flatTerrainPlans.get(coordinates);
+  if (!byElevation) { byElevation = new WeakMap(); flatTerrainPlans.set(coordinates, byElevation); }
+  let plan = byElevation.get(elevations);
+  if (!plan) {
+    const readHeight = (p: number): number | null => {
+      const target = clamp(p, 0, 1);
+      const position = (i: number) => elevations[i].progress ?? i / (elevations.length - 1);
+      let lo = 0, hi = elevations.length - 1;
+      while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); if (position(mid) < target) lo = mid; else hi = mid; }
+      const a = elevations[lo]?.elevation, b = elevations[hi]?.elevation;
+      const span = position(hi) - position(lo);
+      const fraction = span > 0 ? clamp((target - position(lo)) / span, 0, 1) : 0;
+      return Number.isFinite(a) && Number.isFinite(b) ? a + (b - a) * fraction : null;
+    };
+    const raw = Array.from({ length: 101 }, (_, i) => {
+      const p = i / 100, start = Math.max(0, p - 0.012), end = Math.min(1, p + 0.012);
+      const a = getRouteCoordinateAtProgress(coordinates, start), b = getRouteCoordinateAtProgress(coordinates, end);
+      const low = readHeight(start), high = readHeight(end);
+      if (!a || !b || low === null || high === null) return 0;
+      const metres = Math.hypot((b[0] - a[0]) * 111320 * Math.cos(a[1] * Math.PI / 180), (b[1] - a[1]) * 111320);
+      if (metres < 100) return 0;
+      // A crest or dip can return to its starting elevation while still
+      // obstructing a low camera. Count variation inside the window too.
+      let variation = 0, previous = low;
+      for (let sample = 1; sample <= 4; sample++) {
+        const height = sample === 4 ? high : readHeight(start + (end - start) * sample / 4);
+        if (height === null) return 0;
+        variation += Math.abs(height - previous);
+        previous = height;
+      }
+      const grade = variation / metres;
+      const t = clamp((grade - 0.015) / 0.055, 0, 1);
+      return 1 - t * t * (3 - 2 * t);
+    });
+    plan = raw.map((_, i) => {
+      let sum = 0, weight = 0;
+      for (let j = Math.max(0, i - 4); j <= Math.min(100, i + 4); j++) {
+        const w = Math.exp(-0.5 * ((j - i) / 2) ** 2); sum += raw[j] * w; weight += w;
+      }
+      return sum / weight;
+    });
+    byElevation.set(elevations, plan);
+  }
+  const index = clamp(progress, 0, 1) * (plan.length - 1), lo = Math.floor(index), hi = Math.min(plan.length - 1, lo + 1);
+  return plan[lo] + (plan[hi] - plan[lo]) * (index - lo);
+}
+
+// Automatic flight keeps one conservative framing for the whole route.
+// Per-frame terrain and latitude corrections make the lens pulse on climbs.
+const aerialZoomCache = new WeakMap<number[][], WeakMap<CameraPlanOptions['elevationData'], number>>();
+function automaticFlightZoom(coordinates: number[][], elevationData: CameraPlanOptions['elevationData']): number {
+  let byElevation = aerialZoomCache.get(coordinates);
+  if (!byElevation) { byElevation = new WeakMap(); aerialZoomCache.set(coordinates, byElevation); }
+  const cached = byElevation.get(elevationData);
+  if (cached !== undefined) return cached;
+  let zoom = Infinity;
+  for (let i = 0; i <= 100; i++) {
+    const progress = i / 100;
+    const center = getRouteCoordinateAtProgress(coordinates, progress);
+    if (!center) continue;
+    const elevationIndex = Math.round(progress * Math.max(0, elevationData.length - 1));
+    const elevation = elevationData[elevationIndex]?.elevation ?? 0;
+    const correction = calculateTerrainAwareAdjustments(elevation, elevationData, progress);
+    const latitude = clamp(center[1], -85, 85) * Math.PI / 180;
+    const distanceZoom = Math.log2(METERS_PER_PIXEL_AT_ZOOM_0 * Math.cos(latitude) / (1400 / (720 * 1.5)));
+    zoom = Math.min(zoom, Math.max(TERRAIN_CAMERA_SETTINGS.MIN_ZOOM, distanceZoom - correction.zoomAdjust));
+  }
+  const result = Number.isFinite(zoom) ? zoom : TERRAIN_CAMERA_SETTINGS.MIN_ZOOM;
+  byElevation.set(elevationData, result);
+  return result;
+}
+
+function aerialFollowPose(options: CameraPlanOptions, center: [number, number]): ReplayCameraPose {
+  const elevationIndex = Math.round(clamp(options.progress, 0, 1) * Math.max(0, options.elevationData.length - 1));
+  const elevation = options.elevationData[elevationIndex]?.elevation ?? 0;
+  const correction = calculateTerrainAwareAdjustments(elevation, options.elevationData, options.progress);
+  // MapLibre's default 36.87° vertical field of view places its camera
+  // approximately 1.5 viewport heights from the target. Calibrate against a
+  // 720px reference frame so this behaves consistently across output sizes.
+  // Start higher over the terrain while flying into the route, then ease down
+  // into the immersive angle through the first stretch. Staying higher for
+  // longer gives the camera room to cross the first ridge and look into a
+  // valley rather than dropping behind its wall immediately after the intro.
+  const opening = clamp(options.progress / 0.10, 0, 1);
+  const easedOpening = opening * opening * (3 - 2 * opening);
+  const flat = getFlatTerrainBlend(options.coordinates, options.elevationData, options.progress) * easedOpening;
+  return { center, bearing: getPlannedAerialBearing(options.coordinates, options.elevationData, options.progress),
+    zoom: automaticFlightZoom(options.coordinates, options.elevationData),
+    pitch: 50 + 20 * easedOpening - correction.pitchAdjust * 0.2 + flat * 4 };
+}
+
+
 export function getIntroCameraPose(options: CameraPlanOptions): ReplayCameraPose | null {
   const center = getRouteCoordinateAtProgress(options.coordinates, options.progress);
   if (!center || options.cameraMode === 'overview') return null;
@@ -194,6 +356,7 @@ export function getIntroCameraPose(options: CameraPlanOptions): ReplayCameraPose
   if (options.cameraMode === 'follow') {
     return { center, zoom: FOLLOW_CAMERA_ZOOM, pitch: 0, bearing: 0 };
   }
+  if (options.cameraMode === 'aerial-follow') return aerialFollowPose(options, center);
 
   // The fly-in must finish on the same pose used by the first playback frame.
   // A separate, more distant intro target created a visible second zoom after
@@ -223,6 +386,7 @@ export function getPlaybackCameraPose(options: CameraPlanOptions): ReplayCameraP
   if (options.cameraMode === 'follow') {
     return { center, zoom: FOLLOW_CAMERA_ZOOM, pitch: 0, bearing: 0 };
   }
+  if (options.cameraMode === 'aerial-follow') return aerialFollowPose(options, center);
 
   const preset = getFollowBehindCameraTarget(options.followBehindZoomLevel, 'playback');
   const elevationIndex = Math.round(clamp(options.progress, 0, 1) * Math.max(0, options.elevationData.length - 1));

@@ -1,4 +1,3 @@
-import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { drawBuildingsAttribution } from './mapAttribution';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
@@ -6,16 +5,6 @@ import { useAppStore } from '@/store/useAppStore';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { DEFAULT_SKY_COLOR } from '@/components/map/mapSky';
 import { getCropRegion } from '@/utils/crop';
-import { getActivePlaybackAnnotationId } from '@/utils/playbackAnnotations';
-import { localizedAnnotation } from '@/utils/annotationTranslations';
-import { sideAnnotationContent } from '@/components/annotations/sideAnnotationContent';
-import { drawAnnotationSymbol } from '@/components/annotations/annotationSymbol';
-import { drawSidePanelShade } from '@/components/annotations/sidePanelShade';
-import { getSideAnnotationTypography } from '@/components/annotations/sideAnnotationTypography';
-import {
-  layoutSideAnnotationCanvasText,
-  type SideAnnotationTextRole,
-} from '@/components/annotations/sideAnnotationCanvasLayout';
 import type { VideoExportSettings } from '@/types';
 import { markerIconContrastFilter } from '@/utils/activityIcons';
 import { overlayCanvasFontFamily } from '@/utils/typography';
@@ -189,7 +178,6 @@ export function drawExportFrame({
   overlayFramesSinceRefreshRef,
   overlayRefreshIntervalMs,
   updateOverlayAsync,
-  t,
 }: DrawExportFrameOptions) {
     if (!recordingCanvasRef.current || !recordingContextRef.current) return;
     const { width: recordW, height: recordH } = videoExportSettings.resolution;
@@ -246,98 +234,24 @@ export function drawExportFrame({
       context.restore();
     }
 
-    // DOM overlays are not part of MapLibre's canvas. Paint the side panel
-    // explicitly for video frames, including the slowed section of the route.
-    const currentState = useAppStore.getState();
-    const activeId = getActivePlaybackAnnotationId({
-      annotations: resolveSharedRouteMoments(currentState.textAnnotations, currentState.journeySegments, currentState.tracks, currentState.playback.routeTimingMode),
-      currentTime: currentState.playback.currentTime,
-      totalDuration: currentState.playback.totalDuration,
-      phase: currentState.animationPhase,
-    });
-    const sideAnnotation = currentState.textAnnotations.find((item) => item.id === activeId && item.presentation === 'side-panel');
-    if (sideAnnotation) {
-      const panel = container.querySelector('.tr-annotation-side-panel');
-      const rect = panel?.getBoundingClientRect();
-      if (rect) {
-        const x = (rect.left - containerRect.left - cropX) * (recordW / cropW);
-        const measuredY = (rect.top - containerRect.top - cropY) * (recordH / cropH);
-        const w = rect.width * (recordW / cropW);
-        const measuredHeight = rect.height * (recordH / cropH);
-        const scale = recordW / cropW;
-        const copy = sideAnnotationContent(localizedAnnotation(sideAnnotation, currentState.settings.language));
-        const overlayFamily = overlayCanvasFontFamily(currentState.settings.trailStyle.overlayFont);
-        const typography = getSideAnnotationTypography(videoExportSettings.aspectRatio);
-        const inset = 20 * scale;
-        const maxWidth = w - inset * 2;
-        const fonts: Record<SideAnnotationTextRole, string> = {
-          title: `700 ${typography.titleSize * scale}px ${overlayFamily}`,
-          meta: `600 ${typography.metaSize * scale}px ${overlayFamily}`,
-          description: `500 ${typography.detailsSize * scale}px ${overlayFamily}`,
-        };
-        const layout = layoutSideAnnotationCanvasText(
-          copy,
-          typography,
-          maxWidth,
-          (role, value) => {
-            context.font = fonts[role];
-            return context.measureText(value);
-          },
-        );
-        const h = Math.max(measuredHeight, layout.panelHeight * scale);
-        // The live panel is bottom-anchored. If canvas font metrics need more
-        // lines, grow upward so the stop never spills into the elevation strip
-        // or beyond the export frame.
-        const y = measuredY + measuredHeight - h;
-        const contentX = x + inset;
-        context.save();
-        drawSidePanelShade(context, x, y, w, h, scale);
-        const logoY = y + 18 * scale;
-        drawAnnotationSymbol(context, sideAnnotation.logo || 'map:pin', contentX + 17 * scale, logoY + 17 * scale, 29 * scale, sideAnnotation.color);
-        context.shadowColor = 'rgba(3,13,16,0.9)';
-        context.shadowBlur = 6 * scale;
-        context.shadowOffsetY = 2 * scale;
-        context.textAlign = 'left';
-        context.font = `600 ${typography.eyebrowSize * scale}px ${overlayFamily}`;
-        context.fillStyle = '#f8f6f0';
-        context.fillText((copy.eyebrow || t('annotations.sidePanelEyebrow')).toLocaleUpperCase(), contentX + 45 * scale, logoY + 12 * scale);
-        if (copy.code) {
-          context.font = `700 ${typography.codeSize * scale}px ${overlayFamily}`;
-          context.fillStyle = sideAnnotation.color;
-          context.fillText(copy.code, contentX + 45 * scale, logoY + 31 * scale);
-        }
-        context.fillStyle = sideAnnotation.color;
-        context.fillRect(x + w - 51 * scale, logoY + 10 * scale, 31 * scale, scale);
-
-        const drawLines = (lines: string[], font: string, lineHeight: number, baseline: number) => {
-          context.font = font;
-          lines.forEach((line, index) => {
-            context.fillText(line, contentX, baseline + index * lineHeight * scale);
-          });
-          return baseline + lines.length * lineHeight * scale;
-        };
-
-        context.fillStyle = '#f8f8f1';
-        let nextY = drawLines(layout.title, fonts.title, typography.titleSize * 1.25, y + 82 * scale);
-        if (layout.meta.length > 0) {
-          context.fillStyle = sideAnnotation.color;
-          nextY = drawLines(layout.meta, fonts.meta, typography.metaSize * 1.4, nextY + 4 * scale);
-        }
-        if (layout.description.length > 0) {
-          const dividerY = nextY + 8 * scale;
-          context.strokeStyle = sideAnnotation.color;
-          context.lineWidth = scale;
-          context.beginPath();
-          context.moveTo(contentX, dividerY);
-          context.lineTo(x + w - inset, dividerY);
-          context.stroke();
-          context.fillStyle = '#f8f6f0';
-          drawLines(layout.description, fonts.description, typography.detailsSize * 1.55, dividerY + 26 * scale);
-        }
-        context.restore();
-      }
+    // The overview canvas contains both the route and its current moving marker.
+    const overview = container.querySelector('.tr-route-overview') as HTMLCanvasElement | null;
+    if (overview && overview.width && overview.height) {
+      const rect = overview.getBoundingClientRect();
+      const scale = recordW / cropW;
+      context.drawImage(overview, (rect.left - containerRect.left - cropX) * scale,
+        (rect.top - containerRect.top - cropY) * scale, rect.width * scale, rect.height * scale);
     }
 
+    // Screen annotations are DOM overlays; copy their exact drawing into the export crop.
+    const screenNote = container.querySelector('.tr-screen-annotation') as HTMLCanvasElement | null;
+    if (screenNote && screenNote.width && screenNote.height) {
+      const rect = screenNote.getBoundingClientRect();
+      const scale = recordW / cropW;
+      context.drawImage(screenNote, (rect.left - containerRect.left - cropX) * scale,
+        (rect.top - containerRect.top - cropY) * scale, rect.width * scale, rect.height * scale);
+    }
+    const currentState = useAppStore.getState();
     const scaleX = recordW / cropW;
     const scaleY = recordH / cropH;
 

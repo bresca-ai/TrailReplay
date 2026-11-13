@@ -99,7 +99,6 @@ describe('resolveRecipe', () => {
       title: 'Feed station',
       displayDuration: 4000,
       presentation: 'side-panel',
-      holdDuration: 6000,
     });
     expect(resolved.textAnnotations[0].progress).toBeCloseTo(0.25, 2);
     expect(resolved.textAnnotations[0].routeDistance).toBeCloseTo(2500, 0);

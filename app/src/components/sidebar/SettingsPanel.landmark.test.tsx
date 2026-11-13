@@ -52,7 +52,7 @@ it('places the collapsible location chapters between landmarks and overlays', ()
 
 it('browses all map styles in the same picker and keeps the selected style visible', () => {
   useAppStore.getState().reset();
-  useAppStore.getState().setSettings({ language: 'en' });
+  useAppStore.getState().setSettings({ language: 'en', mapStyle: 'satellite' });
   const { unmount } = render(<SettingsPanel />);
   expect(screen.queryByText('More map styles')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Previous map styles' })).toBeDisabled();

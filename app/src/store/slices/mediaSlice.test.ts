@@ -36,7 +36,7 @@ describe('mediaSlice relink actions', () => {
     });
 
     const file = new File(['image'], 'summit.jpg', { type: 'image/jpeg' });
-    store.getState().relinkPictureFile('picture-1', file);
+    store.getState().relinkPictureFile('picture-1', [file]);
 
     const picture = store.getState().pictures[0];
     expect(picture.file).toBe(file);
@@ -44,6 +44,27 @@ describe('mediaSlice relink actions', () => {
     expect(picture.url).toMatch(/^blob:|^data:/);
     expect(picture.originalFileName).toBe('summit.jpg');
   });
+
+  it('relinkPictureFile picks the matching file for a placeholder picture from a list, attaches it to the picture and clears isPlaceholder', () => {
+    const store = createAppStore();
+    store.setState((state) => {
+      state.pictures.push(createPlaceholderPicture());
+    });
+
+    const files = [
+      new File(['image'], 'abc.jpg', { type: 'image/jpeg' }),
+      new File(['image'], 'summit.jpg', { type: 'image/jpeg' }),
+      new File(['image'], 'xyz.jpg', { type: 'image/jpeg' })
+    ];
+    store.getState().relinkPictureFile('picture-1', files);
+
+    const picture = store.getState().pictures[0];
+    expect(picture.file).toBe(files[1]);
+    expect(picture.isPlaceholder).toBe(false);
+    expect(picture.url).toMatch(/^blob:|^data:/);
+    expect(picture.originalFileName).toBe('summit.jpg');
+  });
+
 
   it('uses a converted renderable asset when relinking a picture', () => {
     const store = createAppStore();
@@ -53,7 +74,7 @@ describe('mediaSlice relink actions', () => {
 
     const source = new File(['heic'], 'summit.heic', { type: 'image/heic' });
     const displayFile = new File(['jpeg'], 'summit.jpg', { type: 'image/jpeg' });
-    store.getState().relinkPictureFile('picture-1', source, {
+    store.getState().relinkPictureFile('picture-1', [source], {
       url: 'blob:converted-preview',
       displayFile,
     });
@@ -75,7 +96,7 @@ describe('mediaSlice relink actions', () => {
 
     store.getState().relinkPictureFile(
       'picture-1',
-      new File(['image'], 'summit.jpg', { type: 'image/jpeg' }),
+      [new File(['image'], 'summit.jpg', { type: 'image/jpeg' })],
       { url: 'blob:new-preview' },
     );
 
@@ -89,10 +110,29 @@ describe('mediaSlice relink actions', () => {
     });
 
     const file = new File(['video'], 'descent.mp4', { type: 'video/mp4' });
-    store.getState().relinkVideoFile('video-1', file);
+    store.getState().relinkVideoFile('video-1', [file]);
 
     const video = store.getState().videos[0];
     expect(video.file).toBe(file);
+    expect(video.isPlaceholder).toBe(false);
+    expect(video.url).toMatch(/^blob:|^data:/);
+  });
+
+  it('relinkPictureFile picks the matching file for a placeholder video from a list, attaches it to the video and clears isPlaceholder', () => {
+    const store = createAppStore();
+    store.setState((state) => {
+      state.videos.push(createPlaceholderVideo());
+    });
+
+    const files = [
+      new File(['video'], 'abc.mp4', { type: 'video/mp4' }),
+      new File(['video'], 'descent.mp4', { type: 'video/mp4' }),
+      new File(['video'], 'xyz.mp4', { type: 'video/mp4' })
+    ];
+    store.getState().relinkVideoFile('video-1', files);
+
+    const video = store.getState().videos[0];
+    expect(video.file).toBe(files[1]);
     expect(video.isPlaceholder).toBe(false);
     expect(video.url).toMatch(/^blob:|^data:/);
   });
@@ -103,7 +143,7 @@ describe('mediaSlice relink actions', () => {
       state.pictures.push(createPlaceholderPicture());
     });
 
-    store.getState().relinkPictureFile('missing-id', new File(['image'], 'x.jpg'));
+    store.getState().relinkPictureFile('missing-id', [new File(['image'], 'x.jpg')]);
 
     expect(store.getState().pictures[0].isPlaceholder).toBe(true);
   });

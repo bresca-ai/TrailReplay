@@ -115,3 +115,40 @@ it('paints location names, flags and source credits into cropped video frames', 
   expect(context.fillText.mock.calls.some(call => String(call[0]).includes('geoBoundaries'))).toBe(true);
   useAppStore.getState().reset();
 });
+
+
+it('copies the screen annotation into the exported video frame', () => {
+  const note = document.createElement('canvas');
+  note.className = 'tr-screen-annotation';
+  note.width = 800; note.height = 160;
+  note.getBoundingClientRect = () => new DOMRect(50, 100, 200, 40);
+  document.getElementById('map-capture-container')!.appendChild(note);
+  const { options } = frameOptions();
+  const context = {
+    fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
+    beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(),
+    measureText: (value: string) => ({ width: value.length * 10 }),
+    createLinearGradient: () => ({ addColorStop: vi.fn() }),
+  };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  drawExportFrame(options);
+  expect(context.drawImage).toHaveBeenCalledWith(note, 50, 100, 200, 40);
+});
+
+it('copies the live route overview to its position in the export', () => {
+  const overview = document.createElement('canvas');
+  overview.className = 'tr-route-overview';
+  overview.width = 400; overview.height = 288;
+  overview.getBoundingClientRect = () => new DOMRect(70, 120, 200, 144);
+  document.getElementById('map-capture-container')!.appendChild(overview);
+  const { options } = frameOptions();
+  const context = {
+    fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn(),
+    beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), fillText: vi.fn(),
+    measureText: (value: string) => ({ width: value.length * 10 }),
+    createLinearGradient: () => ({ addColorStop: vi.fn() }),
+  };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  drawExportFrame(options);
+  expect(context.drawImage).toHaveBeenCalledWith(overview, 70, 120, 200, 144);
+});

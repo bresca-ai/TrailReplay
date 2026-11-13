@@ -14,11 +14,20 @@ export interface GPXPoint {
   speed: number;
 }
 
+export interface GPXWaypoint {
+  lat: number;
+  lon: number;
+  name: string;
+  description?: string;
+  elevation?: number;
+}
+
 export interface GPXTrack {
   id: string;
   name: string;
   activityIcon: string;
   points: GPXPoint[];
+  waypoints?: GPXWaypoint[];
   totalDistance: number;
   totalTime: number;
   movingTime: number;
@@ -190,10 +199,14 @@ export interface TextAnnotation {
   color: string;
   elevation?: number;
   displayDuration: number;
+  /** Optional lead time for the map pin; absent uses the shared setting. */
+  pinLeadDuration?: number;
   /** A transparent map caption or a longer field note with a route symbol. */
   presentation?: 'map-card' | 'side-panel';
   /** `map:<glyph>` selects a shared map icon; other values remain emoji. */
   logo?: string;
+  /** Fill the annotation pin with its color; false leaves the map visible. */
+  markerFilled?: boolean;
   /** Additional playback time spent easing through this point, in ms. */
   holdDuration?: number;
   /** Optional authored wording for each UI language. Missing languages use title/subtitle. */
@@ -237,7 +250,7 @@ export interface MapStyleConfig {
   thumbnail?: string;
 }
 
-export type CameraMode = 'overview' | 'follow' | 'follow-behind' | 'cinematic';
+export type CameraMode = 'overview' | 'follow' | 'follow-behind' | 'aerial-follow' | 'cinematic';
 
 export interface CameraSettings {
   mode: CameraMode;
@@ -489,6 +502,13 @@ export interface AppSettings {
   showLeaderboard: boolean;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
+  /** Fill the area below the elevation line. */
+  elevationProfileFilled: boolean;
+  /** Height multiplier for the on-map elevation chart. */
+  elevationProfileHeight: number;
+  /** Optional draggable, top-down route inset. */
+  showRouteOverview: boolean;
+  routeOverviewPosition: { x: number; y: number } | null;
   /** Automatically focus the elevation chart on significant climbs and descents. */
   dynamicElevationProfile: boolean;
   elevationProfilePerRoute: boolean;
@@ -504,6 +524,13 @@ export interface AppSettings {
   landmarkStyle: 'classic' | 'minimal';
   /** Fade landmark labels in with zoom instead of popping them in. */
   landmarkLabelFade: boolean;
+  /** Scale for route annotation markers and their text. */
+  annotationScale: number;
+  annotationPinLeadDuration: number;
+  annotationHoldDuration: number;
+  /** Independent size settings; absent values inherit the older shared scale. */
+  annotationMarkerScale?: number;
+  annotationTextScale?: number;
   inactiveAnnotationsOpacity: number;
 }
 

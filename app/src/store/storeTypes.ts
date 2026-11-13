@@ -219,8 +219,8 @@ export interface AppState {
   setError: (error: string | null) => void;
   setSelectedPictureId: (pictureId: string | null) => void;
   setExportVideoHoldTimeSeconds: (seconds: number | null) => void;
-  relinkPictureFile: (pictureId: string, file: File, asset?: { url: string; displayFile?: File }) => void;
-  relinkVideoFile: (videoId: string, file: File) => void;
+  relinkPictureFile: (pictureId: string, files: File[], asset?: { url: string; displayFile?: File }) => void;
+  relinkVideoFile: (videoId: string, files: File[]) => void;
   reset: () => void;
   /** Bulk-restore only (project load) — bypasses granular per-field actions and their id-generation/side-effect behavior. Do not use for normal UI-driven updates. */
   /** What the last dropped recipe resolved to, shown so a person can check it. */

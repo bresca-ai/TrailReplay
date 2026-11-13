@@ -207,6 +207,8 @@ export function SettingsPanel() {
     }
   };
 
+  const displayedCameraMode = cameraSettings.mode === 'aerial-follow' ? 'cinematic' : cameraSettings.mode;
+
   return (
     <div className="space-y-6">
       {/* Camera Mode */}
@@ -217,13 +219,13 @@ export function SettingsPanel() {
         </h3>
         <div className="grid grid-cols-2 gap-2" role="group" aria-label={t('settings.cameraTitle')}>
           {CAMERA_MODES.map((mode) => (
-            <button key={mode.id} type="button" onClick={() => selectCameraMode(mode.id)} aria-pressed={cameraSettings.mode === mode.id}
-              className={`min-h-11 rounded-lg border-2 px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${cameraSettings.mode === mode.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] text-[var(--evergreen)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)] hover:border-[var(--trail-orange)]/50'}`}>
+            <button key={mode.id} type="button" onClick={() => selectCameraMode(mode.id)} aria-pressed={displayedCameraMode === mode.id}
+              className={`min-h-11 rounded-lg border-2 px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${displayedCameraMode === mode.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] text-[var(--evergreen)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)] hover:border-[var(--trail-orange)]/50'}`}>
               {t(mode.nameKey)}
             </button>
           ))}
         </div>
-        <p className="mt-2 text-xs text-[var(--evergreen-60)]" aria-live="polite">{t(CAMERA_MODES.find((mode) => mode.id === cameraSettings.mode)!.descriptionKey)}</p>
+        <p className="mt-2 text-xs text-[var(--evergreen-60)]" aria-live="polite">{t(CAMERA_MODES.find((mode) => mode.id === displayedCameraMode)!.descriptionKey)}</p>
 
         {/* Follow Behind Presets */}
         {cameraSettings.mode === 'follow-behind' && (
@@ -270,7 +272,7 @@ export function SettingsPanel() {
         )}
 
         {/* Cinematic keyframes */}
-        {cameraSettings.mode === 'cinematic' && <CinematicCameraEditor />}
+        {displayedCameraMode === 'cinematic' && <CinematicCameraEditor />}
 
         {/* Camera Stability */}
         {cameraSettings.mode !== 'overview' && (
@@ -497,10 +499,10 @@ export function SettingsPanel() {
         <div className="mt-3 p-3 bg-[var(--evergreen)]/5 rounded-lg">
           <div className="flex justify-between">
             <label htmlFor="terrain-exaggeration" className="text-sm text-[var(--evergreen)]">{t('settings.terrainExaggeration')}</label>
-            <span className="text-sm text-[var(--evergreen-60)]">{(settings.terrainExaggeration ?? 1.5).toFixed(1)}×</span>
+            <span className="text-sm text-[var(--evergreen-60)]">{(settings.terrainExaggeration ?? 1).toFixed(1)}×</span>
           </div>
           <input id="terrain-exaggeration" type="range" min={0.5} max={3} step={0.1}
-            value={settings.terrainExaggeration ?? 1.5} disabled={!settings.show3DTerrain || settings.recordedElevationPrototype}
+            value={settings.terrainExaggeration ?? 1} disabled={!settings.show3DTerrain || settings.recordedElevationPrototype}
             onChange={(e) => setSettings({ terrainExaggeration: Number(e.target.value) })}
             className="w-full accent-[var(--trail-orange)] disabled:opacity-50" />
           {settings.recordedElevationPrototype && <p className="text-xs text-[var(--evergreen-60)]">{t('settings.terrainExaggerationRecordedHint')}</p>}

@@ -435,7 +435,7 @@ pushing.
 | `mapOverlays` | `{ skiPistes, slopeOverlay, placeLabels, aspectOverlay }`, all boolean |
 | `show3DTerrain` | boolean |
 | `showHeartRate`, `showPictures` | boolean |
-| `cameraMode` | `overview` `follow` `follow-behind` `cinematic` |
+| `cameraMode` | `overview` `follow` `follow-behind` `aerial-follow` `cinematic` |
 | `defaultAnimationSpeed` | number, `1` = normal |
 | `trailStyle` | see below |
 | `waybackRelease`, `waybackItemURL` | historical imagery; `null` unless `mapStyle` is `wayback` |
@@ -460,7 +460,7 @@ pushing.
 
 ### 5.6 `cameraSettings`
 
-`mode` is `overview`, `follow`, `follow-behind`, or `cinematic`.
+`mode` is `overview`, `follow`, `follow-behind`, `aerial-follow`, or `cinematic`.
 
 For `follow-behind`, prefer a named `followBehindPreset`. These names match the
 website's distance control exactly:
