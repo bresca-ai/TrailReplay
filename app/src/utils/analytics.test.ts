@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/config/analytics', () => ({
   GA4_DEBUG_MODE: false,
+  RELEASE_ID: 'release123',
   GA4_MEASUREMENT_ID: 'G-TEST',
   shouldEnableAnalytics: () => true,
 }));
@@ -94,4 +95,23 @@ describe('analytics', () => {
       export_duration_bucket: 'medium',
     });
   });
+  it('emits a privacy-safe reliability alert event with the release id', async () => {
+    const { initAnalytics, trackEvent } = await import('./analytics');
+    initAnalytics();
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    trackEvent('route_import_failed', { filename: 'private-route.gpx', route_error_type: 'parse_error' });
+    const event = (window.dataLayer as IArguments[]).find((call) => call[1] === 'reliability_import_failure');
+    expect(event?.[2]).toEqual({ app_name: 'TrailReplay', app_release: 'release123', operation: 'route_import', failure_stage: 'unknown', reliability_import_failures: 1 });
+    expect(JSON.stringify(event?.[2])).not.toContain('private-route');
+  });
+
+  it('counts export failures without including an unrecognized failure scope', async () => {
+    const { initAnalytics, trackEvent } = await import('./analytics');
+    initAnalytics();
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    trackEvent('export_failed', { export_failure_scope: 'private-filename.gpx' });
+    const event = (window.dataLayer as IArguments[]).find((call) => call[1] === 'reliability_export_failure');
+    expect(event?.[2]).toEqual({ app_name: 'TrailReplay', app_release: 'release123', operation: 'export', failure_stage: 'unknown', reliability_export_failures: 1 });
+  });
+
 });

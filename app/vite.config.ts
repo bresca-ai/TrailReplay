@@ -21,6 +21,9 @@ export default defineConfig(({ command, mode }) => {
 
   return {
   base: '/',
+  define: {
+    __TRAILREPLAY_RELEASE_ID__: JSON.stringify(process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || 'local'),
+  },
   server: {
     proxy: apiProxyTarget ? {
       '/api': {

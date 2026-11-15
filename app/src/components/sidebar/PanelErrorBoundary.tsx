@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { reportBrowserFailure } from '@/utils/browserMonitoring';
 
 type Props = { children: ReactNode; title: string; message: string; reloadLabel: string };
 
@@ -9,6 +10,8 @@ export class PanelErrorBoundary extends Component<Props, { failed: boolean }> {
   static getDerivedStateFromError() {
     return { failed: true };
   }
+
+  componentDidCatch() { reportBrowserFailure('react_panel'); }
 
   render() {
     if (!this.state.failed) return this.props.children;

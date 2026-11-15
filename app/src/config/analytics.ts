@@ -1,5 +1,8 @@
 const DEFAULT_GA4_MEASUREMENT_ID = 'G-0JN6P31VV9';
 
+declare const __TRAILREPLAY_RELEASE_ID__: string;
+export const RELEASE_ID = typeof __TRAILREPLAY_RELEASE_ID__ === 'string' ? __TRAILREPLAY_RELEASE_ID__ : 'local';
+
 export const GA4_MEASUREMENT_ID =
   import.meta.env.VITE_GA_MEASUREMENT_ID || DEFAULT_GA4_MEASUREMENT_ID;
 
