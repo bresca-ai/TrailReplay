@@ -1,4 +1,4 @@
-import { GA4_DEBUG_MODE, GA4_MEASUREMENT_ID, shouldEnableAnalytics } from '@/config/analytics';
+import { GA4_DEBUG_MODE, GA4_MEASUREMENT_ID, RELEASE_ID, shouldEnableAnalytics } from '@/config/analytics';
 import type { VideoExportSettings, VideoFormat } from '@/types';
 
 let isInitialized = false;
@@ -290,6 +290,7 @@ function bootAnalytics(pageContext: AnalyticsPageContext) {
     page_location: window.location.href,
     page_path: `${window.location.pathname}${window.location.search}`,
     app_name: 'TrailReplay',
+    app_release: RELEASE_ID,
     ...pageContext,
   });
 
@@ -323,5 +324,26 @@ export function trackEvent(eventName: string, parameters: Record<string, unknown
   window.gtag('event', eventName, {
     ...sanitizeAnalyticsParams(parameters),
     app_name: 'TrailReplay',
+    app_release: RELEASE_ID,
   });
+
+  // Separate, fixed-name events make GA4 insights filterable without sending
+  // arbitrary exception text, paths, filenames, or user content.
+  const failureEvents: Record<string, string> = {
+    export_failed: 'reliability_export_failure',
+    route_import_failed: 'reliability_import_failure',
+    recipe_import_failed: 'reliability_import_failure',
+    project_open_failed: 'reliability_import_failure',
+  };
+  const reliabilityEvent = failureEvents[eventName];
+  if (reliabilityEvent) {
+    const scope = parameters.export_failure_scope;
+    const safeScopes = ['setup', 'no_data', 'recorder_error', 'encoder_finalize', 'studio_delivery', 'runtime', 'frame_capture'];
+    window.gtag('event', reliabilityEvent, {
+      app_name: 'TrailReplay', app_release: RELEASE_ID,
+      operation: eventName === 'export_failed' ? 'export' : eventName.replace('_failed', ''),
+      failure_stage: typeof scope === 'string' && safeScopes.includes(scope) ? scope : 'unknown',
+      ...(eventName === 'export_failed' ? { reliability_export_failures: 1 } : { reliability_import_failures: 1 }),
+    });
+  }
 }

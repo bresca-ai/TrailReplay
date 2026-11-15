@@ -58,8 +58,10 @@ import './index.css'
 import App from './App.tsx'
 import { captureLeadAttribution, initAnalytics } from '@/utils/analytics'
 import { startWebVitalsTracking } from '@/utils/performance'
+import { installBrowserMonitoring } from '@/utils/browserMonitoring'
 
 void initAnalytics({ page_type: 'app', page_group: 'product' });
+installBrowserMonitoring();
 void captureLeadAttribution();
 void startWebVitalsTracking();
 createRoot(document.getElementById('root')!).render(
