@@ -33,6 +33,23 @@ beforeEach(() => {
 });
 afterEach(() => { document.body.replaceChildren(); mapGlobalRef.current = null; });
 
+it('scales the clamped mobile map crop into the requested output frame', () => {
+  const container = document.getElementById('map-capture-container')!;
+  container.getBoundingClientRect = () => new DOMRect(0, 0, 320, 2132);
+  const canvas = mapGlobalRef.current!.getCanvas();
+  canvas.width = 1229; canvas.height = 8192;
+  const { context, options } = frameOptions();
+  options.videoExportSettings.resolution = { width: 1280, height: 720 };
+  drawExportFrame(options);
+  const [source, x, y, width, height, destX, destY, destWidth, destHeight] = context.drawImage.mock.calls[0];
+  expect(source).toBe(canvas);
+  expect(x).toBe(0);
+  expect(y).toBeGreaterThan(0);
+  expect(width).toBe(1229);
+  expect(height).toBeCloseTo(720 / 1280 * 320 * 8192 / 2132);
+  expect([destX, destY, destWidth, destHeight]).toEqual([0, 0, 1280, 720]);
+});
+
 describe('opaque sky in replay exports', () => {
   it('replaces the previous frame before compositing transparent map pixels on every frame', () => {
     const { context, options } = frameOptions();

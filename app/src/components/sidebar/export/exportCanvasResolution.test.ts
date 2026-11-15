@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { setExportCanvasResolution } from './exportCanvasResolution';
+import { assertExportCanvasUsable, setExportCanvasResolution } from './exportCanvasResolution';
 
 function makeMap(width: number, height: number, maxRatio = Infinity) {
   const canvas = { clientWidth: width, clientHeight: height, width: width * 2, height: height * 2 };
@@ -20,9 +20,24 @@ describe('export canvas resolution', () => {
     restore();
     expect(setPixelRatio).toHaveBeenLastCalledWith(2);
   });
-  it('rejects and restores a device whose canvas cannot reach the selected resolution', () => {
-    const { map, setPixelRatio } = makeMap(600, 400, 3);
-    expect(() => setExportCanvasResolution(map, { width: 3072, height: 3840 })).toThrow('cannot render the selected video resolution');
+  it('keeps a clamped mobile canvas usable and restores the original ratio', () => {
+    const { canvas, map, setPixelRatio } = makeMap(320, 2132, 8192 / 2132);
+    const resolution = { width: 1280, height: 720 };
+    const restore = setExportCanvasResolution(map, resolution);
+    expect(canvas.height).toBeLessThanOrEqual(8192);
+    expect(canvas.width).toBeLessThan(resolution.width);
+    expect(() => assertExportCanvasUsable(map, resolution)).not.toThrow();
+    restore();
     expect(setPixelRatio).toHaveBeenLastCalledWith(2);
+  });
+  it('rejects an unusable backing buffer and restores the original ratio', () => {
+    const { map, setPixelRatio } = makeMap(600, 400, 0);
+    expect(() => setExportCanvasResolution(map, { width: 1280, height: 720 })).toThrow('valid size');
+    expect(setPixelRatio).toHaveBeenLastCalledWith(2);
+  });
+  it('detects a backing buffer lost during capture', () => {
+    const { canvas, map } = makeMap(600, 400);
+    canvas.width = 0;
+    expect(() => assertExportCanvasUsable(map, { width: 1280, height: 720 })).toThrow('valid size');
   });
 });
