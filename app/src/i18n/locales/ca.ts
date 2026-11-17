@@ -285,6 +285,7 @@ export const ca = {
     language: 'Idioma',
   },
   info: {
+    mapDataCredits: 'Crèdits de les dades del mapa',
     title: 'Sobre Trail Replay',
     builtWith: 'Construït amb',
     builtWithBody: 'MapLibre GL JS, React, Vite i proveïdors de mapes oberts.',
@@ -540,7 +541,7 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     iconSearchCount: 'Se’n mostren {shown} de {total}. Afegeix una altra paraula per afinar.',
     iconSearchError: 'No s’han pogut carregar les icones.',
     iconSearchRetry: 'Torna-ho a provar',
-    iconSearchCredit: 'Icones de Pinhead (CC0)',
+    iconSearchCredit: 'Icones de Pinhead (CC0)', iconBrowseAll: 'Veure totes les icones', iconBrowseClose: 'Tanca', iconTopic: { nature: 'Natura i aire lliure', food: 'Menjar i beguda', transport: 'Transport', places: 'Llocs', people: 'Persones', animals: 'Animals', symbols: 'Símbols', other: 'Altres' },
     slowdownSeconds: 'Alentiment (segons)',
     textLanguage: 'Idioma del text',
     translationFallback: "El text segueix l’idioma de l’aplicació. Els idiomes sense traducció mostren el text original.",
@@ -923,7 +924,7 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     addLandmark: 'Afegeix un punt d’interès', clickMapToPlace: 'Fes clic al mapa per col·locar-lo', empty: 'Encara no hi ha punts d’interès. Activa els moments de la ruta o els llocs propers, o afegeix-ne un de propi.',
     editLandmark: 'Edita el punt d’interès', closeEditor: 'Tanca l’editor de punts d’interès', name: 'Nom', icon: 'Icona', color: 'Color', useColor: 'Utilitza el color {color}', removeFromMap: 'Treu del mapa',
     restoreRemovedLandmark: 'Restaura {count} punt d’interès eliminat', restoreRemovedLandmarks: 'Restaura {count} punts d’interès eliminats',
-    glyphs: { pin: 'Marcador', summit: 'Cim', viewpoint: 'Mirador', waypoint: 'Pal indicador', town: 'Poble', shelter: 'Refugi', camp: 'Campament', water: 'Aigua', waterfall: 'Cascada' },
+    glyphs: { 'aid-station': 'Avituallament', pin: 'Marcador', summit: 'Cim', viewpoint: 'Mirador', waypoint: 'Pal indicador', town: 'Poble', shelter: 'Refugi', camp: 'Campament', water: 'Aigua', waterfall: 'Cascada' },
     types: {
       summit: 'Cim', pass: 'Coll', viewpoint: 'Mirador', 'high-point': 'Punt alt', waterfall: 'Cascada', trailhead: 'Inici del sender', hut: 'Refugi', shelter: 'Aixopluc', camp: 'Campament', water: 'Aigua', 'aid-station': 'Avituallament',
       finish: 'Final', town: 'Poble', lake: 'Llac', 'river-crossing': 'Creuament de riu', photo: 'Foto', note: 'Nota', challenge: 'Repte', custom: 'Personalitzat', 'highest-point': 'Punt més alt', 'longest-climb': 'Ascens més llarg', 'major-descent': 'Descens principal', halfway: 'Meitat del recorregut',

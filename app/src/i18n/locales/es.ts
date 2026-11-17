@@ -285,6 +285,7 @@ export const es = {
     language: 'Idioma',
   },
   info: {
+    mapDataCredits: 'Créditos de los datos del mapa',
     title: 'Acerca de Trail Replay',
     builtWith: 'Tecnología',
     builtWithBody: 'MapLibre GL JS, React, Vite y proveedores de mapas abiertos.',
@@ -540,7 +541,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     iconSearchCount: 'Se muestran {shown} de {total}. Añade otra palabra para afinar.',
     iconSearchError: 'No se han podido cargar los iconos.',
     iconSearchRetry: 'Reintentar',
-    iconSearchCredit: 'Iconos de Pinhead (CC0)',
+    iconSearchCredit: 'Iconos de Pinhead (CC0)', iconBrowseAll: 'Ver todos los iconos', iconBrowseClose: 'Cerrar', iconTopic: { nature: 'Naturaleza y aire libre', food: 'Comida y bebida', transport: 'Transporte', places: 'Lugares', people: 'Personas', animals: 'Animales', symbols: 'Símbolos', other: 'Otros' },
     slowdownSeconds: 'Ralentización (segundos)',
     textLanguage: 'Idioma del texto',
     translationFallback: "El texto sigue el idioma de la aplicación. Los idiomas sin traducción muestran el texto original.",
@@ -923,7 +924,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     addLandmark: 'Añadir punto de interés', clickMapToPlace: 'Haz clic en el mapa para colocarlo', empty: 'Aún no hay puntos de interés. Activa los momentos de la ruta o los lugares cercanos, o añade uno propio.',
     editLandmark: 'Editar punto de interés', closeEditor: 'Cerrar el editor de puntos de interés', name: 'Nombre', icon: 'Icono', color: 'Color', useColor: 'Usar el color {color}', removeFromMap: 'Quitar del mapa',
     restoreRemovedLandmark: 'Restaurar {count} punto de interés eliminado', restoreRemovedLandmarks: 'Restaurar {count} puntos de interés eliminados',
-    glyphs: { pin: 'Marcador', summit: 'Pico', viewpoint: 'Mirador', waypoint: 'Poste indicador', town: 'Pueblo', shelter: 'Refugio', camp: 'Campamento', water: 'Agua', waterfall: 'Cascada' },
+    glyphs: { 'aid-station': 'Avituallamiento', pin: 'Marcador', summit: 'Pico', viewpoint: 'Mirador', waypoint: 'Poste indicador', town: 'Pueblo', shelter: 'Refugio', camp: 'Campamento', water: 'Agua', waterfall: 'Cascada' },
     types: {
       summit: 'Cumbre', pass: 'Puerto', viewpoint: 'Mirador', 'high-point': 'Punto alto', waterfall: 'Cascada', trailhead: 'Inicio de sendero', hut: 'Refugio', shelter: 'Abrigo', camp: 'Campamento', water: 'Agua', 'aid-station': 'Avituallamiento',
       finish: 'Final', town: 'Pueblo', lake: 'Lago', 'river-crossing': 'Cruce de río', photo: 'Foto', note: 'Nota', challenge: 'Desafío', custom: 'Personalizado', 'highest-point': 'Punto más alto', 'longest-climb': 'Ascenso más largo', 'major-descent': 'Descenso principal', halfway: 'Mitad de recorrido',

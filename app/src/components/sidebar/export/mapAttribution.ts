@@ -1,7 +1,7 @@
 /** Credit the building data in canvas exports, where HTML attribution is absent. */
 export function drawBuildingsAttribution(ctx: CanvasRenderingContext2D, width: number, height: number) {
   const size = Math.max(12, Math.round(width * 0.012));
-  const text = '© OpenStreetMap contributors (openstreetmap.org/copyright) · © OpenMapTiles';
+  const text = 'OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors (openstreetmap.org/copyright)';
   ctx.save();
   ctx.font = `${size}px sans-serif`;
   ctx.textBaseline = 'bottom';

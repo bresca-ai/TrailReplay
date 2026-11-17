@@ -285,6 +285,7 @@ export const fr = {
     language: 'Langue',
   },
   info: {
+    mapDataCredits: 'Crédits des données cartographiques',
     title: 'À propos de Trail Replay',
     builtWith: 'Construit avec',
     builtWithBody: 'MapLibre GL JS, React, Vite et un ensemble de fournisseurs de données cartographiques ouvertes.',
@@ -540,7 +541,7 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
     iconSearchCount: '{shown} sur {total} affichées. Ajoutez un mot pour affiner.',
     iconSearchError: 'Impossible de charger les icônes.',
     iconSearchRetry: 'Réessayer',
-    iconSearchCredit: 'Icônes Pinhead (CC0)',
+    iconSearchCredit: 'Icônes Pinhead (CC0)', iconBrowseAll: 'Voir toutes les icônes', iconBrowseClose: 'Fermer', iconTopic: { nature: 'Nature et plein air', food: 'Nourriture et boissons', transport: 'Transports', places: 'Lieux', people: 'Personnes', animals: 'Animaux', symbols: 'Symboles', other: 'Autres' },
     slowdownSeconds: 'Ralentissement (secondes)',
     textLanguage: 'Langue du texte',
     translationFallback: "Le texte suit la langue de l’application. Sans traduction, le texte original est affiché.",
@@ -923,7 +924,7 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
     addLandmark: 'Ajouter un point d’intérêt', clickMapToPlace: 'Cliquez sur la carte pour le placer', empty: 'Aucun point d’intérêt. Activez les moments du parcours ou les lieux à proximité, ou ajoutez le vôtre.',
     editLandmark: 'Modifier le point d’intérêt', closeEditor: 'Fermer l’éditeur de points d’intérêt', name: 'Nom', icon: 'Icône', color: 'Couleur', useColor: 'Utiliser la couleur {color}', removeFromMap: 'Retirer de la carte',
     restoreRemovedLandmark: 'Restaurer {count} point d’intérêt supprimé', restoreRemovedLandmarks: 'Restaurer {count} points d’intérêt supprimés',
-    glyphs: { pin: 'Repère', summit: 'Sommet', viewpoint: 'Point de vue', waypoint: 'Panneau indicateur', town: 'Ville', shelter: 'Refuge', camp: 'Campement', water: 'Eau', waterfall: 'Cascade' },
+    glyphs: { 'aid-station': 'Ravitaillement', pin: 'Repère', summit: 'Sommet', viewpoint: 'Point de vue', waypoint: 'Panneau indicateur', town: 'Ville', shelter: 'Refuge', camp: 'Campement', water: 'Eau', waterfall: 'Cascade' },
     types: {
       summit: 'Sommet', pass: 'Col', viewpoint: 'Point de vue', 'high-point': 'Point haut', waterfall: 'Cascade', trailhead: 'Départ du sentier', hut: 'Refuge', shelter: 'Abri', camp: 'Campement', water: 'Eau', 'aid-station': 'Ravitaillement',
       finish: 'Arrivée', town: 'Ville', lake: 'Lac', 'river-crossing': 'Traversée de rivière', photo: 'Photo', note: 'Note', challenge: 'Défi', custom: 'Personnalisé', 'highest-point': 'Point culminant', 'longest-climb': 'Plus longue montée', 'major-descent': 'Descente principale', halfway: 'Mi-parcours',
