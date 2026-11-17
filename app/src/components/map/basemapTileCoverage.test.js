@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 // Exercise the installed renderer's tile cover, not a mock tile-count formula.
 // These engine internals are used only by this regression test.
-import { MercatorTransform } from '../../../node_modules/maplibre-gl/src/geo/projection/mercator_transform.ts';
+import { createMercatorTransform } from '../../../node_modules/maplibre-gl/src/geo/projection/mercator_transform.ts';
 import { LngLat } from '../../../node_modules/maplibre-gl/src/geo/lng_lat.ts';
 import { coveringTiles, createCalculateTileZoomFunction } from '../../../node_modules/maplibre-gl/src/geo/projection/covering_tiles.ts';
 import { applyConsistentBasemapTileLod } from './basemapTileLod';
@@ -9,7 +9,7 @@ import { withStudioForegroundDetail } from '../sidebar/export/studioTileDetail';
 
 describe('cinematic imagery tile coverage', () => {
   it.each([75, 85])('bounds tile demand and retains foreground detail at %s degrees', (pitch) => {
-    const transform = new MercatorTransform({
+    const transform = createMercatorTransform({
       minZoom: 0, maxZoom: 22, minPitch: 0, maxPitch: 85, renderWorldCopies: true,
     });
     transform.resize(1920, 1080);
