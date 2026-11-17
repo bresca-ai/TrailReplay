@@ -30,6 +30,21 @@ it('creates an annotation at the playhead and keeps its editing controls availab
   expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
 });
 
+it('offers custom colors alongside presets when creating and editing a marker', () => {
+  render(<RouteAnnotationsEditor />);
+  const color = screen.getByLabelText('Annotation color');
+  fireEvent.change(color, { target: { value: '#123456' } });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Spring' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  expect(useAppStore.getState().textAnnotations[0].color).toBe('#123456');
+  fireEvent.click(screen.getByText('Spring').closest('summary')!);
+  const editor = screen.getByText('Spring').closest('details')!;
+  expect(within(editor).getByText('Custom color')).toBeInTheDocument();
+  fireEvent.change(within(editor).getByLabelText('Annotation color'), { target: { value: '#abcdef' } });
+  expect(useAppStore.getState().textAnnotations[0].color).toBe('#abcdef');
+  expect(within(editor).getByRole('button', { name: /#f3b133/i })).toBeInTheDocument();
+});
+
 it('offers distinct annotation types with an explanation', () => {
   render(<RouteAnnotationsEditor />);
   expect(screen.getByText('Appears at the bottom right; slows playback for reading.')).toBeInTheDocument();

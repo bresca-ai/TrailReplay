@@ -509,6 +509,8 @@ export interface AppSettings {
   /** Optional draggable, top-down route inset. */
   showRouteOverview: boolean;
   routeOverviewPosition: { x: number; y: number } | null;
+  /** During playback, show only the current route in the overview. */
+  routeOverviewPerRoute: boolean;
   /** Automatically focus the elevation chart on significant climbs and descents. */
   dynamicElevationProfile: boolean;
   elevationProfilePerRoute: boolean;

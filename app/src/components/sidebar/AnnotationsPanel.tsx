@@ -635,6 +635,13 @@ export function AnnotationsPanel() {
           <div><Label htmlFor="route-overview-toggle" className="text-sm text-[var(--evergreen)]">{t('annotations.routeOverview')}</Label><p className="text-xs text-[var(--evergreen-60)]">{t('annotations.routeOverviewHint')}</p></div>
           <Switch id="route-overview-toggle" checked={settings.showRouteOverview ?? false} onCheckedChange={(checked) => setSettings({ showRouteOverview: checked })} />
         </div>
+        {settings.showRouteOverview && <div className="ml-3 space-y-1.5 border-l border-[var(--evergreen)]/15 pl-3">
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="route-overview-per-route" className="text-sm text-[var(--evergreen)]">{t('annotations.routeOverviewPerRoute')}</Label>
+            <Switch id="route-overview-per-route" checked={settings.routeOverviewPerRoute ?? false} onCheckedChange={(checked) => setSettings({ routeOverviewPerRoute: checked })} />
+          </div>
+          <p className="text-xs text-[var(--evergreen-60)]">{t('annotations.routeOverviewPerRouteHint')}</p>
+        </div>}
         <div className="flex items-center justify-between">
           <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showElevationProfile')}</Label>
           <Switch

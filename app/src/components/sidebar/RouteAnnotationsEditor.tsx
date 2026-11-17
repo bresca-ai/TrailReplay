@@ -208,13 +208,15 @@ export function RouteAnnotationsEditor() {
                 aria-pressed={draftAnnotationColor === color}
               />
             ))}
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-1 text-xs text-[var(--evergreen)]">
             <input
               type="color"
               value={draftAnnotationColor}
               onChange={(e) => setDraftAnnotationColor(e.target.value)}
-              className="h-8 w-10 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)]"
+              className="h-7 w-8 cursor-pointer rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)]"
               aria-label={t('annotations.routeAnnotationColor')}
             />
+            {t('annotations.customMarkerColor')}</label>
           </div>
         </div>
 
@@ -340,15 +342,19 @@ export function RouteAnnotationsEditor() {
                           }`}
                           style={{ backgroundColor: color }}
                           title={t('annotations.routeAnnotationColor')}
+                          aria-label={`${t('annotations.routeAnnotationColor')}: ${color}`}
+                          aria-pressed={annotation.color === color}
                         />
                       ))}
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--evergreen)]/20 px-1.5 py-1">
                       <input
                         type="color"
                         value={annotation.color}
                         onChange={(e) => updateTextAnnotation(annotation.id, { color: e.target.value })}
-                        className="h-5 w-6 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)]"
+                        className="h-6 w-7 cursor-pointer rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)]"
                         aria-label={t('annotations.routeAnnotationColor')}
                       />
+                      <span>{t('annotations.customMarkerColor')}</span></label>
                     </div>
                     <span className="inline-flex items-center gap-1 rounded-full bg-[var(--canvas)]/70 px-2 py-1">
                       <MapPinned className="w-3 h-3" />

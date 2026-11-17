@@ -3,7 +3,7 @@ import type { CropPreviewMetrics } from '@/utils/crop';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
-import { buildRouteOverviewGeometry, projectRouteOverviewProgress, routeOverviewColors } from './routeOverviewGeometry';
+import { buildJourneyOverviewRoutes, buildRouteOverviewGeometry, projectRouteOverviewProgress, routeOverviewColors } from './routeOverviewGeometry';
 
 interface Props { containerSize: { width: number; height: number }; frame: CropPreviewMetrics | null }
 const WIDTH = 200, HEIGHT = 144;
@@ -18,9 +18,28 @@ export function RouteOverview({ containerSize, frame }: Props) {
   const isExporting = useAppStore(state => state.isExporting);
   const exportResolution = useAppStore(state => state.videoExportSettings.resolution);
   const phase = useAppStore(state => state.animationPhase);
-  const { allCoordinates, completedCoordinates, currentTrackColor } = useComputedJourney();
-  const geometry = useMemo(() => buildRouteOverviewGeometry(allCoordinates, WIDTH, HEIGHT), [allCoordinates]);
-  const color = currentTrackColor || settings.trailStyle.trailColor;
+  const comparisons = useAppStore(state => state.comparisonTracks);
+  const { allCoordinates, completedCoordinates, currentTrackColor, computedJourney, currentSegment, currentPosition, activeTrack } = useComputedJourney();
+  const selectedSegment = currentSegment?.segment;
+  const routePaths = useMemo(() => {
+    const fallbackColor = settings.trailStyle.trailColor;
+    const primary = computedJourney
+      ? buildJourneyOverviewRoutes(computedJourney, [], selectedSegment, null, fallbackColor, settings.routeOverviewPerRoute)
+      : [{ id: activeTrack?.id ?? 'route', trackId: activeTrack?.id, color: activeTrack?.color ?? fallbackColor, coordinates: allCoordinates, completed: [] as number[][] }];
+    const primaryIds = new Set(primary.map((route) => route.trackId));
+    const others = comparisons.filter((comparison) => !settings.routeOverviewPerRoute && comparison.visible && (!comparison.groupId || primaryIds.has(comparison.groupId)))
+      .map((comparison) => ({ id: comparison.id, trackId: comparison.groupId, color: comparison.color,
+        coordinates: comparison.track.points.map((point) => [point.lon, point.lat]), completed: [] as number[][] }));
+    return [...primary, ...others];
+  }, [computedJourney, selectedSegment, settings.trailStyle.trailColor, settings.routeOverviewPerRoute, activeTrack, allCoordinates, comparisons]);
+  const geometry = useMemo(() => buildRouteOverviewGeometry(routePaths.flatMap((route) => route.coordinates), WIDTH, HEIGHT), [routePaths]);
+  const routes = useMemo(() => {
+    const primary = computedJourney
+      ? buildJourneyOverviewRoutes(computedJourney, completedCoordinates, selectedSegment, currentPosition, currentTrackColor || settings.trailStyle.trailColor, settings.routeOverviewPerRoute)
+      : [{ id: activeTrack?.id ?? 'route', completed: completedCoordinates }];
+    const progress = new Map(primary.map((route) => [route.id, route.completed]));
+    return routePaths.map((route) => ({ ...route, completed: progress.get(route.id) ?? route.completed }));
+  }, [computedJourney, completedCoordinates, selectedSegment, currentPosition, currentTrackColor, settings.trailStyle.trailColor, settings.routeOverviewPerRoute, activeTrack, routePaths]);
   const frameWidth = frame?.frameWidth ?? containerSize.width;
   const frameHeight = frame?.frameHeight ?? containerSize.height;
   const width = Math.min(WIDTH, Math.max(70, frameWidth * 0.38), Math.max(70, frameHeight * 0.32));
@@ -36,18 +55,23 @@ export function RouteOverview({ containerSize, frame }: Props) {
     const resolution = isExporting ? Math.max(2, width * exportResolution.width / Math.max(1, frameWidth) / WIDTH) : 2;
     element.width = WIDTH * resolution; element.height = HEIGHT * resolution;
     ctx.scale(resolution, resolution);
-    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
-    geometry.path.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
-    const colors = routeOverviewColors(color);
-    ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 5; ctx.stroke();
-    ctx.strokeStyle = colors.remaining; ctx.lineWidth = 2.5; ctx.stroke();
-    const completed = projectRouteOverviewProgress(completedCoordinates, geometry.project);
-    if (completed.length > 1) {
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    for (const route of routes) {
+      const path = projectRouteOverviewProgress(route.coordinates, geometry.project);
+      if (path.length < 2) continue;
       ctx.beginPath();
-      completed.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
-      ctx.strokeStyle = colors.completed; ctx.lineWidth = 3; ctx.stroke();
+      path.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
+      const colors = routeOverviewColors(route.color);
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 5; ctx.stroke();
+      ctx.strokeStyle = colors.remaining; ctx.lineWidth = 2.5; ctx.stroke();
+      const completed = projectRouteOverviewProgress(route.completed, geometry.project);
+      if (completed.length > 1) {
+        ctx.beginPath();
+        completed.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
+        ctx.strokeStyle = colors.completed; ctx.lineWidth = 3; ctx.stroke();
+      }
     }
-  }, [geometry, completedCoordinates, color, settings.showRouteOverview, phase, isExporting, width, frameWidth, exportResolution.width]);
+  }, [geometry, routes, settings.showRouteOverview, phase, isExporting, width, frameWidth, exportResolution.width]);
 
   if (!settings.showRouteOverview || !geometry || (phase !== 'idle' && phase !== 'playing')) return null;
   return <canvas ref={canvas} className="tr-route-overview absolute z-20" role="img" aria-label={t('annotations.routeOverview')} tabIndex={isExporting ? -1 : 0}

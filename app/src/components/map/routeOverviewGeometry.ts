@@ -1,3 +1,37 @@
+import type { ComputedJourney, SegmentTiming } from '@/utils/journeyUtils';
+
+export interface OverviewRoute {
+  id: string;
+  trackId?: string;
+  color: string;
+  coordinates: number[][];
+  completed: number[][];
+}
+
+/** Keep each journey segment separate so unrelated routes are never joined by a line. */
+export function buildJourneyOverviewRoutes(
+  journey: ComputedJourney,
+  completed: number[][],
+  currentSegment: SegmentTiming | undefined,
+  currentPosition: { lon: number; lat: number } | null,
+  fallbackColor: string,
+  perRoute: boolean,
+): OverviewRoute[] {
+  const tracks = journey.segmentTimings.filter((segment) => segment.type === 'track' && segment.endCoordIndex >= segment.startCoordIndex);
+  const selected = perRoute
+    ? (currentSegment?.type === 'track' ? currentSegment : [...tracks].reverse().find((segment) => segment.segmentIndex <= (currentSegment?.segmentIndex ?? 0)) ?? tracks[0])
+    : undefined;
+  return tracks.filter((segment) => !perRoute || segment.segmentId === selected?.segmentId).map((segment) => {
+    const coordinates = journey.coordinates.slice(segment.startCoordIndex, segment.endCoordIndex + 1).map((point) => [point.lon, point.lat]);
+    const done = completed.slice(segment.startCoordIndex, Math.min(segment.endCoordIndex + 1, completed.length));
+    if (currentSegment?.segmentId === segment.segmentId && currentPosition && done.length) {
+      const last = done[done.length - 1];
+      if (last[0] !== currentPosition.lon || last[1] !== currentPosition.lat) done.push([currentPosition.lon, currentPosition.lat]);
+    }
+    return { id: segment.segmentId, trackId: segment.trackId, color: segment.color ?? fallbackColor, coordinates, completed: done };
+  });
+}
+
 /** A lightweight, north-up projection for the route inset. */
 export function buildRouteOverviewGeometry(coordinates: number[][], width: number, height: number, padding = 18) {
   const valid = coordinates.filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat));
