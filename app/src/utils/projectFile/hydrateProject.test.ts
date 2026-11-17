@@ -244,6 +244,19 @@ describe('hydrateProject', () => {
     expect(state.playback.routeTimingMode).toBe('uniform');
   });
 
+  it('preserves an explicitly saved camera mode and recorded timing', async () => {
+    const sourceStore = createAppStore();
+    sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
+    sourceStore.getState().setCameraMode('follow');
+    sourceStore.getState().setRouteTimingMode('recorded');
+    const blob = await buildReplayArchive(sourceStore.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
+    const targetStore = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, targetStore.getState());
+    expect(targetStore.getState().cameraSettings.mode).toBe('follow');
+    expect(targetStore.getState().playback.routeTimingMode).toBe('recorded');
+  });
+
   it('defaults route timing mode to recorded for projects saved before it existed', async () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
@@ -304,6 +317,7 @@ describe('hydrateProject', () => {
     for (const [id, icon] of [['bike', 'pinhead:bicycle'], ['tent', 'emoji:🏕️'], ['legacy', 'camp']]) {
       source.getState().addLandmark({ id, icon, type: 'custom', source: 'user', display: 'subtle', lat: 42, lon: 1, progress: 0.5, title: id, importance: 3 });
     }
+    source.getState().updateLandmark('bike', { color: '#123456' });
     source.getState().setLandmarkPriorityIds(['tent', 'bike']);
     const blob = await buildReplayArchive(source.getState());
     const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
@@ -314,6 +328,7 @@ describe('hydrateProject', () => {
     hydrateProject({ ...parsed, project: parsed.project! }, restored.getState());
     expect(restored.getState().landmarkPriorityIds).toEqual([]);
     expect(restored.getState().userLandmarks.map((item) => item.icon)).toEqual(['pinhead:bicycle', 'emoji:🏕️', 'camp']);
+    expect(restored.getState().userLandmarks[0].color).toBe('#123456');
   });
 
   it('keeps a saved annotation size and defaults new projects to 120 percent', async () => {
@@ -347,12 +362,12 @@ describe('hydrateProject', () => {
   it('preserves the overview position and elevation height in saved projects', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
-    source.getState().setSettings({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
+    source.getState().setSettings({ showRouteOverview: true, routeOverviewPerRoute: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
     const archive = await buildReplayArchive(source.getState());
     const parsed = await parseReplayArchive(new File([archive], 'overlay.replay'));
     const target = createAppStore();
     hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
-    expect(target.getState().settings).toMatchObject({ showRouteOverview: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
+    expect(target.getState().settings).toMatchObject({ showRouteOverview: true, routeOverviewPerRoute: true, routeOverviewPosition: { x: 0.3, y: 0.4 }, elevationProfileHeight: 1.7, elevationProfileFilled: false });
   });
 
   it('persists dynamic elevation mode and keeps it disabled for legacy projects', async () => {
@@ -416,6 +431,9 @@ describe('cinematic camera keyframes in a saved project', () => {
 
     sourceStore.getState().addCinematicCameraKeyframe({
       id: 'keyframe-1',
+      scope: 'local',
+      holdDurationMs: 4500,
+      zoomMode: 'custom',
       anchor: { routeSegmentId: segmentId, routeSegmentDistance: 120 },
       bearingDeg: 275,
       pitchDeg: 62,

@@ -85,10 +85,38 @@ export const zhTW = {
     waybackDate: '歷史影像日期', waybackLoading: '正在載入日期…', waybackSelect: '選擇日期', waybackNote: 'Esri Wayback 影像版本日期為發布日期，並非實際拍攝日期。', waybackError: '無法載入歷史影像日期。',
     slopeLegendTitle: '坡度', slopeLegendMild: '<25° — 平緩', slopeLegendModerate: '25–30° — 中等', slopeLegendSteep: '30–35° — 陡峭', slopeLegendVerySteep: '35–40° — 非常陡峭', slopeLegendExtreme: '40–45° — 極陡', slopeLegendCliff: '>45° — 峭壁', slopeLegendFooter: '依 AWS Terrain Tiles 高程資料計算',
     aspectLegendTitle: '坡向（坡面朝向）', aspectLegendNorth: '北', aspectLegendNortheast: '東北', aspectLegendEast: '東', aspectLegendSoutheast: '東南', aspectLegendSouth: '南', aspectLegendSouthwest: '西南', aspectLegendWest: '西', aspectLegendNorthwest: '西北', aspectLegendFooter: '平坦地形不顯示顏色',
+    previousCameraModes: "上一組鏡頭模式", nextCameraModes: "下一組鏡頭模式",
     cameraModes: { aerialFollow: '空中跟隨', aerialFollowDesc: '平穩傾斜的空中跟隨，適應地形', overview: '全景', overviewDesc: '固定觀看整條軌跡', follow: '俯視跟隨', followDesc: '從上方跟隨移動標記', followBehind: '後方跟隨', followBehindDesc: '從後方觀看的電影式視角', cinematic: '自訂運鏡', cinematicDesc: '適應地形的平穩飛行，可選擇自訂鏡頭' },
     cinematicCamera: {
+
+
+
+
+      holdDuration: "保持鏡頭",
+      secondsShort: "秒",
+      holdHint: "停留在此視角的時間；轉場時間另計。相近鏡頭可能會縮短停留。",
+
+      markerLegend: "路線標記", cameraLegend: "鏡頭",
+      directionGuide: "鏡頭方向指南",
+      holdHelp: "保持前一畫面，然後切換。",
+      linearHelp: "線性轉場以固定速度移動。",
+      smoothHelp: "平滑轉場會逐漸進出。",
+      legacyHelp: "這個舊鏡頭會控制鏡頭之間的畫面。",
+      localRange: "鏡頭範圍：{start}–{end}。",
+      referenceRouteHelp: "跟隨路線：如果鏡頭位於標記後方，路線轉彎時鏡頭也會跟著轉，繼續保持在後方。",
+      referenceWorldHelp: "固定於地圖：路線轉彎時，鏡頭仍朝向地圖上的同一方向，例如始終朝北；鏡頭不會停在原地。",
+      keyboardTitle: "鍵盤操作",
+      keySpace: "空白鍵",
+      keyboardPause: "暫停 / 繼續",
+      keyboardTurn: "旋轉",
+      keyboardTilt: "傾斜",
+      keyboardDistance: "拉近 / 拉遠",
+      keyboardSave: "儲存鏡頭",
+      keyboardHint: "請先暫停。輸入文字時無法使用快捷鍵。",
+      transitionLabel: "轉場",
+      referenceLabel: "鏡頭方向",
       title: '鏡頭關鍵影格', hint: '拖曳時間軸定位，轉動控制球調整視角，再儲存鏡頭。', orbitBall: '鏡頭角度',
-      orbitBallHint: '拖曳調整，或在頁面任意位置使用：A／D 轉向、W／S 調整高度、R／F 縮放、Enter 儲存', orbitBallValue: '角度 {bearing}°、高度 {pitch}°',
+      orbitBallHint: "左右拖曳可旋轉，上下拖曳可傾斜。地圖會顯示您的視角。", orbitBallValue: '角度 {bearing}°、高度 {pitch}°',
       infoTitle: '操作說明',
       infoKeyboard: '全程可使用鍵盤：在想設定鏡頭的位置按空白鍵暫停，以 A／D 轉向、W／S 升降、R／F 拉近或拉遠，再按 Enter 儲存為關鍵影格。移到下一個時間點後重複操作。若該位置已有關鍵影格，Enter 會更新它。',
       infoBall: '控制球可調整鏡頭相對於標記的角度與高度。拖曳控制球，或在頁面任意位置按 A／D 轉向、W／S 升降。',
@@ -160,6 +188,7 @@ export const zhTW = {
     ghostTrailTitle: '全程路線預覽', ghostTrailOpacityLabel: '不透明度', ghostTrailOpacityHint: '設為 0 可隱藏完整路線，僅隨播放進度逐步顯示。',
     statsTitle: '統計資訊', statsHint: '拖曳地圖上的統計資訊方塊，即可調整位置。', statsBackground: '統計資訊背景', statsBackgroundPanel: '底板', statsBackgroundTransparent: '透明',
     statsNeedTiming: '時間、配速與速度需要記錄時間戳記，但這條路線沒有時間資料。', statsNeedHeartRate: '心率需要感測器記錄，但這條路線沒有心率資料。',
+    routeOverviewPerRoute: '一次顯示一條路線', routeOverviewPerRouteHint: '播放時單獨顯示目前的路線。',
     paceMode: '配速模式', paceModeCumulative: '全程平均', paceModePerKm: '每公里', routeOverview: "路線總覽", routeOverviewHint: "朝北的路線總覽，可拖曳調整位置。", resizeElevationProfile: "調整海拔剖面高度", elevationProfileFill: "填滿海拔剖面下方", showElevationProfile: '海拔剖面圖', elevationProfilePerRoute: '各路線海拔剖面', elevationProfilePerRouteHint: '播放時分別顯示各條路線。',
     dynamicElevationProfile: '動態路段', dynamicElevationProfileHint: '播放時，自動聚焦主要的持續爬升與下降路段。',
     dynamicElevationProfileGuideTitle: '操作說明', dynamicElevationProfileGuideAutomatic: '剖面圖會標記接下來的爬升與下降，並在播放時平順地放大各路段。', dynamicElevationProfileGuideEdit: '暫停後可編輯：拖曳兩端把手以調整路段範圍。', dynamicElevationProfileGuideAddRemove: '點選 ＋，再點選剖面圖以新增路段；點選路段上的 × 可移除。',
@@ -248,6 +277,7 @@ export const zhTW = {
     manualPlacementQueuedSingleVideo: '1 段影片無法自動定位，請點選地圖以放置。', manualPlacementQueuedMultipleVideo: '{count} 段影片無法自動定位，請依序點選地圖以放置。', manualPlacementCountVideo: '第 {current}／{total} 段影片', manualPlacementSkipVideo: '略過影片', manualPlacementNoRouteVideo: '尚無可用來定位這段影片的路線。', videoPlacedManuallyBadge: '已手動定位',
   },
   export: {
+    resultSettingsLocked: "這些設定適用於已完成的影片。選擇「重新匯出」後可更改設定並重新產生影片。",
     studioNeedsMp4: '工作室轉譯需要 MP4。',
     resolution: '解析度', estimatedSize: '預估大小', selectedEncodingUnsupported: '此瀏覽器無法在精細模式下編碼所選的解析度與影格率。請嘗試較低的解析度或影格率。',
     saveProjectTitle: '儲存專案', saveProjectBody: '下載包含路線、旅程與設定的 .replay 檔案，日後可接續編輯。', projectNameLabel: '專案名稱', projectNamePlaceholder: '我的旅程', generateVideo: '製作影片',
@@ -267,6 +297,7 @@ export const zhTW = {
   map: { loading: '正在載入地圖…', preparingReplay: '正在準備重播…', zoomButtonsHint: '動畫播放時，可使用 ＋／− 按鈕調整縮放。' },
   errors: { noValidGpx: '找不到有效的 GPX、KML 或 FIT 檔案', parseGpxFailed: '無法解析 GPX 檔案' },
   routeLandmarks: {
+    customColor: "自訂顏色",
     styleTitle: "地點樣式",
     styleClassic: "經典",
     styleMinimal: "簡約",

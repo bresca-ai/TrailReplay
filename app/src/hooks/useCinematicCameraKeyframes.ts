@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { getLocalShotHeading } from '@/utils/localShotHeading';
 import { buildComputedJourney } from '@/utils/journeyUtils';
 import {
   deriveCinematicKeyframeProgress,
@@ -22,6 +23,8 @@ export function usePreparedCinematicCameraKeyframes(
   const journeySegments = useAppStore((state) => state.journeySegments);
   const tracks = useAppStore((state) => state.tracks);
   const routeTimingMode = useAppStore((state) => state.playback.routeTimingMode);
+  const totalDurationMs = useAppStore((state) => state.playback.totalDuration);
+  const cameraStability = useAppStore((state) => state.cameraSettings.cameraStability);
 
   return useMemo(() => {
     if (keyframes.length === 0 || cameraPathCoordinates.length === 0) return [];
@@ -42,6 +45,7 @@ export function usePreparedCinematicCameraKeyframes(
       if (progress !== null) withProgress.push({ keyframe, progress });
     }
 
-    return prepareCinematicKeyframeTrack(withProgress, cameraPathCoordinates);
-  }, [keyframes, journeySegments, tracks, routeTimingMode, cameraPathCoordinates]);
+    return prepareCinematicKeyframeTrack(withProgress, cameraPathCoordinates,
+      (progress) => getLocalShotHeading(cameraPathCoordinates, progress, cameraStability, totalDurationMs));
+  }, [keyframes, journeySegments, tracks, routeTimingMode, cameraPathCoordinates, cameraStability, totalDurationMs]);
 }

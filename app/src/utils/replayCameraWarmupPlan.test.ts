@@ -20,6 +20,19 @@ const baseOptions = {
 };
 
 describe('replay camera warmup plan', () => {
+  it('preserves the automatic flight outside a local shot window', () => {
+    const local: PreparedCinematicKeyframe = { id: 'local', progress: 0.5, scope: 'local', zoomMode: 'custom', frame: 'world',
+      routeHeadingAtAnchorDeg: null, worldBearingDeg: 20, pitchDeg: 50, zoom: 16, easing: 'smooth' };
+    const automatic = { ...baseOptions, cameraMode: 'aerial-follow' as const, aerialTerrainPlan: [30, 130],
+      cameraStability: 0.5, totalDurationMs: 60000 };
+    for (const progress of [0, 0.2, 0.4, 0.6, 0.9, 1]) {
+      expect(getReplayWarmupPose({ ...automatic, cinematicKeyframes: [local], progress }))
+        .toEqual(getReplayWarmupPose({ ...automatic, cinematicKeyframes: [], progress }));
+    }
+    expect(getReplayWarmupPose({ ...automatic, cinematicKeyframes: [local], progress: 0.5 }))
+      .toMatchObject({ bearing: 20, pitch: 50, zoom: 16 });
+  });
+
   it('warms the planned automatic camera through the opening, not its generic heading', () => {
     const poses = getOpeningReplayWarmupPoses({
       ...baseOptions,

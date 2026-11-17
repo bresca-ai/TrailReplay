@@ -77,6 +77,7 @@ export function createDefaultSettings(): AppSettings {
     elevationProfileHeight: 1,
     showRouteOverview: false,
     routeOverviewPosition: null,
+    routeOverviewPerRoute: false,
     dynamicElevationProfile: false,
     elevationProfilePerRoute: false,
     elevationSectionOverrides: [],

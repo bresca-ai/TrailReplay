@@ -179,6 +179,9 @@ describe('createAppStore', () => {
 
     const state = useStore.getState();
     expect(state.tracks).toHaveLength(1);
+    expect(state.playback.routeTimingMode).toBe('uniform');
+    expect(state.cameraSettings.mode).toBe('cinematic');
+    expect(state.settings.cameraMode).toBe('cinematic');
     expect(state.activeTrackId).toBe(track.id);
     expect(state.journey?.name).toBe('My Journey');
     expect(state.journeySegments).toHaveLength(1);

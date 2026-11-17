@@ -23,6 +23,9 @@ import {
   Palette,
   ChevronLeft,
   ChevronRight,
+  Navigation,
+  Navigation2,
+  LocateFixed,
 } from 'lucide-react';
 
 const MAP_STYLES: { id: MapStyle; nameKey: string }[] = [
@@ -115,6 +118,7 @@ export function SettingsPanel() {
   const landmarkEditorRequested = useAppStore((state) => state.landmarkEditorRequested);
   const clearLandmarkEditorRequest = useAppStore((state) => state.clearLandmarkEditorRequest);
   const landmarkSectionRef = useRef<HTMLDetailsElement>(null);
+  const cameraCarouselRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!landmarkEditorRequested || !landmarkSectionRef.current) return;
     landmarkSectionRef.current.open = true;
@@ -208,24 +212,44 @@ export function SettingsPanel() {
   };
 
   const displayedCameraMode = cameraSettings.mode === 'aerial-follow' ? 'cinematic' : cameraSettings.mode;
+  useEffect(() => {
+    const carousel = cameraCarouselRef.current;
+    const selected = carousel?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (carousel && selected) {
+      const left = selected.offsetLeft - carousel.offsetLeft;
+      if (left < carousel.scrollLeft || left + selected.offsetWidth > carousel.scrollLeft + carousel.clientWidth) {
+        carousel.scrollLeft = Math.max(0, left + selected.offsetWidth - carousel.clientWidth);
+      }
+    }
+  }, [displayedCameraMode]);
 
   return (
     <div className="space-y-6">
       {/* Camera Mode */}
       <div>
-        <h3 className="text-sm font-bold text-[var(--evergreen)] mb-3 uppercase tracking-wide flex items-center gap-2">
-          <Video className="w-4 h-4" />
-          {t('settings.cameraTitle')}
-        </h3>
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label={t('settings.cameraTitle')}>
-          {CAMERA_MODES.map((mode) => (
-            <button key={mode.id} type="button" onClick={() => selectCameraMode(mode.id)} aria-pressed={displayedCameraMode === mode.id}
-              className={`min-h-11 rounded-lg border-2 px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${displayedCameraMode === mode.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] text-[var(--evergreen)]' : 'border-[var(--evergreen)]/20 text-[var(--evergreen)] hover:border-[var(--trail-orange)]/50'}`}>
-              {t(mode.nameKey)}
-            </button>
-          ))}
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--evergreen)]">
+            <Video className="h-4 w-4" />{t('settings.cameraTitle')}
+          </h3>
+          <div className="flex items-center gap-1">
+            <button type="button" aria-label={t('settings.previousCameraModes')} onClick={() => cameraCarouselRef.current?.scrollBy({ left: -150, behavior: 'smooth' })} className="flex h-9 w-9 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
+            <button type="button" aria-label={t('settings.nextCameraModes')} onClick={() => cameraCarouselRef.current?.scrollBy({ left: 150, behavior: 'smooth' })} className="flex h-9 w-9 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
+          </div>
         </div>
-        <p className="mt-2 text-xs text-[var(--evergreen-60)]" aria-live="polite">{t(CAMERA_MODES.find((mode) => mode.id === displayedCameraMode)!.descriptionKey)}</p>
+        <div ref={cameraCarouselRef} role="group" aria-label={t('settings.cameraTitle')} className="relative flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2">
+          {CAMERA_MODES.map((mode) => {
+            const Icon = mode.id === 'overview' ? MapIcon : mode.id === 'follow' ? LocateFixed : mode.id === 'follow-behind' ? Navigation2 : Navigation;
+            return <button key={mode.id} type="button" onClick={() => selectCameraMode(mode.id)} aria-pressed={displayedCameraMode === mode.id}
+              className={`min-w-0 flex-[0_0_46%] snap-start rounded-lg border-2 p-1.5 text-left text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)] ${displayedCameraMode === mode.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
+              <span className="relative flex h-14 items-center justify-center overflow-hidden rounded bg-[var(--evergreen)]/10">
+                <img src="/media/images/map-previews/topo.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" />
+                <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[var(--canvas)]/95 text-[var(--trail-orange)] shadow-sm"><Icon className="h-4 w-4" aria-hidden="true" /></span>
+              </span>
+              <span className="mt-1.5 block text-xs font-semibold leading-tight">{t(mode.nameKey)}</span>
+              <span className="mt-1 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t(mode.descriptionKey)}</span>
+            </button>;
+          })}
+        </div>
 
         {/* Follow Behind Presets */}
         {cameraSettings.mode === 'follow-behind' && (
@@ -327,7 +351,13 @@ export function SettingsPanel() {
             })}
           </div>
         </div>
-        <p className="mt-1 text-[10px] text-[var(--evergreen-60)]">© Esri · © <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a className="underline" href="https://opentopomap.org/about" target="_blank" rel="noreferrer">OpenTopoMap</a> (CC-BY-SA)</p>
+        <p className="mt-1 text-[10px] text-[var(--evergreen-60)]">
+          {displayedMapStyle === 'street' || displayedMapStyle === 'topo' || displayedMapStyle === 'mapbox-streets' ? <>
+            {displayedMapStyle === 'mapbox-streets' && <>© <a className="underline" href="https://www.mapbox.com/about/maps/" target="_blank" rel="noreferrer">Mapbox</a> · </>}
+            © <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>
+            {displayedMapStyle === 'topo' && <> · © <a className="underline" href="https://opentopomap.org/about" target="_blank" rel="noreferrer">OpenTopoMap</a> (CC-BY-SA)</>}
+          </> : <>© Esri</>}
+        </p>
 
         {/* Wayback options — date selector */}
         {settings.mapStyle === 'wayback' && (

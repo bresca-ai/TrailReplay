@@ -39,3 +39,12 @@ it('shows overlapping candidates and moves a preferred landmark to the top', () 
   expect(Array.from(screen.getAllByRole('listitem')).map((item) => item.textContent)).toEqual(['Water', 'Puig Alt']);
   expect(screen.getByRole('button', { name: 'Move Water up' })).toBeDisabled();
 });
+
+it.each(['user', 'enriched'] as const)('lets a %s landmark use a custom color alongside the suggested colors', (source) => {
+  if (source === 'user') useAppStore.getState().addLandmark({ ...landmark, source: 'user' });
+  render(<RouteLandmarkList />);
+  expect(screen.getByRole('button', { name: 'Use color #E86F51' })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Custom color'), { target: { value: '#123456' } });
+  expect(useAppStore.getState().userLandmarks[0]).toMatchObject({ id: landmark.id, color: '#123456' });
+  expect(screen.getByLabelText('Custom color')).toHaveValue('#123456');
+});

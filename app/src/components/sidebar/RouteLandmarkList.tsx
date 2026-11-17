@@ -46,6 +46,9 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
   const isOwned = userLandmarks.some((entry) => entry.id === landmark.id);
   const symbol = landmarkSymbol(landmark);
   const color = landmark.color ?? colorForLandmark(landmark);
+  const shortHex = /^#([0-9a-f]{3})$/i.exec(color);
+  const pickerColor = shortHex ? `#${[...shortHex[1]].map((digit) => digit + digit).join('')}`
+    : /^#[0-9a-f]{6}$/i.test(color) ? color : '#e86f51';
 
   const edit = (updates: Partial<RouteLandmark>) => {
     if (!isOwned) adoptLandmark(landmark);
@@ -95,6 +98,16 @@ function LandmarkEditor({ landmark }: { landmark: RouteLandmark }) {
             />
           ))}
         </div>
+        <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-1 text-xs text-[var(--evergreen)]">
+          <input
+            type="color"
+            value={pickerColor}
+            onChange={(event) => edit({ color: event.target.value })}
+            aria-label={t('routeLandmarks.customColor')}
+            className="h-7 w-8 cursor-pointer rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)]"
+          />
+          <span>{t('routeLandmarks.customColor')}</span>
+        </label>
       </div>
 
       <button

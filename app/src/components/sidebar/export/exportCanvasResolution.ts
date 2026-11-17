@@ -1,6 +1,12 @@
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { getVideoCropRegion } from '@/utils/crop';
 
+/** Never encode frames at a different size from the selected output. */
+export function assertRecordingCanvasResolution(canvas: HTMLCanvasElement, resolution: { width: number; height: number }): void {
+  if (canvas.width !== resolution.width || canvas.height !== resolution.height) {
+    throw new Error(`Video export size changed: expected ${resolution.width}×${resolution.height}, got ${canvas.width}×${canvas.height}. Start a new export.`);
+  }
+}
 
 /** A clamped backing buffer can still be scaled into the output video. */
 export function assertExportCanvasUsable(map: MapLibreMap, resolution: { width: number; height: number }): void {

@@ -35,11 +35,13 @@ import {
   shouldAutoDownloadVideo,
 } from './studioDelivery';
 import { useVideoExportRecorderCore, type UseVideoExportRecorderOptions } from './useVideoExportRecorderCore';
+import type { VideoExportSettings } from '@/types';
 
 const EXPORT_MAP_SETTLE_MS = 150;
 
 export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = {}) {
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportedVideoSettings, setExportedVideoSettings] = useState<VideoExportSettings | null>(null);
   const {
     t, language, studioDelivery, videoExportSettings, mapStyle, show3DTerrain, tracks,
     pictures, videos, journeySegments, cameraSettings, playback, animationPhase,
@@ -601,6 +603,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     setExportStage(t('export.stagePreparing'));
     setExportError(null);
     setExportedBlob(null);
+    setExportedVideoSettings({ ...videoExportSettings, resolution: { ...videoExportSettings.resolution } });
     setStudioDeliveryStatus('idle');
     setStudioDeliveryError(null);
     studioDeliveryJobRef.current = null;
@@ -921,6 +924,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
   const resetExportResult = useCallback(() => {
     setExportedBlob(null);
+    setExportedVideoSettings(null);
     setStudioDeliveryStatus('idle');
     setStudioDeliveryError(null);
     setExportProgress(0);
@@ -935,6 +939,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     exportError,
     exportStage,
     exportedBlob,
+    exportedVideoSettings,
     handleCancelExport,
     handleDownload,
     handleStartExport,

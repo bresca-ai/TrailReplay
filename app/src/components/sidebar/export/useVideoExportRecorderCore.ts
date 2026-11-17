@@ -1,4 +1,4 @@
-import { assertExportCanvasUsable } from './exportCanvasResolution';
+import { assertExportCanvasUsable, assertRecordingCanvasResolution } from './exportCanvasResolution';
 import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
 import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -131,7 +131,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     totalDistance,
   } = useComputedJourney();
   const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
-  const replayCameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.length);
+  const replayCameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.filter((frame) => frame.scope !== 'local').length);
   const journeyDistanceProfile = useMemo(
     () => computedJourney ? buildJourneyDistanceProfile(computedJourney.coordinates) : null,
     [computedJourney],
@@ -378,6 +378,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, []);
 
   const captureFrame = useCallback(() => {
+    if (recordingCanvasRef.current) {
+      assertRecordingCanvasResolution(recordingCanvasRef.current, videoExportSettings.resolution);
+      assertRecordingCanvasResolution(recordingCanvasRef.current, useAppStore.getState().videoExportSettings.resolution);
+    }
     const coverStartedAt = coverFrameStartTimeRef.current;
     if (
       videoExportSettings.includeCover

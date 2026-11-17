@@ -1,4 +1,5 @@
-import { getCinematicCameraPose, type PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import { applyLocalCinematicShots, getCinematicCameraPose, type PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
+import { getLocalShotHeading } from '@/utils/localShotHeading';
 import { getSmoothedCameraAnchor, getSmoothedRouteHeadingDeg } from '@/utils/cinematicCameraAnchor';
 import { cinematicAnchorSmoothingHalfWindow, cinematicHeadingBaselineHalfWidth } from '@/components/map/cameraUtils';
 import { terrainPlanBearing } from '@/utils/aerialTerrainPlan';
@@ -112,7 +113,7 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
     const heading = getSmoothedRouteHeadingDeg({ coordinates: options.coordinates, progress: options.progress, smoothingHalfWindow: halfWindow, baselineHalfWidth: cinematicHeadingBaselineHalfWidth(halfWindow) })
       ?? getRouteBearingAtProgress(options.coordinates, options.progress);
     const authoredPose = getCinematicCameraPose({
-      keyframes: options.cinematicKeyframes ?? [],
+      keyframes: (options.cinematicKeyframes ?? []).filter((frame) => frame.scope !== 'local'),
       coordinates: options.coordinates,
       progress: options.progress,
       routeHeadingDeg: heading,
@@ -130,7 +131,9 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
     if (pose && marker) {
       pose.center = getSmoothedCameraAnchor({ coordinates: options.coordinates, progress: options.progress, smoothingHalfWindow: halfWindow, markerPosition: marker, zoom: pose.zoom });
     }
-    return pose;
+    return pose ? applyLocalCinematicShots({ basePose: pose, keyframes: options.cinematicKeyframes ?? [],
+      coordinates: options.coordinates, progress: options.progress,
+      routeHeadingDeg: getLocalShotHeading(options.coordinates, options.progress, options.cameraStability ?? 0.5, options.totalDurationMs ?? 60000), totalDurationMs: options.totalDurationMs ?? 60000 }) : null;
   }
 
   const pose = getPlaybackCameraPose({
@@ -153,7 +156,10 @@ export function getReplayWarmupPose(options: ReplayPoseOptions): ReplayCameraPos
       pose.bearing = terrainPlanBearing(options.aerialTerrainPlan, options.progress);
     }
   }
-  return pose;
+  return pose && options.cameraMode === 'aerial-follow'
+    ? applyLocalCinematicShots({ basePose: pose, keyframes: options.cinematicKeyframes ?? [], coordinates: options.coordinates,
+        progress: options.progress, routeHeadingDeg: getLocalShotHeading(options.coordinates, options.progress, options.cameraStability ?? 0.5, options.totalDurationMs ?? 60000), totalDurationMs: options.totalDurationMs ?? 60000 })
+    : pose;
 }
 
 /**
