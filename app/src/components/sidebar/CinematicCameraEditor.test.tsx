@@ -36,6 +36,14 @@ it('uses the terrain-aware flight when seeking after pause', async () => {
 });
 afterEach(() => { cleanup(); mapGlobalRef.current = null; });
 
+it('shows the keyboard shortcuts beside the camera control and explains both direction modes', () => {
+  const { container, getByText } = render(<CinematicCameraEditor />);
+  expect(Array.from(container.querySelectorAll('kbd')).map((key) => key.textContent))
+    .toEqual(['Space', 'A', 'D', 'W', 'S', 'R', 'F', 'Enter']);
+  expect(getByText(/stays behind as the route bends/i)).toBeTruthy();
+  expect(getByText(/does not stay in one place/i)).toBeTruthy();
+});
+
 it('keeps the actual flight view on pause and lets a deliberate camera edit move it', () => {
   const jumpTo = vi.fn();
   mapGlobalRef.current = { getBearing: () => 120, getPitch: () => 68, getZoom: () => 14.5, jumpTo } as unknown as MapLibreMap;

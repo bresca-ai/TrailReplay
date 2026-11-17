@@ -40,7 +40,7 @@ export function CinematicOrbitBall({ bearingDeg, pitchDeg, onChange }: Cinematic
   ].sort((a, b) => a.depth - b.depth);
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex w-full flex-col items-center gap-2">
       <svg
         width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
         onPointerDown={(event) => {
@@ -60,7 +60,7 @@ export function CinematicOrbitBall({ bearingDeg, pitchDeg, onChange }: Cinematic
         }}
         onPointerCancel={() => { dragRef.current = null; }}
         onLostPointerCapture={() => { dragRef.current = null; }}
-        className="touch-none cursor-grab select-none rounded-full active:cursor-grabbing"
+        className="h-auto w-full max-w-[192px] touch-none cursor-grab select-none rounded-full active:cursor-grabbing"
         role="img"
         aria-label={t('settings.cinematicCamera.orbitBallValue', { bearing: Math.round(normalizeAngle(bearingDeg)), pitch: Math.round(pitchDeg) })}
       >

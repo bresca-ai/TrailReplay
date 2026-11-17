@@ -244,6 +244,19 @@ describe('hydrateProject', () => {
     expect(state.playback.routeTimingMode).toBe('uniform');
   });
 
+  it('preserves an explicitly saved camera mode and recorded timing', async () => {
+    const sourceStore = createAppStore();
+    sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
+    sourceStore.getState().setCameraMode('follow');
+    sourceStore.getState().setRouteTimingMode('recorded');
+    const blob = await buildReplayArchive(sourceStore.getState());
+    const parsed = await parseReplayArchive(new File([blob], 'project.replay'));
+    const targetStore = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, targetStore.getState());
+    expect(targetStore.getState().cameraSettings.mode).toBe('follow');
+    expect(targetStore.getState().playback.routeTimingMode).toBe('recorded');
+  });
+
   it('defaults route timing mode to recorded for projects saved before it existed', async () => {
     const sourceStore = createAppStore();
     sourceStore.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
