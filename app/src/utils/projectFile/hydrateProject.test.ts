@@ -416,6 +416,9 @@ describe('cinematic camera keyframes in a saved project', () => {
 
     sourceStore.getState().addCinematicCameraKeyframe({
       id: 'keyframe-1',
+      scope: 'local',
+      holdDurationMs: 4500,
+      zoomMode: 'custom',
       anchor: { routeSegmentId: segmentId, routeSegmentDistance: 120 },
       bearingDeg: 275,
       pitchDeg: 62,

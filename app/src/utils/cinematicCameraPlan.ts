@@ -53,6 +53,12 @@ export interface CinematicCameraKeyframe {
   frame: CinematicKeyframeFrame;
   /** How the camera arrives at this keyframe. */
   easing: CinematicKeyframeEasing;
+  /** Local shots overlay the automatic flight. Absent means a legacy authored track. */
+  scope?: 'local';
+  /** Time spent at the composed view, centered on the keyframe, in video milliseconds. */
+  holdDurationMs?: number;
+  /** Local shots follow the automatic zoom unless the user explicitly saves a distance. */
+  zoomMode?: 'automatic' | 'custom';
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -101,6 +107,12 @@ export interface PreparedCinematicKeyframe {
   pitchDeg: number;
   zoom: number;
   easing: CinematicKeyframeEasing;
+  /** Local shots overlay the automatic flight. Absent means a legacy authored track. */
+  scope?: 'local';
+  /** Time spent at the composed view, centered on the keyframe, in video milliseconds. */
+  holdDurationMs?: number;
+  /** Local shots follow the automatic zoom unless the user explicitly saves a distance. */
+  zoomMode?: 'automatic' | 'custom';
 }
 
 /**
@@ -114,6 +126,7 @@ export interface PreparedCinematicKeyframe {
 export function prepareCinematicKeyframeTrack(
   keyframesWithProgress: Array<{ keyframe: CinematicCameraKeyframe; progress: number }>,
   coordinates: number[][],
+  localHeadingAtProgress?: (progress: number) => number,
 ): PreparedCinematicKeyframe[] {
   const sorted = [...keyframesWithProgress].sort((a, b) => a.progress - b.progress);
   let previousUnwrapped: number | null = null;
@@ -137,10 +150,14 @@ export function prepareCinematicKeyframeTrack(
       progress,
       worldBearingDeg: unwrapped,
       frame: keyframe.frame,
-      routeHeadingAtAnchorDeg,
+      routeHeadingAtAnchorDeg: keyframe.scope === 'local' && routeHeadingAtAnchorDeg !== null && localHeadingAtProgress
+        ? localHeadingAtProgress(progress) : routeHeadingAtAnchorDeg,
       pitchDeg: keyframe.pitchDeg,
       zoom: keyframe.zoom,
       easing: keyframe.easing,
+      scope: keyframe.scope,
+      holdDurationMs: keyframe.holdDurationMs,
+      zoomMode: keyframe.zoomMode,
     };
   });
 }
@@ -301,4 +318,114 @@ export function getCinematicCameraPose(options: CinematicCameraPoseOptions): Rep
     clamp(pitch, pitchLo, pitchHi),
     clamp(zoom, zoomLo, zoomHi),
   );
+}
+
+export const LOCAL_SHOT_BLEND_MS = 3000;
+export const LOCAL_SHOT_MAX_HOLD_MS = 60_000;
+
+export interface LocalShotTiming {
+  id: string;
+  startMs: number;
+  holdStartMs: number;
+  holdEndMs: number;
+  endMs: number;
+}
+
+/** Timing is in video time; close shots share a smooth transition. */
+export function getLocalShotTimings(
+  keyframes: Array<Pick<PreparedCinematicKeyframe, 'id' | 'progress' | 'scope' | 'holdDurationMs'>>,
+  totalDurationMs: number,
+): LocalShotTiming[] {
+  if (!Number.isFinite(totalDurationMs) || totalDurationMs <= 0) return [];
+  const frames = keyframes.filter((frame) => frame.scope === 'local').slice().sort((a, b) => a.progress - b.progress);
+  const timings = frames.map((frame) => {
+    const at = clamp(frame.progress, 0, 1) * totalDurationMs;
+    const hold = Number.isFinite(frame.holdDurationMs) ? clamp(frame.holdDurationMs!, 0, LOCAL_SHOT_MAX_HOLD_MS) : 0;
+    const holdStartMs = Math.max(0, at - hold / 2);
+    const holdEndMs = Math.min(totalDurationMs, at + hold / 2);
+    return { id: frame.id, at, startMs: Math.max(0, holdStartMs - LOCAL_SHOT_BLEND_MS), holdStartMs,
+      holdEndMs, endMs: Math.min(totalDurationMs, holdEndMs + LOCAL_SHOT_BLEND_MS) };
+  });
+  for (let i = 0; i < timings.length - 1; i++) {
+    const a = timings[i];
+    const b = timings[i + 1];
+    if (b.holdStartMs - a.holdEndMs > 2 * LOCAL_SHOT_BLEND_MS) continue;
+    if (a.holdEndMs >= b.holdStartMs) {
+      // If holds overlap, reserve a short crossfade around the midpoint while
+      // still reaching each authored pose at its own keyframe.
+      const middle = (a.at + b.at) / 2;
+      const halfFade = Math.min(500, (b.at - a.at) / 4);
+      a.holdEndMs = Math.max(a.at, middle - halfFade);
+      b.holdStartMs = Math.min(b.at, middle + halfFade);
+    }
+    a.endMs = b.holdStartMs;
+    b.startMs = a.holdEndMs;
+  }
+  return timings;
+}
+
+/** Strength of the local-shot treatment, including overlapping transitions. */
+export function localShotInfluence(timings: LocalShotTiming[], timeMs: number): number {
+  const smooth = (value: number) => {
+    const t = clamp(value, 0, 1);
+    return t * t * (3 - 2 * t);
+  };
+  return timings.reduce((strength, shot) => {
+    if (timeMs < shot.startMs || timeMs > shot.endMs) return strength;
+    const entering = shot.holdStartMs > shot.startMs
+      ? smooth((timeMs - shot.startMs) / (shot.holdStartMs - shot.startMs)) : 1;
+    const leaving = shot.endMs > shot.holdEndMs
+      ? smooth((shot.endMs - timeMs) / (shot.endMs - shot.holdEndMs)) : 1;
+    return Math.min(1, strength + Math.min(entering, leaving));
+  }, 0);
+}
+
+/** Apply local shots to an already evaluated automatic (or legacy) pose. */
+export function applyLocalCinematicShots(options: CinematicCameraPoseOptions & {
+  basePose: ReplayCameraPose;
+  totalDurationMs: number;
+}): ReplayCameraPose {
+  const local = options.keyframes.filter((frame) => frame.scope === 'local').slice().sort((a, b) => a.progress - b.progress);
+  const timings = getLocalShotTimings(local, options.totalDurationMs);
+  if (!timings.length) return options.basePose;
+  const time = clamp(options.progress, 0, 1) * options.totalDurationMs;
+  const shot = (frame: PreparedCinematicKeyframe) => {
+    const pose = poseFromValues(options.coordinates, clamp(options.progress, 0, 1),
+      heldBearingDeg(frame, options.routeHeadingDeg), frame.pitchDeg,
+      frame.zoomMode === 'custom' ? frame.zoom : options.basePose.zoom);
+    return pose && { ...options.basePose, ...pose, center: options.basePose.center };
+  };
+  const ease = (t: number, easing: CinematicKeyframeEasing) => easing === 'linear' ? t : t * t * (3 - 2 * t);
+  const blend = (a: ReplayCameraPose, b: ReplayCameraPose, t: number): ReplayCameraPose => ({
+    ...a, bearing: normalizeAngle(a.bearing + shortestAngleDelta(a.bearing, b.bearing) * t),
+    pitch: a.pitch + (b.pitch - a.pitch) * t, zoom: a.zoom + (b.zoom - a.zoom) * t,
+  });
+  for (let i = 0; i < timings.length; i++) {
+    const current = timings[i];
+    if (time < current.startMs || time > current.endMs) continue;
+    const target = shot(local[i]);
+    if (!target) return options.basePose;
+    if (time < current.holdStartMs) {
+      const previous = timings[i - 1];
+      if (previous && previous.endMs === current.holdStartMs && current.startMs === previous.holdEndMs) {
+        const previousPose = shot(local[i - 1]);
+        const span = current.holdStartMs - current.startMs;
+        if (previousPose && span > 0) return blend(previousPose, target, ease((time - current.startMs) / span, local[i].easing));
+      }
+      const span = current.holdStartMs - current.startMs;
+      if (time <= current.startMs && span > 0) return options.basePose;
+      return span > 0 ? blend(options.basePose, target, ease((time - current.startMs) / span, local[i].easing)) : target;
+    }
+    if (time <= current.holdEndMs) return target;
+    const next = timings[i + 1];
+    if (next && current.endMs === next.holdStartMs && next.startMs === current.holdEndMs) {
+      const nextPose = shot(local[i + 1]);
+      const span = current.endMs - current.holdEndMs;
+      if (nextPose && span > 0) return blend(target, nextPose, ease((time - current.holdEndMs) / span, local[i + 1].easing));
+    }
+    const span = current.endMs - current.holdEndMs;
+    if (time >= current.endMs && span > 0) return options.basePose;
+    return span > 0 ? blend(target, options.basePose, ease((time - current.holdEndMs) / span, local[i].easing)) : target;
+  }
+  return options.basePose;
 }

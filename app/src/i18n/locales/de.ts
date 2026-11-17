@@ -210,6 +210,7 @@ export const de = {
     aspectLegendWest: 'Westen',
     aspectLegendNorthwest: 'Nordwest',
     aspectLegendFooter: 'Transparent auf sehr flachem Gelände',
+    previousCameraModes: "Vorherige Kameramodi", nextCameraModes: "Weitere Kameramodi",
     cameraModes: {
       aerialFollow: 'Bergflug',
       aerialFollowDesc: 'Ruhige, geneigte Luftaufnahme mit Geländeanpassung',
@@ -223,10 +224,29 @@ export const de = {
       cinematicDesc: 'Ruhiger geländeangepasster Flug mit optionalen eigenen Kameraeinstellungen',
     },
     cinematicCamera: {
+
+
+
+
+      holdDuration: "Einstellung halten",
+      secondsShort: "s",
+      holdHint: "Zeit in dieser Ansicht; Übergänge kommen hinzu. Nahe Einstellungen können sie verkürzen.",
+
+      markerLegend: "Routenmarker", cameraLegend: "Kamera",
+      directionGuide: "Kamerarichtung erklärt",
+      holdHelp: "Halten behält die vorige Ansicht und schneidet dann.",
+      linearHelp: "Linear bewegt sich gleichmäßig.",
+      smoothHelp: "Sanft blendet allmählich ein und aus.",
+      legacyHelp: "Diese ältere Einstellung steuert die Kamera zwischen Einstellungen.",
+      localRange: "Einstellungsbereich: {start}–{end}.",
+      referenceRouteHelp: "Route folgen: Der Winkel zur Strecke bleibt auch in Kurven gleich.",
+      referenceWorldHelp: "An der Karte ausgerichtet: Die Himmelsrichtung bleibt bei Kurven gleich.",
+      transitionLabel: "Übergang",
+      referenceLabel: "Kamerarichtung",
       title: 'Kamera-Keyframes',
       hint: 'Zeitleiste verschieben, den Ball drehen, um die Einstellung anzuvisieren, dann erfassen.',
       orbitBall: 'Kamerawinkel',
-      orbitBallHint: 'Ziehen, oder von überall: A/D Winkel, W/S Höhe, R/F Zoom, Enter zum Speichern',
+      orbitBallHint: "Seitlich ziehen zum Drehen, nach oben oder unten zum Neigen. Die Karte zeigt die Ansicht.",
       orbitBallValue: '{bearing}° Winkel, {pitch}° Höhe',
       infoTitle: 'So funktioniert es',
       infoKeyboard: 'Der ganze Ablauf geht ohne Maus: dort pausieren, wo Du eine Einstellung willst (Leertaste), sie mit A/D drehen, mit W/S heben oder senken und mit R/F näher oder weiter stellen, dann Enter drücken, um sie als Keyframe zu speichern. Zum nächsten Moment springen und wiederholen. Enter an einem Moment, der schon ein Keyframe hat, aktualisiert es, statt ein zweites anzulegen.',
@@ -239,8 +259,8 @@ export const de = {
       empty: 'Die Kamera fliegt automatisch. Füge Keyframes für eigene Kameraeinstellungen hinzu.',
       keyframeAt: 'Bei {time}',
       frame: 'Bezug',
-      frameWorld: 'Welt',
-      frameRoute: 'Route',
+      frameWorld: "An Karte ausrichten",
+      frameRoute: "Route folgen",
       easing: 'Übergang',
       easingSmooth: 'Sanft',
       easingLinear: 'Linear',

@@ -3,6 +3,7 @@ import {
   calculateTerrainAwareAdjustments,
   cameraCenterChaseDurationFromStability,
   cameraReactivityFromStability,
+  cameraZoomSmoothingInput,
   shouldBypassProceduralCameraSmoothing,
   frameTimeMultiplierFromDeltaMs,
   smoothBearing,
@@ -18,6 +19,15 @@ import {
 } from './cameraUtils';
 
 describe('camera utilities', () => {
+  it('uses the rendered terrain-adjusted zoom for angle-only shots', () => {
+    // A native terrain correction moved the rendered camera away from the
+    // uncomposed target. An angle-only shot must not switch zoom baselines.
+    expect(cameraZoomSmoothingInput(13.8, 14.4, false)).toBe(13.8);
+    // An explicit distance move or chapter still needs an independent base.
+    expect(cameraZoomSmoothingInput(13.8, 14.4, true)).toBe(14.4);
+    expect(cameraZoomSmoothingInput(13.8, null, true)).toBe(13.8);
+  });
+
   it('smooths aerial bearing across north at a consistent rate', () => {
     expect(smoothAerialBearing(359, 1, 1000)).toBeGreaterThan(359);
     const step = (frames: number) => Array.from({length: frames}).reduce<number>(

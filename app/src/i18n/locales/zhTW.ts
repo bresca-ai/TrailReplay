@@ -85,10 +85,30 @@ export const zhTW = {
     waybackDate: '歷史影像日期', waybackLoading: '正在載入日期…', waybackSelect: '選擇日期', waybackNote: 'Esri Wayback 影像版本日期為發布日期，並非實際拍攝日期。', waybackError: '無法載入歷史影像日期。',
     slopeLegendTitle: '坡度', slopeLegendMild: '<25° — 平緩', slopeLegendModerate: '25–30° — 中等', slopeLegendSteep: '30–35° — 陡峭', slopeLegendVerySteep: '35–40° — 非常陡峭', slopeLegendExtreme: '40–45° — 極陡', slopeLegendCliff: '>45° — 峭壁', slopeLegendFooter: '依 AWS Terrain Tiles 高程資料計算',
     aspectLegendTitle: '坡向（坡面朝向）', aspectLegendNorth: '北', aspectLegendNortheast: '東北', aspectLegendEast: '東', aspectLegendSoutheast: '東南', aspectLegendSouth: '南', aspectLegendSouthwest: '西南', aspectLegendWest: '西', aspectLegendNorthwest: '西北', aspectLegendFooter: '平坦地形不顯示顏色',
+    previousCameraModes: "上一組鏡頭模式", nextCameraModes: "下一組鏡頭模式",
     cameraModes: { aerialFollow: '空中跟隨', aerialFollowDesc: '平穩傾斜的空中跟隨，適應地形', overview: '全景', overviewDesc: '固定觀看整條軌跡', follow: '俯視跟隨', followDesc: '從上方跟隨移動標記', followBehind: '後方跟隨', followBehindDesc: '從後方觀看的電影式視角', cinematic: '自訂運鏡', cinematicDesc: '適應地形的平穩飛行，可選擇自訂鏡頭' },
     cinematicCamera: {
+
+
+
+
+      holdDuration: "保持鏡頭",
+      secondsShort: "秒",
+      holdHint: "停留在此視角的時間；轉場時間另計。相近鏡頭可能會縮短停留。",
+
+      markerLegend: "路線標記", cameraLegend: "鏡頭",
+      directionGuide: "鏡頭方向指南",
+      holdHelp: "保持前一畫面，然後切換。",
+      linearHelp: "線性轉場以固定速度移動。",
+      smoothHelp: "平滑轉場會逐漸進出。",
+      legacyHelp: "這個舊鏡頭會控制鏡頭之間的畫面。",
+      localRange: "鏡頭範圍：{start}–{end}。",
+      referenceRouteHelp: "跟隨路線：路線轉彎時，保持相對路線的角度。",
+      referenceWorldHelp: "固定於地圖：路線轉彎時，羅盤方向保持不變。",
+      transitionLabel: "轉場",
+      referenceLabel: "鏡頭方向",
       title: '鏡頭關鍵影格', hint: '拖曳時間軸定位，轉動控制球調整視角，再儲存鏡頭。', orbitBall: '鏡頭角度',
-      orbitBallHint: '拖曳調整，或在頁面任意位置使用：A／D 轉向、W／S 調整高度、R／F 縮放、Enter 儲存', orbitBallValue: '角度 {bearing}°、高度 {pitch}°',
+      orbitBallHint: "左右拖曳可旋轉，上下拖曳可傾斜。地圖會顯示您的視角。", orbitBallValue: '角度 {bearing}°、高度 {pitch}°',
       infoTitle: '操作說明',
       infoKeyboard: '全程可使用鍵盤：在想設定鏡頭的位置按空白鍵暫停，以 A／D 轉向、W／S 升降、R／F 拉近或拉遠，再按 Enter 儲存為關鍵影格。移到下一個時間點後重複操作。若該位置已有關鍵影格，Enter 會更新它。',
       infoBall: '控制球可調整鏡頭相對於標記的角度與高度。拖曳控制球，或在頁面任意位置按 A／D 轉向、W／S 升降。',

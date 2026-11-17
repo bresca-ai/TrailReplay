@@ -1,3 +1,8 @@
+/** Select the correct previous zoom for the next smoothing step. */
+export function cameraZoomSmoothingInput(renderedZoom: number, uncomposedZoom: number | null, preserveUncomposed: boolean): number {
+  return preserveUncomposed && uncomposedZoom !== null ? uncomposedZoom : renderedZoom;
+}
+
 /**
  * Scales a stability-tuned setting (0-1, where 0.5 matches the values tuned
  * below) into a multiplier applied to smoothing speed and deadbands. 0 = very

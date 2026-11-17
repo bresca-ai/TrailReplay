@@ -221,6 +221,7 @@ export const en = {
     aspectLegendWest: 'West',
     aspectLegendNorthwest: 'Northwest',
     aspectLegendFooter: 'Transparent on very flat terrain',
+    previousCameraModes: "Previous camera modes", nextCameraModes: "Next camera modes",
     cameraModes: {
       aerialFollow: 'Aerial Follow',
       aerialFollowDesc: 'Smooth aerial follow with a high tilt and terrain-aware framing',
@@ -234,10 +235,29 @@ export const en = {
       cinematicDesc: 'Smooth terrain-aware flight with optional custom camera shots',
     },
     cinematicCamera: {
+
+
+
+
+      holdDuration: "Hold shot",
+      secondsShort: "s",
+      holdHint: "Time at this view; blends are extra. Nearby shots may shorten the hold.",
+
+      markerLegend: "Route marker", cameraLegend: "Camera",
+      directionGuide: "Camera direction guide",
+      holdHelp: "Hold keeps the previous view, then cuts.",
+      linearHelp: "Linear moves at a steady rate.",
+      smoothHelp: "Smooth eases in and out.",
+      legacyHelp: "This older shot controls the camera between shots.",
+      localRange: "Shot window: {start}–{end}.",
+      referenceRouteHelp: "Follow route: keeps the same angle relative to the trail as it turns.",
+      referenceWorldHelp: "Fixed to map: keeps the same compass direction as the route turns.",
+      transitionLabel: "Transition",
+      referenceLabel: "Camera direction",
       title: 'Camera keyframes',
       hint: 'Scrub the timeline, rotate the ball to aim the shot, then capture it.',
       orbitBall: 'Camera angle',
-      orbitBallHint: 'Drag, or from anywhere: A/D angle, W/S height, R/F zoom, Enter to save',
+      orbitBallHint: "Drag left or right to turn; up or down to tilt. The map shows your view.",
       orbitBallValue: '{bearing}° angle, {pitch}° height',
       infoTitle: 'How this works',
       infoKeyboard: 'The whole loop works without the mouse: pause where you want a shot (Space), aim it with A/D to turn, W/S to raise or lower, R/F to move closer or further, then press Enter to save it as a keyframe. Scrub to the next moment and repeat. Enter on a moment that already has a keyframe updates it rather than adding a second.',
@@ -250,8 +270,8 @@ export const en = {
       empty: 'The camera flies automatically. Add keyframes to create custom shots.',
       keyframeAt: 'At {time}',
       frame: 'Frame',
-      frameWorld: 'World',
-      frameRoute: 'Route',
+      frameWorld: "Fixed to map",
+      frameRoute: "Follow route",
       easing: 'Easing',
       easingSmooth: 'Smooth',
       easingLinear: 'Linear',

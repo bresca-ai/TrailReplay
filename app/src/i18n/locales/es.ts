@@ -210,6 +210,7 @@ export const es = {
     aspectLegendWest: 'Oeste',
     aspectLegendNorthwest: 'Noroeste',
     aspectLegendFooter: 'Transparente en terreno muy plano',
+    previousCameraModes: "Modos de cámara anteriores", nextCameraModes: "Más modos de cámara",
     cameraModes: {
       aerialFollow: 'Vuelo de montaña',
       aerialFollowDesc: 'Seguimiento aéreo suave, inclinado y adaptado al terreno',
@@ -223,10 +224,29 @@ export const es = {
       cinematicDesc: 'Vuelo suave adaptado al terreno con planos de cámara personalizados opcionales',
     },
     cinematicCamera: {
+
+
+
+
+      holdDuration: "Mantener plano",
+      secondsShort: "s",
+      holdHint: "Tiempo en esta vista; las transiciones se añaden. Los planos cercanos pueden acortarlo.",
+
+      markerLegend: "Marcador", cameraLegend: "Cámara",
+      directionGuide: "Guía de dirección de cámara",
+      holdHelp: "Mantener conserva la vista anterior y luego corta.",
+      linearHelp: "Lineal se mueve a velocidad constante.",
+      smoothHelp: "Suave entra y sale gradualmente.",
+      legacyHelp: "Este plano anterior controla la cámara entre planos.",
+      localRange: "Intervalo del plano: {start}–{end}.",
+      referenceRouteHelp: "Seguir ruta: mantiene el ángulo respecto al recorrido cuando este gira.",
+      referenceWorldHelp: "Fija al mapa: mantiene la dirección de la brújula cuando gira la ruta.",
+      transitionLabel: "Transición",
+      referenceLabel: "Dirección de cámara",
       title: 'Fotogramas clave de cámara',
       hint: 'Desplaza la línea de tiempo, gira la bola para apuntar el plano y captúralo.',
       orbitBall: 'Ángulo de cámara',
-      orbitBallHint: 'Arrastra, o desde cualquier parte: A/D ángulo, W/S altura, R/F zoom, Enter para guardar',
+      orbitBallHint: "Arrastra a los lados para girar y arriba o abajo para inclinar. El mapa muestra tu vista.",
       orbitBallValue: '{bearing}° de ángulo, {pitch}° de altura',
       infoTitle: 'Cómo funciona',
       infoKeyboard: 'Todo el proceso funciona sin ratón: pausa donde quieras un plano (Espacio), apúntalo con A/D para girar, W/S para subir o bajar y R/F para acercar o alejar, y pulsa Enter para guardarlo como fotograma clave. Avanza al siguiente momento y repite. Enter en un momento que ya tiene un fotograma clave lo actualiza en vez de añadir otro.',
@@ -239,8 +259,8 @@ export const es = {
       empty: 'La cámara vuela automáticamente. Añade fotogramas clave para crear planos personalizados.',
       keyframeAt: 'En {time}',
       frame: 'Referencia',
-      frameWorld: 'Mundo',
-      frameRoute: 'Ruta',
+      frameWorld: "Fija al mapa",
+      frameRoute: "Seguir ruta",
       easing: 'Transición',
       easingSmooth: 'Suave',
       easingLinear: 'Lineal',

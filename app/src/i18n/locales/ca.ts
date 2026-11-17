@@ -210,6 +210,7 @@ export const ca = {
     aspectLegendWest: 'Oest',
     aspectLegendNorthwest: 'Nord-oest',
     aspectLegendFooter: 'Transparent en terreny molt pla',
+    previousCameraModes: "Modes de càmera anteriors", nextCameraModes: "Més modes de càmera",
     cameraModes: {
       aerialFollow: 'Vol de muntanya',
       aerialFollowDesc: 'Seguiment aeri suau, inclinat i adaptat al terreny',
@@ -223,10 +224,29 @@ export const ca = {
       cinematicDesc: 'Vol suau adaptat al terreny amb plans de càmera personalitzats opcionals',
     },
     cinematicCamera: {
+
+
+
+
+      holdDuration: "Mantenir el pla",
+      secondsShort: "s",
+      holdHint: "Temps en aquesta vista; les transicions se sumen. Els plans propers poden escurçar-lo.",
+
+      markerLegend: "Marcador", cameraLegend: "Càmera",
+      directionGuide: "Guia de direcció de càmera",
+      holdHelp: "Mantenir conserva la vista anterior i després talla.",
+      linearHelp: "Lineal es mou a velocitat constant.",
+      smoothHelp: "Suau entra i surt gradualment.",
+      legacyHelp: "Aquest pla anterior controla la càmera entre plans.",
+      localRange: "Interval del pla: {start}–{end}.",
+      referenceRouteHelp: "Seguir ruta: manté l’angle respecte al recorregut quan aquest gira.",
+      referenceWorldHelp: "Fixa al mapa: manté la direcció de la brúixola quan gira la ruta.",
+      transitionLabel: "Transició",
+      referenceLabel: "Direcció de càmera",
       title: 'Fotogrames clau de càmera',
       hint: 'Desplaça la línia de temps, gira la bola per apuntar el pla i captura\'l.',
       orbitBall: 'Angle de càmera',
-      orbitBallHint: 'Arrossega, o des de qualsevol lloc: A/D angle, W/S alçada, R/F zoom, Enter per desar',
+      orbitBallHint: "Arrossega als costats per girar i amunt o avall per inclinar. El mapa mostra la teva vista.",
       orbitBallValue: '{bearing}° d\'angle, {pitch}° d\'alçada',
       infoTitle: 'Com funciona',
       infoKeyboard: 'Tot el procés funciona sense ratolí: pausa on vulguis un pla (Espai), apunta\'l amb A/D per girar, W/S per pujar o baixar i R/F per apropar o allunyar, i prem Enter per desar-lo com a fotograma clau. Avança al següent moment i repeteix. Enter en un moment que ja té un fotograma clau l\'actualitza en lloc d\'afegir-ne un altre.',
@@ -239,8 +259,8 @@ export const ca = {
       empty: 'La càmera vola automàticament. Afegeix fotogrames clau per crear plans personalitzats.',
       keyframeAt: 'A {time}',
       frame: 'Referència',
-      frameWorld: 'Món',
-      frameRoute: 'Ruta',
+      frameWorld: "Fixa al mapa",
+      frameRoute: "Seguir ruta",
       easing: 'Transició',
       easingSmooth: 'Suau',
       easingLinear: 'Lineal',

@@ -131,7 +131,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     totalDistance,
   } = useComputedJourney();
   const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
-  const replayCameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.length);
+  const replayCameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.filter((frame) => frame.scope !== 'local').length);
   const journeyDistanceProfile = useMemo(
     () => computedJourney ? buildJourneyDistanceProfile(computedJourney.coordinates) : null,
     [computedJourney],

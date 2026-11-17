@@ -1,5 +1,6 @@
 import earcut from 'earcut';
 import { setBuildingFrameController } from './buildingFrameReadiness';
+import { createBuildingRefreshScheduler } from './buildingRefreshScheduler';
 import { BASEMAP_FILTER_PAINT } from './mapFilters';
 import type { MapFilter } from '@/types';
 import { intersection, type Polygon } from 'polygon-clipping';
@@ -18,9 +19,7 @@ export function satelliteRoofs(map: MapLibreMap, template: string, initialFilter
   let program: WebGLProgram;
   let buffer: WebGLBuffer;
   let batches: Batch[] = [];
-  let timer: ReturnType<typeof setTimeout> | undefined;
   let removed = false;
-  let dirty = true;
   let currentFilter = initialFilter;
   const textures = new Map<string, WebGLTexture | null>();
   const pending = new Set<string>();
@@ -70,8 +69,6 @@ export function satelliteRoofs(map: MapLibreMap, template: string, initialFilter
   }
 
   function rebuild() {
-    timer = undefined;
-    dirty = false;
     if (removed || map.getZoom() < 13 || !map.getLayer('buildings-3d')) { batches = []; return; }
     const zoom = buildingImageryZoom(map.getZoom());
     const scale = 2 ** zoom;
@@ -163,11 +160,9 @@ export function satelliteRoofs(map: MapLibreMap, template: string, initialFilter
     batches = [...grouped.values()];
     map.triggerRepaint();
   }
-  function schedule() {
-    dirty = true;
-    if (timer || removed) return;
-    timer = setTimeout(rebuild, 200);
-  }
+  const refresh = createBuildingRefreshScheduler(rebuild);
+  const schedule = () => refresh.schedule();
+  const onRender = () => refresh.onRender();
 
   return {
     id: 'satellite-building-roofs', type: 'custom', renderingMode: '3d',
@@ -200,15 +195,11 @@ void main(){
       gl.deleteShader(vert); gl.deleteShader(frag);
       buffer = gl.createBuffer()!;
       setBuildingFrameController(map, {
-        prepare: () => {
-          if (!dirty) return;
-          if (timer) { clearTimeout(timer); timer = undefined; }
-          rebuild();
-        },
+        prepare: refresh.prepare,
         setFilter: (filter) => { currentFilter = filter; map.triggerRepaint(); },
-        isReady: () => !dirty && batches.every((batch) => !!textures.get(`${batch.zoom}/${batch.x}/${batch.y}`)),
+        isReady: () => !refresh.isDirty() && batches.every((batch) => !!textures.get(`${batch.zoom}/${batch.x}/${batch.y}`)),
       });
-      map.on('move', schedule); map.on('sourcedata', schedule); schedule();
+      map.on('move', schedule); map.on('sourcedata', schedule); map.on('render', onRender); schedule();
     },
     render(context, options: CustomRenderMethodInput) {
       gl = context as WebGL2RenderingContext;
@@ -244,8 +235,8 @@ void main(){
     onRemove() {
       removed = true;
       setBuildingFrameController(map, null);
-      if (timer) clearTimeout(timer);
-      map.off('move', schedule); map.off('sourcedata', schedule);
+      refresh.dispose();
+      map.off('move', schedule); map.off('sourcedata', schedule); map.off('render', onRender);
       for (const tex of textures.values()) if (tex) gl.deleteTexture(tex);
       if (buffer) gl.deleteBuffer(buffer);
       if (program) gl.deleteProgram(program);

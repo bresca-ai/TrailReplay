@@ -147,7 +147,7 @@ export function TrailMap(_props: TrailMapProps) {
     : activeTrack?.name;
   const followBehindZoomLevel = cameraSettings.followBehindZoomLevel;
   const cinematicKeyframes = usePreparedCinematicCameraKeyframes(cameraPathCoordinates);
-  const cameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.length);
+  const cameraMode = resolveReplayCameraMode(cameraSettings.mode, cinematicKeyframes.filter((frame) => frame.scope !== 'local').length);
   const [terrainViewportHeight, setTerrainViewportHeight] = useState(720);
   const [terrainPlanState, setTerrainPlanState] = useState<{ coordinates: number[][]; elevations: typeof elevationData; viewportHeight: number; exaggeration: number; halfWindow: number; durationMs: number; plan: number[] | null } | null>(null);
   const terrainExaggeration = effectiveTerrainExaggeration(settings);

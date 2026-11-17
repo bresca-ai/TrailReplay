@@ -1,132 +1,88 @@
-import { useRef } from 'react';
+import { useId, useRef } from 'react';
 import { useI18n } from '@/i18n/useI18n';
+import { orbitPoseFromDrag } from '@/utils/cinematicOrbitInteraction';
 
 interface CinematicOrbitBallProps {
   bearingDeg: number;
   pitchDeg: number;
-  /** Route heading at the current moment, to mark "ahead" on the ring. Null when there's no route to reference. */
   routeHeadingDeg: number | null;
   onChange: (next: { bearingDeg: number; pitchDeg: number }) => void;
 }
 
-const SIZE = 168;
+const SIZE = 192;
 const CENTER = SIZE / 2;
-const MAX_RADIUS = CENTER - 14;
-const MAX_PITCH = 85;
+const RADIUS = 76;
 
 function normalizeAngle(deg: number): number {
   return ((deg % 360) + 360) % 360;
 }
 
-function pointFromPose(bearingDeg: number, pitchDeg: number): { x: number; y: number } {
-  const radius = (Math.max(0, Math.min(MAX_PITCH, pitchDeg)) / MAX_PITCH) * MAX_RADIUS;
-  const angleRad = (normalizeAngle(bearingDeg) * Math.PI) / 180;
-  return {
-    x: CENTER + radius * Math.sin(angleRad),
-    y: CENTER - radius * Math.cos(angleRad),
-  };
+/** Project compass and up axes into a small orientation indicator, not terrain. */
+function projectAxis(east: number, north: number, up: number, bearingDeg: number, pitchDeg: number) {
+  const bearing = bearingDeg * Math.PI / 180;
+  const pitch = pitchDeg * Math.PI / 180;
+  const x = east * Math.cos(bearing) - north * Math.sin(bearing);
+  const forward = east * Math.sin(bearing) + north * Math.cos(bearing);
+  const y = -forward * Math.cos(pitch) - up * Math.sin(pitch);
+  const depth = up * Math.cos(pitch) - forward * Math.sin(pitch);
+  return { x: CENTER + x * RADIUS * 0.7, y: CENTER + y * RADIUS * 0.7, depth };
 }
 
-function poseFromPoint(x: number, y: number): { bearingDeg: number; pitchDeg: number } {
-  const dx = x - CENTER;
-  const dy = y - CENTER;
-  const radius = Math.min(MAX_RADIUS, Math.sqrt(dx * dx + dy * dy));
-  const bearingDeg = normalizeAngle((Math.atan2(dx, -dy) * 180) / Math.PI);
-  const pitchDeg = (radius / MAX_RADIUS) * MAX_PITCH;
-  return { bearingDeg, pitchDeg };
-}
-
-/**
- * The orbit gizmo from CINEMATIC_CAMERA_PLAN.md section 8.2: a subject-fixed
- * "ball" the user rotates to place the camera, rather than freeform map
- * dragging — which pans the subject out from under the shot along with
- * whatever rotate/tilt gesture was intended. Bearing is the handle's angle
- * from the top (12 o'clock = north); pitch is its distance from the centre
- * (centre = looking straight down, edge = near ground level). Zoom is
- * intentionally not part of this control — see the plan's own table.
- */
-export function CinematicOrbitBall({ bearingDeg, pitchDeg, routeHeadingDeg, onChange }: CinematicOrbitBallProps) {
+export function CinematicOrbitBall({ bearingDeg, pitchDeg, onChange }: CinematicOrbitBallProps) {
   const { t } = useI18n();
-  const svgRef = useRef<SVGSVGElement>(null);
-  const draggingRef = useRef(false);
+  const gradientId = useId();
+  const dragRef = useRef<{ x: number; y: number; bearing: number; pitch: number; pointerId: number } | null>(null);
 
-  const applyFromClientPoint = (clientX: number, clientY: number) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * SIZE;
-    const y = ((clientY - rect.top) / rect.height) * SIZE;
-    onChange(poseFromPoint(x, y));
-  };
-
-  const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    draggingRef.current = true;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    applyFromClientPoint(event.clientX, event.clientY);
-  };
-
-  const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!draggingRef.current) return;
-    applyFromClientPoint(event.clientX, event.clientY);
-  };
-
-  const handlePointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
-    draggingRef.current = false;
-    event.currentTarget.releasePointerCapture(event.pointerId);
-  };
-
-  const handle = pointFromPose(bearingDeg, pitchDeg);
-  const headingPoint = routeHeadingDeg !== null ? pointFromPose(routeHeadingDeg, MAX_PITCH + 10) : null;
+  const axes = [
+    { name: 'N', ...projectAxis(0, 1, 0, bearingDeg, pitchDeg) },
+    { name: 'E', ...projectAxis(1, 0, 0, bearingDeg, pitchDeg) },
+    { name: '↑', ...projectAxis(0, 0, 1, bearingDeg, pitchDeg) },
+  ].sort((a, b) => a.depth - b.depth);
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       <svg
-        ref={svgRef}
-        width={SIZE}
-        height={SIZE}
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        className="touch-none cursor-grab select-none active:cursor-grabbing rounded-full"
+        width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return;
+          dragRef.current = { x: event.clientX, y: event.clientY, bearing: bearingDeg, pitch: pitchDeg, pointerId: event.pointerId };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          const drag = dragRef.current;
+          if (!drag || drag.pointerId !== event.pointerId) return;
+          onChange(orbitPoseFromDrag(drag.bearing, drag.pitch, event.clientX - drag.x, event.clientY - drag.y));
+        }}
+        onPointerUp={(event) => {
+          if (dragRef.current?.pointerId !== event.pointerId) return;
+          dragRef.current = null;
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => { dragRef.current = null; }}
+        onLostPointerCapture={() => { dragRef.current = null; }}
+        className="touch-none cursor-grab select-none rounded-full active:cursor-grabbing"
         role="img"
-        aria-label={t('settings.cinematicCamera.orbitBallValue', {
-          bearing: Math.round(normalizeAngle(bearingDeg)),
-          pitch: Math.round(pitchDeg),
-        })}
+        aria-label={t('settings.cinematicCamera.orbitBallValue', { bearing: Math.round(normalizeAngle(bearingDeg)), pitch: Math.round(pitchDeg) })}
       >
-        {/* Pitch reference rings: straight-down, mid, near-ground. */}
-        {[0.33, 0.66, 1].map((fraction) => (
-          <circle
-            key={fraction}
-            cx={CENTER}
-            cy={CENTER}
-            r={MAX_RADIUS * fraction}
-            fill="none"
-            stroke="var(--evergreen-20, rgba(0,0,0,0.12))"
-            strokeWidth={1}
-          />
+        <defs>
+          <radialGradient id={gradientId} cx="35%" cy="25%" r="75%">
+            <stop offset="0%" stopColor="var(--canvas)" />
+            <stop offset="100%" stopColor="#b5c4ae" stopOpacity="0.55" />
+          </radialGradient>
+        </defs>
+        <circle cx={CENTER} cy={CENTER} r={RADIUS} fill={`url(#${gradientId})`} stroke="var(--evergreen)" strokeOpacity="0.25" />
+        <ellipse cx={CENTER} cy={CENTER} rx={RADIUS} ry={RADIUS * 0.35} fill="none" stroke="var(--evergreen)" strokeOpacity="0.13" />
+        <ellipse cx={CENTER} cy={CENTER} rx={RADIUS * 0.4} ry={RADIUS} fill="none" stroke="var(--evergreen)" strokeOpacity="0.13" />
+        {axes.map((axis) => (
+          <g key={axis.name} opacity={axis.depth < 0 ? 0.5 : 1}>
+            <line x1={CENTER} y1={CENTER} x2={axis.x} y2={axis.y} stroke="var(--evergreen)" strokeOpacity="0.45" strokeWidth="1.5" />
+            <circle cx={axis.x} cy={axis.y} r="12" fill={axis.name === 'N' ? 'var(--trail-orange)' : 'var(--canvas)'} stroke="var(--evergreen)" strokeOpacity="0.3" />
+            <text x={axis.x} y={axis.y} textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="700" fill={axis.name === 'N' ? 'white' : 'var(--evergreen)'}>{axis.name}</text>
+          </g>
         ))}
-        <circle cx={CENTER} cy={CENTER} r={2} fill="var(--evergreen-60, rgba(0,0,0,0.4))" />
-
-        {headingPoint && (
-          <line
-            x1={CENTER}
-            y1={CENTER}
-            x2={headingPoint.x}
-            y2={headingPoint.y}
-            stroke="var(--trail-orange, #C1652F)"
-            strokeOpacity={0.35}
-            strokeWidth={2}
-            strokeDasharray="3 3"
-          />
-        )}
-
-        <line x1={handle.x} y1={handle.y} x2={CENTER} y2={CENTER} stroke="var(--trail-orange, #C1652F)" strokeWidth={1.5} strokeOpacity={0.5} />
-        <circle cx={handle.x} cy={handle.y} r={8} fill="var(--trail-orange, #C1652F)" stroke="white" strokeWidth={2} />
+        <circle cx={CENTER} cy={CENTER} r="3" fill="var(--evergreen)" />
       </svg>
-      <p className="text-[10px] text-[var(--evergreen-60)] text-center leading-tight max-w-[168px]">
+      <p className="max-w-[230px] text-center text-[11px] leading-relaxed text-[var(--evergreen-60)]">
         {t('settings.cinematicCamera.orbitBallHint')}
       </p>
     </div>

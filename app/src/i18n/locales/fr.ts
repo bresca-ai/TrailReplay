@@ -210,6 +210,7 @@ export const fr = {
     aspectLegendWest: 'Ouest',
     aspectLegendNorthwest: 'Nord-Ouest',
     aspectLegendFooter: 'Transparent sur les terrains très plats',
+    previousCameraModes: "Modes de caméra précédents", nextCameraModes: "Autres modes de caméra",
     cameraModes: {
       aerialFollow: 'Vol de montagne',
       aerialFollowDesc: 'Suivi aérien fluide, incliné et adapté au terrain',
@@ -223,10 +224,29 @@ export const fr = {
       cinematicDesc: 'Vol fluide adapté au terrain avec plans de caméra personnalisés en option',
     },
     cinematicCamera: {
+
+
+
+
+      holdDuration: "Maintenir le plan",
+      secondsShort: "s",
+      holdHint: "Temps sur cette vue, hors transitions. Des plans proches peuvent le raccourcir.",
+
+      markerLegend: "Repère", cameraLegend: "Caméra",
+      directionGuide: "Guide de direction de la caméra",
+      holdHelp: "Maintenir garde la vue précédente puis coupe.",
+      linearHelp: "Linéaire avance à vitesse constante.",
+      smoothHelp: "Doux entre et sort progressivement.",
+      legacyHelp: "Ce plan plus ancien contrôle la caméra entre les plans.",
+      localRange: "Intervalle du plan : {start}–{end}.",
+      referenceRouteHelp: "Suivre le parcours : l’angle reste le même par rapport au trajet.",
+      referenceWorldHelp: "Fixe sur la carte : la direction reste constante dans les virages.",
+      transitionLabel: "Transition",
+      referenceLabel: "Direction de la caméra",
       title: 'Images clés de la caméra',
       hint: 'Déplacez la chronologie, tournez la boule pour viser le plan, puis capturez-le.',
       orbitBall: 'Angle de caméra',
-      orbitBallHint: 'Glissez, ou depuis n’importe où : A/D angle, W/S hauteur, R/F zoom, Entrée pour enregistrer',
+      orbitBallHint: "Glissez sur les côtés pour tourner, vers le haut ou le bas pour incliner. La carte montre votre vue.",
       orbitBallValue: '{bearing}° d’angle, {pitch}° de hauteur',
       infoTitle: 'Comment ça marche',
       infoKeyboard: 'Tout se fait sans la souris : mettez en pause où vous voulez un plan (Espace), visez-le avec A/D pour tourner, W/S pour monter ou descendre et R/F pour approcher ou éloigner, puis appuyez sur Entrée pour l’enregistrer comme image clé. Avancez au moment suivant et recommencez. Entrée sur un moment qui a déjà une image clé la met à jour au lieu d’en ajouter une seconde.',
@@ -239,8 +259,8 @@ export const fr = {
       empty: 'La caméra vole automatiquement. Ajoutez des images clés pour créer des plans personnalisés.',
       keyframeAt: 'À {time}',
       frame: 'Référence',
-      frameWorld: 'Monde',
-      frameRoute: 'Parcours',
+      frameWorld: "Fixe sur la carte",
+      frameRoute: "Suivre le parcours",
       easing: 'Transition',
       easingSmooth: 'Douce',
       easingLinear: 'Linéaire',

@@ -19,6 +19,7 @@ import { mapGlobalRef } from '@/utils/mapRef';
 import { formatDuration } from '@/utils/units';
 import { trackEvent } from '@/utils/analytics';
 import { getPlaybackCameraPose, getRouteBearingAtProgress } from '@/utils/replayCameraPlan';
+import { getLocalShotHeading } from '@/utils/localShotHeading';
 import { getReadyAerialTerrainPlan, terrainPlanBearing } from '@/utils/aerialTerrainPlan';
 import {
   CINEMATIC_BEARING_MAX,
@@ -30,6 +31,9 @@ import {
   type CinematicKeyframeEasing,
   type CinematicKeyframeFrame,
   deriveCinematicKeyframeProgress,
+  getLocalShotTimings,
+  LOCAL_SHOT_MAX_HOLD_MS,
+  applyLocalCinematicShots,
   getCinematicCameraPose,
 } from '@/utils/cinematicCameraPlan';
 import { isFocusedViaPointer } from '@/utils/focusModality';
@@ -41,6 +45,8 @@ import {
   Camera,
   ChevronDown,
   ChevronUp,
+  Compass,
+  Navigation2,
   Minus,
   Plus,
   RotateCcw,
@@ -103,6 +109,7 @@ function CameraParameter(props: {
   translationKey: string,
   iconDecrease: ElementWithClassName,
   iconIncrease: ElementWithClassName,
+  onEdit?: () => void,
 }) {
   const { t } = useI18n();
 
@@ -119,10 +126,12 @@ function CameraParameter(props: {
     <div className="flex items-center gap-2">
       <button
         type="button"
-        onClick={() => setDraftPose((current: DraftPose): DraftPose => ({
-          ...current,
-          [props.draftPoseProperty]: Math.max(props.min, current[props.draftPoseProperty] - props.step)
-        }))}
+        onClick={() => {
+          props.onEdit?.();
+          setDraftPose((current: DraftPose): DraftPose => ({
+            ...current, [props.draftPoseProperty]: Math.max(props.min, current[props.draftPoseProperty] - props.step),
+          }));
+        }}
         aria-label={t(`settings.cinematicCamera.${props.translationKey}.decrease`)}
         className="p-1.5 rounded border border-[var(--evergreen)]/30 text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:text-[var(--trail-orange)]"
       >
@@ -134,18 +143,18 @@ function CameraParameter(props: {
         max={props.max}
         step={1}
         value={draftPose[props.draftPoseProperty]}
-        onChange={(e) => setDraftPose((current) => ({
-          ...current,
-          [props.draftPoseProperty]: Number(e.target.value)
-        }))}
+        onChange={(e) => {
+          props.onEdit?.();
+          setDraftPose((current) => ({ ...current, [props.draftPoseProperty]: Number(e.target.value) }));
+        }}
         className="flex-1 accent-[var(--trail-orange)]"
       />
       <button
         type="button"
-        onClick={() => setDraftPose((current) => ({
-          ...current,
-          [props.draftPoseProperty]: Math.min(props.max, current[props.draftPoseProperty] + props.step)
-        }))}
+        onClick={() => {
+          props.onEdit?.();
+          setDraftPose((current) => ({ ...current, [props.draftPoseProperty]: Math.min(props.max, current[props.draftPoseProperty] + props.step) }));
+        }}
         aria-label={t(`settings.cinematicCamera.${props.translationKey}.increase`)}
         className="p-1.5 rounded border border-[var(--evergreen)]/30 text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:text-[var(--trail-orange)]"
       >
@@ -195,6 +204,7 @@ export function CinematicCameraEditor() {
   const animationPhase = useAppStore((state) => state.animationPhase);
   const isExporting = useAppStore((state) => state.isExporting);
   const cameraSettings = useAppStore((state) => state.cameraSettings);
+  const cameraPosition = useAppStore((state) => state.cameraPosition);
   const addCinematicCameraKeyframe = useAppStore((state) => state.addCinematicCameraKeyframe);
   const updateCinematicCameraKeyframe = useAppStore((state) => state.updateCinematicCameraKeyframe);
   const removeCinematicCameraKeyframe = useAppStore((state) => state.removeCinematicCameraKeyframe);
@@ -214,6 +224,7 @@ export function CinematicCameraEditor() {
   const hasPlayedRef = useRef(false);
   const skipComposePreviewRef = useRef(false);
   const holdPausedViewRef = useRef(false);
+  const zoomEditedRef = useRef(false);
 
   const routeHeadingDeg = cameraPathCoordinates.length > 0
     ? getRouteBearingAtProgress(cameraPathCoordinates, playback.progress)
@@ -238,6 +249,7 @@ export function CinematicCameraEditor() {
   // stops, so the ball matches the frame the replay left on screen.
   useEffect(() => {
     if (!isComposing) {
+      zoomEditedRef.current = false;
       wasComposingRef.current = false;
       hasPlayedRef.current = true;
       return;
@@ -247,18 +259,19 @@ export function CinematicCameraEditor() {
     // different fallback on the first editor render. Seeking while already
     // paused still computes a pose for the newly selected route position.
     const map = mapGlobalRef.current;
+    zoomEditedRef.current = false;
     if (!wasComposingRef.current && hasPlayedRef.current && map) {
       wasComposingRef.current = true;
       skipComposePreviewRef.current = true;
       holdPausedViewRef.current = true;
-      setDraftPose({ bearingDeg: map.getBearing(), pitchDeg: map.getPitch(), zoom: map.getZoom() });
+      setDraftPose({ bearingDeg: normalizeAngle(map.getBearing()), pitchDeg: map.getPitch(), zoom: map.getZoom() });
       return;
     }
     wasComposingRef.current = true;
     holdPausedViewRef.current = false;
 
     const cinematicPose = getCinematicCameraPose({
-      keyframes: preparedKeyframes,
+      keyframes: preparedKeyframes.filter((frame) => frame.scope !== 'local'),
       coordinates: cameraPathCoordinates,
       progress: playback.progress,
       routeHeadingDeg,
@@ -275,7 +288,11 @@ export function CinematicCameraEditor() {
       if (automaticPlan?.length) {
         pose.bearing = terrainPlanBearing(automaticPlan, playback.progress);
       }
-      setDraftPose({ bearingDeg: pose.bearing, pitchDeg: pose.pitch, zoom: pose.zoom });
+      const composed = applyLocalCinematicShots({ basePose: pose, keyframes: preparedKeyframes,
+        coordinates: cameraPathCoordinates, progress: playback.progress,
+        routeHeadingDeg: getLocalShotHeading(cameraPathCoordinates, playback.progress, cameraSettings.cameraStability, playback.totalDuration),
+        totalDurationMs: playback.totalDuration });
+      setDraftPose({ bearingDeg: composed.bearing, pitchDeg: composed.pitch, zoom: composed.zoom });
     }
     // Deliberately keyed on progress and on whether we are composing at all:
     // this is "arriving at a new moment", not "the pose at this moment
@@ -357,9 +374,11 @@ export function CinematicCameraEditor() {
           setDraftPose((current) => ({ ...current, pitchDeg: Math.min(MAX_PITCH, current.pitchDeg + PITCH_KEY_STEP) }));
           break;
         case 'r':
+          zoomEditedRef.current = true;
           setDraftPose((current) => ({ ...current, zoom: Math.min(CINEMATIC_ZOOM_MAX, current.zoom + ZOOM_STEP) }));
           break;
         case 'f':
+          zoomEditedRef.current = true;
           setDraftPose((current) => ({ ...current, zoom: Math.max(CINEMATIC_ZOOM_MIN, current.zoom - ZOOM_STEP) }));
           break;
         default:
@@ -390,11 +409,13 @@ export function CinematicCameraEditor() {
       : undefined;
 
     if (existingId) {
+      const existing = keyframes.find((entry) => entry.id === existingId);
       updateCinematicCameraKeyframe(existingId, {
-        bearingDeg: draftPose.bearingDeg,
+        bearingDeg: existing?.frame === 'route'
+          ? shortestAngleDelta(routeHeadingDeg ?? 0, draftPose.bearingDeg) : draftPose.bearingDeg,
         pitchDeg: draftPose.pitchDeg,
         zoom: draftPose.zoom,
-        frame: 'world',
+        ...(existing?.scope === 'local' && zoomEditedRef.current ? { zoomMode: 'custom' as const } : {}),
       });
     } else {
       addCinematicCameraKeyframe({
@@ -403,14 +424,14 @@ export function CinematicCameraEditor() {
           routeSegmentId: currentSegment.segment.segmentId,
           routeSegmentDistance: currentPosition.distance,
         },
-        // 'world' per CINEMATIC_CAMERA_PLAN.md section 11: more stable, and
-        // the mode's selling point is shots that don't simply trail the
-        // subject.
-        bearingDeg: draftPose.bearingDeg,
+        bearingDeg: shortestAngleDelta(routeHeadingDeg ?? 0, draftPose.bearingDeg),
         pitchDeg: draftPose.pitchDeg,
         zoom: draftPose.zoom,
-        frame: 'world',
+        frame: 'route',
         easing: 'smooth',
+        scope: 'local',
+        holdDurationMs: 2000,
+        zoomMode: zoomEditedRef.current ? 'custom' : 'automatic',
       });
     }
     // A dedicated event rather than the generic `feature_enabled`, because
@@ -450,6 +471,10 @@ export function CinematicCameraEditor() {
       .sort((a, b) => a.progress - b.progress)
     : [], [computedJourney, keyframes, playback.routeTimingMode]);
 
+  const shotTimings = getLocalShotTimings(rows.map(({ keyframe, progress }) => ({
+    id: keyframe.id, progress, scope: keyframe.scope, holdDurationMs: keyframe.holdDurationMs,
+  })), playback.totalDuration);
+
   const changeFrame = (keyframeId: string, progress: number, nextFrame: CinematicKeyframeFrame) => {
     const keyframe = keyframes.find((entry) => entry.id === keyframeId);
     if (!keyframe || keyframe.frame === nextFrame) return;
@@ -476,22 +501,40 @@ export function CinematicCameraEditor() {
           <li>{t('settings.cinematicCamera.infoKeyboard')}</li>
           <li>{t('settings.cinematicCamera.infoBall')}</li>
           <li>{t('settings.cinematicCamera.infoZoom')}</li>
-          <li>{t('settings.cinematicCamera.infoFrame')}</li>
-          <li>{t('settings.cinematicCamera.infoEasing')}</li>
+          <li>{t('settings.cinematicCamera.smoothHelp')} {t('settings.cinematicCamera.linearHelp')}</li>
           <li>{t('settings.cinematicCamera.infoStability')}</li>
         </ul>
       </Foldable>
 
+      <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--canvas)] p-2.5">
+        <Foldable headerTranslationKey="directionGuide">
+          <div className="mt-3 grid gap-2">
+            <div className="flex gap-2.5 rounded-md bg-[var(--evergreen)]/5 p-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--trail-orange-15)] text-[var(--trail-orange)]"><Navigation2 className="h-4 w-4" aria-hidden="true" /></span>
+              <div><p className="text-xs font-semibold text-[var(--evergreen)]">{t('settings.cinematicCamera.frameRoute')}</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t('settings.cinematicCamera.referenceRouteHelp')}</p></div>
+            </div>
+            <div className="flex gap-2.5 rounded-md bg-[var(--evergreen)]/5 p-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--evergreen)]/10 text-[var(--evergreen)]"><Compass className="h-4 w-4" aria-hidden="true" /></span>
+              <div><p className="text-xs font-semibold text-[var(--evergreen)]">{t('settings.cinematicCamera.frameWorld')}</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t('settings.cinematicCamera.referenceWorldHelp')}</p></div>
+            </div>
+          </div>
+        </Foldable>
+      </div>
+
       <div className="flex justify-center">
         <CinematicOrbitBall
-          bearingDeg={draftPose.bearingDeg}
-          pitchDeg={draftPose.pitchDeg}
+          bearingDeg={!isComposing && cameraPosition ? cameraPosition.bearing : draftPose.bearingDeg}
+          pitchDeg={!isComposing && cameraPosition ? cameraPosition.pitch : draftPose.pitchDeg}
           routeHeadingDeg={routeHeadingDeg}
-          onChange={(next) => setDraftPose((current) => ({ ...current, ...next }))}
+          onChange={(next) => {
+            if (isComposing) setDraftPose((current) => ({ ...current, ...next }));
+          }}
         />
       </div>
 
-      <Foldable headerTranslationKey={'slidersTitle'}>
+      <Foldable headerTranslationKey={'slidersTitle'} showContentInitial>
         <CameraParameter draftPoseProperty={'bearingDeg'}
                          min={CINEMATIC_BEARING_MIN}
                          max={CINEMATIC_BEARING_MAX}
@@ -519,6 +562,7 @@ export function CinematicCameraEditor() {
                        step={0.1}
                        draftPoseState={draftPoseState}
                        translationKey={'zoom'}
+                       onEdit={() => { zoomEditedRef.current = true; }}
                        iconDecrease={<Minus />}
                        iconIncrease={<Plus />}
       />
@@ -564,7 +608,7 @@ export function CinematicCameraEditor() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-[10px] text-[var(--evergreen-60)]">
-                  {t('settings.cinematicCamera.frame')}
+                  {t('settings.cinematicCamera.referenceLabel')}
                   <select
                     value={keyframe.frame}
                     onChange={(e) => changeFrame(keyframe.id, progress, e.target.value as CinematicKeyframeFrame)}
@@ -578,13 +622,13 @@ export function CinematicCameraEditor() {
                   </select>
                 </label>
                 <label className="text-[10px] text-[var(--evergreen-60)]">
-                  {t('settings.cinematicCamera.easing')}
+                  {t('settings.cinematicCamera.transitionLabel')}
                   <select
                     value={keyframe.easing}
                     onChange={(e) => updateCinematicCameraKeyframe(keyframe.id, { easing: e.target.value as CinematicKeyframeEasing })}
                     className="mt-0.5 w-full text-xs rounded border border-[var(--evergreen)]/30 bg-[var(--canvas)] text-[var(--evergreen)] px-1.5 py-1"
                   >
-                    {EASING_OPTIONS.map((option) => (
+                    {EASING_OPTIONS.filter((option) => keyframe.scope !== 'local' || option !== 'hold').map((option) => (
                       <option key={option} value={option}>
                         {t(`settings.cinematicCamera.easing${option.charAt(0).toUpperCase()}${option.slice(1)}`)}
                       </option>
@@ -592,6 +636,30 @@ export function CinematicCameraEditor() {
                   </select>
                 </label>
               </div>
+              {keyframe.scope === 'local' && <div className="space-y-1.5">
+                <label className="flex items-center justify-between gap-2 text-xs text-[var(--evergreen)]">
+                  <span>{t('settings.cinematicCamera.holdDuration')}</span>
+                  <span className="flex items-center gap-1 text-[var(--evergreen-60)]">
+                    <input type="number" min={0} max={LOCAL_SHOT_MAX_HOLD_MS / 1000} step={0.5}
+                      value={(keyframe.holdDurationMs ?? 0) / 1000}
+                      onChange={(event) => {
+                        const value = event.currentTarget.valueAsNumber;
+                        if (Number.isFinite(value)) updateCinematicCameraKeyframe(keyframe.id, {
+                          holdDurationMs: Math.max(0, Math.min(LOCAL_SHOT_MAX_HOLD_MS, value * 1000)),
+                        });
+                      }}
+                      className="w-16 rounded border border-[var(--evergreen)]/30 bg-[var(--canvas)] px-2 py-1 text-right tabular-nums text-[var(--evergreen)]" />
+                    {t('settings.cinematicCamera.secondsShort')}
+                  </span>
+                </label>
+                <p className="text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t('settings.cinematicCamera.holdHint')}</p>
+                {shotTimings.find((timing) => timing.id === keyframe.id) && <p className="text-[11px] text-[var(--evergreen-60)]">
+                  {t('settings.cinematicCamera.localRange', {
+                    start: formatDuration(shotTimings.find((timing) => timing.id === keyframe.id)!.startMs / 1000),
+                    end: formatDuration(shotTimings.find((timing) => timing.id === keyframe.id)!.endMs / 1000),
+                  })}
+                </p>}
+              </div>}
             </div>
           ))}
         </div>
