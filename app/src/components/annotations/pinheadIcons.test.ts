@@ -181,6 +181,13 @@ describe('icon display labels', () => {
 
 
 describe('reviewed icon label catalogue', () => {
+  it('distinguishes bears from bones in Catalan', () => {
+    for (const [id, translations] of Object.entries(reviewedPinheadLabels)) {
+      if (id.startsWith('bear_spray_can')) expect(translations.ca, id).toContain('óssos');
+    }
+    expect(reviewedPinheadLabels.skull_above_crossed_bones.ca).toContain('ossos');
+  });
+
   it('only contains selectable icons and provides every supported translation', () => {
     const available = new Set(parsePinheadIndex(readPinnedIndex()).map((icon) => icon.id));
     expect([...available].filter((id) => !reviewedPinheadLabels[id])).toEqual([]);
