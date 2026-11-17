@@ -790,6 +790,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       if (useWebCodecsRef.current) {
         void runDeterministicExport().catch((error) => {
           console.error('Deterministic export failed', error);
+          trackEvent('export_failed', { export_failure_scope: 'runtime', export_format: actualFormat, export_encoder_path: 'webcodecs' });
           // Runtime and encoder failures still cancel the deterministic export.
           // A map-tile timeout is counted and surfaced as a partial Studio
           // completion by the readiness barrier instead.
@@ -802,6 +803,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
         });
       } else {
         startFrameCapture((error) => {
+          trackEvent('export_failed', { export_failure_scope: 'frame_capture', export_format: actualFormat, export_encoder_path: 'mediarecorder' });
           recordingCancelledRef.current = true;
           finishRecording();
           setExportStage(t('export.stageFailedWithError', { error: (error as Error).message }));

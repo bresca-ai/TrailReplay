@@ -11,7 +11,7 @@ const siteUrl = 'https://trailreplay.com';
 // last significant change to each page. Omit lastmod until it can be tracked
 // per page, rather than publishing misleading dates.
 const localizedHelp = ['es', 'ca', 'de', 'fr', 'zh-tw'].flatMap((language) =>
-  ['tutorial', 'gpx-download-guide', 'agents'].map((slug) => ({ path: `/${language}/${slug}` })),
+  ['releases', 'tutorial', 'gpx-download-guide', 'agents'].map((slug) => ({ path: `/${language}/${slug}` })),
 );
 const germanLandings = ['strava-to-video', 'garmin-to-video', 'gpx-animation', 'cycling-route-animation', 'running-route-animation', 'cinematic-camera'].map((slug) => ({ path: `/de/${slug}` }));
 const requestedLandings = ['es', 'ca', 'fr', 'zh-tw'].flatMap((language) =>

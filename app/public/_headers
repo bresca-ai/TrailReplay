@@ -3,6 +3,9 @@
   X-Frame-Options: DENY
   X-XSS-Protection: 1; mode=block
 
+/retained-assets.json
+  Cache-Control: no-store
+
 /robots.txt
   Cache-Control: public, max-age=86400
 

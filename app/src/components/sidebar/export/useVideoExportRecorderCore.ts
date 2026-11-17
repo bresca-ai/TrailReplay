@@ -1,4 +1,4 @@
-import { assertExportCanvasResolution } from './exportCanvasResolution';
+import { assertExportCanvasUsable } from './exportCanvasResolution';
 import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
 import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -386,7 +386,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       && drawVideoCoverFrame()
     ) return;
     if (mapGlobalRef.current) {
-      assertExportCanvasResolution(mapGlobalRef.current, videoExportSettings.resolution);
+      assertExportCanvasUsable(mapGlobalRef.current, videoExportSettings.resolution);
     }
     const profileStartedAt = isExportProfilingEnabled() ? performance.now() : 0;
     drawExportFrame({

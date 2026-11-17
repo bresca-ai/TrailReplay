@@ -21,6 +21,9 @@ export default defineConfig(({ command, mode }) => {
 
   return {
   base: '/',
+  define: {
+    __TRAILREPLAY_RELEASE_ID__: JSON.stringify(process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || 'local'),
+  },
   server: {
     proxy: apiProxyTarget ? {
       '/api': {
@@ -40,6 +43,8 @@ export default defineConfig(({ command, mode }) => {
       '@radix-ui/react-switch',
       'fix-webm-duration',
       'mp4-muxer',
+      'maplibre-gl',
+      'next-themes',
     ],
   },
   plugins: [
@@ -78,6 +83,7 @@ export default defineConfig(({ command, mode }) => {
       input: {
         main: path.resolve(import.meta.dirname, 'index.html'),
         tutorial: path.resolve(import.meta.dirname, 'tutorial.html'),
+        releases: path.resolve(import.meta.dirname, 'releases.html'),
         agents: path.resolve(import.meta.dirname, 'agents.html'),
         gpxGuide: path.resolve(import.meta.dirname, 'gpx-download-guide.html'),
         stravaToVideo: path.resolve(import.meta.dirname, 'strava-to-video.html'),

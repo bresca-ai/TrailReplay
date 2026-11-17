@@ -32,23 +32,11 @@ Most GPX tools stop at route inspection. TrailReplay is built for presentation: 
 - Export polished videos with map motion, stats overlays, elevation profile, and branded output.
 - Keep the core GPX workflow local in the browser by default.
 
-## Demo Videos
+## Demo
 
-**Path Export with Stats**  
-Export a route story with animated map playback, live stats, elevation profile, and branded video output.
+See a route brought to life with animated maps, annotations, photos, and live stats.
 
-https://github.com/user-attachments/assets/73c65611-8348-4b4d-b7c2-af661ab5e75f
-
-[▶ Watch in tutorial](https://trailreplay.com/tutorial.html#demo-videos)
-
-**Comparison Mode**  
-Compare two GPX tracks from the same time window and see where each person was at every moment.
-
-https://github.com/user-attachments/assets/c42e5efd-6c08-4591-ab66-92cc16484f24
-
-[▶ Watch in tutorial](https://trailreplay.com/tutorial.html#demo-videos)
-
-> If GitHub does not render the inline previews for your session, you can still watch them in the tutorial or open the original MP4 files in [`media/video/`](./media/video).
+https://github.com/user-attachments/assets/2191746d-cbd7-43e5-8382-8986a8706931
 
 ## Core Workflow
 

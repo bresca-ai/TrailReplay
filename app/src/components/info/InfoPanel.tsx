@@ -1,6 +1,7 @@
+import { releaseLabels } from '@/releases/releaseLabels';
 import { localizedSitePath } from '@/seo/seoLocale';
 import { Github, Instagram } from '@/components/icons/brandIcons';
-import { X, MessageSquare, Heart, ExternalLink, Shield, FileText, BookOpen, Download, Sparkles, Building2 } from 'lucide-react';
+import { X, MessageSquare, Heart, ExternalLink, Shield, FileText, BookOpen, Download, Sparkles, Building2, History } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
 
@@ -63,6 +64,7 @@ export function InfoPanel({ onClose }: InfoPanelProps) {
             {t('info.learnBody')}
           </p>
           <div className="space-y-2">
+            <InfoCard href={localizedSitePath('/releases', language)} icon={<History className="w-4 h-4" />} label={releaseLabels[language].title} description={releaseLabels[language].description} />
             <InfoCard
               href={localizedSitePath('/tutorial', language)}
               icon={<BookOpen className="w-4 h-4" />}

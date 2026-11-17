@@ -2,6 +2,16 @@
 
 TrailReplay uses a continuous deployment model: merges to `main` are production deployments through Cloudflare Pages. A GitHub Release marks a deliberate public milestone; it does not deploy a separate artifact.
 
+Production builds retain fingerprinted assets from prior deployments for 30 days
+after they stop being the live build. This lets an open editor load older lazy
+panels without a reload that would discard its in-memory work. The build fetches
+the live site's retention manifest and fails if it cannot carry the assets
+forward; the first build bootstraps from the live site's Vite dependency graph.
+The manifest must remain served with `Cache-Control: no-store`. A session left
+open beyond the retention period is not protected by this mechanism, so users
+should save their work before reloading. Preview and local builds do not fetch
+production assets unless `TRAILREPLAY_ASSET_SOURCE` is explicitly set.
+
 ## Before a release
 
 1. Merge only reviewed pull requests with successful CI and Cloudflare Pages checks.

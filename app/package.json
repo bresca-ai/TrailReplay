@@ -1,12 +1,12 @@
 {
   "name": "trailreplay-app",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "prebuild": "node scripts/generate-sitemap.mjs && node scripts/generate-video-sitemap.mjs",
-    "build": "tsc -b && vite build && node scripts/prerender.mjs && node scripts/validate-seo-output.mjs",
+    "build": "tsc -b && vite build && node scripts/retain-deployment-assets.mjs && node scripts/prerender.mjs && node scripts/validate-seo-output.mjs",
     "seo:generate": "node scripts/generate-sitemap.mjs && node scripts/generate-video-sitemap.mjs",
     "seo:prerender": "node scripts/prerender.mjs",
     "seo:check": "node scripts/validate-seo-output.mjs",

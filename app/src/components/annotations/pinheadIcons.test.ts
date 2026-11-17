@@ -1,7 +1,8 @@
+import { reviewedPinheadLabel, reviewedPinheadLabels } from './pinheadLabels';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { buildPinheadPathMap, parsePinheadIndex, searchPinheadIcons, type PinheadTerms } from './pinheadIcons';
+import { buildPinheadPathMap, parsePinheadIndex, pinheadLocalizedLabel, searchPinheadIcons, type PinheadTerms } from './pinheadIcons';
 import ca from './pinheadTerms/ca.json';
 import de from './pinheadTerms/de.json';
 import es from './pinheadTerms/es.json';
@@ -30,12 +31,20 @@ describe('parsePinheadIndex', () => {
     ]);
   });
 
+  it('finds the aid-station symbol in common race languages', () => {
+    const icons = parsePinheadIndex(readPinnedIndex());
+    for (const query of ['aid station', 'avituallament', 'avituallamiento', 'ravitaillement']) {
+      expect(searchPinheadIcons(icons, query, 10).results.map((icon) => icon.id)).toContain('burger_and_drink_cup_with_straw');
+    }
+  });
+
   it('reads the pinned package it ships with', () => {
     const index = readPinnedIndex();
     const icons = parsePinheadIndex(index);
 
     expect(icons.length).toBeGreaterThan(2000);
     expect(icons.find((icon) => icon.id === 'mountain')?.path).toMatch(/^M/);
+    expect(icons.find((icon) => icon.id === 'jug_and_apple')?.path).toMatch(/^M/);
     const sensitive = Object.entries(index.icons as Record<string, { sensitive?: string[] }>)
       .filter(([, entry]) => entry.sensitive?.length)
       .map(([id]) => id);
@@ -148,5 +157,70 @@ describe('pinhead word lists', () => {
   it.each(Object.keys(lists))('%s covers every word in the pinned Pinhead names', (language) => {
     const missing = [...vocabulary].filter((word) => !/^\d+$/.test(word) && !SAME_IN_EVERY_LANGUAGE.has(word) && !lists[language][word]);
     expect(missing).toEqual([]);
+  });
+});
+
+
+describe('icon display labels', () => {
+  const icon = (id: string) => ({ id, label: id.replace(/_/g, ' '), terms: id, path: 'M0' });
+  it.each([
+    ['ca', 'Muntanya'], ['es', 'Montaña'], ['fr', 'Montagne'],
+    ['de', 'Berg'], ['zh-TW', '山'],
+  ])('uses a reviewed complete label for %s', (language, expected) => {
+    expect(pinheadLocalizedLabel(icon('mountain'), null, language, reviewedPinheadLabel)).toBe(expected);
+  });
+  it('finds an icon when the entire query is normally a linking word', () => {
+    const icons = parsePinheadIndex({ icons: { a: { svg: svg('M1Z') } } });
+    expect(searchPinheadIcons(icons, 'a', 10).results.map((item) => item.id)).toEqual(['a']);
+  });
+  it('uses English instead of assembling an unreviewed label from keywords', () => {
+    expect(pinheadLocalizedLabel(icon('mountain_with_cross'), ca, 'ca', reviewedPinheadLabel)).toBe('mountain with cross');
+    expect(pinheadLocalizedLabel(icon('mountain_with_astronaut'), zhTW, 'zh-TW', reviewedPinheadLabel)).toBe('mountain with astronaut');
+  });
+});
+
+
+describe('reviewed icon label catalogue', () => {
+  it('distinguishes bears from bones in Catalan', () => {
+    for (const [id, translations] of Object.entries(reviewedPinheadLabels)) {
+      if (id.startsWith('bear_spray_can')) expect(translations.ca, id).toContain('óssos');
+    }
+    expect(reviewedPinheadLabels.skull_above_crossed_bones.ca).toContain('ossos');
+  });
+
+  it('only contains selectable icons and provides every supported translation', () => {
+    const available = new Set(parsePinheadIndex(readPinnedIndex()).map((icon) => icon.id));
+    expect([...available].filter((id) => !reviewedPinheadLabels[id])).toEqual([]);
+    for (const [id, translations] of Object.entries(reviewedPinheadLabels)) {
+      expect(available.has(id), `Unknown or unavailable icon: ${id}`).toBe(true);
+      for (const language of ['ca', 'es', 'fr', 'de', 'zh-TW']) {
+        expect(translations[language], `${id} is missing ${language}`).toBeTruthy();
+      }
+    }
+  });
+});
+
+
+it('finds every reviewed label in its own language', () => {
+  const icons = parsePinheadIndex(readPinnedIndex());
+  for (const icon of icons) {
+    for (const language of ['ca', 'es', 'fr', 'de', 'zh-TW']) {
+      const label = reviewedPinheadLabel(icon.id, language)!;
+      expect(searchPinheadIcons([icon], label, 1, null, language, reviewedPinheadLabel).total, `${language}: ${icon.id}: ${label}`).toBe(1);
+    }
+  }
+});
+
+describe('searching reviewed complete labels', () => {
+  const icons = parsePinheadIndex({ icons: {
+    person_snowshoeing: { svg: svg('M1Z') },
+    water_bottle: { svg: svg('M2Z') },
+  } });
+  it('finds complete labels even when vocabulary files have not loaded', () => {
+    expect(searchPinheadIcons(icons, 'raquetes de neu', 10, null, 'ca', reviewedPinheadLabel).results.map((icon) => icon.id)).toContain('person_snowshoeing');
+    expect(searchPinheadIcons(icons, '穿雪鞋行走的人', 10, null, 'zh-TW', reviewedPinheadLabel).results.map((icon) => icon.id)).toContain('person_snowshoeing');
+  });
+  it('continues to match English names in another language', () => {
+    expect(searchPinheadIcons(icons, 'water bottle', 10, null, 'fr').results.map((icon) => icon.id)).toEqual(['water_bottle']);
   });
 });
