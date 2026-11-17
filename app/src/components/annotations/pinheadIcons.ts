@@ -76,6 +76,13 @@ function localized(icon: PinheadIcon, localTerms: PinheadTerms) {
   return entry;
 }
 
+export type PinheadLabelLookup = (id: string, language: string) => string | undefined;
+
+/** Show complete labels when loaded; retain the English name as a fallback. */
+export function pinheadLocalizedLabel(icon: PinheadIcon, _localTerms?: PinheadTerms | null, language = 'en', lookup?: PinheadLabelLookup) {
+  return lookup?.(icon.id, language) ?? icon.label;
+}
+
 /**
  * Every query word has to appear in the icon's name or category, in English
  * or — when `localTerms` is given — in the app's language, so "tent" and
@@ -83,9 +90,11 @@ function localized(icon: PinheadIcon, localTerms: PinheadTerms) {
  * matches rank above category-only ones, and shorter names first: "mountain"
  * before "mountain with greek cross".
  */
-export function searchPinheadIcons(icons: PinheadIcon[], query: string, limit: number, localTerms?: PinheadTerms | null) {
-  const words = normalizeSearchText(query).split(/\s+/).filter((word) => word && !QUERY_STOPWORDS.has(word));
-  if (words.length === 0) return { results: [], total: 0 };
+export function searchPinheadIcons(icons: PinheadIcon[], query: string, limit: number, localTerms?: PinheadTerms | null, language = 'en', lookup?: PinheadLabelLookup) {
+  const queryWords = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+  if (queryWords.length === 0) return { results: [], total: 0 };
+  const meaningfulWords = queryWords.filter((word) => !QUERY_STOPWORDS.has(word));
+  const words = meaningfulWords.length ? meaningfulWords : queryWords;
 
   const phrase = words.join(' ');
   const rankLabel = (label: string) => {
@@ -98,9 +107,12 @@ export function searchPinheadIcons(icons: PinheadIcon[], query: string, limit: n
 
   const matches = icons.flatMap((icon) => {
     const local = localTerms ? localized(icon, localTerms) : null;
-    const found = words.every((word) => icon.terms.includes(word) || (local?.terms.includes(word) ?? false));
+    const reviewed = lookup?.(icon.id, language);
+    const displayLabel = reviewed ? normalizeSearchText(reviewed) : '';
+    const aliases = icon.id === 'burger_and_drink_cup_with_straw' ? 'aid station avituallament avituallamiento ravitaillement verpflegungsstation 補給站' : '';
+    const found = words.every((word) => icon.terms.includes(word) || aliases.includes(word) || displayLabel.includes(word) || (local?.terms.includes(word) ?? false));
     if (!found) return [];
-    return [{ icon, rank: Math.min(rankLabel(icon.label), local ? rankLabel(local.label) : 4) }];
+    return [{ icon, rank: Math.min(rankLabel(icon.label), local ? rankLabel(local.label) : 4, displayLabel ? rankLabel(displayLabel) : 4) }];
   }).sort((a, b) => a.rank - b.rank
     || a.icon.label.length - b.icon.label.length
     || a.icon.label.localeCompare(b.icon.label));

@@ -11,6 +11,14 @@ vi.mock('@/components/sidebar/AnnotationSymbolPicker', () => ({ AnnotationSymbol
 beforeEach(() => { useAppStore.getState().reset(); useAppStore.getState().setSettings({ language: 'en' }); journeyState.current = { currentPosition: { lat: 42, lon: 1, elevation: 100 }, routeDistance: 500 }; });
 afterEach(cleanup);
 
+it('places the add control first and exposes the symbol picker in the composer', () => {
+  const { container } = render(<RouteAnnotationsEditor />);
+  const firstSection = container.firstElementChild?.firstElementChild;
+  expect(firstSection?.tagName).toBe('DETAILS');
+  expect(firstSection?.querySelector('summary')).toHaveTextContent('Add Annotation');
+  expect(within(firstSection as HTMLElement).getByText('Symbol picker')).toBeVisible();
+});
+
 it('creates an annotation at the playhead and keeps its editing controls available', () => {
   render(<RouteAnnotationsEditor />);
   fireEvent.change(screen.getByRole('textbox', { name: 'Title' }), { target: { value: 'Mountain pass' } });

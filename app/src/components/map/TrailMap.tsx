@@ -12,6 +12,7 @@ import { getAerialFollowBearing, resolveReplayCameraMode } from '@/utils/replayC
 import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
 import { useSuggestedFollowBehindDistance } from '@/components/map/hooks/useSuggestedFollowBehindDistance';
 import { MapElevationProfile } from './MapElevationProfile';
+import { MapBuildingAttribution } from './MapBuildingAttribution';
 import { ComparisonLeaderboard } from './ComparisonLeaderboard';
 import { LocationChapterLabel } from './LocationChapterLabel';
 import { COMPARISON_MARKER_SIZE } from '@/utils/comparisonMarker';
@@ -612,7 +613,7 @@ export function TrailMap(_props: TrailMapProps) {
       data-aerial-trailing-bearing={import.meta.env.DEV && cameraPathCoordinates.length > 1 ? trailingFlightBearing(cameraPathCoordinates, playback.progress).toFixed(1) : undefined}
       data-aerial-planned-bearing={import.meta.env.DEV && matchingTerrainPlan?.plan ? terrainPlanBearing(matchingTerrainPlan.plan, playback.progress).toFixed(1) : undefined}>
       <div ref={mapContainer} className="w-full h-full" style={{ backgroundColor: DEFAULT_SKY_COLOR }} />
-      {settings.show3DBuildings && <div className="absolute bottom-1 left-1 z-10 bg-black/70 px-1 text-[10px] text-white">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a href="https://openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a></div>}
+      {settings.show3DBuildings && <MapBuildingAttribution />}
 
       <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : "ready"} />
       {locationChapter.label && <LocationChapterLabel label={locationChapter.label} accent={settings.locationChapters?.color ?? '#ffbd66'} font={trailStyle.overlayFont} />}
