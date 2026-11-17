@@ -30,6 +30,16 @@ it('projects the completed route through its interpolated current point', () => 
   expect(projectRouteOverviewProgress([], geometry.project)).toEqual([]);
 });
 
+it('keeps every turn in long routes for both the full and completed paths', () => {
+  const route = Array.from({ length: 1501 }, (_, index) => [index, index % 2]);
+  const project = (lon: number, lat: number) => ({ x: lon, y: lat });
+  const full = projectRouteOverviewProgress(route, project);
+  const completed = projectRouteOverviewProgress(route.slice(0, 1000), project);
+  expect(full).toHaveLength(1501);
+  expect(completed).toEqual(full.slice(0, 1000));
+  expect(full[1]).toEqual({ x: 1, y: 1 });
+});
+
 it('uses light and dark shades of the selected route color', () => {
   expect(routeOverviewColors('#ff0000')).toEqual({ remaining: 'rgb(255, 140, 140)', completed: 'rgb(184, 0, 0)' });
   expect(routeOverviewColors('#36c')).toEqual(routeOverviewColors('#3366cc'));

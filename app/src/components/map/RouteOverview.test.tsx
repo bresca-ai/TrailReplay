@@ -1,7 +1,7 @@
 import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
-import type { ComparisonTrack } from '@/types';
+import type { ComparisonTrack, GPXTrack } from '@/types';
 import { RouteOverview } from './RouteOverview';
 
 const journeyState = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
@@ -44,4 +44,21 @@ it('draws each route in its own color, and only the current route in per-route m
   expect(colors).not.toContain('rgb(255, 140, 140)');
   expect(colors).toContain('rgb(140, 140, 255)');
   expect(colors).not.toContain('rgb(140, 255, 140)');
+});
+
+it('paints comparison route progress at the same time as the main map', () => {
+  useAppStore.getState().reset();
+  useAppStore.getState().setSettings({ showRouteOverview: true });
+  const primary = { id: 'primary', color: '#ff0000', points: [] } as unknown as GPXTrack;
+  const comparison = { id: 'compare', groupId: 'primary', visible: true, color: '#00ff00',
+    track: { points: [{ lon: 1, lat: 1, distance: 0, time: new Date(0) }, { lon: 2, lat: 2, distance: 100, time: new Date(10000) }] } } as unknown as ComparisonTrack;
+  useAppStore.setState({ comparisonTracks: [comparison], comparisonMode: 'time' });
+  journeyState.current = { computedJourney: null, activeTrack: primary, currentPosition: { lon: 1.5, lat: 1.5, time: new Date(5000) },
+    completedCoordinates: [[1, 1], [1.5, 1.5]], allCoordinates: [[1, 1], [2, 2]] };
+  const colors: string[] = [];
+  const ctx = { scale: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), lineJoin: '', lineCap: '', strokeStyle: '', lineWidth: 0,
+    stroke() { colors.push(this.strokeStyle); } };
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  render(<RouteOverview containerSize={{ width: 800, height: 600 }} frame={null} />);
+  expect(colors).toContain('rgb(0, 184, 0)');
 });

@@ -3,6 +3,9 @@ import type { CropPreviewMetrics } from '@/utils/crop';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
+import { comparisonDistanceAtPrimary, getRouteComparisonPlan } from '@/utils/routeComparisonPlayback';
+import { interpolateTrackPoint } from '@/utils/gpx/interpolateTrackPoint';
+import { buildTrackTimeIndex, trackPositionAtTime } from '@/utils/trackPositionAtTime';
 import { buildJourneyOverviewRoutes, buildRouteOverviewGeometry, projectRouteOverviewProgress, routeOverviewColors } from './routeOverviewGeometry';
 
 interface Props { containerSize: { width: number; height: number }; frame: CropPreviewMetrics | null }
@@ -19,6 +22,9 @@ export function RouteOverview({ containerSize, frame }: Props) {
   const exportResolution = useAppStore(state => state.videoExportSettings.resolution);
   const phase = useAppStore(state => state.animationPhase);
   const comparisons = useAppStore(state => state.comparisonTracks);
+  const comparisonMode = useAppStore(state => state.comparisonMode);
+  const comparisonThreshold = useAppStore(state => state.comparisonThresholdMeters);
+  const tracks = useAppStore(state => state.tracks);
   const { allCoordinates, completedCoordinates, currentTrackColor, computedJourney, currentSegment, currentPosition, activeTrack } = useComputedJourney();
   const selectedSegment = currentSegment?.segment;
   const routePaths = useMemo(() => {
@@ -33,11 +39,29 @@ export function RouteOverview({ containerSize, frame }: Props) {
     return [...primary, ...others];
   }, [computedJourney, selectedSegment, settings.trailStyle.trailColor, settings.routeOverviewPerRoute, activeTrack, allCoordinates, comparisons]);
   const geometry = useMemo(() => buildRouteOverviewGeometry(routePaths.flatMap((route) => route.coordinates), WIDTH, HEIGHT), [routePaths]);
+  const projectedPaths = useMemo(() => new Map(routePaths.map((route) => [route.id,
+    geometry ? projectRouteOverviewProgress(route.coordinates, geometry.project) : [],
+  ])), [routePaths, geometry]);
+  const comparisonTimeIndexes = useMemo(() => new Map(comparisons.map((comparison) => [comparison.id, buildTrackTimeIndex(comparison.track)])), [comparisons]);
   const routes = useMemo(() => {
     const primary = computedJourney
       ? buildJourneyOverviewRoutes(computedJourney, completedCoordinates, selectedSegment, currentPosition, currentTrackColor || settings.trailStyle.trailColor, settings.routeOverviewPerRoute)
       : [{ id: activeTrack?.id ?? 'route', completed: completedCoordinates }];
     const progress = new Map(primary.map((route) => [route.id, route.completed]));
+    const primaryTrack = tracks.find((track) => track.id === currentPosition?.trackId) ?? activeTrack;
+    for (const comparison of comparisons) {
+      if (!comparison.visible || (comparisonMode === 'route' && comparison.groupId && comparison.groupId !== primaryTrack?.id)) continue;
+      const timeIndex = comparisonTimeIndexes.get(comparison.id);
+      const position = comparisonMode === 'route' && primaryTrack
+        ? interpolateTrackPoint(comparison.track, comparisonDistanceAtPrimary(
+            getRouteComparisonPlan(primaryTrack, comparison.track, comparisonThreshold), currentPosition?.distance ?? 0))
+        : currentPosition?.time && timeIndex ? trackPositionAtTime(comparison.track, timeIndex, currentPosition.time.getTime()) : null;
+      if (!position) continue;
+      const completed = comparison.track.points.filter((point) => point.distance <= position.distance).map((point) => [point.lon, point.lat]);
+      const last = completed.at(-1);
+      if (!last || last[0] !== position.lon || last[1] !== position.lat) completed.push([position.lon, position.lat]);
+      progress.set(comparison.id, completed);
+    }
     const result = routePaths.map((route) => ({ ...route, completed: progress.get(route.id) ?? route.completed }));
     // Paint the active segment last so its advancing line stays visible where
     // it overlaps an earlier, later, or comparison route.
@@ -45,7 +69,7 @@ export function RouteOverview({ containerSize, frame }: Props) {
     const activeIndex = result.findIndex((route) => route.id === activeId);
     if (activeIndex >= 0) result.push(...result.splice(activeIndex, 1));
     return result;
-  }, [computedJourney, completedCoordinates, selectedSegment, currentPosition, currentTrackColor, settings.trailStyle.trailColor, settings.routeOverviewPerRoute, activeTrack, routePaths]);
+  }, [computedJourney, completedCoordinates, selectedSegment, currentPosition, currentTrackColor, settings.trailStyle.trailColor, settings.routeOverviewPerRoute, activeTrack, routePaths, tracks, comparisons, comparisonMode, comparisonThreshold, comparisonTimeIndexes]);
   const frameWidth = frame?.frameWidth ?? containerSize.width;
   const frameHeight = frame?.frameHeight ?? containerSize.height;
   const width = Math.min(WIDTH, Math.max(70, frameWidth * 0.38), Math.max(70, frameHeight * 0.32));
@@ -63,7 +87,7 @@ export function RouteOverview({ containerSize, frame }: Props) {
     ctx.scale(resolution, resolution);
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     for (const route of routes) {
-      const path = projectRouteOverviewProgress(route.coordinates, geometry.project);
+      const path = projectedPaths.get(route.id) ?? [];
       if (path.length < 2) continue;
       ctx.beginPath();
       path.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
@@ -77,7 +101,7 @@ export function RouteOverview({ containerSize, frame }: Props) {
         ctx.strokeStyle = colors.completed; ctx.lineWidth = 3; ctx.stroke();
       }
     }
-  }, [geometry, routes, settings.showRouteOverview, phase, isExporting, width, frameWidth, exportResolution.width]);
+  }, [geometry, routes, projectedPaths, settings.showRouteOverview, phase, isExporting, width, frameWidth, exportResolution.width]);
 
   if (!settings.showRouteOverview || !geometry || (phase !== 'idle' && phase !== 'playing')) return null;
   return <canvas ref={canvas} className="tr-route-overview absolute z-20" role="img" aria-label={t('annotations.routeOverview')} tabIndex={isExporting ? -1 : 0}

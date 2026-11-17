@@ -54,8 +54,9 @@ export function buildRouteOverviewGeometry(coordinates: number[][], width: numbe
 /** Use the same projected coordinates as the live route marker, including its interpolated endpoint. */
 export function projectRouteOverviewProgress(coordinates: number[][], project: (lon: number, lat: number) => { x: number; y: number }) {
   const valid = coordinates.filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat));
-  const step = Math.max(1, Math.ceil(valid.length / 1000));
-  return valid.filter((_, index) => index % step === 0 || index === valid.length - 1).map(([lon, lat]) => project(lon, lat));
+  // Full and completed paths must use the same vertices: sampling them at
+  // different rates makes the painted line cut across bends in the route.
+  return valid.map(([lon, lat]) => project(lon, lat));
 }
 
 /** Derive light and dark versions without changing the chosen route hue. */
