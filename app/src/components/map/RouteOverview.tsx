@@ -38,7 +38,16 @@ export function RouteOverview({ containerSize, frame }: Props) {
         coordinates: comparison.track.points.map((point) => [point.lon, point.lat]), completed: [] as number[][] }));
     return [...primary, ...others];
   }, [computedJourney, selectedSegment, settings.trailStyle.trailColor, settings.routeOverviewPerRoute, activeTrack, allCoordinates, comparisons]);
-  const geometry = useMemo(() => buildRouteOverviewGeometry(routePaths.flatMap((route) => route.coordinates), WIDTH, HEIGHT), [routePaths]);
+  const geometry = useMemo(() => {
+    const coordinates = routePaths.flatMap((route) => route.coordinates);
+    // Include connections in the bounds so the position marker remains on
+    // screen while travelling between routes, without drawing extra lines.
+    for (const segment of computedJourney?.segmentTimings ?? []) {
+      if (segment.type !== 'transport' || (settings.routeOverviewPerRoute && segment.segmentId !== selectedSegment?.segmentId)) continue;
+      coordinates.push(...computedJourney!.coordinates.slice(segment.startCoordIndex, segment.endCoordIndex + 1).map((point) => [point.lon, point.lat]));
+    }
+    return buildRouteOverviewGeometry(coordinates, WIDTH, HEIGHT);
+  }, [routePaths, computedJourney, selectedSegment, settings.routeOverviewPerRoute]);
   const projectedPaths = useMemo(() => new Map(routePaths.map((route) => [route.id,
     geometry ? projectRouteOverviewProgress(route.coordinates, geometry.project) : [],
   ])), [routePaths, geometry]);
@@ -101,7 +110,17 @@ export function RouteOverview({ containerSize, frame }: Props) {
         ctx.strokeStyle = colors.completed; ctx.lineWidth = 3; ctx.stroke();
       }
     }
-  }, [geometry, routes, projectedPaths, settings.showRouteOverview, phase, isExporting, width, frameWidth, exportResolution.width]);
+    if (currentPosition && Number.isFinite(currentPosition.lon) && Number.isFinite(currentPosition.lat)) {
+      const marker = geometry.project(currentPosition.lon, currentPosition.lat);
+      ctx.beginPath();
+      ctx.arc(marker.x, marker.y, 3, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+  }, [geometry, routes, projectedPaths, currentPosition, settings.showRouteOverview, phase, isExporting, width, frameWidth, exportResolution.width]);
 
   if (!settings.showRouteOverview || !geometry || (phase !== 'idle' && phase !== 'playing')) return null;
   return <canvas ref={canvas} className="tr-route-overview absolute z-20" role="img" aria-label={t('annotations.routeOverview')} tabIndex={isExporting ? -1 : 0}
