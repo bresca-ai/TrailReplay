@@ -16,7 +16,9 @@ export function WorkflowGuide() {
   const { t } = useI18n();
   const activePanel = useAppStore((state) => state.activePanel);
   const setActivePanel = useAppStore((state) => state.setActivePanel);
-  const activeIndex = Math.max(0, steps.findIndex((step) => step.id === activePanel));
+  const activeIndex = steps.findIndex((step) => step.id === activePanel);
+  // The story is a second product beside the video, not a step towards it.
+  if (activeIndex === -1) return null;
   const activeStep = steps[activeIndex];
   const nextStep = steps[activeIndex + 1];
 

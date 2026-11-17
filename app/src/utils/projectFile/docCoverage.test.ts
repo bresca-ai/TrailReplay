@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { normalizeStory, type StoryDocument } from '@/utils/story/storyDocument';
 
 /**
  * app/public/replay-file.md is served at trailreplay.com/replay-file.md and is
@@ -52,5 +53,20 @@ describe('replay-file.md', () => {
       expect(doc).toContain(`\`${field}\``);
     }
     expect(doc).toContain('Fields to leave alone');
+  });
+
+  // normalizeStory drops unknown keys and repairs bad values, so an example that
+  // comes back unchanged uses only real field names with values the app keeps.
+  it('gives a story example the app reads back unchanged', () => {
+    const section = doc.slice(doc.search(/^### [\d.]+ `story`$/m));
+    const example = /```json\n([\s\S]*?)\n```/.exec(section)?.[1];
+    expect(example, 'a json block under the story heading').toBeDefined();
+    const story = JSON.parse(example!) as StoryDocument;
+
+    expect(normalizeStory(story)).toStrictEqual(story);
+    expect(story.title).not.toBe('');
+    expect(story.intro).not.toBe('');
+    expect(story.sections.map((entry) => entry.anchor.ref?.kind ?? null)).toEqual([null, 'annotation']);
+    expect(new Set(story.sections.flatMap((entry) => entry.blocks.map((block) => block.kind)))).toEqual(new Set(['text', 'media']));
   });
 });

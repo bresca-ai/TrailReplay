@@ -67,7 +67,7 @@ export function FeedbackSolicitation() {
   const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
   const [isSavingProject, setIsSavingProject] = useState(false);
   const hasUnsavedWork = useAppStore((state) =>
-    hasUnsavedProjectContent({ tracks: state.tracks, pictures: state.pictures, journey: state.journey })
+    hasUnsavedProjectContent({ tracks: state.tracks, pictures: state.pictures, journey: state.journey, story: state.story })
   );
   const promptTimeoutRef = useRef<number | null>(null);
   const [isNarrowScreen, setIsNarrowScreen] = useState(

@@ -2,6 +2,7 @@ import { zip, type Zippable } from 'fflate';
 import type { AppState } from '@/store/storeTypes';
 import { serializeTrackToGpx } from '@/utils/gpxParser';
 import type { GPXTrack } from '@/types';
+import { hasStoryContent } from '@/utils/story/storyDocument';
 import {
   APP_VERSION,
   CURRENT_FORMAT_VERSION,
@@ -132,6 +133,7 @@ export async function buildReplayArchive(state: AppState): Promise<Blob> {
     cameraSettings: state.cameraSettings,
     videoExportSettings: state.videoExportSettings,
     socialShareSettings: state.socialShareSettings,
+    ...(hasStoryContent(state.story) ? { story: state.story } : {}),
   };
 
   const savedAt = new Date().toISOString();

@@ -1,6 +1,7 @@
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { ExportAwareSidebar } from '@/components/sidebar/ExportAwareSidebar';
 import { WaypointImportDialog } from '@/components/app/WaypointImportDialog';
+import { StoryPreviewHost } from '@/components/story/StoryPreviewHost';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -548,7 +549,8 @@ function App() {
     };
   }, [availableStats.length, isResizingStats, setSettings]);
 
-  const { activePicture, activeVideo, autoPictureId, autoVideoId, closeActivePicture, closeActiveVideo } = usePlaybackMediaPopups();
+  const { activePicture, activeVideo, autoPictureId, autoVideoId, closeActivePicture, closeActiveVideo, cancelHolds } = usePlaybackMediaPopups();
+  const pause = useAppStore((state) => state.pause);
   const onPictureElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoPictureId ? null : { kind: 'picture', id: autoPictureId, elapsedMs }); }, [autoPictureId]);
   const onVideoElapsed = useCallback((elapsedMs: number | null) => { setMediaHoldClock(elapsedMs === null || !autoVideoId ? null : { kind: 'video', id: autoVideoId, elapsedMs }); }, [autoVideoId]);
 
@@ -845,7 +847,8 @@ function App() {
         </main>
         
         <WaypointImportDialog />
-        <Toaster 
+        <StoryPreviewHost onOpen={() => { pause(); cancelHolds(); }} />
+        <Toaster
           position="bottom-right"
           toastOptions={{
             style: {

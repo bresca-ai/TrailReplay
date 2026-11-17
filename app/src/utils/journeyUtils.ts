@@ -465,6 +465,38 @@ export function segmentAnchorForRouteDistance(
   };
 }
 
+/** Segment anchor to profile metres; exact on tracks, whose profile steps are the track-local metres. */
+export function profileDistanceForSegmentAnchor(
+  profile: JourneyDistanceProfile,
+  segmentTimings: SegmentTiming[],
+  segmentId: string,
+  segmentMeters: number,
+): number | null {
+  const timing = segmentTimings.find((candidate) => candidate.segmentId === segmentId);
+  // A segment whose track is gone has no coordinates: endCoordIndex = startCoordIndex - 1.
+  if (!timing || timing.endCoordIndex < timing.startCoordIndex || !Number.isFinite(segmentMeters)) return null;
+
+  const start = profile.cumulativeDistances[timing.startCoordIndex];
+  const span = profile.cumulativeDistances[timing.endCoordIndex] - start;
+  return start + Math.max(0, Math.min(span, segmentMeters));
+}
+
+/** Inverse: the first segment whose profile span holds `routeMeters`, so a shared boundary picks the earlier. */
+export function segmentAnchorForProfileDistance(
+  profile: JourneyDistanceProfile,
+  segmentTimings: SegmentTiming[],
+  routeMeters: number,
+): { segmentId: string; segmentMeters: number } | null {
+  for (const timing of segmentTimings) {
+    if (timing.endCoordIndex < timing.startCoordIndex) continue;
+    const start = profile.cumulativeDistances[timing.startCoordIndex];
+    if (routeMeters >= start && routeMeters <= profile.cumulativeDistances[timing.endCoordIndex]) {
+      return { segmentId: timing.segmentId, segmentMeters: routeMeters - start };
+    }
+  }
+  return null;
+}
+
 function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
 }
@@ -561,7 +593,7 @@ export function buildJourneyDistanceProfile(coordinates: JourneyPoint[]): Journe
   };
 }
 
-function findDistanceIndex(profile: JourneyDistanceProfile, distance: number): number {
+export function findDistanceIndex(profile: JourneyDistanceProfile, distance: number): number {
   let left = 0;
   let right = profile.cumulativeDistances.length - 1;
 

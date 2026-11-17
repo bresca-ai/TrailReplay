@@ -84,4 +84,17 @@ describe('buildReplayArchive', () => {
     const reparsed = parseGPX(gpxText, 'ridge-loop.gpx');
     expect(reparsed.points).toHaveLength(track.points.length);
   });
+
+  it('writes the story only when it has a title, intro or section', async () => {
+    const store = createAppStore();
+    store.getState().addTrack(parseGPX(sampleGpx, 'ridge-loop.gpx'));
+    const savedProject = async () => {
+      const files = unzipSync(new Uint8Array(await (await buildReplayArchive(store.getState())).arrayBuffer()));
+      return JSON.parse(strFromU8(files['project.json'])) as ReplayProjectFile;
+    };
+
+    expect(await savedProject()).not.toHaveProperty('story');
+    store.getState().updateStory({ type: 'addSection', id: 'camp', anchor: { ref: null, place: { routeMeters: 50 } } });
+    expect((await savedProject()).story).toStrictEqual(store.getState().story);
+  });
 });

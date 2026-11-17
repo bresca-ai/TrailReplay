@@ -23,6 +23,8 @@ import type { LandmarkType, NearbyPlacesCoverage, RouteLandmark } from '@/types/
 import type { CinematicCameraKeyframe } from '@/utils/cinematicCameraPlan';
 import type { Recipe, RecipeReport } from '@/utils/recipe/types';
 import type { TrackTrimRange } from '@/utils/gpx/trimTrack';
+import type { StoryDocument } from '@/utils/story/storyDocument';
+import type { StoryEdit } from '@/utils/story/storyEdits';
 
 export interface FileImportStatus {
   kind: 'routes' | 'recipe' | 'project';
@@ -55,6 +57,7 @@ export interface AppState {
   videos: VideoAnnotation[];
   iconChanges: IconChange[];
   textAnnotations: TextAnnotation[];
+  story: StoryDocument;
   userLandmarks: RouteLandmark[];
   landmarkPriorityIds: string[];
   enrichedLandmarks: RouteLandmark[];
@@ -100,7 +103,7 @@ export interface AppState {
   exportStage: string;
   isSidebarOpen: boolean;
   exploreMode: boolean;
-  activePanel: 'tracks' | 'journey' | 'annotations' | 'pictures' | 'export' | 'settings';
+  activePanel: 'tracks' | 'journey' | 'annotations' | 'pictures' | 'export' | 'settings' | 'story';
   isLoading: boolean;
   fileImportStatus: FileImportStatus | null;
   error: string | null;
@@ -165,6 +168,7 @@ export interface AppState {
   addTextAnnotation: (annotation: TextAnnotation) => void;
   updateTextAnnotation: (annotationId: string, updates: Partial<TextAnnotation>) => void;
   removeTextAnnotation: (annotationId: string) => void;
+  updateStory: (edit: StoryEdit) => void;
   setLandmarkPriorityIds: (ids: string[]) => void;
   addLandmark: (landmark: RouteLandmark) => void;
   hideLandmark: (landmarkId: string) => void;

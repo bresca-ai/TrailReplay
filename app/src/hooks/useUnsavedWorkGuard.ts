@@ -10,12 +10,8 @@ import { hasUnsavedProjectContent } from '@/utils/projectFile/hasUnsavedWork';
  * canceling gives the user the chance to click Save Project themselves.
  */
 export function useUnsavedWorkGuard() {
-  const tracks = useAppStore((state) => state.tracks);
-  const pictures = useAppStore((state) => state.pictures);
-  const journey = useAppStore((state) => state.journey);
-  const isExporting = useAppStore((state) => state.isExporting);
-
-  const shouldWarn = isExporting || hasUnsavedProjectContent({ tracks, pictures, journey });
+  // A boolean selector, so App (which has no memo boundary) re-renders only when the answer flips, not on every story keystroke.
+  const shouldWarn = useAppStore((state) => state.isExporting || hasUnsavedProjectContent(state));
 
   useEffect(() => {
     if (!shouldWarn) return;

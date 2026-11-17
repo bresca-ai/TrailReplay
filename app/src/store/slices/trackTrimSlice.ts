@@ -19,6 +19,7 @@ export function hasTrackTrimDependencies(state: AppState): boolean {
     || state.iconChanges.length > 0 || state.cinematicCameraKeyframes.length > 0
     || state.userLandmarks.length > 0 || state.comparisonTracks.length > 0
     || state.journeySegments.some((segment) => segment.type === 'transport')
+    || state.story.sections.length > 0
     || hasRouteAnchoredSettings(state);
 }
 

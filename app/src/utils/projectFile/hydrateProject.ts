@@ -12,6 +12,7 @@ import type { AppSettings, ComparisonTrack, PictureAnnotation, VideoAnnotation }
 import type { ParsedProject, ReplayProjectFile, SerializedPicture, SerializedVideo } from './types';
 import { normalizeRouteDivergenceThreshold } from '@/utils/routeDivergence';
 import { BASEMAP_PRESENTATIONS } from '@/components/map/mapStyle';
+import { normalizeStory } from '@/utils/story/storyDocument';
 
 /** Hydration is only reachable once a resolved project is known to be present. */
 export type ResolvedParsedProject = ParsedProject & { project: ReplayProjectFile };
@@ -141,6 +142,7 @@ export function hydrateProject(parsed: ResolvedParsedProject, store: AppState): 
     videos: (project.videos ?? []).map(hydrateVideo),
     iconChanges: project.iconChanges ?? [],
     textAnnotations: project.textAnnotations ?? [],
+    story: normalizeStory(project.story),
     // Predates cinematic mode in older projects.
     cinematicCameraKeyframes: project.cinematicCameraKeyframes ?? [],
     userLandmarks: project.userLandmarks ?? [],

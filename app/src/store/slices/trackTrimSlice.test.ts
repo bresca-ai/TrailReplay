@@ -71,6 +71,29 @@ describe('track trimming in the app store', () => {
     expect(store.getState().applyTrackTrim(track.id, 1, 4)).toBe(false);
   });
 
+  it('refuses apply and restore while the story has sections, since trimming would move every place', () => {
+    const { store, track } = setup();
+    const addSection = () => store.getState().updateStory({
+      type: 'addSection', id: 'camp', anchor: { ref: null, place: { routeMeters: 100 } },
+    });
+    const removeSection = () => store.getState().updateStory({ type: 'removeSection', id: 'camp' });
+    store.getState().updateStory({ type: 'setCover', title: 'A title has no place on the route' });
+    expect(hasTrackTrimDependencies(store.getState())).toBe(false);
+
+    addSection();
+    expect(store.getState().applyTrackTrim(track.id, 1, 4)).toBe(false);
+    expect(store.getState().tracks[0].points).toHaveLength(track.points.length);
+    removeSection();
+    expect(store.getState().applyTrackTrim(track.id, 1, 4)).toBe(true);
+
+    addSection();
+    expect(store.getState().restoreTrackTrim(track.id)).toBe(false);
+    expect(store.getState().tracks[0].points).toHaveLength(4);
+    removeSection();
+    expect(store.getState().restoreTrackTrim(track.id)).toBe(true);
+    expect(store.getState().tracks[0].points).toEqual(track.points);
+  });
+
   it.each<[string, (store: ReturnType<typeof createAppStore>) => void]>([
     ['custom elevation sections', (store) => store.getState().setSettings({
       customElevationSections: [{ id: 'custom', segmentIndex: 0, startProgress: 0.4, endProgress: 0.6 }],

@@ -5,6 +5,7 @@ import { parseGPX } from '@/utils/gpxParser';
 import { buildReplayArchive } from './buildReplayArchive';
 import { parseReplayArchive } from './parseReplayArchive';
 import { hydrateProject } from './hydrateProject';
+import { createDefaultStory } from '@/utils/story/storyDocument';
 
 const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="TrailReplay">
@@ -554,5 +555,95 @@ describe('cinematic camera keyframes in a saved project', () => {
     }, store.getState());
 
     expect(store.getState().journeySegments).toEqual([]);
+  });
+});
+
+describe('story in a saved project', () => {
+  const minimal = (story: unknown) => {
+    const meta = { routeFile: 'routes/ridge-loop.gpx' };
+    return {
+      manifest: {
+        formatVersion: 1, appVersion: '0.0.0', projectName: 'Story',
+        createdAt: '', savedAt: '', trackCount: 1, pictureCount: 0, videoCount: 0,
+      },
+      project: { formatVersion: 1, tracks: [meta], story: story as never },
+      tracks: [{ meta, gpxText: sampleGpx }],
+      comparisonTracks: [],
+      recipe: null,
+      routes: [],
+    };
+  };
+
+  it('comes back deep-equal after a save and reopen', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    const segmentId = source.getState().journeySegments[0].id;
+    const { updateStory } = source.getState();
+    updateStory({ type: 'setCover', title: 'Ridge loop', intro: 'Up.\n\nThen down.' });
+    updateStory({ type: 'setLayout', layout: { view: '3d', zoom: 'far', textSide: 'right', mobileMap: 'bottom' } });
+    updateStory({
+      type: 'addSection', id: 'note',
+      anchor: { ref: { kind: 'annotation', id: 'note-1' }, place: { routeMeters: 40, segmentId, segmentMeters: 40 } },
+      prefill: { heading: 'The col', text: 'Windy.' },
+    });
+    updateStory({ type: 'addSection', id: 'typed', anchor: { ref: null, place: { routeMeters: 90 } } });
+    updateStory({ type: 'addBlock', sectionId: 'typed', block: { id: 'clip', kind: 'media', media: { kind: 'video', id: 'video-1' } } });
+
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'story.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+
+    expect(target.getState().story).toStrictEqual(source.getState().story);
+  });
+
+  it('opens a file without a story with the default, replacing the story already open', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    const parsed = await parseReplayArchive(new File([await buildReplayArchive(source.getState())], 'plain.replay'));
+    expect(parsed.project).not.toHaveProperty('story');
+
+    const target = createAppStore();
+    target.getState().updateStory({ type: 'setCover', title: 'Left over from the last project' });
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().story).toEqual(createDefaultStory());
+  });
+
+  it.each([null, 'story', 42, [], { sections: 'none' }, { layout: [], sections: [null, 7] }])(
+    'opens a hostile story value %j as the default',
+    (story) => {
+      const store = createAppStore();
+      expect(() => hydrateProject(minimal(story), store.getState())).not.toThrow();
+      expect(store.getState().story).toEqual(createDefaultStory());
+    },
+  );
+
+  it('keeps the text of a section whose anchor and media are malformed', () => {
+    const store = createAppStore();
+    hydrateProject(minimal({
+      title: 7,
+      layout: { view: 'vr', textSide: 'right' },
+      sections: [{
+        id: 'camp',
+        anchor: { ref: { kind: 'waypoint', id: 'w' }, place: { routeMeters: -5 } },
+        heading: 'Camp',
+        blocks: [
+          { id: 'b1', kind: 'media', media: { kind: 'audio', id: 'a' } },
+          { id: 'b2', kind: 'text', text: 'We slept here.' },
+        ],
+      }],
+    }), store.getState());
+
+    expect(store.getState().story).toStrictEqual({
+      title: '',
+      intro: '',
+      layout: { ...createDefaultStory().layout, textSide: 'right' },
+      sections: [{
+        id: 'camp',
+        anchor: { ref: null, place: { routeMeters: 0 } },
+        heading: 'Camp',
+        blocks: [{ id: 'b2', kind: 'text', text: 'We slept here.' }],
+      }],
+    });
   });
 });

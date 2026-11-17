@@ -2,6 +2,7 @@ import type * as maplibregl from 'maplibre-gl';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppState } from '@/store/storeTypes';
+import type { StoryDebugFrame } from '@/components/story/view/StoryView';
 
 /**
  * A read-and-drive handle on the running app, for measuring a replay from
@@ -35,6 +36,24 @@ export interface ProbeBridge {
   seekToProgress: (progress: number) => void;
   /** Screen position of the playback marker, as a fraction of the canvas. */
   getMarkerScreenPosition: () => { x: number; y: number } | null;
+  /** The story preview, while its host is mounted. */
+  readonly story?: StoryProbe;
+}
+
+export interface StoryProbe {
+  isOpen: () => boolean;
+  open: () => void;
+  close: () => void;
+  /** The reader's latest debug frame and its scroller; null before the first frame of this opening. */
+  last: () => (StoryDebugFrame & { scroller: HTMLElement | null }) | null;
+}
+
+let storyProbe: StoryProbe | undefined;
+
+/** The story host can mount before the bridge is installed (child effects run first), so the bridge reads it late. */
+export function exposeStoryProbe(probe: StoryProbe): () => void {
+  storyProbe = probe;
+  return () => { if (storyProbe === probe) storyProbe = undefined; };
 }
 
 declare global {
@@ -76,6 +95,7 @@ export function installProbeBridge(): () => void {
     pause: () => useAppStore.getState().pause(),
     seekToProgress: (progress) => useAppStore.getState().seekToProgress(progress),
     getMarkerScreenPosition: markerScreenPosition,
+    get story() { return storyProbe; },
   };
 
   window.__trailreplay = bridge;

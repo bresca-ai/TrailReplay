@@ -6,8 +6,11 @@ import {
   getCompletedCoordinates,
   getJourneyDistanceAtProgress,
   getJourneyElevationData,
+  getJourneyPointAtDistance,
   getJourneyPointAtProgress,
+  profileDistanceForSegmentAnchor,
   progressForRouteDistance,
+  segmentAnchorForProfileDistance,
   type JourneyPoint,
   type SegmentTiming,
 } from './journeyUtils';
@@ -178,5 +181,57 @@ describe('camera transitions', () => {
       expect(getSegmentAtProgress(0.5, candidate.segmentTimings)?.segment.transportMode).toBe('camera');
       expect(getJourneyDistanceAtProgress(0.5, buildJourneyDistanceProfile(candidate.coordinates)!, candidate.segmentTimings)).toBeCloseTo(100);
     }
+  });
+});
+
+describe('segment anchors on the distance profile', () => {
+  const first = { ...trackWithTimes([0, 10, 20, 30]), id: 'first' };
+  // 0.01 degrees east of the first track with nothing in between, so the profile crosses a straight gap.
+  const second = { ...first, id: 'second', points: first.points.map((p) => ({ ...p, lon: 6.01 })) };
+  const trackSegment = (id: string, trackId: string): JourneySegment => ({ id, type: 'track', trackId, duration: 1000 });
+
+  it('lands exactly on the track-local metres of the anchored track', () => {
+    const journey = buildComputedJourney([trackSegment('a', 'first'), trackSegment('b', 'second')], [first, second])!;
+    const profile = buildJourneyDistanceProfile(journey.coordinates)!;
+    const meters = profileDistanceForSegmentAnchor(profile, journey.segmentTimings, 'b', 150)!;
+
+    const point = getJourneyPointAtDistance(profile, meters)!;
+    expect(point.lat).toBeCloseTo(45.0015, 9);
+    expect(point.lon).toBeCloseTo(6.01, 9);
+
+    const anchor = segmentAnchorForProfileDistance(profile, journey.segmentTimings, meters);
+    expect(anchor?.segmentId).toBe('b');
+    expect(anchor?.segmentMeters).toBeCloseTo(150, 9);
+
+    const end = getJourneyPointAtDistance(profile, profileDistanceForSegmentAnchor(profile, journey.segmentTimings, 'b', 999)!)!;
+    expect([end.lat, end.lon]).toEqual([45.003, 6.01]);
+
+    const gapMiddle = (300 + profileDistanceForSegmentAnchor(profile, journey.segmentTimings, 'b', 0)!) / 2;
+    expect(segmentAnchorForProfileDistance(profile, journey.segmentTimings, gapMiddle)).toBeNull();
+  });
+
+  it('returns null for a segment that is gone or lost its track', () => {
+    const journey = buildComputedJourney(
+      [trackSegment('a', 'first'), trackSegment('orphan', 'deleted-track'), trackSegment('b', 'second')],
+      [first, second],
+    )!;
+    const profile = buildJourneyDistanceProfile(journey.coordinates)!;
+
+    expect(profileDistanceForSegmentAnchor(profile, journey.segmentTimings, 'never-existed', 10)).toBeNull();
+    expect(profileDistanceForSegmentAnchor(profile, journey.segmentTimings, 'orphan', 0)).toBeNull();
+    expect(profileDistanceForSegmentAnchor(profile, journey.segmentTimings, 'a', 100)).toBe(100);
+  });
+
+  it('picks the earlier segment where two segments share a profile boundary', () => {
+    const journey = buildComputedJourney([
+      trackSegment('a', 'first'),
+      { id: 'move', type: 'transport', mode: 'camera', from: { lat: 45.003, lon: 6 }, to: { lat: 45, lon: 6.01 }, duration: 1000, distance: 0 },
+      trackSegment('b', 'second'),
+    ], [first, second])!;
+    const profile = buildJourneyDistanceProfile(journey.coordinates)!;
+
+    expect(profileDistanceForSegmentAnchor(profile, journey.segmentTimings, 'b', 0)).toBe(300);
+    expect(segmentAnchorForProfileDistance(profile, journey.segmentTimings, 300)).toEqual({ segmentId: 'a', segmentMeters: 300 });
+    expect(segmentAnchorForProfileDistance(profile, journey.segmentTimings, 450)).toEqual({ segmentId: 'b', segmentMeters: 150 });
   });
 });

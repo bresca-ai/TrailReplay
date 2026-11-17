@@ -136,6 +136,64 @@ representative of a real viewer; the probe says so rather than letting the
 numbers look authoritative. Marker framing, tiles, warnings and errors are
 unaffected by frame rate.
 
+### Story map (`components/story/`, `utils/story/`)
+
+A second product beside the video: the creator writes text with photos and
+clips tied to places on the route, and the reader drives the route by
+scrolling. It shares the route with the video and nothing else.
+
+- `utils/story/storyDocument.ts` — `StoryDocument` (cover, layout, sections of
+  text and media blocks) and `normalizeStory`, its only trust boundary. An
+  anchor is a live annotation, photo or clip with a captured fallback place, or
+  a typed km; places are metres on the distance-profile scale, never progress
+- `utils/story/storyEdits.ts` — `applyStoryEdit`, behind the store's single
+  writer `updateStory`
+- `utils/story/compileStory.ts` — document + route + media → a self-contained
+  `CompiledStory`; the only code that converts between the route scale and the
+  scroll scale
+- `components/story/view/` — the reader: `StoryView.tsx` (layout, measuring,
+  the frame loop), `storyFrame.ts` (scrollTop → camera, head, media strength),
+  `storyWedge.ts` (the shape from a photo to its place), `storyMap.ts`
+- `components/story/StoryPanel.tsx` — the Story tab; `StoryPreviewHost.tsx` and
+  `StoryPreviewDialog.tsx` — the preview, a modal dialog over one compiled
+  snapshot, opened only by the tab's Preview button
+
+What must stay true:
+
+- **The frame is a pure function of scrollTop** (given the story, the measured
+  layout and reduced motion). No time, tween or easing, so scrolling up rewinds
+  exactly and frame rate does not matter.
+- **The reader has its own MapLibre map.** It never writes `mapGlobalRef`, and
+  never writes playback, settings or export state; opening the preview only
+  pauses the video.
+- **`view/` and `utils/story/` stay away from the editor.** ESLint
+  `no-restricted-imports` forbids the store, hooks, `useI18n`, `mapRef`,
+  `probeBridge`, the video map, playback and sidebar there, because a standalone
+  viewer will reuse `normalizeStory`, `compileStory` and `StoryView` unchanged.
+  Strings arrive as props.
+- **The wedge's opacity is bounded by a contrast test.** `WEDGE_MAX_ALPHA` must
+  keep body text under a full-strength wedge at 4.5:1; `storyWedge.test.ts`
+  fails if it is raised past that.
+
+Project files carry the document as the optional `story` field, written only
+when it has content (`replay-file.md` section 5.11).
+
+`scripts/probe-story.mjs` does for the reader what probe-replay does for the
+video. It drops routes (the two samples by default), builds a story through
+`window.__trailreplay`, opens it with the Preview button in each layout
+(desktop text left and right, phone map top and bottom, 2D and 3D, reduced
+motion) and checks the contract: frames under shuffled and CPU-throttled
+scrolling, headings resting on their place, head and framed photos inside the
+map box, wedges as painted against the DOM and cut at the map box, phone
+overflow and attribution, touch and pinch, rotation keeping the reading place,
+the editor's state untouched, focus and keys, contrast under the wedge's text
+part. It also times the reader's frame and flags a p95 over 8 ms. It needs the
+Vite dev server, because it imports `compileStory` from `/src` to know where
+each section should rest, and it refuses to run when that server serves a story
+module older than its file (a missed watch event; restart the server).
+`--map-style` reads on another basemap. Verdicts live in `scripts/story-metrics.mjs`,
+tested from `app/src/utils/storyMetrics.test.ts`.
+
 ### Project files (`.replay`) and agent authoring
 
 `app/src/utils/projectFile/` reads and writes `.replay` archives. One archive

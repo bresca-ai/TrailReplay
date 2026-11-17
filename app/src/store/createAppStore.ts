@@ -17,6 +17,8 @@ import { createUiSlice } from '@/store/slices/uiSlice';
 import { createLandmarksSlice } from '@/store/slices/landmarksSlice';
 import { ROUTE_DIVERGENCE_THRESHOLD_METERS } from '@/utils/routeDivergence';
 import { createTrackTrimSlice } from '@/store/slices/trackTrimSlice';
+import { createStorySlice } from '@/store/slices/storySlice';
+import { createDefaultStory } from '@/utils/story/storyDocument';
 
 export function createAppStore() {
   return create<AppState>()(
@@ -29,6 +31,7 @@ export function createAppStore() {
       ...createUiSlice(set, get, store),
       ...createLandmarksSlice(set, get, store),
       ...createTrackTrimSlice(set, get, store),
+      ...createStorySlice(set, get, store),
 
       reset: () =>
         set((state) => {
@@ -52,6 +55,7 @@ export function createAppStore() {
           state.videos = [];
           state.iconChanges = [];
           state.textAnnotations = [];
+          state.story = createDefaultStory();
           state.userLandmarks = [];
           state.landmarkPriorityIds = [];
           state.landmarkEditorRequested = false;

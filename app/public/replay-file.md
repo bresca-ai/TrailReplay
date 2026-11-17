@@ -667,7 +667,60 @@ A `transport` segment interpolates a connector between two points:
 When tracks are stitched, `progress` spans the whole journey: a pin on the
 second of three equal legs sits past `0.333`.
 
-### 5.11 Fields to leave alone
+### 5.11 `story`
+
+An optional scroll story: a cover, then sections of text, photos and clips,
+each tied to a place on the route. The reader scrolls the text and the route
+advances on a map. Nothing in `story` reaches the video. A recipe cannot carry
+a story yet, so write it in `project.json`.
+
+```json
+{
+  "title": "Two cols and an aid station",
+  "intro": "Forty kilometres from Ribes.\n\nWe started in the dark.",
+  "layout": { "view": "3d", "zoom": "medium", "textSide": "left", "mobileMap": "top" },
+  "sections": [
+    {
+      "id": "aid-1",
+      "anchor": { "ref": null, "place": { "routeMeters": 6500 } },
+      "heading": "Collet de Barraques",
+      "blocks": [
+        { "id": "aid-1-text", "kind": "text", "text": "Water, cola and fruit. Ten minutes, no more." },
+        { "id": "aid-1-photo", "kind": "media", "media": { "kind": "picture", "id": "photo-1" } }
+      ]
+    },
+    {
+      "id": "climb",
+      "anchor": { "ref": { "kind": "annotation", "id": "note-1" }, "place": { "routeMeters": 13400 } },
+      "heading": "The long climb",
+      "blocks": [{ "id": "climb-text", "kind": "text", "text": "900 m in 6 km. Nobody talked." }]
+    }
+  ]
+}
+```
+
+| Field | Notes |
+|---|---|
+| `title`, `intro` | The cover. Plain text; a blank line starts a paragraph. Up to 200 and 20,000 characters. |
+| `layout` | `view` `2d` \| `3d`; `zoom` `near` \| `medium` \| `far` (about 2, 6 or 18 km across the map); `textSide` `left` \| `right` (wide screens); `mobileMap` `top` \| `bottom` (phones). A missing or unknown value keeps the default: `2d`, `medium`, `left`, `top`. |
+| `sections` | Up to 200, in route order. Each has an `id` unique in the story, an `anchor`, a `heading` (up to 200 characters) and `blocks`. |
+| `anchor.place.routeMeters` | Metres from the start of the journey. Tracks count their recorded distance, transport segments their straight line, and camera transitions 0. Two tracks with nothing between them also count the straight line from the end of one to the start of the next, so km 0.5 of day 2 is day 1's distance plus that gap plus `500`. Km 6.5 of a single track is `6500`. |
+| `anchor.ref` | `null` makes `place` the anchor. `{ "kind": "annotation", "id" }` follows a `textAnnotations` card, and `picture` or `video` follows a photo or clip. The item's own position wins; `place` is the fallback when the item is gone. |
+| `blocks` | Up to 100 per section, in reading order, each with an `id` unique in its section. A text block is `{ "id", "kind": "text", "text" }`, up to 20,000 characters. A media block is `{ "id", "kind": "media", "media": { "kind", "id" } }`, where `kind` is `picture` or `video`. |
+
+This scale is the journey distance profile. The reader's cover distance and its
+km labels are on it too, so with a gap between two tracks the cover shows more
+than the Journey panel, which adds up track distances only.
+
+The app also writes `segmentId` and `segmentMeters` beside `routeMeters`, so a
+place follows its track when segments are reordered. Leave them out.
+
+A media block names an item in `pictures` or `videos` by its `id`. Those come
+from the app (§5.12), so take ids from a saved project, or write text blocks and
+let the person add photos in the app. A media block whose item is missing stays
+in the file and shows nothing.
+
+### 5.12 Fields to leave alone
 
 `pictures` and `videos` are route-timed media annotations, separate from cover
 `photoSlots`. Saved projects reopen those annotations as placeholders, so

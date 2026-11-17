@@ -12,7 +12,8 @@ import {
   Video,
   Eye,
   Globe2,
-  ChevronDown
+  ChevronDown,
+  ScrollText
 } from 'lucide-react';
 
 function SidebarPreferences() {
@@ -65,6 +66,7 @@ export function Sidebar() {
   const pictures = useAppStore((state) => state.pictures);
   const videos = useAppStore((state) => state.videos);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
+  const storySections = useAppStore((state) => state.story.sections.length);
 
   const tabs = [
     { id: 'tracks' as const, label: t('sidebar.tabs.tracks'), icon: MapPin, count: tracks.length },
@@ -73,6 +75,8 @@ export function Sidebar() {
     { id: 'settings' as const, label: t('sidebar.tabs.settings'), icon: Eye, count: 0 },
     { id: 'pictures' as const, label: t('sidebar.tabs.pictures'), icon: Image, count: pictures.length + videos.length + textAnnotations.length },
     { id: 'export' as const, label: t('sidebar.tabs.export'), icon: Video, count: 0 },
+    // A second product beside the video steps, so it takes its own full-width row.
+    { id: 'story' as const, label: t('sidebar.tabs.story'), icon: ScrollText, count: storySections },
   ];
 
   return (
@@ -95,7 +99,7 @@ export function Sidebar() {
             disabled={isLockedByExport}
             className={`
               flex min-h-[56px] items-center justify-center gap-1.5 px-2 py-3 text-xs font-medium text-center transition-colors
-              border-r border-b border-[var(--evergreen)]/15 last:border-r-0
+              border-r border-b border-[var(--evergreen)]/15 [&:nth-child(3n)]:border-r-0 last:col-span-3 last:border-r-0
               ${activeTab === tab.id
                 ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
                 : 'text-[var(--evergreen)] hover:bg-[var(--evergreen)]/10'

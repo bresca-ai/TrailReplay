@@ -10,12 +10,12 @@ const fields = [
   'cinematicCameraKeyframes', 'pictures', 'pendingPicturePlacements', 'videos', 'iconChanges',
   'textAnnotations', 'userLandmarks', 'landmarkPriorityIds', 'hiddenLandmarkIds',
   'showAutomaticLandmarks', 'enabledLandmarkGroups', 'nearbyPlaceTypes', 'nearbyPlacesEnabled',
-  'settings', 'cameraSettings', 'videoExportSettings', 'socialShareSettings', 'videoCoverImageUrl',
+  'settings', 'cameraSettings', 'videoExportSettings', 'socialShareSettings', 'videoCoverImageUrl', 'story',
 ] as const satisfies readonly (keyof AppState)[];
 type Field = typeof fields[number];
 type Change = { path: string[]; before: unknown; after: unknown; hadBefore: boolean; hadAfter: boolean };
 type Entry = { changes: Change[]; group: Element | null; time: number };
-const nestedFields = new Set<Field>(['settings', 'cameraSettings', 'videoExportSettings', 'socialShareSettings']);
+const nestedFields = new Set<Field>(['settings', 'cameraSettings', 'videoExportSettings', 'socialShareSettings', 'story']);
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype;
 }

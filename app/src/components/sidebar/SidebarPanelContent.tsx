@@ -12,6 +12,7 @@ const AnnotationsPanel = lazy(() => import('./AnnotationsPanel').then((module) =
 const PicturesPanel = lazy(() => import('./PicturesPanel').then((module) => ({ default: module.PicturesPanel })));
 const ExportPanel = lazy(() => import('./ExportPanel').then((module) => ({ default: module.ExportPanel })));
 const SettingsPanel = lazy(() => import('./SettingsPanel').then((module) => ({ default: module.SettingsPanel })));
+const StoryPanel = lazy(() => import('@/components/story/StoryPanel').then((module) => ({ default: module.StoryPanel })));
 
 function PanelFallback() {
   const { t } = useI18n();
@@ -36,6 +37,7 @@ const panelRegistry: Record<
   pictures: () => <PicturesPanel />,
   export: () => <ExportPanel />,
   settings: () => <SettingsPanel />,
+  story: () => <StoryPanel />,
 };
 
 export function SidebarPanelContent() {

@@ -234,6 +234,20 @@ export function usePlaybackMediaPopups() {
     }
   }, [autoPlaybackPictureId, clearPendingQueuedPictureOpen, play, scheduleNextQueuedPlaybackPicture, selectedPictureId, setSelectedPictureId]);
 
+  // Ends any hold without resuming: the close handlers above would call play() once the queue drains.
+  // Shown ids stay, so the media already held does not trigger again when playback resumes.
+  const cancelHolds = useCallback(() => {
+    clearPendingQueuedPictureOpen();
+    queuedPlaybackPictureIdsRef.current = [];
+    queuedPlaybackVideoIdsRef.current = [];
+    resumePlaybackAfterPictureQueueRef.current = false;
+    resumePlaybackAfterVideoRef.current = false;
+    setAutoPlaybackPictureId(null);
+    setAutoPlaybackVideoId(null);
+    setSelectedPictureId(null);
+    setSelectedVideoId(null);
+  }, [clearPendingQueuedPictureOpen, setSelectedPictureId, setSelectedVideoId]);
+
   // Get active picture for current progress
   const selectedPicture = selectedPictureId
     ? pictures.find((p) => p.id === selectedPictureId)
@@ -243,5 +257,5 @@ export function usePlaybackMediaPopups() {
     : undefined;
   const activePicture = selectedPicture || autoPlaybackPicture;
   const activeVideo = selectedVideoId ? videos.find((entry) => entry.id === selectedVideoId) : undefined;
-  return { activePicture, activeVideo, autoPictureId: autoPlaybackPictureId, autoVideoId: autoPlaybackVideoId === selectedVideoId ? autoPlaybackVideoId : null, closeActivePicture, closeActiveVideo };
+  return { activePicture, activeVideo, autoPictureId: autoPlaybackPictureId, autoVideoId: autoPlaybackVideoId === selectedVideoId ? autoPlaybackVideoId : null, closeActivePicture, closeActiveVideo, cancelHolds };
 }

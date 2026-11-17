@@ -5,6 +5,25 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
+const STORY_EDITOR_FREE = {
+  // `**/` so relative paths are caught as well as `@/` aliases.
+  group: [
+    '**/store',
+    '**/store/**',
+    '**/hooks/**',
+    '**/useI18n',
+    '**/mapRef',
+    '**/probeBridge',
+    '**/TrailMap',
+    '**/playback/**',
+    '**/sidebar/**',
+    // The story editor beside the reader (useCompiledStory and storyPreview reach the store); the negation keeps view/.
+    '**/components/story/*',
+    '!**/components/story/view',
+  ],
+  message: 'Story model and reader code must not depend on the editor store, hooks, i18n hook, story editor or video map: the phase-2 viewer reuses it standalone.',
+}
+
 export default defineConfig([
   globalIgnores(['dist', 'coverage']),
   {
@@ -38,5 +57,22 @@ export default defineConfig([
   {
     files: ['src/components/sidebar/CinematicCameraEditor.tsx'],
     rules: { 'react-hooks/immutability': 'off' },
+  },
+  // The story model and reader stay free of the editor, so the phase-2 standalone viewer imports them unchanged.
+  {
+    files: ['src/utils/story/**/*.{ts,tsx}', 'src/components/story/view/**/*.{ts,tsx}'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [STORY_EDITOR_FREE] }] },
+  },
+  // A later block replaces the rule's options instead of merging them, so the reader repeats the boundary above.
+  {
+    files: ['src/components/story/view/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [STORY_EDITOR_FREE, {
+          group: ['../**'],
+          message: 'The reader imports outside view/ by alias only, so a relative path cannot climb into the story editor beside it: the phase-2 viewer reuses view/ alone.',
+        }],
+      }],
+    },
   },
 ])

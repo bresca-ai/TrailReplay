@@ -13,6 +13,7 @@ import type {
 import type { LandmarkType, RouteLandmark } from '@/types/landmarks';
 import type { CinematicCameraKeyframe } from '@/utils/cinematicCameraPlan';
 import type { Recipe } from '@/utils/recipe/types';
+import type { StoryDocument } from '@/utils/story/storyDocument';
 
 export const CURRENT_FORMAT_VERSION = 1;
 export const SUPPORTED_FORMAT_VERSIONS = [1];
@@ -152,6 +153,8 @@ export interface ReplayProjectFile {
   cameraSettings?: Partial<CameraSettings>;
   videoExportSettings?: Partial<VideoExportSettings>;
   socialShareSettings?: Partial<SocialShareSettings>;
+  /** Written only when it has a title, intro or section; absent reads as the empty default. */
+  story?: StoryDocument;
 }
 
 /**
