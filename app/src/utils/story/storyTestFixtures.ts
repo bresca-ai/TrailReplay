@@ -1,10 +1,8 @@
-// Test-only builders shared by the compile and reader tests.
 import type { AppSettings, GPXTrack, JourneySegment } from '@/types';
 import { buildTrackFromRawPoints } from '@/utils/gpx/trackStats';
 import type { StoryCompileInput } from './compileStory';
 import { createDefaultStory, type StoryAnchor, type StoryBlock, type StoryDocument } from './storyDocument';
 
-/** A straight north-bound track, 0.001 degrees of latitude (about 111 m) between points. */
 export function northbound(name: string, lat: number, lon: number, points = 11): GPXTrack {
   return buildTrackFromRawPoints({
     idPrefix: 'track',
@@ -22,7 +20,6 @@ export function northbound(name: string, lat: number, lon: number, points = 11):
   });
 }
 
-/** Segment ids `day-1`, `hop` (a camera connector) and `day-2`. */
 export function journeyWithCameraHop(first: GPXTrack, second: GPXTrack): JourneySegment[] {
   return [
     { id: 'day-1', type: 'track', trackId: first.id, duration: 60_000 },

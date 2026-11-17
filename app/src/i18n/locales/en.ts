@@ -34,7 +34,7 @@ export const en = {
       pictures: 'Media',
       export: 'Generate',
       settings: 'Map & Camera',
-      story: "Story",
+      story: 'Story',
     },
     preferencesTitle: 'Preferences',
     footerTitle: 'Trail Replay',

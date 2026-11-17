@@ -17,8 +17,7 @@ const photo = (id: string, lat: number, fields: Partial<PictureAnnotation> = {})
 
 const store = () => useAppStore.getState();
 const sections = () => store().story.sections;
-const addRoute = () => store().addTrack(northbound('Ridge', 42, 1)); // about 1.11 km due north
-// A keyboard user's activation: focus moves to the control, then it is clicked.
+const addRoute = () => store().addTrack(northbound('Ridge', 42, 1));
 const press = (control: HTMLElement) => { act(() => control.focus()); fireEvent.click(control); };
 
 const scrollIntoView = vi.fn();
@@ -113,16 +112,14 @@ describe('Story tab', () => {
     press(screen.getByRole('button', { name: 'Cancel' }));
     expect(add).toHaveFocus();
 
-    // Route order puts the new section above the one at 0.8 km, far from the Add section button.
     press(add);
     press(screen.getByRole('button', { name: 'Distance' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Distance in km' }), { target: { value: '0.3' } });
     press(screen.getByRole('button', { name: 'Add section here' }));
-    const added = screen.getByRole('region', { name: 'Section 1' });
-    expect(within(added).getByRole('textbox', { name: 'Heading' })).toHaveFocus();
-    expect(scrollIntoView.mock.contexts).toEqual([added.closest('li')]);
-
     const section = screen.getByRole('region', { name: 'Section 1' });
+    expect(within(section).getByRole('textbox', { name: 'Heading' })).toHaveFocus();
+    expect(scrollIntoView.mock.contexts).toEqual([section.closest('li')]);
+
     const changePlace = within(section).getByRole('button', { name: 'Change place' });
     press(changePlace);
     press(within(section).getByRole('button', { name: 'Cancel' }));

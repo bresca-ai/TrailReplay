@@ -29,10 +29,6 @@ function Issues({ issues }: { issues: StoryIssue[] }) {
 
 const issueKey = (issue: StoryIssue) => `${issue.kind} ${issue.sectionId} ${issue.blockId ?? ''}`;
 
-/**
- * The tab's one polite live region. An issue can appear away from focus (on another section after Change place,
- * beside a block just added), so each change of the issues reads out only the new ones, with their section.
- */
 export function StoryIssueAnnouncer({ issues, sections }: { issues: StoryIssue[]; sections: StorySection[] }) {
   const { t } = useI18n();
   const keys = issues.map(issueKey);
@@ -47,8 +43,6 @@ export function StoryIssueAnnouncer({ issues, sections }: { issues: StoryIssue[]
   return <p role="status" className="sr-only">{seen.text}</p>;
 }
 
-// Removing the focused control would drop focus to the page body: it moves to the same control on the next
-// item, else the previous one, else the fallback.
 function removeKeepingFocus(control: HTMLElement, fallback: HTMLElement | null | undefined, remove: () => void) {
   const item = control.closest('li');
   const sibling = item?.nextElementSibling ?? item?.previousElementSibling;

@@ -32,7 +32,7 @@ export const de = {
       pictures: 'Medien',
       export: 'Erstellen',
       settings: 'Karte & Kamera',
-      story: "Geschichte",
+      story: 'Geschichte',
     },
     preferencesTitle: 'Präferenzen',
     footerTitle: 'TrailReplay',

@@ -8,7 +8,6 @@ import {
   type StorySection,
 } from './storyDocument';
 
-/** What the panel does, and nothing else. */
 export type StoryEdit =
   | { type: 'setCover'; title?: string; intro?: string }
   | { type: 'setLayout'; layout: Partial<StoryLayout> }
@@ -55,7 +54,6 @@ export function applyStoryEdit(story: StoryDocument, edit: StoryEdit): StoryDocu
       const anchor = edit.anchor === undefined || sameAnchor(edit.anchor, section.anchor) ? section.anchor : edit.anchor;
       if (heading === section.heading && anchor === section.anchor) return story;
       const next = { ...section, heading, anchor };
-      // A new place moves the section to its route-order slot, as adding it there would.
       return anchor === section.anchor
         ? updateSection(story, edit.id, () => next)
         : { ...story, sections: inRouteOrder(story.sections.filter((s) => s !== section), next) };
@@ -84,7 +82,6 @@ export function applyStoryEdit(story: StoryDocument, edit: StoryEdit): StoryDocu
   }
 }
 
-/** `sections` with `section` before the first one placed further along the route. */
 function inRouteOrder(sections: StorySection[], section: StorySection): StorySection[] {
   const slot = sections.findIndex((s) => s.anchor.place.routeMeters > section.anchor.place.routeMeters);
   const next = [...sections];
@@ -96,7 +93,6 @@ function updateSection(story: StoryDocument, id: string, update: (section: Story
   return withSections(story, story.sections.map((section) => (section.id === id ? update(section) : section)));
 }
 
-/** `story` itself when no section changed identity or position. */
 function withSections(story: StoryDocument, sections: StorySection[]): StoryDocument {
   return sameItems(sections, story.sections) ? story : { ...story, sections };
 }
@@ -109,7 +105,6 @@ function sameItems<T>(next: T[], previous: T[]): boolean {
   return next.length === previous.length && next.every((item, index) => item === previous[index]);
 }
 
-/** The item with `id` moved to `to`, clamped to the list; unknown id: the list unchanged. */
 function moveItem<T extends { id: string }>(items: T[], id: string, to: number): T[] {
   const from = items.findIndex((item) => item.id === id);
   if (from === -1) return items;

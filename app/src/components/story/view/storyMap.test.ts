@@ -5,8 +5,8 @@ import { buildTrackFromRawPoints } from '@/utils/gpx/trackStats';
 import { compileStory, type StoryCompileInput } from '@/utils/story/compileStory';
 import type { StoryLayout } from '@/utils/story/storyDocument';
 import { journeyWithCameraHop, km, northbound, settings, story } from '@/utils/story/storyTestFixtures';
-import type { StoryFrame } from './storyFrame';
 import { TRANSPORT_SEGMENT_COLOR } from '@/utils/trailColorFeatures';
+import type { StoryFrame } from './storyFrame';
 import { buildStoryMapStyle, createStoryMap } from './storyMap';
 
 const { FakeMap, maps } = vi.hoisted(() => {
@@ -139,7 +139,7 @@ describe('buildStoryMapStyle', () => {
 
   it('leaves camera connectors out of the route and draws other transport as part of it', () => {
     const lineLons = (journeySegments: JourneySegment[]) => {
-      const source = styleFor({}, { journeySegments }).style.sources['story-route'] as { data: GeoJSON.FeatureCollection<GeoJSON.LineString> };
+      const source = styleFor({}, { journeySegments }).style.sources['story-route'] as { data: FeatureCollection<LineString> };
       return source.data.features.map((feature) => [...new Set(feature.geometry.coordinates.map(([lon]) => lon))].sort());
     };
 
@@ -231,7 +231,6 @@ describe('createStoryMap', () => {
 
   it('collapses the compact attribution MapLibre opens on load, once, and keeps its button', () => {
     const { map, container } = open();
-    // MapLibre's compact control as it stands after the first style data: open, with its (i) summary.
     container.innerHTML = '<details class="maplibregl-ctrl maplibregl-ctrl-attrib maplibregl-compact maplibregl-compact-show" open>'
       + '<summary class="maplibregl-ctrl-attrib-button" aria-label="Toggle attribution"></summary>'
       + '<div class="maplibregl-ctrl-attrib-inner">© Esri</div></details>';
@@ -241,7 +240,6 @@ describe('createStoryMap', () => {
     expect(attribution.classList.contains('maplibregl-compact')).toBe(true);
     expect(attribution.querySelector('summary')).toHaveAccessibleName('Toggle attribution');
 
-    // The reader opens it with the button: later data must not close it again.
     attribution.classList.add('maplibregl-compact-show');
     map.fire('sourcedata');
     map.fire('styledata');

@@ -3,7 +3,6 @@ import { afterEach, expect, it } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { useUnsavedWorkGuard } from './useUnsavedWorkGuard';
 
-/** True when the browser would ask before leaving the page. */
 function leavingIsGuarded(): boolean {
   const event = new Event('beforeunload', { cancelable: true });
   window.dispatchEvent(event);

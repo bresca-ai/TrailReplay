@@ -8,7 +8,6 @@ export const createStorySlice: AppSliceCreator<Pick<AppState, 'story' | 'updateS
 
   updateStory: (edit) => {
     const next = applyStoryEdit(get().story, edit);
-    // A no-op edit returns the same story, so skipping the write keeps it out of undo.
     if (next !== get().story) set({ story: next });
   },
 });

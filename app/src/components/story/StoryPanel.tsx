@@ -26,19 +26,16 @@ export function StoryPanel() {
   const updateStory = useAppStore((state) => state.updateStory);
   const [adding, setAdding] = useState(false);
   const addButton = useRef<HTMLButtonElement>(null);
-  // The picker unmounts on pick or cancel; without this, focus falls to the page body.
   const stopAdding = () => { setAdding(false); addButton.current?.focus(); };
   const sectionList = useRef<HTMLOListElement>(null);
   const addSection = (anchor: StoryAnchor, prefill?: StoryPrefill) => {
     const id = createId('section');
-    // Rendered now, because route order can put the new section far above this button: it takes focus there.
     flushSync(() => { updateStory({ type: 'addSection', id, anchor, prefill }); setAdding(false); });
     const item = sectionList.current?.children[useAppStore.getState().story.sections.findIndex((section) => section.id === id)];
     item?.scrollIntoView({ block: 'nearest' });
     (item?.querySelector('input') ?? addButton.current)?.focus({ preventScroll: true });
   };
   const doc = input.document;
-  const totalMeters = story?.route.route.totalDistance ?? 0;
 
   return (
     <div className="space-y-6 text-[var(--evergreen)]">
@@ -101,7 +98,7 @@ export function StoryPanel() {
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />{t('story.addSection')}
         </button>
         {adding && (
-          <StoryAnchorPicker input={input} totalMeters={totalMeters} actionLabel={t('story.anchor.add')}
+          <StoryAnchorPicker input={input} totalMeters={story?.route.route.totalDistance ?? 0} actionLabel={t('story.anchor.add')}
             onPick={addSection} onCancel={stopAdding} />
         )}
         <StoryIssueAnnouncer issues={story?.issues ?? []} sections={doc.sections} />

@@ -27,12 +27,10 @@ function toCompileInput(picked: ReturnType<typeof pickStoryState>): StoryCompile
   return { ...rest, settings: { mapStyle, waybackItemURL, terrainExaggeration, unitSystem, trailStyle } };
 }
 
-/** The compile input at one moment, for the preview's snapshot. */
 export function storyCompileInput(state: AppState): StoryCompileInput {
   return toCompileInput(pickStoryState(state));
 }
 
-/** Editor only. Reads no playback field, so the Story tab does not re-render while the video plays. */
 export function useCompiledStory() {
   const picked = useAppStore(useShallow(pickStoryState));
   return useMemo(() => {

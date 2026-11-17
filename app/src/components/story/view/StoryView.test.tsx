@@ -50,8 +50,6 @@ const strings: StoryStrings = {
   distance: 'Distance', elevationGain: 'Elevation gain', placeholder: (fileName) => `Missing ${fileName}`,
 };
 
-// A fake desktop layout: viewport 1280x800, map box on the right half, every [data-story-key] element 250 px
-// tall every 300 px of content, starting at content y 100 + shift. Viewport y = content y - scrollTop.
 const SCROLLER = { top: 0, bottom: 800, left: 0, right: 1280 };
 const MAP_BOX = { top: 0, bottom: 800, left: 640, right: 1280 };
 const COLUMN = { left: 40, right: 600 };
@@ -63,6 +61,7 @@ let motion: { matches: boolean; listener: (() => void) | null };
 let fontsLoaded: () => void;
 
 const keyed = () => [...document.querySelectorAll<HTMLElement>('[data-story-key]')];
+const MEDIA_HEIGHT = 200;
 const contentTop = (index: number) => 100 + layout.shift + index * 300;
 const rect = (box: { top: number; bottom: number; left: number; right: number }) => ({
   ...box, x: box.left, y: box.top, width: box.right - box.left, height: box.bottom - box.top, toJSON: () => box,
@@ -72,13 +71,13 @@ function fakeRect(this: Element) {
   if (!layout.sized) return rect({ top: 0, bottom: 0, left: 0, right: 0 });
   if (this.hasAttribute('data-text-side')) return rect(SCROLLER);
   if (this.getAttribute('role') === 'region' || this.parentElement?.getAttribute('role') === 'region') return rect(MAP_BOX);
-  const index = keyed().indexOf(this as HTMLElement);
+  const media = this.closest('[data-story-media]') === this;
+  const index = keyed().indexOf((media ? this.closest('[data-story-key]') : this) as HTMLElement);
   if (index < 0) return rect({ top: 0, bottom: 0, left: 0, right: 0 });
   const top = contentTop(index) - layout.scrollTop;
-  return rect({ top, bottom: top + 250, ...COLUMN });
+  return rect({ top, bottom: top + (media ? MEDIA_HEIGHT : 250), ...COLUMN });
 }
 
-/** The measure the fake layout describes, in content px. */
 function expectedMeasure(): TrackMeasure {
   const blocks = keyed().map((element, index) => ({ key: element.dataset.storyKey!, top: contentTop(index), height: 250, ...COLUMN }));
   return {
@@ -86,6 +85,10 @@ function expectedMeasure(): TrackMeasure {
     map: MAP_BOX,
     contentHeight: CONTENT_HEIGHT,
     blocks,
+    media: keyed().flatMap((element, index) => {
+      const key = element.querySelector<HTMLElement>('[data-story-media]')?.dataset.storyMedia;
+      return key ? [{ key, top: contentTop(index), height: MEDIA_HEIGHT, ...COLUMN }] : [];
+    }),
     sections: keyed().flatMap((element, index) => (
       element.hasAttribute('data-story-head') ? [{ headTop: contentTop(index), headBottom: contentTop(index) + 250 }] : []
     )),
@@ -185,7 +188,6 @@ describe('StoryView content', () => {
     expect(screen.queryByText('Missing north.jpg')).not.toBeInTheDocument();
 
     const photo = screen.getByRole('img', { name: 'The ridge' });
-    // Eager, so a photo does not grow its section while the reader is mid-text.
     expect(photo).not.toHaveAttribute('loading');
     expect(photo).toHaveAttribute('decoding', 'async');
     fireEvent.error(photo);
@@ -255,7 +257,6 @@ describe('StoryView keys and headings', () => {
     const finish = keyed().findIndex((element) => element.textContent?.includes('Finish') && !element.hasAttribute('data-story-head'));
     expect(keyed()[finish].dataset.storyKey).toBe('finish');
 
-    // The finish card, half past the 400 px line.
     scrollTo(contentTop(finish) + 125 - 400);
     layout.shift = 200;
     resize();
@@ -263,15 +264,13 @@ describe('StoryView keys and headings', () => {
   });
 
   it('never renders an empty heading: the anchored caption, else the distance', () => {
-    const blank = (heading: string) => (section: ReturnType<typeof story>['sections'][number]) => ({ ...section, heading });
     const document = story(['photo', { ref: { kind: 'picture', id: 'north' }, place: { routeMeters: 0 } }], ['typed', km(600)]);
-    const file = { ...document, sections: [blank('')(document.sections[0]), blank('  ')(document.sections[1])] };
+    const file = { ...document, sections: [{ ...document.sections[0], heading: '' }, { ...document.sections[1], heading: '  ' }] };
     const result = compiled({}, file);
     mount({ story: result });
 
     const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(headings).toEqual(['The ridge', formatDistance(result.sections[1].routeMeters, 'metric')]);
-    // The distance shows once: as the heading, not again above it.
     expect(keyed().find((element) => element.dataset.storyKey === 'section-1')!.textContent)
       .toBe(formatDistance(result.sections[1].routeMeters, 'metric'));
   });
@@ -323,7 +322,6 @@ describe('StoryView reading loop', () => {
     Object.assign(clip, { pause });
     Object.defineProperty(clip, 'paused', { configurable: true, value: false });
 
-    // The clip is the 5th keyed element: content y 1300 to 1550; the band is the whole 800 px viewport.
     scrollTo(900);
     expect(pause).not.toHaveBeenCalled();
     scrollTo(3000);
@@ -335,11 +333,10 @@ describe('StoryView reading loop', () => {
     mount({ onDebugFrame });
     resize();
 
-    // The photo is the 4th keyed element, content y 1000 to 1250: centred on the 400 px line at scrollTop 725.
     scrollTo(725);
     const { wedges } = onDebugFrame.mock.lastCall![0];
     const [wedge] = wedges;
-    expect(wedge).toMatchObject({ key: 'section-0-1', apex: [960, 400], polygon: [[600, 275], [600, 525], [960, 400]] });
+    expect(wedge).toMatchObject({ key: 'section-0-1', apex: [960, 400], polygon: [[600, 275], [600, 475], [960, 400]] });
 
     const groups = [...document.querySelectorAll('svg[data-story-wedges] > g[data-wedge-slot]')];
     expect(groups.map((group) => group.getAttribute('visibility'))).toEqual(
@@ -349,8 +346,8 @@ describe('StoryView reading loop', () => {
     const text = first.querySelector('[data-wedge-part="text"]')!;
     const inMap = first.querySelector('[data-wedge-part="map"]')!;
     expect(first.querySelector('polygon')).toBe(text);
-    for (const polygon of [text, inMap.querySelector('polygon')]) expect(polygon).toHaveAttribute('points', '600,275 600,525 960,400');
-    for (const edge of inMap.querySelectorAll('polyline')) expect(edge).toHaveAttribute('points', '600,275 960,400 600,525');
+    for (const polygon of [text, inMap.querySelector('polygon')]) expect(polygon).toHaveAttribute('points', '600,275 600,475 960,400');
+    expect(document.querySelector('svg[data-story-wedges] polyline')).toBeNull();
 
     const [textStops, veilStops] = [...first.querySelectorAll('linearGradient')].map((gradient) => (
       [...gradient.querySelectorAll('stop')].map((stop) => Number(stop.getAttribute('stop-opacity')))
@@ -360,7 +357,6 @@ describe('StoryView reading loop', () => {
     expect(first.querySelector('stop')).toHaveAttribute('stop-color', `rgb(${WEDGE_COLOR.join(' ')})`);
     expect(first.querySelector('circle')).toHaveAttribute('cx', '960');
 
-    // The text part is clipped to everything but the map box, the map part to the map box.
     const clip = (id: string) => document.getElementById(id.slice('url(#'.length, -1))!.firstElementChild!;
     expect(clip(inMap.getAttribute('clip-path')!)).toMatchObject({ tagName: 'rect' });
     expect(['x', 'y', 'width', 'height'].map((name) => clip(inMap.getAttribute('clip-path')!).getAttribute(name))).toEqual(['640', '0', '640', '800']);
@@ -370,21 +366,15 @@ describe('StoryView reading loop', () => {
 
   it('tints the map part to contrast with the basemap: light over imagery, evergreen over light maps', () => {
     const dark = `rgb(${WEDGE_COLOR.join(' ')})`;
-    const tones = (mapStyle: CompiledStory['look']['mapStyle']) => {
+    const veil = (mapStyle: CompiledStory['look']['mapStyle']) => {
       const story = compiled();
       mount({ story: { ...story, look: { ...story.look, mapStyle } } });
-      const part = document.querySelector('[data-wedge-part="map"]')!;
-      const veil = document.querySelectorAll('linearGradient')[1].querySelector('stop')!.getAttribute('stop-color');
-      const [halo, line] = [...part.querySelectorAll('polyline')].map((edge) => edge.getAttribute('stroke'));
+      const color = document.querySelectorAll('linearGradient')[1].querySelector('stop')!.getAttribute('stop-color');
       cleanup();
-      return { veil, halo, line };
+      return color;
     };
-    for (const mapStyle of ['satellite', 'esri-clarity', 'wayback'] as const) {
-      expect(tones(mapStyle), mapStyle).toEqual({ veil: '#F8F6F0', line: '#F8F6F0', halo: dark });
-    }
-    for (const mapStyle of ['street', 'topo', 'outdoor', 'mapbox-streets'] as const) {
-      expect(tones(mapStyle), mapStyle).toEqual({ veil: dark, line: dark, halo: '#F8F6F0' });
-    }
+    for (const mapStyle of ['satellite', 'esri-clarity', 'wayback'] as const) expect(veil(mapStyle), mapStyle).toBe('#F8F6F0');
+    for (const mapStyle of ['street', 'topo', 'outdoor', 'mapbox-streets'] as const) expect(veil(mapStyle), mapStyle).toBe(dark);
   });
 
   it('marks the apex with a ringed dot that shows on any basemap, open when terrain hides the point', () => {
@@ -419,7 +409,7 @@ describe('StoryView reading loop', () => {
 
     fakeMap.project.mockReturnValue({ x: 900, y: 300, occluded: false });
     act(() => fakeMap.onRender.mock.calls[0][0]());
-    expect(document.querySelector('svg[data-story-wedges] polygon')).toHaveAttribute('points', '600,275 600,525 900,300');
+    expect(document.querySelector('svg[data-story-wedges] polygon')).toHaveAttribute('points', '600,275 600,475 900,300');
     expect(fakeMap.show).toHaveBeenCalledTimes(shown);
   });
 
@@ -459,7 +449,6 @@ describe('StoryView reading loop', () => {
       set: (value: number) => { writes(value); layout.scrollTop = value; },
     });
 
-    // Any write, even of the same value, would cancel a smooth PageDown in flight.
     resize();
     layout.shift = 0.4;
     resize();
@@ -468,7 +457,6 @@ describe('StoryView reading loop', () => {
     layout.shift = 200;
     resize();
     expect(writes).toHaveBeenCalledOnce();
-    // The 0.4 px left in place became the reading place; the 200 px shift moves it.
     expect(writes.mock.lastCall![0]).toBeCloseTo(725 + 200 - 0.4, 6);
   });
 

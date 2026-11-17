@@ -1,5 +1,3 @@
-// The scroll contract: the map state is a pure function of (story, track, scrollTop, reducedMotion), with no
-// time, tween or history, so scrolling up rewinds exactly and frame rate does not matter.
 import { METERS_PER_PIXEL_AT_ZOOM_0 } from '@/utils/followBehindCamera';
 import { findDistanceIndex, type JourneyDistanceProfile } from '@/utils/journeyUtils';
 import { longitudeStep, pathBounds, routeAt, type CompiledStory, type StoryRoute } from '@/utils/story/compileStory';
@@ -9,35 +7,29 @@ export type LngLat = [number, number];
 export type MapSide = 'left' | 'right' | 'top' | 'bottom';
 export interface Box { top: number; bottom: number; left: number; right: number }
 
-/**
- * Read from the DOM by StoryView; an input of buildScrollTrack, never stored. Boxes are viewport px. A content
- * y is where that point sits in the viewport at scrollTop 0 (rect.top + scrollTop), so its viewport y is
- * content y - scrollTop. Left and right are viewport px: the scroller never scrolls sideways.
- */
+/** Boxes and left/right are viewport px; every other top or bottom is a content y, rect.top + scrollTop. */
 export interface TrackMeasure {
-  scroller: Box; map: Box; // both constant while scrolling
-  contentHeight: number; // the scroller's scrollHeight
-  blocks: { key: string; top: number; height: number; left: number; right: number }[]; // [data-story-key]
-  sections: { headTop: number; headBottom: number }[]; // index-aligned with story.sections
+  scroller: Box; map: Box;
+  contentHeight: number;
+  blocks: { key: string; top: number; height: number; left: number; right: number }[];
+  media: { key: string; top: number; height: number; left: number; right: number }[];
+  sections: { headTop: number; headBottom: number }[];
   finishTop: number;
 }
 
-/** Built once per measure, so a frame costs O(log n) lookups plus O(media). */
 export interface ScrollTrack {
-  line: number; // viewport y of the reading line; content y at the line = scrollTop + line
-  band: { top: number; height: number }; // viewport px: the scroller minus the map box
-  map: Box; mapSide: MapSide; // where the map box sits relative to the band
-  // Travel non-decreasing; y as measured. Out-of-order edges are harmless: the search always lands on a knot
-  // at or below y whose successor is above it, and its index never falls as y rises.
+  line: number;
+  band: { top: number; height: number };
+  map: Box; mapSide: MapSide;
   knots: { y: number; travel: number }[];
-  steps: { y: number; travel: number }[]; // reduced motion: stops only
-  sectionTops: number[]; // headTop per section
-  legs: { from: number; to: number; fitZoom: number }[]; // between distinct stops [0, T_1..T_n, D]
+  steps: { y: number; travel: number }[];
+  sectionTops: number[];
+  legs: { from: number; to: number; fitZoom: number }[];
   media: {
     key: string; top: number; bottom: number; left: number; right: number; point: LngLat | null;
     elevation: number | null; isClip: boolean;
   }[];
-  blocks: { key: string; top: number; height: number }[]; // sorted by top, for place restore
+  blocks: { key: string; top: number; height: number }[];
   zNear: number; routeFitZoom: number; maxScroll: number;
 }
 
@@ -45,13 +37,12 @@ export interface CameraPose { center: LngLat; zoom: number; pitch: 0 | 55; beari
 
 /** A pure function of (story, track, scrollTop, reducedMotion): same inputs, deep-equal frame, in any order. */
 export interface StoryFrame {
-  scrollTop: number; travel: number; camera: CameraPose; section: number; // -1 on the cover
-  head: { lngLat: LngLat; coordIndex: number; visible: boolean }; // hidden inside a camera connector
-  media: { key: string; strength: number; inBand: boolean }[]; // index-aligned with track.media; !inBand pauses a clip
-  place: { key: string; fraction: number }; // the block at the reading line, restored after a re-measure
+  scrollTop: number; travel: number; camera: CameraPose; section: number;
+  head: { lngLat: LngLat; coordIndex: number; visible: boolean };
+  media: { key: string; strength: number; inBand: boolean }[];
+  place: { key: string; fraction: number };
 }
 
-/** The place span across the map box's shorter side. */
 const SPAN_METERS: Record<StoryZoom, number> = { near: 2_000, medium: 6_000, far: 18_000 };
 const WORLD_PX = 512; // MapLibre tiles: the world is 512 * 2^zoom px wide
 const FIT_PADDING = 32;
@@ -69,10 +60,9 @@ export function buildScrollTrack(story: CompiledStory, measure: TrackMeasure): S
   const line = band.top + band.height / 2;
   const total = story.route.travel.totalDistance;
   const heads = story.sections.map((section, index) => ({ ...measure.sections[index], travel: section.travelMeters }));
-  // Section travel is a running max, so the stops are sorted.
   const stops = [0, ...heads.map((head) => head.travel), total].filter((stop, index, all) => index === 0 || stop > all[index - 1]);
   const [[, south], [, north]] = story.route.bounds;
-  const boxes = new Map(measure.blocks.map((block) => [block.key, block]));
+  const mediaBoxes = new Map(measure.media.map((box) => [box.key, box]));
 
   return {
     line,
@@ -96,7 +86,7 @@ export function buildScrollTrack(story: CompiledStory, measure: TrackMeasure): S
       fitZoom: fitZoom(pathBounds(legLngLats(story.route, stops[index], to)), map),
     })),
     media: story.sections.flatMap((section) => section.blocks).flatMap((block) => {
-      const box = boxes.get(block.key);
+      const box = mediaBoxes.get(block.key);
       return block.kind === 'media' && box ? [{
         key: block.key,
         top: box.top,
@@ -124,7 +114,8 @@ export function storyFrameAt(story: CompiledStory, track: ScrollTrack, scrollTop
   const travel = reducedMotion
     ? track.steps[lastAtOrBefore(track.steps, y, (step) => step.y)].travel
     : travelOnKnots(track.knots, y);
-  const head = headAt(story.route, travel);
+  const at = routeAt(story.route, travel);
+  const head = { lngLat: at.lngLat, coordIndex: at.lower, visible: isOnRoute(story.route.travel, at.upper, travel) };
   const bandTop = s + track.band.top;
   const media = track.media.map((item) => ({
     key: item.key,
@@ -132,10 +123,9 @@ export function storyFrameAt(story: CompiledStory, track: ScrollTrack, scrollTop
     inBand: item.top < bandTop + track.band.height && item.bottom > bandTop,
   }));
   const pitch = story.layout.view === '3d' ? PITCH_3D : 0;
-  // 18 wins over the route floor for a route shorter than the map box shows at 18.
   const minZoom = Math.min(track.routeFitZoom - 0.5, MAX_ZOOM);
   // 3D terrain lifts each point by its height over the head, which sits on the ground (centerClampedToGround).
-  const relief = pitch ? { head: routeAt(story.route, travel).elevation, exaggeration: story.look.terrainExaggeration } : null;
+  const relief = pitch ? { head: at.elevation, exaggeration: story.look.terrainExaggeration } : null;
   const zoom = framedZoom(track, travel, head.lngLat, media, pitch, relief, minZoom, reducedMotion);
 
   return {
@@ -149,7 +139,7 @@ export function storyFrameAt(story: CompiledStory, track: ScrollTrack, scrollTop
   };
 }
 
-/** Resize, rotation, image or font load: the scrollTop that puts `place` back on the reading line. */
+/** The scrollTop that puts `place` back on the reading line. */
 export function scrollTopForPlace(track: ScrollTrack, place: StoryFrame['place']): number {
   const block = track.blocks.find((candidate) => candidate.key === place.key);
   return block ? clamp(block.top + place.fraction * block.height - track.line, 0, track.maxScroll) : 0;
@@ -169,15 +159,6 @@ function travelOnKnots(knots: ScrollTrack['knots'], y: number): number {
   return to ? from.travel + (to.travel - from.travel) * smoothstep(from.y, to.y, y) : from.travel;
 }
 
-function headAt(route: StoryRoute, travel: number): StoryFrame['head'] {
-  const { lngLat, lower, upper } = routeAt(route, travel);
-  return { lngLat, coordIndex: lower, visible: isOnRoute(route.travel, upper, travel) };
-}
-
-/**
- * Visible unless every route point the head touches is a camera connector point: the points exactly at its
- * travel when there are any, else both ends of its step. A connector's ends sit on the tracks it joins.
- */
 function isOnRoute({ coordinates: points, cumulativeDistances: along }: JourneyDistanceProfile, upper: number, travel: number): boolean {
   const onRoute = (index: number) => points[index].transportMode !== 'camera';
   if (along[upper] !== travel) return onRoute(upper - 1) || onRoute(upper);
@@ -187,7 +168,6 @@ function isOnRoute({ coordinates: points, cumulativeDistances: along }: JourneyD
   return false;
 }
 
-/** The travel profile's path between two distances, ends included, in route order. */
 function legLngLats(route: StoryRoute, from: number, to: number): LngLat[] {
   const { coordinates: points, cumulativeDistances: along } = route.travel;
   const lngLats = [routeAt(route, from).lngLat];
@@ -198,7 +178,6 @@ function legLngLats(route: StoryRoute, from: number, to: number): LngLat[] {
   return lngLats;
 }
 
-/** The zoom fitting a box (east may pass 180) into the map box with padding; Infinity for a single place. */
 function fitZoom([[west, south], [east, north]]: [LngLat, LngLat], map: Box): number {
   const fit = (px: number, world: number) => Math.max(1, px - 2 * FIT_PADDING) / (world * WORLD_PX);
   return Math.log2(Math.min(fit(widthOf(map), (east - west) / 360), fit(heightOf(map), mercatorY(south) - mercatorY(north))));
@@ -216,13 +195,11 @@ function framedZoom(
 ): number {
   const near = track.zNear;
   const leg = track.legs[lastAtOrBefore(track.legs, travel, (candidate) => candidate.from)];
-  // zTravel + (zNear - zTravel) * cos^2(pi t), written with sin^2 so every stop is exactly zNear.
   const zoom = leg && !reducedMotion
     ? near - (near - Math.min(near, leg.fitZoom)) * Math.sin(Math.PI * (travel - leg.from) / (leg.to - leg.from)) ** 2
     : near;
   const pull = track.media.reduce((most, item, index) => {
     const { strength } = media[index];
-    // Reduced motion frames a far point as one cut at half strength, so its wedge still shows without a glide.
     const weight = reducedMotion ? (strength >= 0.5 ? 1 : 0) : smoothstep(0, 0.5, strength);
     if (!item.point || weight === 0) return most;
     const rise = relief && item.elevation !== null ? (item.elevation - relief.head) * relief.exaggeration : 0;
@@ -231,20 +208,13 @@ function framedZoom(
   return zoom - pull;
 }
 
-/**
- * The largest zoom in [minZoom, 18] that keeps `point`, `rise` metres above the head (terrain exaggeration
- * included, 0 in 2D), inside the map box inset 32 px while the camera is centred on `head`. MapLibre 6.16's
- * fov of 0.6435 rad puts the camera D = 1.5 map heights from the centre; an offset (dx east, dy north, dz up) in
- * px projects to x = D dx / depth, y = D (dy cos t + dz sin t) / depth with depth = D + dy sin t - dz cos t. Each
- * offset grows with 2^zoom, so the fit is monotonic and bisection finds the edge.
- */
 function zContain(head: LngLat, point: LngLat, rise: number, map: Box, pitch: number, minZoom: number): number {
   const halfWidth = widthOf(map) / 2 - CONTAIN_INSET;
   const halfHeight = heightOf(map) / 2 - CONTAIN_INSET;
+  // MapLibre's default fov, 0.6435 rad, puts the camera 1.5 map heights from the centre.
   const distance = 1.5 * heightOf(map);
   const sin = Math.sin(toRadians(pitch));
   const cos = Math.cos(toRadians(pitch));
-  // World units at zoom 0, times WORLD_PX * 2^zoom for px.
   const east = longitudeStep(head[0], point[0]) / 360;
   const north = mercatorY(head[1]) - mercatorY(point[1]);
   const up = rise / (EARTH_CIRCUMFERENCE * Math.cos(toRadians(head[1])));
@@ -270,13 +240,11 @@ function zContain(head: LngLat, point: LngLat, rise: number, map: Box, pitch: nu
 }
 
 function placeAt(blocks: ScrollTrack['blocks'], y: number): StoryFrame['place'] {
-  // Above the first block (the cover), the first block with a negative fraction.
   const block = blocks[Math.max(0, lastAtOrBefore(blocks, y, (candidate) => candidate.top))];
   if (!block) return { key: '', fraction: 0 };
   return { key: block.key, fraction: block.height > 0 ? (y - block.top) / block.height : 0 };
 }
 
-/** Index of the last item whose `at` is <= value in items sorted by `at`, or -1. */
 function lastAtOrBefore<T>(items: readonly T[], value: number, at: (item: T) => number): number {
   let low = 0;
   let high = items.length;

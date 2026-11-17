@@ -86,9 +86,7 @@ describe('applyStoryEdit', () => {
     expect(ids(applyStoryEdit(storyWith(['b', 6_000], ['c', 12_000]), { type: 'addSection', id: 'a', anchor: at(15_000) }))).toEqual(ids(moved));
 
     expect(ids(applyStoryEdit(three, { type: 'setSection', id: 'c', anchor: at(0) }))).toEqual(['c', 'a', 'b']);
-    // A tie goes after the section already there, as an add does.
     expect(ids(applyStoryEdit(three, { type: 'setSection', id: 'a', anchor: at(6_000) }))).toEqual(['b', 'a', 'c']);
-    // A heading edit alone keeps the list order, even when the list is out of route order.
     const unordered = applyStoryEdit(three, { type: 'moveSection', id: 'c', to: 0 });
     expect(ids(applyStoryEdit(unordered, { type: 'setSection', id: 'c', heading: 'Col' }))).toEqual(['c', 'a', 'b']);
   });

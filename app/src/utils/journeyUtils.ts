@@ -465,7 +465,6 @@ export function segmentAnchorForRouteDistance(
   };
 }
 
-/** Segment anchor to profile metres; exact on tracks, whose profile steps are the track-local metres. */
 export function profileDistanceForSegmentAnchor(
   profile: JourneyDistanceProfile,
   segmentTimings: SegmentTiming[],
@@ -473,7 +472,6 @@ export function profileDistanceForSegmentAnchor(
   segmentMeters: number,
 ): number | null {
   const timing = segmentTimings.find((candidate) => candidate.segmentId === segmentId);
-  // A segment whose track is gone has no coordinates: endCoordIndex = startCoordIndex - 1.
   if (!timing || timing.endCoordIndex < timing.startCoordIndex || !Number.isFinite(segmentMeters)) return null;
 
   const start = profile.cumulativeDistances[timing.startCoordIndex];

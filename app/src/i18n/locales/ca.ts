@@ -32,7 +32,7 @@ export const ca = {
       pictures: 'Mèdia',
       export: 'Generar',
       settings: 'Mapa i càmera',
-      story: "Història",
+      story: 'Història',
     },
     preferencesTitle: 'Preferències',
     footerTitle: 'Trail Replay',

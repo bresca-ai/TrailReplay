@@ -6,7 +6,6 @@ import { compileStory, resolveRoutePlace, routeAt, type StoryCompileInput } from
 import { createDefaultStory, type StoryDocument } from './storyDocument';
 import { journeyWithCameraHop, km, media, northbound, settings, story } from './storyTestFixtures';
 
-// Day 2 starts about 79 km east of where day 1 ends: far beyond 10% of the 2.2 km route.
 const dayOne = northbound('Day 1', 45, 6);
 const dayTwo = northbound('Day 2', 45, 7);
 const tracks = [dayOne, dayTwo];
@@ -63,7 +62,6 @@ describe('compileStory', () => {
     const [start, dayTwoStart, lake] = compiled.sections;
     expect(start.routeMeters).toBeCloseTo(500, 6);
     expect(start.travelMeters).toBeCloseTo(500, 6);
-    // Same km label as the end of day 1, but the head has glided across the connector.
     expect(dayTwoStart.routeMeters).toBeCloseTo(dayOne.totalDistance, 6);
     expect(dayTwoStart.travelMeters).toBeCloseTo(dayOne.totalDistance + connectorTravel, 6);
     expect(lake.routeMeters).toBeCloseTo(dayOne.totalDistance + local, 6);
@@ -123,7 +121,6 @@ describe('compileStory', () => {
       },
     ))!;
 
-    // Keys follow document positions: the deleted clip (block 5) leaves no gap behind it in the others.
     expect(compiled.sections[0].blocks).toEqual([
       { kind: 'text', key: 'section-0-0', paragraphs: ['First line\nsame paragraph.', 'Second.'] },
       { kind: 'media', key: 'section-0-1', media: { kind: 'picture', fileName: 'IMG_1.jpg', caption: 'Summit', src: 'blob:gps', point: [6, 45.005], elevation: 150 } },
@@ -140,7 +137,6 @@ describe('compileStory', () => {
 
   it('keys every section and block by position, so no id a file can carry makes two keys alike', () => {
     const blocks = (...ids: string[]) => ids.map((id) => ({ id, kind: 'text' as const, text: id }));
-    // Ids normalizeStory accepts, and repeats it would rename, which the store could still hand over.
     const document = { ...createDefaultStory(), sections: [
       { id: 'cover', anchor: km(0), heading: 'c', blocks: blocks('finish') },
       { id: 'finish', anchor: km(100), heading: 'f', blocks: blocks('cover', 'cover') },
@@ -183,7 +179,6 @@ describe('compileStory', () => {
     expect(car.length).toBeGreaterThan(2);
     expect(car.map((index) => route.coordinates[index].elevation).every((elevation) => elevation === 0)).toBe(true);
 
-    // Day 1 ends at 200 m and day 2 starts at 100 m: the car legs descend between them.
     const heights = car.map((index) => route.heights[index]);
     for (const height of heights) {
       expect(height).toBeGreaterThanOrEqual(100);
@@ -198,7 +193,6 @@ describe('compileStory', () => {
   });
 
   it('gives a track recorded without heights the ground of the tracks around it, so its photos do not sit at 0 m', () => {
-    // The GPX parser records a missing <ele> as 0, so a track that is 0 m throughout has no heights at all.
     const flat = buildTrackFromRawPoints({
       idPrefix: 'track',
       name: 'Planned day',
@@ -251,13 +245,11 @@ describe('resolveRoutePlace', () => {
 
   it('rejects a stale fallback more than 250 m from the item lat/lon', () => {
     const onDayTwo = dayTwo.points[3];
-    // The segment id is gone and the old distance now lands on day 1, about 79 km from the photo.
     const stale = media('stale', { routeSegmentId: 'removed-day', routeDistance: 200, lat: onDayTwo.lat, lon: onDayTwo.lon });
     const projected = resolveRoutePlace(inputFor(createDefaultStory(), { pictures: [stale] }), { kind: 'picture', id: 'stale' })!;
     expect(projected.segmentId).toBe('day-2');
     expect(projected.routeMeters).toBeCloseTo(dayOne.totalDistance + onDayTwo.distance, 3);
 
-    // Within 250 m the distance is kept even though projecting lat/lon would land one point further on.
     const close = media('close', { routeDistance: dayOne.totalDistance + onDayTwo.distance, lat: dayTwo.points[4].lat, lon: onDayTwo.lon });
     expect(resolveRoutePlace(inputFor(createDefaultStory(), { pictures: [close] }), { kind: 'picture', id: 'close' })?.routeMeters)
       .toBeCloseTo(dayOne.totalDistance + onDayTwo.distance, 6);

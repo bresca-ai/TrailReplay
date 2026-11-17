@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-// The story probe runs outside the app as plain Node; its verdicts are pinned here so a check that can no
-// longer fail is caught offline. Shapes are declared in src/types/story-metrics.d.ts.
 import {
   clipBoxes,
   contrastRatio,
@@ -19,13 +17,12 @@ import {
 type Box = StorySample['map'];
 const MAP = { top: 0, bottom: 800, left: 640, right: 1280 };
 
-/** A slot painted as the reader paints it: every copy of the shape agrees, cut at `map`. */
 function paint(points: [number, number][], hollow = false, map: Box = MAP): PaintedWedge {
   const [base0, base1, apex] = points;
   const middle = [(base0[0] + base1[0]) / 2, (base0[1] + base1[1]) / 2];
   return {
     points, cx: apex[0], cy: apex[1], hollow, alpha: 0.2,
-    veil: points, edges: [[base0, apex, base1], [base0, apex, base1]], axes: [[...apex, ...middle], [...apex, ...middle]],
+    veil: points, axes: [[...apex, ...middle], [...apex, ...middle]],
     clip: {
       rule: 'evenodd',
       text: `M-1e5 -1e5H1e5V1e5H-1e5Z M${map.left} ${map.top}H${map.right}V${map.bottom}H${map.left}Z`,
@@ -115,9 +112,7 @@ describe('wedge copies and clips', () => {
     expect(wedgeSummary([sample()])).toMatchObject({ painted: 1, torn: 0, unclipped: 0 });
     const drifted: PaintedWedge[] = [
       { ...good, veil: [[600, 300], [600, 500], [1002, 300]] },
-      { ...good, edges: [good.edges[0], [[600, 300], [600, 500], [1000, 300]]] },
       { ...good, axes: [good.axes[0], [600, 400, 1000, 300]] },
-      { ...good, edges: [good.edges[0]] },
     ];
     for (const painted of drifted) {
       expect(wedgeSummary([sample({ painted: [painted, null, null] })])).toMatchObject({ painted: 1, torn: 1, mismatched: 0 });
@@ -183,7 +178,7 @@ describe('metersBetween', () => {
 });
 
 describe('reducedMotionSummary', () => {
-  const track = { rests: [0, 1000, 5000], zNear: 13, routeFitZoom: 9 };
+  const track = { compiledRests: [0, 1000, 5000], zNear: 13, routeFitZoom: 9 };
 
   it('accepts rests, the near zoom and a framed media cut', () => {
     const atRest = sample({ frame: { travel: 1000, camera: { zoom: 13 }, media: [{ key: 's/photo', strength: 0.2 }] } });
@@ -217,7 +212,7 @@ describe('contrast', () => {
   it('reads translucent text over the canvas, darkened by the wedge', () => {
     const colours = { text: [27, 42, 32, 0.8] as [number, number, number, number], canvas: [248, 246, 240] as [number, number, number], wedge: [27, 42, 32] as [number, number, number] };
     const clear = textContrastUnderWedge({ ...colours, alpha: 0 });
-    expect(clear).toBeCloseTo(7.46, 1); // the design's figure for --evergreen-80 on --canvas
+    expect(clear).toBeCloseTo(7.46, 1);
     expect(textContrastUnderWedge({ ...colours, alpha: 0.22 })).toBeLessThan(clear);
   });
 });

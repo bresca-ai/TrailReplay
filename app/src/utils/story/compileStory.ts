@@ -14,7 +14,7 @@ import {
 } from '@/utils/journeyUtils';
 import { GPS_ROUTE_MATCH_THRESHOLD_METERS } from '@/utils/photoPlacement';
 import { projectCoordinateToJourney } from '@/utils/routeProjection';
-import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
+import { clampTerrainExaggeration } from '@/utils/terrainExaggeration';
 import type { RoutePlace, StoryAnchor, StoryDocument, StoryLayout, StoryRef, StorySection } from './storyDocument';
 
 type MediaFields = 'id' | 'url' | 'isPlaceholder' | 'originalFileName' | 'lat' | 'lon' | 'title'
@@ -22,11 +22,10 @@ type MediaFields = 'id' | 'url' | 'isPlaceholder' | 'originalFileName' | 'lat' |
 type LookFields = 'mapStyle' | 'waybackItemURL' | 'terrainExaggeration';
 type StoryMedia = Pick<PictureAnnotation, MediaFields> | Pick<VideoAnnotation, MediaFields>;
 
-/** Everything a story reads. A phase-2 viewer builds it from a .replay, with its own hosted URLs as `url`. */
 export interface StoryCompileInput {
   document: StoryDocument; tracks: GPXTrack[]; journeySegments: JourneySegment[]; textAnnotations: TextAnnotation[];
   pictures: Pick<PictureAnnotation, MediaFields>[]; videos: Pick<VideoAnnotation, MediaFields>[];
-  journeyName: string; // the cover falls back to it when the story has no title
+  journeyName: string;
   settings: Pick<AppSettings, LookFields | 'unitSystem' | 'trailStyle'>;
 }
 
@@ -69,13 +68,12 @@ export interface StoryIssue {
     | 'out-of-route-order';
 }
 
-/** Self-contained and immutable: no store type, no File, no live object. StoryView needs nothing else. */
 export interface CompiledStory {
   title: string; intro: string[]; unitSystem: AppSettings['unitSystem'];
   stats: { distanceMeters: number; elevationGainMeters: number };
   layout: StoryLayout; look: Pick<AppSettings, LookFields> & { trailColor: string };
   route: StoryRoute; sections: CompiledSection[];
-  issues: StoryIssue[]; // listed in the Story tab; the reader never sees them
+  issues: StoryIssue[];
 }
 
 const CONNECTOR_TRAVEL_SHARE = 0.1;
@@ -94,7 +92,7 @@ export function compileStory(input: StoryCompileInput): CompiledStory | null {
   let headTravel = 0;
   const placed = document.sections.map((section, index) => {
     const report = (kind: StoryIssue['kind'], blockId?: string) => {
-      issues.push(blockId === undefined ? { sectionId: section.id, kind } : { sectionId: section.id, blockId, kind });
+      issues.push({ sectionId: section.id, blockId, kind });
     };
     const place = resolveAnchor(input, route, section.anchor, report);
     const travel = travelMetersAt(route, place);
@@ -124,8 +122,7 @@ export function compileStory(input: StoryCompileInput): CompiledStory | null {
     look: {
       mapStyle: settings.mapStyle,
       waybackItemURL: settings.waybackItemURL,
-      // The story switches 3D with its own layout.view; this borrows only the video's [0.5, 3] clamp.
-      terrainExaggeration: effectiveTerrainExaggeration({ show3DTerrain: true, terrainExaggeration: settings.terrainExaggeration }),
+      terrainExaggeration: clampTerrainExaggeration(settings.terrainExaggeration),
       trailColor: settings.trailStyle.trailColor,
     },
     route,
@@ -137,7 +134,6 @@ export function compileStory(input: StoryCompileInput): CompiledStory | null {
   };
 }
 
-/** Live item (or a typed km) to a place with compileStory's chain, so a captured place matches what the reader sees. */
 export function resolveRoutePlace(input: StoryCompileInput, target: StoryRef | { routeMeters: number }): RoutePlace | null {
   const built = storyRouteFor(input);
   if (!built) return null;
@@ -158,13 +154,11 @@ export function resolveRoutePlace(input: StoryCompileInput, target: StoryRef | {
   const item: StoryMedia | undefined = (target.kind === 'picture' ? input.pictures : input.videos)
     .find((candidate) => candidate.id === target.id);
   if (!item) return null;
-  // The segment anchor wins, as in the video: lat/lon may lag it after "move to playhead".
   const live = item.routeSegmentId !== undefined && isFiniteNumber(item.routeSegmentDistance)
     ? placeOnSegment(route, item.routeSegmentId, item.routeSegmentDistance)
     : null;
   if (live) return live;
 
-  // A stale distance can land on another segment, so each fallback must stay near the item's lat/lon.
   const fromDistance = placeAtRouteDistance(route, item.routeDistance);
   const lonLat = mediaLonLat(item);
   if (!lonLat) return fromDistance;
@@ -252,11 +246,10 @@ function wrapLongitude(lon: number): number {
 }
 
 function groundHeights(points: JourneyPoint[]): number[] {
-  // The GPX parser records a missing <ele> as 0, so a track that is 0 m throughout is filled like transport.
   const measured = new Set(points.flatMap((point) => (point.segmentType === 'track' && point.elevation !== 0 ? [point.segmentIndex] : [])));
   const known = points.flatMap((point, index) => (measured.has(point.segmentIndex) ? [index] : []));
   if (known.length === 0) return points.map(() => 0);
-  let next = 0; // the first track point at or after `index`
+  let next = 0;
   return points.map((_, index) => {
     while (next < known.length && known[next] < index) next += 1;
     if (next === known.length) return points[known[known.length - 1]].elevation;
@@ -267,10 +260,6 @@ function groundHeights(points: JourneyPoint[]): number[] {
   });
 }
 
-/**
- * The route profile with every step that touches a camera connector (0 on the route) counted as its
- * straight line, each connector scaled down to at most CONNECTOR_TRAVEL_SHARE of the route total.
- */
 function travelProfile(route: JourneyDistanceProfile): JourneyDistanceProfile {
   const { coordinates: points, cumulativeDistances: routeMeters } = route;
   const steps = points.map((point, index) => {
@@ -350,7 +339,6 @@ function compileBlocks(
   });
 }
 
-/** Travel metres for a place: by its live segment when it has one, so a connector boundary is unambiguous. */
 function travelMetersAt(route: StoryRoute, place: RoutePlace): number {
   const along = route.route.cumulativeDistances;
   const travel = route.travel.cumulativeDistances;
@@ -360,7 +348,6 @@ function travelMetersAt(route: StoryRoute, place: RoutePlace): number {
     return travel[start] + clamp(place.routeMeters - along[start], 0, travel[timing.endCoordIndex] - travel[start]);
   }
 
-  // Without a segment, a zero-length connector resolves to its earlier end, as segmentAnchorForProfileDistance does.
   const meters = clamp(place.routeMeters, 0, route.route.totalDistance);
   const upper = findDistanceIndex(route.route, meters);
   if (upper === 0) return 0;
@@ -373,7 +360,6 @@ function placeOnSegment(route: StoryRoute, segmentId: string, segmentMeters: num
   return routeMeters === null ? null : { routeMeters, segmentId, segmentMeters: Math.max(0, segmentMeters) };
 }
 
-/** `routeDistance` is on the timing scale, as the video reads it; the segment anchor carries it to the profile. */
 function placeAtRouteDistance(route: StoryRoute, routeDistance: number | undefined): RoutePlace | null {
   const anchor = isFiniteNumber(routeDistance) ? segmentAnchorForRouteDistance(route.segmentTimings, routeDistance) : null;
   return anchor && placeOnSegment(route, anchor.segmentId, anchor.segmentDistance);
@@ -381,13 +367,11 @@ function placeAtRouteDistance(route: StoryRoute, routeDistance: number | undefin
 
 function projectedPlace(journey: ComputedJourney, route: StoryRoute, lat: number, lon: number) {
   const match = projectCoordinateToJourney(journey, lat, lon, 0);
-  const place = match?.routeSegmentId !== undefined && match.routeSegmentDistance !== undefined
-    ? placeOnSegment(route, match.routeSegmentId, match.routeSegmentDistance)
-    : null;
-  return place && match ? { place, meters: match.distanceMeters } : null;
+  if (match?.routeSegmentId === undefined || match.routeSegmentDistance === undefined) return null;
+  const place = placeOnSegment(route, match.routeSegmentId, match.routeSegmentDistance);
+  return place && { place, meters: match.distanceMeters };
 }
 
-/** The anchored note's title or media caption: the heading a section shows when the creator left it blank. */
 function refLabel(input: StoryCompileInput, ref: StoryRef | null): string {
   if (!ref) return '';
   if (ref.kind === 'annotation') return input.textAnnotations.find((note) => note.id === ref.id)?.title.trim() ?? '';

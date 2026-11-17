@@ -234,8 +234,6 @@ export function usePlaybackMediaPopups() {
     }
   }, [autoPlaybackPictureId, clearPendingQueuedPictureOpen, play, scheduleNextQueuedPlaybackPicture, selectedPictureId, setSelectedPictureId]);
 
-  // Ends any hold without resuming: the close handlers above would call play() once the queue drains.
-  // Shown ids stay, so the media already held does not trigger again when playback resumes.
   const cancelHolds = useCallback(() => {
     clearPendingQueuedPictureOpen();
     queuedPlaybackPictureIdsRef.current = [];

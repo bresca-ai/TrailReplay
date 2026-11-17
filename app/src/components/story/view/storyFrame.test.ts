@@ -8,7 +8,6 @@ import type { StoryBlock, StoryDocument, StoryLayout } from '@/utils/story/story
 import { journeyWithCameraHop, km, media, northbound, settings, story } from '@/utils/story/storyTestFixtures';
 import { buildScrollTrack, scrollTopForPlace, storyFrameAt, type Box, type LngLat, type ScrollTrack, type TrackMeasure } from './storyFrame';
 
-// Two 11 km days; day 2 starts about 79 km east, so the camera connector glides over 2.2 km of travel (the 10% cap).
 const dayOne = northbound('Day 1', 45, 6, 101);
 const dayTwo = northbound('Day 2', 45, 7, 101);
 
@@ -23,7 +22,6 @@ const plain = story(
   ['day-2', dayTwoStart, [text('a'), text('b')]],
   ['lake', km(dayOne.totalDistance + 5_000), [text('a'), text('b')]],
 );
-// 'north' sits a quarter into the first leg and 'south' three quarters in: each is about 8 km from the head.
 const withPhotos = story(
   ['start', km(0), [text('a'), photo('north'), text('b'), text('c'), photo('south'), text('d')]],
   ['day-1-end', dayOneEnd, [text('a')]],
@@ -50,8 +48,8 @@ function compile(document: StoryDocument, options: {
 
 interface Layout {
   name: string; scroller: Box; map: Box;
-  band: { top: number; bottom: number }; // viewport px
-  coverTop: number; tail: number; // in-flow map box before the cover (phone top) or after the end spacer (phone bottom)
+  band: { top: number; bottom: number };
+  coverTop: number; tail: number;
   column: { left: number; right: number };
 }
 const desktop = { top: 0, bottom: 800, left: 0, right: 1280 };
@@ -69,10 +67,10 @@ const TEXT = 500;
 const MEDIA = 240;
 const FINISH = 200;
 
-/** StoryView's flow: cover of one band height, headings and blocks stacked, finish, a 60svh end spacer. */
 function measureFor(compiled: CompiledStory, layout: Layout, grow: Record<string, number> = {}): TrackMeasure {
   let y = layout.coverTop + layout.band.bottom - layout.band.top;
   const blocks: TrackMeasure['blocks'] = [];
+  const media: TrackMeasure['media'] = [];
   const sections = compiled.sections.map((section) => {
     const headTop = y;
     y += HEADING;
@@ -80,6 +78,7 @@ function measureFor(compiled: CompiledStory, layout: Layout, grow: Record<string
     for (const block of section.blocks) {
       const height = (block.kind === 'text' ? TEXT : MEDIA) + (grow[block.key] ?? 0);
       blocks.push({ key: block.key, top: y, height, ...layout.column });
+      if (block.kind === 'media') media.push({ key: block.key, top: y, height, ...layout.column });
       y += height;
     }
     return { headTop, headBottom };
@@ -90,6 +89,7 @@ function measureFor(compiled: CompiledStory, layout: Layout, grow: Record<string
     map: layout.map,
     contentHeight: y + FINISH + 0.6 * scrollerHeight + layout.tail - layout.scroller.top,
     blocks,
+    media,
     sections,
     finishTop: y,
   };
@@ -99,14 +99,11 @@ function scrollTops(track: ScrollTrack, step: number): number[] {
   return [...Array.from({ length: Math.floor(track.maxScroll / step) + 1 }, (_, index) => index * step), track.maxScroll];
 }
 
-/**
- * MapLibre 6.16's camera rebuilt from vectors: the fov of 0.6435 rad sets both the focal length and the camera's
- * distance from the centre, north-up, tilted `pitch` from vertical; `rise` metres above the centre become px at
- * the centre latitude. Screen px from the map box centre, y down; null behind the camera.
- */
+const mercatorY = (lat: number) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2;
+
+/** MapLibre's camera at its default fov, 0.6435 rad. */
 function screenOffset(center: LngLat, point: LngLat, rise: number, zoom: number, pitch: number, map: Box) {
   const worldPx = 512 * 2 ** zoom;
-  const mercatorY = (lat: number) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2;
   const pxPerMeter = worldPx / (2 * Math.PI * 6_371_008.8 * Math.cos(center[1] * Math.PI / 180));
   const offset = [(point[0] - center[0]) / 360 * worldPx, (mercatorY(center[1]) - mercatorY(point[1])) * worldPx, rise * pxPerMeter];
   const focal = (map.bottom - map.top) / 2 / Math.tan(0.6435011087932844 / 2);
@@ -126,14 +123,12 @@ function projectsInside(center: LngLat, point: LngLat, rise: number, zoom: numbe
     && Math.abs(offset.y) <= (map.bottom - map.top) / 2 - 32 + tolerance;
 }
 
-/** The fixture's ground: northbound tracks climb 10 m for every 0.001 degrees north of latitude 45, from 100 m. */
 const groundAt = ([, lat]: LngLat) => 100 + (lat - 45) * 10_000;
 
-/** Every point inside the map box padded 32 px at this zoom, north-up and flat. */
 function showsAll(lngLats: LngLat[], zoom: number, map: Box): boolean {
   const worldPx = 512 * 2 ** zoom;
   const xs = lngLats.map(([lon]) => (lon + 180) / 360 * worldPx);
-  const ys = lngLats.map(([, lat]) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) / Math.PI) / 2 * worldPx);
+  const ys = lngLats.map(([, lat]) => mercatorY(lat) * worldPx);
   const tolerance = 1e-6;
   return Math.max(...xs) - Math.min(...xs) <= map.right - map.left - 64 + tolerance
     && Math.max(...ys) - Math.min(...ys) <= map.bottom - map.top - 64 + tolerance;
@@ -269,7 +264,6 @@ describe('storyFrameAt', () => {
   });
 
   it('puts the zoom setting span across the map box shorter side, whatever the route length', () => {
-    // Both centred on latitude 45: 5.5 km and 22 km long.
     const [short, long] = [northbound('Short', 44.975, 6, 51), northbound('Long', 44.9, 6, 201)].map((track) => {
       const compiled = compile(story(), { tracks: [track], journeySegments: [{ id: 'day', type: 'track', trackId: track.id, duration: 1 }] });
       return { compiled, track: buildScrollTrack(compiled, measureFor(compiled, desktopRight)) };
@@ -296,7 +290,6 @@ describe('storyFrameAt', () => {
       }
     }
 
-    // An 18 km span over a 5.5 km route would show far more than the route: held at the route fit.
     const day = northbound('Short', 45, 6, 51);
     const small = compile(plain, { layout: { zoom: 'far' }, tracks: [day], journeySegments: [{ id: 'day-1', type: 'track', trackId: day.id, duration: 1 }] });
     const smallTrack = buildScrollTrack(small, measureFor(small, desktopRight));
@@ -305,7 +298,6 @@ describe('storyFrameAt', () => {
       expect(storyFrameAt(small, smallTrack, scrollTop, false).camera.zoom).toBe(smallTrack.routeFitZoom - 0.5);
     }
 
-    // A 2 km span across a 20,000 px map box would pass zoom 18.
     const huge = { top: 0, bottom: 20_000, left: 0, right: 40_000 };
     const hugeLayout: Layout = {
       name: 'huge', scroller: huge, map: { ...huge, left: 20_000 }, band: { top: 0, bottom: 20_000 }, coverTop: 0, tail: 0, column: { left: 0, right: 20_000 },
@@ -315,7 +307,6 @@ describe('storyFrameAt', () => {
     expect(track.zNear).toBeGreaterThan(18);
     expect(storyFrameAt(compiled, track, 0, false).camera.zoom).toBe(18);
 
-    // A one-point route fits at any zoom: the floor is 18, not Infinity.
     const dot = northbound('Dot', 45, 6, 1);
     const single = compile(story(['here', km(0), [text('a')]]), { tracks: [dot], journeySegments: [{ id: 'dot', type: 'track', trackId: dot.id, duration: 1 }] });
     const singleTrack = buildScrollTrack(single, measureFor(single, desktopRight));
@@ -366,7 +357,6 @@ describe('storyFrameAt', () => {
       const compiled = compile(withPhotos, { layout: { view } });
       const track = buildScrollTrack(compiled, measureFor(compiled, desktopRight));
       const north = track.media.findIndex((item) => item.key === 'section-0-1');
-      // At scrollTop 0 the head is at the start, about 10 km from 'north': only that photo, moved, can pull.
       const withNorthAt = (offset: number | null): ScrollTrack => ({
         ...track,
         media: track.media.map((item, index) => {
@@ -385,7 +375,6 @@ describe('storyFrameAt', () => {
         const weight = smoothstep(0, 0.5, frame.media[north].strength);
         expect(frame.camera.zoom, `${view}, ${offset}`).toBeCloseTo(unframed - weight * (unframed - framed), 9);
       }
-      // Reduced motion: no framing below half strength, full framing from half strength on, nothing in between.
       expect(frameWith(0.45, true).media[north].strength).toBeLessThan(0.5);
       expect(frameWith(0.45, true).camera.zoom, view).toBe(track.zNear);
       expect(frameWith(0.25, true).media[north].strength).toBeGreaterThanOrEqual(0.5);
@@ -442,7 +431,6 @@ describe('storyFrameAt', () => {
     const compiled = compile(withPhotos);
     const measure = measureFor(compiled, desktopRight);
     const [first, second, ...rest] = measure.sections;
-    // Mid-layout: section 1's bottom edge reads 0.5 px above its top, and section 2's top 3 px above section 1's bottom.
     const skewed: TrackMeasure = {
       ...measure,
       sections: [first, { headTop: second.headTop, headBottom: second.headTop - 0.5 }, { ...rest[0], headTop: second.headTop - 3 }, ...rest.slice(1)],
@@ -476,7 +464,6 @@ describe('storyFrameAt', () => {
 
           expect(frame.media[index].strength).toBeCloseTo(1, 9);
           expect(projectsInside(center, point, rise, zoom, pitch, layout.map), `${layout.name}, ${view}, ${key}`).toBe(true);
-          // Tight: the unframed zoom would have lost it.
           expect(projectsInside(center, point, rise, zoom + 0.05, pitch, layout.map)).toBe(false);
         }
       }
@@ -512,7 +499,6 @@ describe('storyFrameAt', () => {
 });
 
 describe('a route across 180 degrees', () => {
-  // About 10.6 km due east along latitude 17 S, from 179.95 E over the antimeridian to 179.95 W.
   const wrap = (lon: number) => ((lon + 540) % 360) - 180;
   const crossing = buildTrackFromRawPoints({
     idPrefix: 'track',
@@ -593,7 +579,6 @@ describe('3D framing over terrain', () => {
     const rise = (groundAt(point) - groundAt(center)) * compiled.look.terrainExaggeration;
     expect(rise).toBeLessThan(-500);
     expect(projectsInside(center, point, rise, zoom, 55, phoneBottom.map)).toBe(true);
-    // Level with the head (the flat-ground prediction), the zoom is too close for where terrain draws the point.
     expect(projectsInside(center, point, rise, at(flat).zoom, 55, phoneBottom.map)).toBe(false);
   });
 });

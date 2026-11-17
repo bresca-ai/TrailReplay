@@ -1,39 +1,34 @@
-// The story's own MapLibre instance: never the editor map, never mapGlobalRef, story-* ids only.
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { FeatureCollection } from 'geojson';
-import { BASEMAP_FALLBACK_MAX_ZOOM, BASEMAP_PRESENTATIONS, MAP_STYLE } from '@/components/map/mapStyle';
+import { BASEMAP_FALLBACK_MAX_ZOOM, BASEMAP_PRESENTATIONS, DEFAULT_MAP_STYLE, MAP_STYLE } from '@/components/map/mapStyle';
 import { longitudeStep, unwrapPath, type CompiledStory } from '@/utils/story/compileStory';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import type { LngLat, StoryFrame } from './storyFrame';
-import type { ProjectPoint } from './storyWedge';
+import { WEDGE_LIGHT, type ProjectPoint } from './storyWedge';
 
 export interface StoryMap {
-  show(frame: StoryFrame): void; // jumpTo(frame.camera); the travelled line and head only when travel changed
+  show(frame: StoryFrame): void;
   project: ProjectPoint;
-  onRender(listener: () => void): () => void; // tiles and terrain refine the projection: repaint the wedges
-  tilesLoaded(): boolean; // basemap and terrain: until then a 3D projection still moves (the probe waits on it)
+  onRender(listener: () => void): () => void;
+  tilesLoaded(): boolean;
   resize(): void;
-  destroy(): void; // map.remove()
+  destroy(): void;
 }
 
-/** createDefaultSettings().mapStyle, which the store boundary keeps out of reach here. */
-const DEFAULT_BASEMAP = 'esri-clarity';
 const LABELLED_BASEMAPS = new Set(['street', 'topo', 'outdoor']);
 const WAYBACK_ATTRIBUTION = '© Esri — Source: Esri, Maxar, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN, and the GIS User Community';
-const HEAD_STROKE = '#F8F6F0'; // --canvas
 const OCCLUSION_SAMPLES = 8;
 
 type Style = maplibregl.StyleSpecification;
 type Layer = maplibregl.LayerSpecification;
 const BASE = MAP_STYLE as unknown as Style;
 
-/** The reader's style: the selected basemap only, the route and the head; terrain and sky only in 3D. */
 export function buildStoryMapStyle(story: CompiledStory): Style {
   const { look } = story;
   const color = look.trailColor;
-  const segmentColor = ['coalesce', ['get', 'color'], color] as maplibregl.ExpressionSpecification; // transport grey, track colours
+  const segmentColor = ['coalesce', ['get', 'color'], color] as maplibregl.ExpressionSpecification;
   const basemap = basemapOf(look);
   const labels = LABELLED_BASEMAPS.has(look.mapStyle);
   const is3d = story.layout.view === '3d';
@@ -65,14 +60,14 @@ export function buildStoryMapStyle(story: CompiledStory): Style {
       },
       {
         id: 'story-head', type: 'circle', source: 'story-progress', filter: ['==', ['geometry-type'], 'Point'],
-        paint: { 'circle-radius': 6, 'circle-color': color, 'circle-stroke-color': HEAD_STROKE, 'circle-stroke-width': 2 },
+        paint: { 'circle-radius': 6, 'circle-color': color, 'circle-stroke-color': WEDGE_LIGHT, 'circle-stroke-width': 2 },
       },
     ],
   };
 }
 
 export function createStoryMap(container: HTMLElement, story: CompiledStory, first: StoryFrame): StoryMap {
-  // Vite renames MapLibre's chunk, so the worker is not next to it; the editor map may never have run.
+  // Vite renames MapLibre's chunk, so the worker is not next to it.
   maplibregl.setWorkerUrl(maplibreWorkerUrl);
   const map = new maplibregl.Map({
     container,
@@ -160,8 +155,7 @@ function basemapOf(look: CompiledStory['look']): { sources: Style['sources']; la
       ],
     };
   }
-  // Wayback without a URL has no imagery of its own; the default imagery beats an empty fill.
-  const presentation = (look.mapStyle !== 'wayback' && BASEMAP_PRESENTATIONS[look.mapStyle]) || BASEMAP_PRESENTATIONS[DEFAULT_BASEMAP];
+  const presentation = (look.mapStyle !== 'wayback' && BASEMAP_PRESENTATIONS[look.mapStyle]) || BASEMAP_PRESENTATIONS[DEFAULT_MAP_STYLE];
   return {
     sources: {
       [presentation.fallbackSourceId]: BASE.sources[presentation.fallbackSourceId],
@@ -171,41 +165,33 @@ function basemapOf(look: CompiledStory['look']): { sources: Style['sources']; la
   };
 }
 
-/** A MAP_STYLE layer, shown: the editor style hides all but satellite until its effects run. */
 function layerOf(id: string): Layer {
   const layer = BASE.layers.find((candidate) => candidate.id === id)!;
   return { ...layer, layout: { ...layer.layout, visibility: 'visible' } } as Layer;
 }
 
-/** Unwrapped, so a line across 180 degrees stays short instead of circling the world. */
 function lonLats(story: CompiledStory): number[][] {
   return unwrapPath(story.route.coordinates.map((point): LngLat => [point.lon, point.lat]));
 }
 
-/** Every segment but camera connectors, as solid lines; with `head`, only the part behind it. */
 function trailLines(story: CompiledStory, coordinates: number[][], head?: StoryFrame['head']) {
   const { route, look } = story;
-  const behind = head && coordinates[head.coordIndex][0];
+  const lines = { coordinates, segmentTimings: route.segmentTimings, fallbackColor: look.trailColor };
+  if (!head) return buildSegmentLineFeatures(lines);
+  const [behind] = coordinates[head.coordIndex];
   return buildSegmentLineFeatures({
-    coordinates,
-    segmentTimings: route.segmentTimings,
-    fallbackColor: look.trailColor,
-    ...(head && behind !== undefined && {
-      maxCoordIndex: head.coordIndex,
-      partialEndpoint: [behind + longitudeStep(behind, head.lngLat[0]), head.lngLat[1]] as LngLat,
-      partialSegmentIndex: route.coordinates[head.coordIndex].segmentIndex,
-    }),
+    ...lines,
+    maxCoordIndex: head.coordIndex,
+    partialEndpoint: [behind + longitudeStep(behind, head.lngLat[0]), head.lngLat[1]],
+    partialSegmentIndex: route.coordinates[head.coordIndex].segmentIndex,
   });
 }
 
 interface CameraTransform { getCameraLngLat(): maplibregl.LngLat; getCameraAltitude(): number }
 
-/**
- * Whether 3D terrain hides `point`: any of 8 samples on the straight line from the camera to the point lies
- * under the ground. MapLibre 6 keeps the camera on `_camera.transform`, outside the documented surface; if
- * that moves, the point counts as visible.
- */
 function isOccluded(map: maplibregl.Map, point: LngLat): boolean {
+  // MapLibre 6 keeps the camera on `_camera.transform`, outside its documented API. If that moves, every point
+  // counts as visible: wedges never dim or hollow, and the probe cannot tell.
   const transform = (map as unknown as { _camera?: { transform?: Partial<CameraTransform> } })._camera?.transform;
   if (typeof transform?.getCameraLngLat !== 'function' || typeof transform.getCameraAltitude !== 'function') return false;
   const camera = maplibregl.MercatorCoordinate.fromLngLat(transform.getCameraLngLat(), transform.getCameraAltitude());

@@ -5,6 +5,7 @@ import {
   getFollowBehindZoomLevelForPreset,
 } from '@/utils/followBehindCamera';
 import { DEFAULT_ACTIVITY_ICON } from '@/utils/activityIcons';
+import { DEFAULT_MAP_STYLE } from '@/components/map/mapStyle';
 
 export function createDefaultPlayback(): PlaybackState {
   return {
@@ -23,7 +24,7 @@ export function createDefaultSettings(): AppSettings {
   return {
     language: getInitialLanguage(),
     unitSystem: 'metric',
-    mapStyle: 'esri-clarity',
+    mapStyle: DEFAULT_MAP_STYLE,
     mapFilter: 'none',
     show3DTerrain: true,
     terrainExaggeration: 1,

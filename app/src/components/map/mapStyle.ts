@@ -1,3 +1,4 @@
+import type { MapStyle } from '@/types';
 import { DEFAULT_MAP_SKY } from './mapSky';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
@@ -5,6 +6,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 // A coarse, low-zoom parent layer covers the distant horizon with a small
 // number of requests, while the full-resolution layer fills in above it.
 export const BASEMAP_FALLBACK_MAX_ZOOM = 8;
+
+export const DEFAULT_MAP_STYLE: MapStyle = 'esri-clarity';
 
 export const BASEMAP_PRESENTATIONS: Record<string, {
   fallbackLayerId: string;

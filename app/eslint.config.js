@@ -17,7 +17,7 @@ const STORY_EDITOR_FREE = {
     '**/TrailMap',
     '**/playback/**',
     '**/sidebar/**',
-    // The story editor beside the reader (useCompiledStory and storyPreview reach the store); the negation keeps view/.
+    // `*` also matches the view directory itself, so the negation keeps view/.
     '**/components/story/*',
     '!**/components/story/view',
   ],
@@ -58,7 +58,6 @@ export default defineConfig([
     files: ['src/components/sidebar/CinematicCameraEditor.tsx'],
     rules: { 'react-hooks/immutability': 'off' },
   },
-  // The story model and reader stay free of the editor, so the phase-2 standalone viewer imports them unchanged.
   {
     files: ['src/utils/story/**/*.{ts,tsx}', 'src/components/story/view/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': ['error', { patterns: [STORY_EDITOR_FREE] }] },

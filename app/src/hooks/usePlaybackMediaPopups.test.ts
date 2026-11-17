@@ -7,7 +7,7 @@ import { usePlaybackMediaPopups } from './usePlaybackMediaPopups';
 const picture: PictureAnnotation = {
   id: 'photo-1', file: null, url: 'blob:photo-1', isPlaceholder: false, progress: 0.5, position: 0.5, displayDuration: 3000,
 };
-const clip = { id: 'video-1', file: null, url: 'blob:video-1', isPlaceholder: false, progress: 0.5, position: 0.5, duration: 4 } as unknown as VideoAnnotation;
+const clip: VideoAnnotation = { id: 'video-1', file: null, url: 'blob:video-1', isPlaceholder: false, progress: 0.5 };
 const originalPlay = useAppStore.getState().play;
 
 beforeEach(() => useAppStore.getState().reset());
@@ -55,7 +55,7 @@ describe('cancelHolds', () => {
   });
 
   it('drops queued clips, so the next clip shown is the next one reached', () => {
-    const at = (id: string, progress: number) => ({ ...clip, id, url: `blob:${id}`, progress, position: progress });
+    const at = (id: string, progress: number) => ({ ...clip, id, url: `blob:${id}`, progress });
     useAppStore.setState({ videos: [at('video-1', 0.5), at('video-2', 0.5), at('video-3', 0.7)], animationPhase: 'playing', play: vi.fn() });
     moveTo(0.4, true);
     const { result } = renderHook(() => usePlaybackMediaPopups());

@@ -11,7 +11,6 @@ import type { StoryViewProps } from './view/StoryView';
 
 const reader = vi.hoisted(() => ({ fails: false }));
 
-// The real reader needs WebGL; this stand-in keeps its contract: a focusable data-story-scroller, an exit, debug frames.
 vi.mock('./view/StoryView', () => ({
   StoryView: ({ story, onExit, onDebugFrame }: StoryViewProps) => {
     if (reader.fails) throw new Error('WebGL is not available');
@@ -124,7 +123,7 @@ describe('story preview host', () => {
     act(() => freshPreview.getState().open(document.body));
     expect(playing).toBe(false);
     expect(screen.queryByTestId('scroller')).toBeNull();
-    playing = true; // Space or the Play button, while nothing is modal yet
+    playing = true;
     await screen.findByTestId('scroller');
     expect(playing).toBe(false);
   });

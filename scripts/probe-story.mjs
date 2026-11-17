@@ -1,21 +1,5 @@
 #!/usr/bin/env node
 /**
- * Read a story map in a headless browser and check it against its contract.
- *
- * The story map's promises live in the rendered reader, between the DOM
- * measure, MapLibre and the SVG wedge layer: the frame is a pure function of
- * scrollTop, a heading on the reading line puts the head on its place, the
- * wedge runs from the photo's edge to its point, and the reader leaves the
- * editor's playback, settings and map alone. None of that is visible to a unit
- * test. This builds a story through the probe bridge, opens it through the
- * Story tab's Preview button and checks each promise per layout:
- *
- *   a purity    b heading at rest    c head in frame    d wedges as painted
- *   e media point in frame    f phone layout    g rotation keeps the place
- *   h reduced motion    i isolation    j focus, keys, Escape, clips    k contrast
- *
- * plus the per-frame cost of the reader's frame over a scripted scroll.
- *
  * Usage:
  *   node scripts/probe-story.mjs [<dir-with-gpx-and-optional-recipe>] [options]
  *
@@ -27,12 +11,6 @@
  *   --headed             watch it run
  *
  * With no directory it reads the two sample routes in app/public/media/samples.
- * The probe imports compileStory from the dev server's /src to know where each
- * section should rest, so --url must serve the app through Vite. It refuses to
- * measure when Vite serves a story module older than its file (a missed watch
- * event leaves the old reader in place); restart the dev server then.
- *
- * Needs Playwright: `npm i -D playwright && npx playwright install chromium`.
  */
 
 import { existsSync, mkdirSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
@@ -74,12 +52,8 @@ const VARIANTS = [
 
 const PURITY_SCROLLTOPS = 40;
 const SCROLL_STEPS = 120;
-const FRAMING_INSET = 32; // storyFrame's zContain keeps a framed point this far inside the map box
+const FRAMING_INSET = 32;
 const BUDGET_MS = 8;
-
-// ---------------------------------------------------------------------------
-// The story the probe reads
-// ---------------------------------------------------------------------------
 
 const SENTENCES = [
   'We left before the light reached the valley floor, with frost still on the meadow grass.',
@@ -103,7 +77,6 @@ function prose(seed, paragraphs, sentencesEach) {
   ).join(' ')).join('\n\n');
 }
 
-/** Route fractions keep the layout meaningful for any route a directory brings. */
 function storySpec() {
   const section = (index, at, heading, extra = {}) => ({ at, heading, text: [prose(index, 2, 5), prose(index + 7, 3, 4)], ...extra });
   return {
@@ -115,18 +88,13 @@ function storySpec() {
       section(3, 0.32, 'Along the ridge', { media: { kind: 'picture', at: 0.37, size: [900, 1200], routePosition: true } }),
       section(4, 0.46, 'The refuge', { annotation: true }),
       section(5, 0.6, 'Over the pass', { media: { kind: 'picture', at: 0.64, size: [1600, 900], caption: 'Looking back at the pass' } }),
-      // A panorama first under its heading, its point 5 km off: framed while the heading rests at the near
-      // zoom, so check e fails without the media pull whatever the layout.
       section(6, 0.74, 'The long descent', { media: { kind: 'picture', at: 0.74, size: [2400, 600], offsetMeters: [4000, 3000], first: true } }),
       section(7, 0.88, 'The last kilometres'),
     ],
   };
 }
 
-// ---------------------------------------------------------------------------
-// In the page (serialized by addInitScript: nothing from this module's scope)
-// ---------------------------------------------------------------------------
-
+// page.addInitScript serializes this function, so it cannot reach anything in this module's scope.
 function installPageHelpers() {
   const webgl = new Set();
   const getContext = HTMLCanvasElement.prototype.getContext;
@@ -162,9 +130,6 @@ function installPageHelpers() {
       map.on(type, () => note(type, new Error().stack.split('\n').map((line) => line.trim()).find((line) => line.includes('/src/')) ?? ''));
     }
   };
-  // The editor re-fits the route when its aerial terrain plan lands, up to 15 s after the plan's inputs
-  // change (the plan aborts then and logs that too). Its dev build logs each landing; the snapshot waits
-  // for the landing after the last input change, so that re-fit is not blamed on the reader.
   let planAt = 0;
   let planInputsAt = 0;
   const debug = console.debug;
@@ -204,7 +169,6 @@ function installPageHelpers() {
   const wedgeLayer = () => scroller().nextElementSibling;
   const byUrl = (reference) => document.getElementById(/^url\(#(.+)\)$/.exec(reference ?? '')?.[1] ?? '');
   const pointsOf = (element) => element.getAttribute('points').trim().split(/\s+/).map((pair) => pair.split(',').map(Number));
-  /** The tint over the text column: the gradient the text part fills with, never the veil inside the map box. */
   const textGradient = (slot) => byUrl(slot.querySelector('[data-wedge-part="text"]').getAttribute('fill'));
 
   async function compiled() {
@@ -215,7 +179,6 @@ function installPageHelpers() {
     return compileStory(storyCompileInput(window.__trailreplay.getState()));
   }
 
-  // The layout rule restated from the DOM: beside a desktop map the band is the whole scroller height.
   function bandOf(scrollerBox, map) {
     const width = (box) => box.right - box.left;
     if (width(map) >= 0.9 * width(scrollerBox)) {
@@ -248,7 +211,6 @@ function installPageHelpers() {
     }
   }
 
-  /** The frame that belongs to this scrollTop: never a fixed delay, which software WebGL makes meaningless. */
   async function frameAt(target) {
     const element = scroller();
     element.scrollTop = target;
@@ -262,7 +224,7 @@ function installPageHelpers() {
     const element = scroller();
     const scrollerBox = rectOf(element);
     const map = rectOf(mapBox());
-    const figures = new Map([...element.querySelectorAll('figure[data-story-key]')].map((figure) => [figure.dataset.storyKey, figure]));
+    const mediaElements = new Map([...element.querySelectorAll('[data-story-media]')].map((media) => [media.dataset.storyMedia, media]));
     const { frame, track, project, ms } = last;
     return {
       scrollTop: frame.scrollTop,
@@ -277,9 +239,8 @@ function installPageHelpers() {
         point: item.point,
         strength: frame.media[index].strength,
         projected: item.point && project(item.point),
-        rect: figures.has(item.key) ? rectOf(figures.get(item.key)) : null,
+        rect: mediaElements.has(item.key) ? rectOf(mediaElements.get(item.key)) : null,
       })),
-      // One entry per slot: its text part and its map part are two clipped copies of one wedge.
       painted: [...wedgeLayer().querySelectorAll('[data-wedge-slot]')].map((group) => {
         if (group.getAttribute('visibility') !== 'visible') return null;
         const circle = group.querySelector('circle');
@@ -292,7 +253,6 @@ function installPageHelpers() {
         return {
           points: pointsOf(text),
           veil: pointsOf(mapPart.querySelector('polygon')),
-          edges: [...mapPart.querySelectorAll('polyline')].map(pointsOf),
           axes: [...group.querySelectorAll('linearGradient')].map((gradient) => ['x1', 'y1', 'x2', 'y2'].map((name) => Number(gradient.getAttribute(name)))),
           clip: {
             rule: textClip?.getAttribute('clip-rule') ?? null,
@@ -302,22 +262,20 @@ function installPageHelpers() {
           cx: Number(circle.getAttribute('cx')),
           cy: Number(circle.getAttribute('cy')),
           alpha: Number(stop.getAttribute('stop-opacity')),
-          // A filled dot shares the wedge colour; a hollow one (terrain hides the point) does not.
           hollow: circle.getAttribute('fill') !== stop.getAttribute('stop-color'),
         };
       }),
     };
   }
 
-  // Terrain tiles move a 3D projection between MapLibre renders; the wedges repaint on the next one.
   const settled = (reading) => reading.painted.every((painted) => !painted || reading.media.some((media) => (
     media.projected && Math.hypot(media.projected.x - painted.cx, media.projected.y - painted.cy) <= 1
   )));
 
   async function sample(target) {
     const last = await frameAt(target);
-    // A 3D projection moves by up to 20 px while terrain tiles (re)load at the camera, so it is read once they have.
-    if (last.frame.camera.pitch > 0 && last.tilesLoaded) {
+    // MapLibre projects at elevation 0 until a point's DEM tile loads, so a 3D projection shifts as tiles arrive.
+    if (last.frame.camera.pitch > 0) {
       await until(() => last.tilesLoaded(), 20_000, 'tiles').catch(() => {});
       await nextFrame();
       await nextFrame();
@@ -331,10 +289,6 @@ function installPageHelpers() {
     return reading;
   }
 
-  /**
-   * Where a key or gesture left the scroller. While the map loads, a key's scroll can start half a second
-   * late, so with `from` it first waits up to 10 s for the scroll to begin, then for it to stop.
-   */
   async function settleScroll(from) {
     const element = scroller();
     if (from !== undefined) await until(() => element.scrollTop !== from, 10_000, 'a scroll').catch(() => {});
@@ -405,7 +359,6 @@ function installPageHelpers() {
   window.__storyProbe = {
     trigger: null,
 
-    /** Builds the story through the store's own actions, as the Story tab would. */
     async buildStory(spec) {
       const state = () => window.__trailreplay.getState();
       const empty = await compiled();
@@ -468,10 +421,6 @@ function installPageHelpers() {
       };
     },
 
-    /**
-     * Editor state the reader must never touch. The editor re-fits the route a while after its inputs change
-     * (adding the story's photos is one), so it waits for its terrain plan and 3 s without an editor camera move.
-     */
     async isolation() {
       const bridge = window.__trailreplay;
       watchEditorMap(bridge.getMap());
@@ -509,8 +458,6 @@ function installPageHelpers() {
         return last && last.project(last.frame.head.lngLat);
       }, 120_000, 'the reader and its map');
       readerSeen = true;
-      // The reader's own scrollTop writes and image loads, read back after the key presses: a key that
-      // did not scroll is explained by them, not by the keyboard.
       const element = scroller();
       const { get, set } = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
       const opened = performance.now();
@@ -519,7 +466,6 @@ function installPageHelpers() {
         configurable: true,
         get() { return get.call(this); },
         set(value) {
-          // Same-value writes too: setting scrollTop at all ends a smooth keyboard scroll in progress.
           readerScroll.push(`wrote ${get.call(this).toFixed(2)} to ${Number(value).toFixed(2)} at ${Math.round(performance.now() - opened)} ms`);
           set.call(this, value);
         },
@@ -539,29 +485,21 @@ function installPageHelpers() {
 
     settleScroll,
 
-    /** An image load with nothing moved: the reader re-measures, and must leave scrollTop alone. */
     async remeasureInPlace() {
-      // The reader listens for load in the capture phase, so the cover stands in when the story has no photo.
       const target = scroller().querySelector('img') ?? scroller().querySelector('[data-story-key]');
       if (!target) return false;
       target.dispatchEvent(new Event('load'));
       for (let frame = 0; frame < 10; frame += 1) await nextFrame();
       return true;
     },
-    /** The reader's scroll writes, image loads and keys since the last call. */
     readerScroll: () => readerScroll.splice(0),
 
-    /**
-     * Every /src module the page imports from its entry, each against the same file fetched under a query Vite
-     * has not cached (it strips only 13-digit t= stamps): a module whose edit Vite's watcher missed still serves
-     * the old code at its own URL.
-     */
     async staleModules() {
+      // Vite strips only 13-digit t= stamps from a request URL, so this 10-digit one forces a fresh transform.
       const fresh = `t=${Math.floor(Date.now() / 1000)}`;
       // t= stamps and the dep optimizer's v= hash change without any source edit.
       const plain = (code) => code.replace(/[?&](?:t=\d+|v=[\da-f]+)/g, '').replace(/createHotContext\([^)]*\)/, '').replace(/\/\/# sourceMappingURL=\S+\s*$/, '');
       const text = (url) => fetch(url).then((response) => response.text());
-      // The first line that differs, or null.
       const differs = async (path) => {
         const [served, current] = [plain(await text(path)).split('\n'), plain(await text(`${path}?${fresh}`)).split('\n')];
         const line = served.findIndex((code, index) => code !== current[index]);
@@ -593,7 +531,6 @@ function installPageHelpers() {
 
     async warmUp() {
       const element = scroller();
-      // Each image or clip load re-measures the reader: wait for all of them before measuring.
       const media = [...element.querySelectorAll('img, video')];
       await Promise.all(media.map((item) => {
         const ready = item.tagName === 'IMG' ? item.complete : item.readyState >= 1;
@@ -614,8 +551,7 @@ function installPageHelpers() {
       const { track } = reader().last();
       const story = await compiled();
       return {
-        // From the compiled story, not the reader's steps, so a reader resting at the wrong travel fails h.
-        rests: [0, ...story.sections.map((section) => section.travelMeters), story.route.travel.totalDistance],
+        compiledRests: [0, ...story.sections.map((section) => section.travelMeters), story.route.travel.totalDistance],
         zNear: track.zNear,
         routeFitZoom: track.routeFitZoom,
         maxScroll: track.maxScroll,
@@ -695,7 +631,6 @@ function installPageHelpers() {
     scrollTop: () => scroller().scrollTop,
     viewportScale: () => visualViewport.scale,
 
-    /** The reading place 40% into a section's first block. */
     async placeIn(sectionIndex) {
       const element = scroller();
       const block = element.querySelectorAll('[data-story-head]')[sectionIndex].nextElementSibling.firstElementChild;
@@ -704,7 +639,6 @@ function installPageHelpers() {
       return last.frame.place;
     },
 
-    /** After a resize: a frame measured on the new layout, no longer moving. */
     async settledPlace() {
       let key = '';
       for (let still = 0, waited = 0; still < 10 && waited < 1200; waited += 1) {
@@ -734,7 +668,6 @@ function installPageHelpers() {
       }
       const playing = await until(() => !video.paused && video.currentTime > 0, 10_000, 'the clip to play').then(() => true, () => false);
       const { band } = bandOf(rectOf(element), rectOf(mapBox()));
-      // Scroll up until the clip is below the band.
       const last = await frameAt(element.scrollTop - (band.bottom - band.top) - (rect.bottom - rect.top));
       const index = last.track.media.findIndex((item) => item.key === key);
       return { present: true, playing, inBand: last.frame.media[index].inBand, paused: video.paused };
@@ -765,10 +698,6 @@ function installPageHelpers() {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Driving the page
-// ---------------------------------------------------------------------------
-
 function parseArgs(argv) {
   const args = { url: 'http://localhost:5173', headed: false };
   const rest = [];
@@ -786,7 +715,6 @@ function parseArgs(argv) {
   return args;
 }
 
-/** The routes in a directory and the recipe, if it brings one. */
 function collectFiles(dir) {
   const entries = readdirSync(dir).filter((name) => statSync(join(dir, name)).isFile());
   const recipes = entries.filter((name) => name.toLowerCase().endsWith('.json'));
@@ -806,19 +734,16 @@ async function launch(headed) {
   return chromium.launch({
     headless: !headed,
     args: [
-      // MapLibre needs WebGL, and a headless machine has no GPU. SwiftShader
-      // renders it in software: slower, but it is the same pixels.
+      // MapLibre needs WebGL and a headless machine has no GPU, so SwiftShader renders it in software.
       '--use-gl=angle',
       '--use-angle=swiftshader',
       '--enable-unsafe-swiftshader',
       '--disable-dev-shm-usage',
-      // Check j plays a clip from script, with no user gesture.
       '--autoplay-policy=no-user-gesture-required',
     ],
   });
 }
 
-/** A deterministic shuffle, so a failing order can be replayed. */
 function shuffled(items, seed) {
   let state = seed;
   const random = () => {
@@ -906,7 +831,7 @@ async function runVariant(page, variant, args) {
   raw.scrollSeconds = (Date.now() - started) / 1000;
   raw.colours = await helper('colours');
 
-  if (variant.device === 'phone') raw.phone = await phoneChecks(page, cdp, helper, raw.track.maxScroll);
+  if (variant.device === 'phone') raw.phone = await phoneChecks(cdp, helper, raw.track.maxScroll);
   raw.clip = await helper('clip');
   if (args.screenshots) raw.screenshots = await screenshots(page, helper, variant, raw, args.screenshots);
   if (variant.device === 'phone') raw.phone.pinch = await pinch(cdp, helper);
@@ -915,8 +840,6 @@ async function runVariant(page, variant, args) {
   raw.close = await helper('closed');
   raw.after = await helper('isolation');
 
-  // Its own opening: turning the phone resizes the editor map too, and the editor re-fits the route on a
-  // resize, which would read as the reader moving it.
   if (variant.device === 'phone') {
     await trigger.click();
     await helper('opened');
@@ -948,7 +871,7 @@ async function pressKey(page, helper, key, keys) {
   }
 }
 
-async function phoneChecks(page, cdp, helper, maxScroll) {
+async function phoneChecks(cdp, helper, maxScroll) {
   const result = { overflow: await helper('overflow'), swipes: {}, refused: {} };
   for (const where of ['text', 'map']) {
     const points = await helper('touchPoints', Math.round(maxScroll / 3));
@@ -959,7 +882,6 @@ async function phoneChecks(page, cdp, helper, maxScroll) {
       }), 60_000, `touch swipe on the ${where}`);
       result.swipes[where] = (await helper('settleScroll', before)) - before;
     } catch (error) {
-      // A map box that scrolled out of view cannot be touched: a failed check, not a failed probe.
       result.swipes[where] = 0;
       result.refused[where] = error.message.split('\n')[0];
     }
@@ -967,7 +889,6 @@ async function phoneChecks(page, cdp, helper, maxScroll) {
   return result;
 }
 
-/** 390x844 to 844x390 puts the reader in its two-column layout, and back. */
 async function rotation(page, helper) {
   const result = { before: await helper('placeIn', 2) };
   await page.setViewportSize({ width: 844, height: 390 });
@@ -977,7 +898,6 @@ async function rotation(page, helper) {
   return result;
 }
 
-/** Last on a phone: a pinch that does zoom the page would skew every later reading. */
 async function pinch(cdp, helper) {
   const { map } = await helper('touchPoints', 0);
   try {
@@ -1003,17 +923,13 @@ async function screenshots(page, helper, variant, raw, dir) {
   const paths = [];
   for (const [suffix, reading] of picks) {
     await helper('frameAt', reading.scrollTop);
-    await page.waitForTimeout(1500); // tiles, for the eye only: no measurement reads this picture
+    await page.waitForTimeout(1500);
     const path = join(dir, `${variant.name}${suffix}.png`);
     await page.screenshot({ path });
     paths.push(path);
   }
   return paths;
 }
-
-// ---------------------------------------------------------------------------
-// Verdicts
-// ---------------------------------------------------------------------------
 
 const check = (pass, summary, numbers = {}) => ({ pass, summary, ...numbers });
 const fixed = (value, digits = 1) => (Number.isFinite(value) ? value.toFixed(digits) : String(value));
@@ -1109,7 +1025,6 @@ function judge(variant, raw, story) {
   }
 
   const difference = firstDifference(raw.before.state, raw.after.state);
-  // Editor camera moves and resizes between the two snapshots, so a change names where it came from.
   const moves = raw.after.moves.slice(raw.before.moves.length);
   checks.i = check(
     difference === null,
@@ -1137,7 +1052,6 @@ function judge(variant, raw, story) {
     { keys, open: raw.open, close: raw.close, clip: raw.clip },
   );
 
-  // Only the text part can lie over body text; the veil is clipped to the map box.
   const { text, canvas, wedge, maxAlpha } = raw.colours;
   const painted = Math.max(0, ...readings.flatMap((reading) => reading.painted.map((entry) => entry?.alpha ?? 0)));
   const alpha = Math.max(maxAlpha, painted);
@@ -1158,10 +1072,6 @@ function judge(variant, raw, story) {
   };
   return { checks, budget };
 }
-
-// ---------------------------------------------------------------------------
-// Report
-// ---------------------------------------------------------------------------
 
 const NAMES = {
   a: 'purity', b: 'heading', c: 'head', d: 'wedges', e: 'framing', f: 'phone', g: 'rotation', h: 'reduced', i: 'isolation', j: 'keys', k: 'contrast',
@@ -1209,8 +1119,6 @@ async function main() {
   const variants = VARIANTS.filter((variant) => !args.only || args.only.includes(variant.name));
 
   const browser = await launch(args.headed);
-  // An uncaught exception is a defect. A failed tile is the network, and on a
-  // map that fetches hundreds of them it would drown everything else.
   const exceptions = [];
   const resourceErrors = new Map();
   const results = [];
@@ -1246,7 +1154,6 @@ async function main() {
           result = { name: variant.name, ...judge(variant, raw, story), raw };
         } catch (error) {
           result = { name: variant.name, error: error.message };
-          // A variant that died with the reader open would block the next one's Preview button.
           await page.keyboard.press('Escape').catch(() => {});
         }
         results.push(result);
@@ -1279,7 +1186,6 @@ async function main() {
   process.exitCode = failed.length > 0 || exceptions.length > 0 ? 1 : 0;
 }
 
-// Runs main only when argv[1] names this file (symlinks resolved); importing it from elsewhere runs nothing.
 if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   main().catch((error) => {
     console.error(error.message);

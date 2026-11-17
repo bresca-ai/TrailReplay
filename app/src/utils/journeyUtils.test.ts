@@ -186,7 +186,6 @@ describe('camera transitions', () => {
 
 describe('segment anchors on the distance profile', () => {
   const first = { ...trackWithTimes([0, 10, 20, 30]), id: 'first' };
-  // 0.01 degrees east of the first track with nothing in between, so the profile crosses a straight gap.
   const second = { ...first, id: 'second', points: first.points.map((p) => ({ ...p, lon: 6.01 })) };
   const trackSegment = (id: string, trackId: string): JourneySegment => ({ id, type: 'track', trackId, duration: 1000 });
 

@@ -55,8 +55,6 @@ describe('replay-file.md', () => {
     expect(doc).toContain('Fields to leave alone');
   });
 
-  // normalizeStory drops unknown keys and repairs bad values, so an example that
-  // comes back unchanged uses only real field names with values the app keeps.
   it('gives a story example the app reads back unchanged', () => {
     const section = doc.slice(doc.search(/^### [\d.]+ `story`$/m));
     const example = /```json\n([\s\S]*?)\n```/.exec(section)?.[1];

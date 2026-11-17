@@ -4,7 +4,7 @@ import type { CompiledBlock, CompiledMedia, CompiledStory } from '@/utils/story/
 import { formatDistance, formatElevation } from '@/utils/units';
 import { buildScrollTrack, scrollTopForPlace, storyFrameAt, type Box, type ScrollTrack, type StoryFrame, type TrackMeasure } from './storyFrame';
 import { createStoryMap, type StoryMap } from './storyMap';
-import { WEDGE_COLOR, WEDGE_LIGHT, wedgeTone, wedgesFor, type ProjectPoint, type Wedge } from './storyWedge';
+import { MAX_WEDGES, WEDGE_COLOR, WEDGE_LIGHT, wedgeVeil, wedgesFor, type ProjectPoint, type Wedge } from './storyWedge';
 
 /** Every user-visible string the reader shows; the caller translates them. */
 export interface StoryStrings {
@@ -16,23 +16,18 @@ export interface StoryStrings {
 export interface StoryDebugFrame { frame: StoryFrame; wedges: Wedge[]; track: ScrollTrack; ms: number; project: ProjectPoint; tilesLoaded: () => boolean }
 
 export interface StoryViewProps {
-  story: CompiledStory; // read once: the view never recompiles or subscribes
+  story: CompiledStory;
   strings: StoryStrings;
-  onExit?: () => void; // absent in a standalone viewer
-  onDebugFrame?: (debug: StoryDebugFrame) => void; // probe
+  onExit?: () => void;
+  onDebugFrame?: (debug: StoryDebugFrame) => void;
 }
 
-const WEDGE_SLOTS = [0, 1, 2]; // wedgesFor returns at most 3
+const WEDGE_SLOTS = Array.from({ length: MAX_WEDGES }, (_, slot) => slot);
 const WEDGE_FILL = `rgb(${WEDGE_COLOR.join(' ')})`;
-const DOT_RING = WEDGE_LIGHT; // as the map's head dot: the dark fill alone vanishes on dark imagery
+const DOT_RING = WEDGE_LIGHT;
 const LABEL = 'text-xs font-semibold uppercase tracking-[0.1em] text-[var(--evergreen-80)]';
 const BODY = 'text-base leading-relaxed text-[var(--evergreen-80)] whitespace-pre-line [overflow-wrap:anywhere]';
 
-/**
- * One scroll container (cover, sections, finish and a sticky map box), so wheel, touch and keys scroll natively;
- * one fixed wedge SVG above it. The map follows scrollTop through storyFrame's pure contract, with no React state
- * per frame.
- */
 export function StoryView({ story, strings, onExit, onDebugFrame }: StoryViewProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -45,7 +40,7 @@ export function StoryView({ story, strings, onExit, onDebugFrame }: StoryViewPro
   // The map starts outside render (resize, font and image callbacks): its failure is rethrown here for the boundary.
   const [failure, setFailure] = useState<Error | null>(null);
   const { layout, unitSystem } = story;
-  const tone = wedgeTone(story.look.mapStyle);
+  const veil = wedgeVeil(story.look.mapStyle);
 
   useEffect(() => { debugRef.current = onDebugFrame; }, [onDebugFrame]);
   useEffect(() => runReader({
@@ -127,13 +122,11 @@ export function StoryView({ story, strings, onExit, onDebugFrame }: StoryViewPro
                 {formatDistance(story.stats.distanceMeters, unitSystem)} · {formatElevation(story.stats.elevationGainMeters, unitSystem)}
               </p>
             </div>
-            {/* Half the band: at the end the finish has crossed the reading line yet still sits inside the band. */}
             <div aria-hidden="true" className="h-[calc(var(--story-band)/2)]" />
           </div>
         </div>
       </div>
 
-      {/* Cut at the map box: the bounded tint over text outside it, a veil and haloed edges in the basemap's contrast tone inside. */}
       <svg ref={wedgesRef} aria-hidden="true" data-story-wedges="" className="pointer-events-none fixed inset-0 z-10 h-full w-full">
         <defs>
           <clipPath id={`${wedgeId}-text`}><path clipRule="evenodd" /></clipPath>
@@ -147,15 +140,13 @@ export function StoryView({ story, strings, onExit, onDebugFrame }: StoryViewPro
                 <stop offset="1" stopColor={WEDGE_FILL} stopOpacity="0" />
               </linearGradient>
               <linearGradient id={`${wedgeId}-veil-${slot}`} gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor={tone.veil} stopOpacity="0" />
-                <stop offset="1" stopColor={tone.veil} stopOpacity="0" />
+                <stop offset="0" stopColor={veil} stopOpacity="0" />
+                <stop offset="1" stopColor={veil} stopOpacity="0" />
               </linearGradient>
             </defs>
             <polygon data-wedge-part="text" clipPath={`url(#${wedgeId}-text)`} fill={`url(#${wedgeId}-text-${slot})`} />
             <g data-wedge-part="map" clipPath={`url(#${wedgeId}-map)`}>
               <polygon fill={`url(#${wedgeId}-veil-${slot})`} />
-              <polyline data-wedge-edge="halo" fill="none" stroke={tone.halo} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
-              <polyline data-wedge-edge="line" fill="none" stroke={tone.edge} strokeWidth="1.25" strokeLinejoin="round" strokeLinecap="round" />
             </g>
             <circle r="5" />
           </g>
@@ -191,18 +182,17 @@ function StoryBlockView({ block, strings }: { block: CompiledBlock; strings: Sto
 function StoryMediaView({ itemKey, media, strings }: { itemKey: string; media: CompiledMedia; strings: StoryStrings }) {
   const [failed, setFailed] = useState(false);
   const label = media.caption || media.fileName;
-  const showFile = media.src !== null && !failed;
+  const src = failed ? null : media.src;
   return (
     <figure data-story-key={itemKey}>
-      {showFile && media.kind === 'video' && (
-        <video src={media.src!} aria-label={label} controls playsInline preload="metadata" onError={() => setFailed(true)} className="block w-full rounded-lg bg-black" />
+      {src !== null && media.kind === 'video' && (
+        <video data-story-media={itemKey} src={src} aria-label={label} controls playsInline preload="metadata" onError={() => setFailed(true)} className="block w-full rounded-lg bg-black" />
       )}
-      {showFile && media.kind === 'picture' && (
-        // Eager: a photo loading mid-read would grow its section and move the knots under the reader.
-        <img src={media.src!} alt={label} decoding="async" onError={() => setFailed(true)} className="block h-auto w-full rounded-lg" />
+      {src !== null && media.kind === 'picture' && (
+        <img data-story-media={itemKey} src={src} alt={label} decoding="async" onError={() => setFailed(true)} className="block h-auto w-full rounded-lg" />
       )}
-      {!showFile && (
-        <div className="flex aspect-[4/3] items-center justify-center rounded-lg border border-dashed border-[var(--evergreen)]/30 bg-[var(--evergreen)]/5 p-4 text-center text-sm text-[var(--evergreen-80)] [overflow-wrap:anywhere]">
+      {src === null && (
+        <div data-story-media={itemKey} className="flex aspect-[4/3] items-center justify-center rounded-lg border border-dashed border-[var(--evergreen)]/30 bg-[var(--evergreen)]/5 p-4 text-center text-sm text-[var(--evergreen-80)] [overflow-wrap:anywhere]">
           {strings.placeholder(media.fileName)}
         </div>
       )}
@@ -215,7 +205,6 @@ interface ReaderDom {
   scroller: HTMLElement; content: HTMLElement; mapBox: HTMLElement; map: HTMLElement; finish: HTMLElement; wedges: SVGSVGElement;
 }
 
-/** Wires measuring, the map and the frame loop to the rendered DOM; returns the teardown. */
 function runReader(
   dom: ReaderDom,
   story: CompiledStory,
@@ -230,7 +219,6 @@ function runReader(
     gradients: [...group.querySelectorAll('linearGradient')],
     stops: [...group.querySelectorAll('linearGradient')].map((gradient) => gradient.querySelectorAll('stop')),
     polygons: [...group.querySelectorAll('polygon')],
-    edges: [...group.querySelectorAll('polyline')],
     dot: group.querySelector('circle')!,
   }));
   let map: StoryMap | null = null;
@@ -241,7 +229,7 @@ function runReader(
   let disposed = false;
 
   const paintWedges = (wedges: Wedge[]) => {
-    slots.forEach(({ group, gradients, stops, polygons, edges, dot }, index) => {
+    slots.forEach(({ group, gradients, stops, polygons, dot }, index) => {
       const wedge = wedges[index];
       group.setAttribute('visibility', wedge ? 'visible' : 'hidden');
       if (!wedge) return;
@@ -253,10 +241,6 @@ function runReader(
       });
       const points = wedge.polygon.map((point) => point.join(',')).join(' ');
       for (const polygon of polygons) polygon.setAttribute('points', points);
-      const [base0, base1, apex] = wedge.polygon;
-      for (const edge of edges) edge.setAttribute('points', [base0, apex, base1].map((point) => point.join(',')).join(' '));
-      edges[0].setAttribute('opacity', String(wedge.edgeAlpha * 0.6));
-      edges[1].setAttribute('opacity', String(wedge.edgeAlpha));
       setAttributes(dot, {
         cx: wedge.apex[0],
         cy: wedge.apex[1],
@@ -343,7 +327,6 @@ function runReader(
   return stop;
 }
 
-/** The reconciliation's origin: a content y is rect.top + scrollTop; boxes and left/right are viewport px. */
 function measureReader({ scroller, content, mapBox, finish }: ReaderDom): TrackMeasure | null {
   const scrollerBox = boxOf(scroller);
   const mapBoxBox = boxOf(mapBox);
@@ -359,6 +342,10 @@ function measureReader({ scroller, content, mapBox, finish }: ReaderDom): TrackM
     contentHeight: scroller.scrollHeight,
     blocks: [...content.querySelectorAll<HTMLElement>('[data-story-key]')].map((element) => ({
       key: element.dataset.storyKey ?? '',
+      ...place(element),
+    })),
+    media: [...content.querySelectorAll<HTMLElement>('[data-story-media]')].map((element) => ({
+      key: element.dataset.storyMedia ?? '',
       ...place(element),
     })),
     sections: [...content.querySelectorAll('[data-story-head]')].map((element) => {

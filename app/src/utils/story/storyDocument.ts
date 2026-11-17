@@ -1,10 +1,7 @@
-// Store-free (ESLint no-restricted-imports), so a phase-2 viewer imports it unchanged.
-
-// Each enum lives once: normalizeStory, the Story tab's segmented controls and an i18n test map over these.
-export const STORY_VIEWS = ['2d', '3d'] as const; // 3D adds terrain and a fixed 55 degree tilt, north-up
-export const STORY_ZOOMS = ['near', 'medium', 'far'] as const; // place span across the map box: 2, 6, 18 km
-export const STORY_TEXT_SIDES = ['left', 'right'] as const; // desktop column of the text
-export const STORY_MOBILE_MAPS = ['top', 'bottom'] as const; // phones (< 768 px): sticky map box
+export const STORY_VIEWS = ['2d', '3d'] as const;
+export const STORY_ZOOMS = ['near', 'medium', 'far'] as const;
+export const STORY_TEXT_SIDES = ['left', 'right'] as const;
+export const STORY_MOBILE_MAPS = ['top', 'bottom'] as const;
 export const STORY_REF_KINDS = ['annotation', 'picture', 'video'] as const;
 
 export type StoryViewMode = (typeof STORY_VIEWS)[number];
@@ -14,7 +11,6 @@ export type StoryMobileMap = (typeof STORY_MOBILE_MAPS)[number];
 export type StoryRefKind = (typeof STORY_REF_KINDS)[number];
 export interface StoryLayout { view: StoryViewMode; zoom: StoryZoom; textSide: StoryTextSide; mobileMap: StoryMobileMap }
 
-/** Ids are unique only per kind, so a reference always carries its kind. */
 export interface StoryRef { kind: StoryRefKind; id: string }
 
 /**
@@ -38,18 +34,14 @@ export type StoryBlock =
   | { id: string; kind: 'media'; media: { kind: 'picture' | 'video'; id: string } };
 export interface StorySection { id: string; anchor: StoryAnchor; heading: string; blocks: StoryBlock[] }
 
-/** `AppState.story` and `ReplayProjectFile.story?`: one owner (the slice), one normalizer, one doc section. */
 export interface StoryDocument { title: string; intro: string; layout: StoryLayout; sections: StorySection[] }
 
-/** Shared by normalizeStory, applyStoryEdit and the inputs' `maxLength`. `intro` uses `text`. */
 export const STORY_LIMITS = { title: 200, heading: 200, text: 20_000, sections: 200, blocksPerSection: 100 } as const;
 
-/** Title and intro '', layout { view '2d', zoom 'medium', textSide 'left', mobileMap 'top' }, no sections. */
 export function createDefaultStory(): StoryDocument {
   return { title: '', intro: '', layout: { view: '2d', zoom: 'medium', textSide: 'left', mobileMap: 'top' }, sections: [] };
 }
 
-/** `base` with each key of `raw` taken only when its value is in that key's enum; shared with setLayout. */
 export function mergeStoryLayout(base: StoryLayout, raw: unknown): StoryLayout {
   const source = isRecord(raw) ? raw : {};
   const pick = <K extends keyof StoryLayout>(key: K, options: readonly StoryLayout[K][]) => (
@@ -75,7 +67,6 @@ export function normalizeStory(raw: unknown): StoryDocument {
     layout: mergeStoryLayout(story.layout, raw.layout),
     sections: withUniqueIds(sections.map((value) => ({
       id: isId(value.id) ? value.id : '',
-      // A bad anchor parks the section at the start instead of dropping its text.
       anchor: normalizeAnchor(value.anchor),
       heading: cappedString(value.heading, STORY_LIMITS.heading),
       blocks: normalizeBlocks(value.blocks),
@@ -83,7 +74,6 @@ export function normalizeStory(raw: unknown): StoryDocument {
   };
 }
 
-/** Saving would lose something (title, intro or a section): feeds `hasUnsavedProjectContent` and Save. */
 export function hasStoryContent(story: StoryDocument): boolean {
   return story.title !== '' || story.intro !== '' || story.sections.length > 0;
 }
@@ -114,7 +104,6 @@ function normalizeBlocks(raw: unknown): StoryBlock[] {
   return withUniqueIds(blocks.slice(0, STORY_LIMITS.blocksPerSection), 'block');
 }
 
-/** An empty id becomes `${prefix}-${index + 1}` and a repeat gets `-2`, `-3`...: deterministic, so idempotent. */
 function withUniqueIds<T extends { id: string }>(items: T[], prefix: string): T[] {
   const taken = new Set<string>();
   return items.map((item, index) => {

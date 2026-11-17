@@ -12,7 +12,6 @@ const SOURCES: Source[] = ['annotation', 'picture', 'video', 'distance'];
 const METERS_PER_UNIT = { metric: 1000, imperial: 1609.344 } as const;
 export type StoryPrefill = { heading: string; text: string };
 
-// The group clips its buttons to its rounded border, so the focus outline is drawn inside the button.
 export const SEGMENT = 'min-h-9 min-w-0 flex-1 px-1 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--trail-orange)]';
 const FIELD = 'w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]';
 
@@ -25,7 +24,6 @@ function itemLabel(input: StoryCompileInput, ref: StoryRef, language: LanguageCo
   return item ? item.title || item.originalFileName || item.id : null;
 }
 
-/** Kind, item and the place in the reader's unit, as one line. */
 export function StoryAnchorSummary({ anchor, routeMeters, input }: { anchor: StoryAnchor; routeMeters: number; input: StoryCompileInput }) {
   const { t, language } = useI18n();
   const label = anchor.ref && (itemLabel(input, anchor.ref, language) ?? t('story.section.missingItem'));
@@ -36,10 +34,6 @@ export function StoryAnchorSummary({ anchor, routeMeters, input }: { anchor: Sto
   );
 }
 
-/**
- * Chooses where a section sits: an annotation, a photo, a clip or a typed distance. Places come from
- * resolveRoutePlace, the compile chain, so the captured fallback matches what the reader shows.
- */
 export function StoryAnchorPicker({ input, totalMeters, actionLabel, onPick, onCancel }: {
   input: StoryCompileInput; totalMeters: number; actionLabel: string;
   onPick: (anchor: StoryAnchor, prefill?: StoryPrefill) => void; onCancel: () => void;
@@ -58,7 +52,6 @@ export function StoryAnchorPicker({ input, totalMeters, actionLabel, onPick, onC
     }), [input, language, source]);
 
   const typedMeters = distance.trim() === '' ? NaN : Number(distance.replace(',', '.')) * METERS_PER_UNIT[unitSystem];
-  // The limit shown is rounded; the place itself is clamped to the route by resolveRoutePlace.
   const typedPlace = typedMeters >= 0 && typedMeters <= totalMeters + 0.05 * METERS_PER_UNIT[unitSystem]
     ? resolveRoutePlace(input, { routeMeters: typedMeters })
     : null;

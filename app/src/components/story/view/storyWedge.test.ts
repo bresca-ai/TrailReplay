@@ -4,7 +4,7 @@ import { compileStory } from '@/utils/story/compileStory';
 import type { StoryBlock } from '@/utils/story/storyDocument';
 import { km, media, northbound, settings, story } from '@/utils/story/storyTestFixtures';
 import { buildScrollTrack, storyFrameAt, type Box, type LngLat } from './storyFrame';
-import { WEDGE_COLOR, WEDGE_MAX_ALPHA, WEDGE_VEIL_ALPHA, wedgeGeometry, wedgesFor, type Wedge } from './storyWedge';
+import { WEDGE_COLOR, WEDGE_LIGHT, WEDGE_MAX_ALPHA, WEDGE_VEIL_ALPHA, wedgeGeometry, wedgesFor, type Wedge } from './storyWedge';
 
 const desktop = {
   map: { top: 0, bottom: 800, left: 640, right: 1280 },
@@ -28,7 +28,6 @@ describe('wedgeGeometry', () => {
       baseMid: [600, 320],
       alpha: WEDGE_MAX_ALPHA,
       veilAlpha: WEDGE_VEIL_ALPHA,
-      edgeAlpha: 1,
       dotAlpha: 1,
       hollow: false,
     });
@@ -78,13 +77,12 @@ describe('wedgeGeometry', () => {
     const halfway = rightOfText(at(1280 - 8 - 12, 400));
     expect(halfway?.alpha).toBeCloseTo(WEDGE_MAX_ALPHA * 0.5, 12);
     expect(halfway?.veilAlpha).toBeCloseTo(WEDGE_VEIL_ALPHA * 0.5, 12);
-    expect(halfway?.edgeAlpha).toBeCloseTo(0.5, 12);
     expect(halfway?.dotAlpha).toBeCloseTo(0.5, 12);
     for (const edge of [at(640 + 8 + 12, 400), at(960, 8 + 12), at(960, 800 - 8 - 12)]) {
       expect(rightOfText(edge)?.alpha, `${edge.x}, ${edge.y}`).toBeCloseTo(WEDGE_MAX_ALPHA * 0.5, 12);
     }
     expect(rightOfText(at(1280 - 8 - 12, 400), 0.5)).toMatchObject({
-      alpha: expect.closeTo(WEDGE_MAX_ALPHA * 0.25, 12), veilAlpha: expect.closeTo(WEDGE_VEIL_ALPHA * 0.25, 12), edgeAlpha: 0.25,
+      alpha: expect.closeTo(WEDGE_MAX_ALPHA * 0.25, 12), veilAlpha: expect.closeTo(WEDGE_VEIL_ALPHA * 0.25, 12),
     });
     expect(rightOfText(at(1280 - 8 - 24, 400))?.alpha).toBe(WEDGE_MAX_ALPHA);
   });
@@ -93,7 +91,6 @@ describe('wedgeGeometry', () => {
     const hidden = rightOfText(at(960, 400, true));
     expect(hidden?.alpha).toBeCloseTo(WEDGE_MAX_ALPHA * 0.4, 12);
     expect(hidden?.veilAlpha).toBeCloseTo(WEDGE_VEIL_ALPHA * 0.4, 12);
-    expect(hidden?.edgeAlpha).toBeCloseTo(0.4, 12);
     expect(hidden?.dotAlpha).toBe(1);
     expect(hidden?.hollow).toBe(true);
   });
@@ -110,7 +107,6 @@ describe('wedgeGeometry', () => {
             expect(wedge.alpha).toBeGreaterThan(0);
             expect(wedge.alpha).toBeLessThanOrEqual(WEDGE_MAX_ALPHA);
             expect(wedge.veilAlpha).toBeLessThanOrEqual(WEDGE_VEIL_ALPHA);
-            expect(wedge.edgeAlpha).toBeLessThanOrEqual(1);
           }
         }
       }
@@ -128,25 +124,27 @@ describe('wedgesFor', () => {
     tracks: [day],
     journeySegments: [{ id: 'day', type: 'track', trackId: day.id, duration: 1 }],
     textAnnotations: [],
-    // 'lost' has no lat/lon and no route anchor: no point, so no wedge.
     pictures: keys.map((id, index) => (id === 'lost' ? media(id) : media(id, { lat: 45 + index * 0.001, lon: 6 }))),
     videos: [],
     journeyName: 'Day',
     settings,
   })!;
-  const trackFor = (scroller: Box, map: Box, column: { left: number; right: number }) => buildScrollTrack(compiled, {
-    scroller,
-    map,
-    contentHeight: 3_000,
-    blocks: keys.map((_, index) => ({ key: `section-0-${index}`, top: 1_000 + index * 120, height: 120, ...column })),
-    sections: [{ headTop: 900, headBottom: 960 }],
-    finishTop: 1_700,
-  });
+  const trackFor = (scroller: Box, map: Box, column: { left: number; right: number }) => {
+    const boxes = keys.map((_, index) => ({ key: `section-0-${index}`, top: 1_000 + index * 120, height: 120, ...column }));
+    return buildScrollTrack(compiled, {
+      scroller,
+      map,
+      contentHeight: 3_000,
+      blocks: boxes,
+      media: boxes,
+      sections: [{ headTop: 900, headBottom: 960 }],
+      finishTop: 1_700,
+    });
+  };
   const desktopScroller = { top: 0, bottom: 800, left: 0, right: 1280 };
   const phoneScroller = { top: 0, bottom: 844, left: 0, right: 390 };
   const phoneColumn = { left: 16, right: 374 };
   const track = trackFor(desktopScroller, desktop.map, { left: 40, right: 600 });
-  // The line at content y 1400: c is 20 px away, then lost, d, b and a.
   const frame = storyFrameAt(compiled, track, 1_000, false);
   const keyOf = (id: string) => `section-0-${keys.indexOf(id)}`;
   const pointOf = (id: string) => track.media.find((item) => item.key === keyOf(id))!.point!;
@@ -157,7 +155,6 @@ describe('wedgesFor', () => {
     expect(wedges.map((wedge) => wedge.key)).toEqual(['c', 'd', 'b'].map(keyOf));
     expect(wedges[0].alpha).toBeGreaterThan(wedges[1].alpha);
     expect(wedges[1].alpha).toBeGreaterThan(wedges[2].alpha);
-    // c's content box (1360 to 1480) seen at scrollTop 1000.
     expect(wedges[0].polygon).toEqual([[600, 360], [600, 480], [960, 400]]);
   });
 
@@ -173,12 +170,10 @@ describe('wedgesFor', () => {
     expect(polygonOf(wedgesFor(mapLeft, storyFrameAt(compiled, mapLeft, 1_000, false), () => at(320, 400)), 'c'))
       .toEqual([[680, 360], [680, 480], [320, 400]]);
 
-    // c's content box (1360 to 1480) at scrollTop 1060 sits at 300 to 420, partly under the map box.
     const mapTop = trackFor(phoneScroller, phoneTop.map, phoneColumn);
     expect(polygonOf(wedgesFor(mapTop, storyFrameAt(compiled, mapTop, 1_060, false), () => at(195, 190)), 'c'))
       .toEqual([[16, 380], [374, 380], [195, 190]]);
 
-    // At scrollTop 960 it sits at 400 to 520, its foot under the map box.
     const mapBottom = trackFor(phoneScroller, phoneBottom.map, phoneColumn);
     expect(polygonOf(wedgesFor(mapBottom, storyFrameAt(compiled, mapBottom, 960, false), () => at(195, 654)), 'c'))
       .toEqual([[16, 464], [374, 464], [195, 654]]);
@@ -193,6 +188,14 @@ describe('WEDGE_MAX_ALPHA', () => {
 
     const ground = over([...WEDGE_COLOR], WEDGE_MAX_ALPHA, canvas.rgb);
     expect(contrast(over(body.rgb, body.alpha, ground), ground)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe('wedge colours', () => {
+  it('are the --evergreen and --canvas design tokens', () => {
+    const css = readFileSync('src/index.css', 'utf8');
+    expect(parseColor(token(css, 'evergreen')).rgb).toEqual([...WEDGE_COLOR]);
+    expect(parseColor(token(css, 'canvas')).rgb).toEqual(parseColor(WEDGE_LIGHT).rgb);
   });
 });
 
