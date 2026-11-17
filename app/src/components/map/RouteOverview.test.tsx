@@ -32,6 +32,7 @@ it('draws each route in its own color, and only the current route in per-route m
   expect(colors).toContain('rgb(255, 140, 140)');
   expect(colors).toContain('rgb(140, 140, 255)');
   expect(colors).toContain('rgb(140, 255, 140)');
+  expect(colors.indexOf('rgb(184, 0, 0)')).toBeGreaterThan(colors.indexOf('rgb(140, 140, 255)'));
   expect(colors.at(-2)).toBe('rgb(0, 0, 184)');
   const geometry = buildRouteOverviewGeometry([[1, 1], [2, 2], [3, 3], [4, 4], [3.1, 3], [4.1, 4]], 200, 144)!;
   const initial = geometry.project(3.5, 3.5);

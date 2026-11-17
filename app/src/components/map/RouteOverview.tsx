@@ -103,11 +103,15 @@ export function RouteOverview({ containerSize, frame }: Props) {
       const colors = routeOverviewColors(route.color);
       ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 5; ctx.stroke();
       ctx.strokeStyle = colors.remaining; ctx.lineWidth = 2.5; ctx.stroke();
+    }
+    // Draw all completed sections above every untraveled route, with the
+    // active route last. Its future path must not cover an earlier journey.
+    for (const route of routes) {
       const completed = projectRouteOverviewProgress(route.completed, geometry.project);
       if (completed.length > 1) {
         ctx.beginPath();
         completed.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
-        ctx.strokeStyle = colors.completed; ctx.lineWidth = 3; ctx.stroke();
+        ctx.strokeStyle = routeOverviewColors(route.color).completed; ctx.lineWidth = 3; ctx.stroke();
       }
     }
     if (currentPosition && Number.isFinite(currentPosition.lon) && Number.isFinite(currentPosition.lat)) {
