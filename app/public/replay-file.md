@@ -159,7 +159,7 @@ detail line, and `description` is the longer readable text. Keep those as
 separate JSON fields; the `·` within `meta` or `description` is ordinary text.
 `logo` is the field note's symbol, drawn on the map and in the panel. It takes
 one of the built-in trail glyphs as `map:<glyph>` (`pin`, `summit`, `viewpoint`,
-`waypoint`, `town`, `shelter`, `camp`, `water`, `waterfall`), any icon from
+`waypoint`, `town`, `shelter`, `camp`, `water`, `waterfall`, `aid-station`), any icon from
 [Pinhead](https://pinhead.ink) as `pinhead:<icon id>` (the id is the name shown
 on pinhead.ink, such as `water_tap` or `mountain`), or an emoji. The default is
 `map:pin`. `holdDuration` is additional replay
@@ -393,9 +393,10 @@ visible), `title`, `type`, `source` (use `"user"`). Optional: `display`
 `longest-climb` `major-descent` `halfway`
 
 **`icon`** (overrides the type's glyph) — `pin` `summit` `viewpoint` `waypoint`
-`town` `shelter` `camp` `water` `waterfall`. You can also use a searchable
-Pinhead icon such as `pinhead:bicycle` or an emoji such as `emoji:🏕️`. An aid
-station defaults to `town`; `water` usually reads better.
+`town` `shelter` `camp` `water` `waterfall` `aid-station`. You can also use a
+searchable Pinhead icon such as `pinhead:bicycle` or an emoji such as
+`emoji:🏕️`. An aid station defaults to `town`; `aid-station` usually reads
+better.
 
 **Palette** — `#E86F51` `#F7F2E8` `#6D7E96` `#3C9DCC` `#63C5D9` `#B85E3C`
 `#3E9DB0` `#536B65`. Any hex works.
