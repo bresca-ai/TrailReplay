@@ -506,8 +506,7 @@ export function CinematicCameraEditor() {
         </ul>
       </Foldable>
 
-      <div className="flex items-start gap-2 sm:gap-3">
-        <div className="min-w-0 flex-[0_0_42%]">
+      <div className="flex justify-center">
         <CinematicOrbitBall
           bearingDeg={!isComposing && cameraPosition ? cameraPosition.bearing : draftPose.bearingDeg}
           pitchDeg={!isComposing && cameraPosition ? cameraPosition.pitch : draftPose.pitchDeg}
@@ -516,10 +515,11 @@ export function CinematicCameraEditor() {
             if (isComposing) setDraftPose((current) => ({ ...current, ...next }));
           }}
         />
-        </div>
-        <div className="min-w-0 flex-1 rounded-xl border border-[var(--evergreen)]/10 bg-[var(--canvas)] p-2.5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--evergreen-60)]">{t('settings.cinematicCamera.keyboardTitle')}</p>
-          <div className="mt-2 space-y-2">
+      </div>
+
+      <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--canvas)] p-2.5">
+        <Foldable headerTranslationKey="keyboardTitle">
+          <div className="mt-3 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
             {[
               { keys: [t('settings.cinematicCamera.keySpace')], label: t('settings.cinematicCamera.keyboardPause') },
               { keys: ['A', 'D'], label: t('settings.cinematicCamera.keyboardTurn') },
@@ -536,7 +536,7 @@ export function CinematicCameraEditor() {
             ))}
           </div>
           <p className="mt-2.5 border-t border-[var(--evergreen)]/10 pt-2 text-[10px] leading-relaxed text-[var(--evergreen-60)]">{t('settings.cinematicCamera.keyboardHint')}</p>
-        </div>
+        </Foldable>
       </div>
 
       <div className="rounded-lg border border-[var(--evergreen)]/15 bg-[var(--canvas)] p-2.5">

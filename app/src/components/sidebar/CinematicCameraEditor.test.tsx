@@ -36,8 +36,9 @@ it('uses the terrain-aware flight when seeking after pause', async () => {
 });
 afterEach(() => { cleanup(); mapGlobalRef.current = null; });
 
-it('shows the keyboard shortcuts beside the camera control and explains both direction modes', () => {
-  const { container, getByText } = render(<CinematicCameraEditor />);
+it('offers an expandable keyboard guide and explains both direction modes', () => {
+  const { container, getByText, getByRole } = render(<CinematicCameraEditor />);
+  fireEvent.click(getByRole('button', { name: 'Keyboard controls' }));
   expect(Array.from(container.querySelectorAll('kbd')).map((key) => key.textContent))
     .toEqual(['Space', 'A', 'D', 'W', 'S', 'R', 'F', 'Enter']);
   expect(getByText(/stays behind as the route bends/i)).toBeTruthy();
