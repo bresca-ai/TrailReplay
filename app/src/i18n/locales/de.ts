@@ -790,6 +790,7 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
     videoPlacedManuallyBadge: 'Von Hand platziert',
   },
   export: {
+    resultSettingsLocked: "Diese Einstellungen gelten für das fertige Video. Wähle Neuer Export, um sie zu ändern und erneut zu rendern.",
     studioNeedsMp4: 'Studio-Rendering erfordert MP4.',
     resolution: 'Auflösung', estimatedSize: 'Geschätzte Größe', selectedEncodingUnsupported: 'Dieser Browser kann die gewählte Auflösung und Bildrate im Studio-Modus nicht kodieren. Wähle eine niedrigere Auflösung oder Bildrate.',
     saveProjectTitle: 'Projekt speichern',

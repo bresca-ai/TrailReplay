@@ -790,6 +790,7 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     videoPlacedManuallyBadge: 'Col·locat a mà',
   },
   export: {
+    resultSettingsLocked: "Aquests ajustos corresponen al vídeo acabat. Tria Nova exportació per canviar-los i tornar-lo a generar.",
     studioNeedsMp4: 'La renderització Estudi requereix MP4.',
     resolution: 'Resolució', estimatedSize: 'Mida aprox.', selectedEncodingUnsupported: 'Aquest navegador no pot codificar la resolució i els fotogrames per segon seleccionats en mode Estudi. Prova una resolució o una freqüència més baixes.',
     saveProjectTitle: 'Desa el teu projecte',

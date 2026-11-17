@@ -1,4 +1,4 @@
-import { assertExportCanvasUsable } from './exportCanvasResolution';
+import { assertExportCanvasUsable, assertRecordingCanvasResolution } from './exportCanvasResolution';
 import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
 import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -378,6 +378,10 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   }, []);
 
   const captureFrame = useCallback(() => {
+    if (recordingCanvasRef.current) {
+      assertRecordingCanvasResolution(recordingCanvasRef.current, videoExportSettings.resolution);
+      assertRecordingCanvasResolution(recordingCanvasRef.current, useAppStore.getState().videoExportSettings.resolution);
+    }
     const coverStartedAt = coverFrameStartTimeRef.current;
     if (
       videoExportSettings.includeCover

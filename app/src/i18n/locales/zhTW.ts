@@ -277,6 +277,7 @@ export const zhTW = {
     manualPlacementQueuedSingleVideo: '1 段影片無法自動定位，請點選地圖以放置。', manualPlacementQueuedMultipleVideo: '{count} 段影片無法自動定位，請依序點選地圖以放置。', manualPlacementCountVideo: '第 {current}／{total} 段影片', manualPlacementSkipVideo: '略過影片', manualPlacementNoRouteVideo: '尚無可用來定位這段影片的路線。', videoPlacedManuallyBadge: '已手動定位',
   },
   export: {
+    resultSettingsLocked: "這些設定適用於已完成的影片。選擇「重新匯出」後可更改設定並重新產生影片。",
     studioNeedsMp4: '工作室轉譯需要 MP4。',
     resolution: '解析度', estimatedSize: '預估大小', selectedEncodingUnsupported: '此瀏覽器無法在精細模式下編碼所選的解析度與影格率。請嘗試較低的解析度或影格率。',
     saveProjectTitle: '儲存專案', saveProjectBody: '下載包含路線、旅程與設定的 .replay 檔案，日後可接續編輯。', projectNameLabel: '專案名稱', projectNamePlaceholder: '我的旅程', generateVideo: '製作影片',

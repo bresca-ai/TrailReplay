@@ -790,6 +790,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     videoPlacedManuallyBadge: 'Colocado a mano',
   },
   export: {
+    resultSettingsLocked: "Estos ajustes corresponden al vídeo terminado. Elige Nueva exportación para cambiarlos y volver a generarlo.",
     studioNeedsMp4: 'La renderización Estudio requiere MP4.',
     resolution: 'Resolución', estimatedSize: 'Tamaño aprox.', selectedEncodingUnsupported: 'Este navegador no puede codificar la resolución y los fotogramas por segundo seleccionados en modo Estudio. Prueba una resolución o frecuencia menores.',
     saveProjectTitle: 'Guarda tu proyecto',

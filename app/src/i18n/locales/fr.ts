@@ -790,6 +790,7 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
     videoPlacedManuallyBadge: 'Placé à la main',
   },
   export: {
+    resultSettingsLocked: "Ces réglages correspondent à la vidéo terminée. Choisissez Nouvelle exportation pour les modifier et la générer à nouveau.",
     studioNeedsMp4: 'Le rendu Studio nécessite le format MP4.',
     resolution: 'Résolution', estimatedSize: 'Taille estimée', selectedEncodingUnsupported: 'Ce navigateur ne peut pas encoder la résolution et la fréquence sélectionnées en mode Studio. Essayez une résolution ou une fréquence inférieure.',
     saveProjectTitle: 'Enregistrez votre projet',

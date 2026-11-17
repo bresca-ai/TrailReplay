@@ -66,6 +66,7 @@ export function ExportPanel() {
     exportProgress,
     exportStage,
     exportedBlob,
+    exportedVideoSettings,
     handleCancelExport,
     handleDownload,
     handleStartExport,
@@ -193,12 +194,13 @@ export function ExportPanel() {
       ) : (
         <>
           <VideoSettingsInline
-            settings={videoExportSettings} onChange={setVideoExportSettings} disabled={isExporting}
+            settings={exportedBlob && exportedVideoSettings ? exportedVideoSettings : videoExportSettings} onChange={setVideoExportSettings} disabled={isExporting || !!exportedBlob}
             mp4Supported={mp4Supported} studioSupported={studioSupported} estimatedSize={estimatedSize}
             durationSeconds={Math.round(estimatedDurationMs / 1000)} studioDeliveryEmail={studioDeliveryEmail}
             onStudioDeliveryEmailChange={setStudioDeliveryEmail} marketingConsent={marketingConsent} consentDefaultsLoaded={consentDefaultsLoaded}
             onMarketingConsentChange={(checked) => { consentTouchedRef.current = true; setMarketingConsent(checked); }} t={t}
           />
+          {exportedBlob && !isExporting && <p className="text-xs text-[var(--evergreen-60)]">{t('export.resultSettingsLocked')}</p>}
 
           {(!exportedBlob || videoExportSettings.includeCover) && (
             <div className="rounded-xl border border-[var(--evergreen)]/15 bg-[var(--evergreen)]/[0.03] p-3 text-[var(--evergreen)]">

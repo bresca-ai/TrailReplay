@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { assertExportCanvasUsable, setExportCanvasResolution } from './exportCanvasResolution';
+import { assertExportCanvasUsable, assertRecordingCanvasResolution, setExportCanvasResolution } from './exportCanvasResolution';
 
 function makeMap(width: number, height: number, maxRatio = Infinity) {
   const canvas = { clientWidth: width, clientHeight: height, width: width * 2, height: height * 2 };
@@ -12,6 +12,11 @@ function makeMap(width: number, height: number, maxRatio = Infinity) {
 }
 
 describe('export canvas resolution', () => {
+  it('rejects a landscape recording canvas when portrait output was selected', () => {
+    const canvas = { width: 1920, height: 1080 } as HTMLCanvasElement;
+    expect(() => assertRecordingCanvasResolution(canvas, { width: 810, height: 1440 })).toThrow('expected 810×1440, got 1920×1080');
+    expect(() => assertRecordingCanvasResolution(canvas, { width: 1920, height: 1080 })).not.toThrow();
+  });
   it.each([[600, 400], [1200, 800]])('renders the 4K portrait crop at native resolution with a %sx%s preview', (width, height) => {
     const { canvas, map, setPixelRatio } = makeMap(width, height);
     const restore = setExportCanvasResolution(map, { width: 3072, height: 3840 });

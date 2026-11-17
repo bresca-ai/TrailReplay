@@ -9,12 +9,17 @@ import { ExportPanel } from '../ExportPanel';
 import { useSocialShareExport } from './useSocialShareExport';
 import { captureSocialMap } from './captureSocialMap';
 import { renderSocialPoster } from './socialShareRenderer';
+import { createDefaultVideoExportSettings } from '@/store/defaults';
+
+const recorderMock = vi.hoisted(() => ({ blob: null as Blob | null, exportedSettings: null as import('@/types').VideoExportSettings | null }));
 
 vi.mock('@/hooks/useProjectFile', () => ({ useProjectFile: () => ({ saveProject: vi.fn(), isSaving: false }) }));
 vi.mock('./ExportSettingsModal', () => ({ ExportSettingsModal: () => null }));
 vi.mock('./useVideoExportRecorder', () => ({ useVideoExportRecorder: () => ({
-  actualFormat: 'webm', estimatedSize: 1, exportProgress: 0, exportStage: '', exportedBlob: null,
-  isExporting: false, studioDeliveryStatus: 'idle',
+  actualFormat: 'webm', estimatedSize: 1, exportProgress: 0, exportStage: '', exportedBlob: recorderMock.blob,
+  exportedVideoSettings: recorderMock.exportedSettings,
+  resetExportResult: () => { recorderMock.blob = null; recorderMock.exportedSettings = null; },
+  isExporting: false, studioDeliveryStatus: recorderMock.blob ? 'failed' : 'idle',
 }) }));
 vi.mock('./captureSocialMap', () => ({ captureSocialMap: vi.fn(async () => document.createElement('canvas')) }));
 vi.mock('./socialShareRenderer', async (original) => ({
@@ -33,6 +38,8 @@ vi.mock('./socialShareMedia', async (original) => ({
 const initial = useAppStore.getState();
 beforeEach(() => {
   vi.clearAllMocks();
+  recorderMock.blob = null;
+  recorderMock.exportedSettings = null;
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
   useAppStore.setState(initial, true);
   useAppStore.getState().setSettings({ language: 'en' });
@@ -48,6 +55,20 @@ beforeEach(() => {
     getPitch: () => 75, getBearing: () => 20,
     getCanvas: () => ({ width: 1200, height: 800 }), jumpTo: vi.fn(),
   } as unknown as MapLibreMap;
+});
+
+it('shows the finished video settings and keeps them locked until starting a new export', () => {
+  recorderMock.blob = new Blob(['video'], { type: 'video/mp4' });
+  recorderMock.exportedSettings = createDefaultVideoExportSettings();
+  useAppStore.getState().setVideoExportSettings({ aspectRatio: '9:16', resolution: { width: 810, height: 1440 } });
+  const { rerender } = render(createElement(ExportPanel));
+  expect(screen.getByRole('button', { name: '16:9' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: '9:16' })).toBeDisabled();
+  expect(screen.getByText(/settings describe the finished video/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'New Export' }));
+  rerender(createElement(ExportPanel));
+  expect(screen.getByRole('button', { name: '9:16' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: '9:16' })).toBeEnabled();
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); mapGlobalRef.current = null; useAppStore.setState(initial, true); });
 

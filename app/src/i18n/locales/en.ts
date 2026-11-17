@@ -801,6 +801,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     videoPlacedManuallyBadge: 'Placed by hand',
   },
   export: {
+    resultSettingsLocked: "These settings describe the finished video. Choose New Export to change them and render again.",
     studioNeedsMp4: 'Studio rendering requires MP4.',
     resolution: 'Resolution', estimatedSize: 'Est. size', selectedEncodingUnsupported: 'This browser cannot encode the selected resolution and frame rate in Studio mode. Try a lower resolution or frame rate.',
     saveProjectTitle: 'Save your project',

@@ -33,6 +33,22 @@ beforeEach(() => {
 });
 afterEach(() => { document.body.replaceChildren(); mapGlobalRef.current = null; });
 
+it('crops the landscape map into the selected 9:16 output', () => {
+  const container = document.getElementById('map-capture-container')!;
+  container.getBoundingClientRect = () => new DOMRect(0, 0, 1600, 900);
+  const canvas = mapGlobalRef.current!.getCanvas();
+  canvas.width = 1600; canvas.height = 900;
+  const { context, options } = frameOptions();
+  options.videoExportSettings = { ...options.videoExportSettings, aspectRatio: '9:16', resolution: { width: 810, height: 1440 } };
+  drawExportFrame(options);
+  const [, x, y, width, height, destX, destY, destWidth, destHeight] = context.drawImage.mock.calls[0];
+  expect(x).toBeCloseTo((1600 - 900 * 9 / 16) / 2);
+  expect(y).toBeCloseTo(0);
+  expect(width).toBeCloseTo(900 * 9 / 16);
+  expect(height).toBeCloseTo(900);
+  expect([destX, destY, destWidth, destHeight]).toEqual([0, 0, 810, 1440]);
+});
+
 it('scales the clamped mobile map crop into the requested output frame', () => {
   const container = document.getElementById('map-capture-container')!;
   container.getBoundingClientRect = () => new DOMRect(0, 0, 320, 2132);
