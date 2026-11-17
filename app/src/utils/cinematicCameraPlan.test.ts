@@ -381,7 +381,7 @@ describe('local cinematic shots', () => {
     const frames = preparedTrack([keyframe({ id: 'a', scope: 'local', zoomMode: 'custom', bearingDeg: 10, pitchDeg: 60, zoom: 16 })], straightRoute, [0.5]);
     expect(sample([], 0.5)).toBe(basePose);
     expect(sample(frames, 0.4)).toBe(basePose);
-    expect(sample(frames, 0.55)).toBe(basePose);
+    expect(sample(frames, 0.6)).toBe(basePose);
     expect(sample(frames, 0.5)).toMatchObject({ bearing: 10, pitch: 60, zoom: 16 });
     expect(sample(frames, 0.475).bearing).toBeCloseTo(0);
   });
@@ -406,10 +406,10 @@ describe('local cinematic shots', () => {
   it('holds the authored view for the chosen duration, then blends back to the automatic view', () => {
     const frames = preparedTrack([keyframe({ id: 'a', scope: 'local', zoomMode: 'custom', holdDurationMs: 4000, bearingDeg: 10, zoom: 16 })], straightRoute, [0.5]);
     const timing = getLocalShotTimings(frames, 60_000)[0];
-    expect(timing).toMatchObject({ startMs: 25_000, holdStartMs: 28_000, holdEndMs: 32_000, endMs: 35_000 });
+    expect(timing).toMatchObject({ startMs: 25_000, holdStartMs: 28_000, holdEndMs: 32_000, endMs: 37_000 });
     expect(sample(frames, 28_000 / 60_000)).toMatchObject({ zoom: 16, center: basePose.center });
     expect(sample(frames, 32_000 / 60_000)).toMatchObject({ zoom: 16, center: basePose.center });
-    expect(sample(frames, 35_000 / 60_000)).toBe(basePose);
+    expect(sample(frames, 37_000 / 60_000)).toBe(basePose);
     expect(sample(frames, 0.4)).toBe(basePose);
   });
   it('smoothly limits shot-specific treatment to the shot window', () => {
@@ -419,8 +419,15 @@ describe('local cinematic shots', () => {
     expect(localShotInfluence(timings, 25_000)).toBe(0);
     expect(localShotInfluence(timings, 26_500)).toBeCloseTo(0.5);
     expect(localShotInfluence(timings, 30_000)).toBe(1);
-    expect(localShotInfluence(timings, 33_500)).toBeCloseTo(0.5);
-    expect(localShotInfluence(timings, 35_000)).toBe(0);
+    expect(localShotInfluence(timings, 34_500)).toBeCloseTo(0.5);
+    expect(localShotInfluence(timings, 37_000)).toBe(0);
+  });
+  it('eases the return without an abrupt start or stop and keeps linear transitions linear', () => {
+    const smooth = preparedTrack([keyframe({ id: 'smooth', scope: 'local', zoomMode: 'custom', zoom: 16 })], straightRoute, [0.5]);
+    const linear = preparedTrack([keyframe({ id: 'linear', scope: 'local', zoomMode: 'custom', zoom: 16, easing: 'linear' })], straightRoute, [0.5]);
+    expect(sample(smooth, 30_100 / 60_000).zoom).toBeGreaterThan(15.999);
+    expect(sample(smooth, 34_900 / 60_000).zoom).toBeLessThan(12.001);
+    expect(sample(linear, 31_250 / 60_000).zoom).toBeCloseTo(15);
   });
   it('crossfades overlapping holds and reaches both saved frames without changing the center', () => {
     const frames = preparedTrack([keyframe({ id: 'a', scope: 'local', zoomMode: 'custom', holdDurationMs: 6000, zoom: 14 }), keyframe({ id: 'b', scope: 'local', zoomMode: 'custom', holdDurationMs: 6000, zoom: 18 })], straightRoute, [0.3, 0.35]);
@@ -431,6 +438,7 @@ describe('local cinematic shots', () => {
     expect(sample(frames, 0.325)).toMatchObject({ zoom: 16, center: basePose.center });
     expect(a.endMs).toBe(b.holdStartMs);
     expect(localShotInfluence([a, b], (a.holdEndMs + b.holdStartMs) / 2)).toBeCloseTo(1);
+    expect(localShotInfluence([a, b], a.holdEndMs * 0.25 + b.holdStartMs * 0.75)).toBe(1);
   });
   it('preserves a saved route-relative view while using a stable heading reference', () => {
     const frames = prepareCinematicKeyframeTrack([{ keyframe: keyframe({ id: 'stable', scope: 'local', zoomMode: 'custom', frame: 'route', bearingDeg: 10, holdDurationMs: 2000 }), progress: 0.5 }], straightRoute, () => 30);

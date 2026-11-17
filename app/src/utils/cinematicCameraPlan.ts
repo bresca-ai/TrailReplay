@@ -321,6 +321,7 @@ export function getCinematicCameraPose(options: CinematicCameraPoseOptions): Rep
 }
 
 export const LOCAL_SHOT_BLEND_MS = 3000;
+export const LOCAL_SHOT_RETURN_MS = 5000;
 export const LOCAL_SHOT_MAX_HOLD_MS = 60_000;
 
 export interface LocalShotTiming {
@@ -344,12 +345,12 @@ export function getLocalShotTimings(
     const holdStartMs = Math.max(0, at - hold / 2);
     const holdEndMs = Math.min(totalDurationMs, at + hold / 2);
     return { id: frame.id, at, startMs: Math.max(0, holdStartMs - LOCAL_SHOT_BLEND_MS), holdStartMs,
-      holdEndMs, endMs: Math.min(totalDurationMs, holdEndMs + LOCAL_SHOT_BLEND_MS) };
+      holdEndMs, endMs: Math.min(totalDurationMs, holdEndMs + LOCAL_SHOT_RETURN_MS) };
   });
   for (let i = 0; i < timings.length - 1; i++) {
     const a = timings[i];
     const b = timings[i + 1];
-    if (b.holdStartMs - a.holdEndMs > 2 * LOCAL_SHOT_BLEND_MS) continue;
+    if (b.holdStartMs - a.holdEndMs > LOCAL_SHOT_BLEND_MS + LOCAL_SHOT_RETURN_MS) continue;
     if (a.holdEndMs >= b.holdStartMs) {
       // If holds overlap, reserve a short crossfade around the midpoint while
       // still reaching each authored pose at its own keyframe.
@@ -364,8 +365,20 @@ export function getLocalShotTimings(
   return timings;
 }
 
+/** Ease both velocity and acceleration to zero at either end of the return. */
+function smoothReturn(value: number): number {
+  const t = clamp(value, 0, 1);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
 /** Strength of the local-shot treatment, including overlapping transitions. */
 export function localShotInfluence(timings: LocalShotTiming[], timeMs: number): number {
+  for (let i = 0; i + 1 < timings.length; i++) {
+    const a = timings[i];
+    const b = timings[i + 1];
+    if (a.endMs === b.holdStartMs && b.startMs === a.holdEndMs
+      && timeMs >= a.holdEndMs && timeMs <= b.holdStartMs) return 1;
+  }
   const smooth = (value: number) => {
     const t = clamp(value, 0, 1);
     return t * t * (3 - 2 * t);
@@ -375,7 +388,7 @@ export function localShotInfluence(timings: LocalShotTiming[], timeMs: number): 
     const entering = shot.holdStartMs > shot.startMs
       ? smooth((timeMs - shot.startMs) / (shot.holdStartMs - shot.startMs)) : 1;
     const leaving = shot.endMs > shot.holdEndMs
-      ? smooth((shot.endMs - timeMs) / (shot.endMs - shot.holdEndMs)) : 1;
+      ? 1 - smoothReturn((timeMs - shot.holdEndMs) / (shot.endMs - shot.holdEndMs)) : 1;
     return Math.min(1, strength + Math.min(entering, leaving));
   }, 0);
 }
@@ -425,7 +438,9 @@ export function applyLocalCinematicShots(options: CinematicCameraPoseOptions & {
     }
     const span = current.endMs - current.holdEndMs;
     if (time >= current.endMs && span > 0) return options.basePose;
-    return span > 0 ? blend(target, options.basePose, ease((time - current.holdEndMs) / span, local[i].easing)) : target;
+    if (span <= 0) return target;
+    const t = (time - current.holdEndMs) / span;
+    return blend(target, options.basePose, local[i].easing === 'linear' ? t : smoothReturn(t));
   }
   return options.basePose;
 }
