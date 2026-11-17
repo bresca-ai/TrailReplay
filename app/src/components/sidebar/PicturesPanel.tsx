@@ -280,10 +280,7 @@ export function PicturesPanel() {
       )}
 
       {activeTab === 'annotations' && (
-        <section className="space-y-3">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--evergreen)]">
-            {t('annotations.routeAnnotationsTitle')}
-          </h3>
+        <section aria-label={t('annotations.routeAnnotationsTitle')}>
           <RouteAnnotationsEditor />
         </section>
       )}

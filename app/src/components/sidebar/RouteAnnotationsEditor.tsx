@@ -87,12 +87,14 @@ export function RouteAnnotationsEditor() {
   const distanceValue = (selectedDistance / unitDivisor).toFixed(2);
 
   // This marker is a temporary map preview, never part of the saved project or video.
+  const previewLat = placement?.lat;
+  const previewLon = placement?.lon;
   useEffect(() => {
-    if (!composerOpen || !placement || !mapGlobalRef.current) return;
-    const marker = new maplibregl.Marker({ color: '#C1652F' }).setLngLat([placement.lon, placement.lat]).addTo(mapGlobalRef.current);
+    if (!composerOpen || previewLat === undefined || previewLon === undefined || !mapGlobalRef.current) return;
+    const marker = new maplibregl.Marker({ color: '#C1652F' }).setLngLat([previewLon, previewLat]).addTo(mapGlobalRef.current);
     marker.getElement().style.pointerEvents = 'none';
     return () => { marker.remove(); };
-  }, [composerOpen, placement?.lat, placement?.lon]);
+  }, [composerOpen, previewLat, previewLon]);
 
   const handleAddAnnotation = () => {
     if (!placement) return;
@@ -126,6 +128,133 @@ export function RouteAnnotationsEditor() {
 
   return (
     <div className="space-y-4">
+      <details className="group border-t border-[var(--evergreen)]/15" open={composerOpen} onToggle={(event) => setComposerOpen(event.currentTarget.open)}>
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 text-xs font-bold uppercase tracking-wide text-[var(--evergreen)] hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]"><Plus className="h-4 w-4" aria-hidden="true" /><span className="flex-1">{t('annotations.addRouteAnnotation')}</span><ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
+        <div className="pb-1">
+      <div className="space-y-3">
+        <div role="group" aria-label={t('annotations.presentationLabel')} className="grid grid-cols-2 gap-2">
+          {(['map-card', 'side-panel'] as const).map((type) => <button key={type} type="button" aria-pressed={draftPresentation === type} onClick={() => setDraftPresentation(type)}
+            className={`flex min-w-0 flex-col overflow-hidden rounded-lg border text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${draftPresentation === type ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] ring-1 ring-[var(--trail-orange)]' : 'border-[var(--evergreen)]/20 bg-[var(--canvas)] hover:border-[var(--trail-orange)]/60'}`}>
+            <span aria-hidden="true" className="relative block h-20 w-full shrink-0 overflow-hidden bg-cover bg-center" style={{ backgroundImage: "url('/media/images/map-previews/satellite.jpg')" }}>
+              <span className="absolute inset-0 bg-black/15" />
+              <svg viewBox="-12 -14 24 28" className={`absolute left-[20%] h-6 w-5 text-[var(--trail-orange)] drop-shadow ${type === 'map-card' ? 'top-[15%]' : 'top-[28%]'}`}>
+                <path d="M0 12C-2 9-10 3-10-3a10 10 0 1 1 20 0c0 6-8 12-10 15Z" fill="#101417" stroke="currentColor" strokeWidth="1.5" />
+                <circle cy="-3" r="3" fill="currentColor" />
+              </svg>
+              {type === 'side-panel' ? <>
+                <span className="absolute bottom-4 left-[39%] h-6 w-px bg-[var(--trail-orange)]" />
+                <span className="absolute bottom-4 left-[46%] flex w-[45%] flex-col gap-1 rounded bg-black/55 p-1"><span className="h-1.5 w-full rounded bg-white/90" /><span className="h-1 w-3/4 rounded bg-white/60" /></span>
+              </> : <span className="absolute inset-x-0 bottom-0 flex h-6 flex-col justify-center gap-1 bg-black/80 px-3"><span className="h-1 w-2/3 rounded bg-white/90" /><span className="h-1 w-1/2 rounded bg-white/60" /></span>}
+            </span>
+            <span className="block px-2.5 pb-2.5 pt-2"><span className="block text-xs font-bold text-[var(--evergreen)]">{t(type === 'map-card' ? 'annotations.presentationMapCard' : 'annotations.presentationSidePanel')}</span>
+              <span className="mt-1 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t(type === 'map-card' ? 'annotations.mapCaptionExplanation' : 'annotations.fieldNoteExplanation')}</span></span>
+          </button>)}
+        </div>
+        <p className="text-right text-[9px] text-[var(--evergreen-60)]">© Esri</p>
+        <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-3">
+          <div className="flex items-center justify-between gap-2"><label htmlFor="annotation-position" className="text-xs font-semibold text-[var(--evergreen)]">{t('annotations.positionOnRoute')}</label>
+            <button type="button" onClick={() => { setChosenDistance(null); setDistanceDraft(null); }} disabled={!currentPosition} className="text-xs font-semibold text-[var(--trail-orange)] underline underline-offset-2 disabled:opacity-40">{t('annotations.usePlayhead')}</button></div>
+          <div className="flex items-center gap-2 text-xs text-[var(--evergreen-60)]">
+            <input id="annotation-position" type="text" inputMode="decimal" value={distanceDraft ?? distanceValue} disabled={!currentPosition || totalDistance <= 0}
+              onChange={(event) => setDistanceDraft(event.target.value)} onBlur={() => { const parsed = Number((distanceDraft ?? distanceValue).replace(',', '.')); if (distanceDraft?.trim() && Number.isFinite(parsed)) setChosenDistance(Math.max(0, Math.min(totalDistance, parsed * unitDivisor))); setDistanceDraft(null); }}
+              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }} className="w-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-2 text-sm tabular-nums text-[var(--evergreen)] focus:border-[var(--trail-orange)] focus:outline-none disabled:opacity-50" />
+            <span>{distanceUnit}</span><span>{t('annotations.positionTotal', { distance: formatDistance(totalDistance, unitSystem) })}</span>
+          </div>
+          <input type="range" aria-label={t('annotations.positionOnRoute')} min={0} max={totalDistance || 1} step="any" value={selectedDistance} disabled={!currentPosition || totalDistance <= 0}
+            onChange={(event) => { setChosenDistance(Number(event.target.value)); setDistanceDraft(null); }} className="w-full accent-[var(--trail-orange)] disabled:opacity-50" />
+        </div>
+        {<label className="block text-xs text-[var(--evergreen)]">{t('annotations.eyebrowLabel')}
+          <input value={draftEyebrow} onChange={(e) => setDraftEyebrow(e.target.value)} maxLength={36} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+        </label>}
+        <input
+          value={draftAnnotationTitle}
+          aria-label={t('annotations.routeAnnotationTitlePlaceholder')}
+          onChange={(e) => setDraftAnnotationTitle(e.target.value)}
+          placeholder={t('annotations.routeAnnotationTitlePlaceholder')}
+          className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
+          maxLength={120}
+        />
+
+        <label className="block text-xs text-[var(--evergreen)]">{t('annotations.descriptionLabel')}
+          <textarea value={draftDescription} onChange={(e) => setDraftDescription(e.target.value)} maxLength={600} className="mt-1 w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
+        </label>
+
+        <div className="space-y-3">
+          {<>
+            <div className="border-y border-[var(--evergreen)]/10 py-3"><AnnotationSymbolPicker value={draftLogo} onChange={setDraftLogo} /></div>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={draftMarkerFilled} onChange={(event) => setDraftMarkerFilled(event.target.checked)} />{t('annotations.markerFilled')}</label>
+
+          </>}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
+            {t('annotations.routeAnnotationColor')}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {ANNOTATION_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setDraftAnnotationColor(color)}
+                className={`h-7 w-7 rounded-full border-2 transition-transform ${
+                  draftAnnotationColor === color
+                    ? 'scale-110 border-[var(--evergreen)]'
+                    : 'border-transparent hover:scale-105'
+                }`}
+                style={{ backgroundColor: color }}
+                title={t('annotations.routeAnnotationColor')}
+                aria-label={`${t('annotations.routeAnnotationColor')}: ${color}`}
+                aria-pressed={draftAnnotationColor === color}
+              />
+            ))}
+            <input
+              type="color"
+              value={draftAnnotationColor}
+              onChange={(e) => setDraftAnnotationColor(e.target.value)}
+              className="h-8 w-10 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)]"
+              aria-label={t('annotations.routeAnnotationColor')}
+            />
+          </div>
+        </div>
+
+        <label className="flex items-start gap-2 text-xs text-[var(--evergreen)]">
+          <input type="checkbox" checked={draftShowOnMatchingRoutes} onChange={(event) => setDraftShowOnMatchingRoutes(event.target.checked)} className="mt-0.5 accent-[var(--trail-orange)]" />
+          <span>{t('annotations.showOnMatchingRoutes')}<span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{t('annotations.showOnMatchingRoutesHint')}</span></span>
+        </label>
+        <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-3">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--evergreen)]">
+              {canAddAnnotation
+                ? t('annotations.positionReady', { distance: formatDistance(placement?.routeDistance ?? 0, unitSystem) })
+                : t('annotations.noRoutePositionHint')}
+            </p>
+            {placement?.elevation ? (
+              <p className="text-[11px] text-[var(--evergreen-60)] mt-0.5">
+                {t('annotations.routeAnnotationElevation', {
+                  elevation: Math.round(convertElevation(placement.elevation, unitSystem)).toLocaleString(),
+                  unit: unitSystem === 'metric' ? 'm' : 'ft',
+                })}
+              </p>
+              ) : null}
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleAddAnnotation}
+              disabled={!canAddAnnotation}
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--trail-orange)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              {t('annotations.addRouteAnnotation')}
+            </button>
+          </div>
+        </div>
+      </div>
+
+        </div>
+      </details>
       {textAnnotations.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--evergreen)]/20 px-3 py-4 text-[var(--evergreen-60)]">
           <p className="text-sm">{t('annotations.routeAnnotationsEmpty')}</p>
@@ -285,131 +414,6 @@ export function RouteAnnotationsEditor() {
           <input id="annotation-text-size" type="range" min="0.5" max="2" step="0.1" value={Math.max(0.5, Math.min(2, textSize))} onChange={(event) => setSettings({ annotationTextScale: Number(event.target.value) })} className="w-full accent-[var(--trail-orange)]" />
         </div>
       </div>
-      <details className="group border-t border-[var(--evergreen)]/15" open={composerOpen} onToggle={(event) => setComposerOpen(event.currentTarget.open)}>
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 text-xs font-bold uppercase tracking-wide text-[var(--evergreen)] hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]"><Plus className="h-4 w-4" aria-hidden="true" /><span className="flex-1">{t('annotations.addRouteAnnotation')}</span><ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
-        <div className="pb-1">
-      <div className="space-y-3">
-        <div role="group" aria-label={t('annotations.presentationLabel')} className="grid grid-cols-2 gap-2">
-          {(['map-card', 'side-panel'] as const).map((type) => <button key={type} type="button" aria-pressed={draftPresentation === type} onClick={() => setDraftPresentation(type)}
-            className={`min-w-0 overflow-hidden rounded-lg border text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${draftPresentation === type ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)] ring-1 ring-[var(--trail-orange)]' : 'border-[var(--evergreen)]/20 bg-[var(--canvas)] hover:border-[var(--trail-orange)]/60'}`}>
-            <span aria-hidden="true" className="relative block h-20 overflow-hidden bg-cover bg-center" style={{ backgroundImage: "url('/media/images/map-previews/satellite.jpg')" }}>
-              <span className="absolute inset-0 bg-black/15" />
-              <span className="absolute bottom-3 left-[20%] h-5 w-5 rounded-full border-2 border-[var(--trail-orange)] shadow" />
-              <span className="absolute bottom-4 left-[39%] h-6 w-px bg-[var(--trail-orange)]" />
-              <span className="absolute bottom-4 left-[46%] flex w-[45%] flex-col gap-1"><span className="h-1.5 w-full rounded bg-white/90" /><span className="h-1 w-3/4 rounded bg-white/60" /></span>
-            </span>
-            <span className="block px-2.5 pb-2.5 pt-2"><span className="block text-xs font-bold text-[var(--evergreen)]">{t(type === 'map-card' ? 'annotations.presentationMapCard' : 'annotations.presentationSidePanel')}</span>
-              <span className="mt-1 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t(type === 'map-card' ? 'annotations.mapCaptionExplanation' : 'annotations.fieldNoteExplanation')}</span></span>
-          </button>)}
-        </div>
-        <p className="text-right text-[9px] text-[var(--evergreen-60)]">© Esri</p>
-        <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-3">
-          <div className="flex items-center justify-between gap-2"><label htmlFor="annotation-position" className="text-xs font-semibold text-[var(--evergreen)]">{t('annotations.positionOnRoute')}</label>
-            <button type="button" onClick={() => { setChosenDistance(null); setDistanceDraft(null); }} disabled={!currentPosition} className="text-xs font-semibold text-[var(--trail-orange)] underline underline-offset-2 disabled:opacity-40">{t('annotations.usePlayhead')}</button></div>
-          <div className="flex items-center gap-2 text-xs text-[var(--evergreen-60)]">
-            <input id="annotation-position" type="text" inputMode="decimal" value={distanceDraft ?? distanceValue} disabled={!currentPosition || totalDistance <= 0}
-              onChange={(event) => setDistanceDraft(event.target.value)} onBlur={() => { const parsed = Number((distanceDraft ?? distanceValue).replace(',', '.')); if (distanceDraft?.trim() && Number.isFinite(parsed)) setChosenDistance(Math.max(0, Math.min(totalDistance, parsed * unitDivisor))); setDistanceDraft(null); }}
-              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }} className="w-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-2 text-sm tabular-nums text-[var(--evergreen)] focus:border-[var(--trail-orange)] focus:outline-none disabled:opacity-50" />
-            <span>{distanceUnit}</span><span>{t('annotations.positionTotal', { distance: formatDistance(totalDistance, unitSystem) })}</span>
-          </div>
-          <input type="range" aria-label={t('annotations.positionOnRoute')} min={0} max={totalDistance || 1} step="any" value={selectedDistance} disabled={!currentPosition || totalDistance <= 0}
-            onChange={(event) => { setChosenDistance(Number(event.target.value)); setDistanceDraft(null); }} className="w-full accent-[var(--trail-orange)] disabled:opacity-50" />
-        </div>
-        {<label className="block text-xs text-[var(--evergreen)]">{t('annotations.eyebrowLabel')}
-          <input value={draftEyebrow} onChange={(e) => setDraftEyebrow(e.target.value)} maxLength={36} className="mt-1 w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
-        </label>}
-        <input
-          value={draftAnnotationTitle}
-          aria-label={t('annotations.routeAnnotationTitlePlaceholder')}
-          onChange={(e) => setDraftAnnotationTitle(e.target.value)}
-          placeholder={t('annotations.routeAnnotationTitlePlaceholder')}
-          className="w-full rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--evergreen)] outline-none focus:border-[var(--trail-orange)]"
-          maxLength={120}
-        />
-
-        <label className="block text-xs text-[var(--evergreen)]">{t('annotations.descriptionLabel')}
-          <textarea value={draftDescription} onChange={(e) => setDraftDescription(e.target.value)} maxLength={600} className="mt-1 w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
-        </label>
-
-        <div className="space-y-3">
-          {<>
-            <details className="group w-full border-y border-[var(--evergreen)]/10">
-              <summary className="flex cursor-pointer list-none items-center justify-between py-2 text-xs font-semibold text-[var(--evergreen)]">{t('annotations.logoLabel')}<ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" /></summary>
-              <div className="pb-3"><AnnotationSymbolPicker value={draftLogo} onChange={setDraftLogo} /></div>
-            </details>
-            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={draftMarkerFilled} onChange={(event) => setDraftMarkerFilled(event.target.checked)} />{t('annotations.markerFilled')}</label>
-
-          </>}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--evergreen-60)]">
-            {t('annotations.routeAnnotationColor')}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {ANNOTATION_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => setDraftAnnotationColor(color)}
-                className={`h-7 w-7 rounded-full border-2 transition-transform ${
-                  draftAnnotationColor === color
-                    ? 'scale-110 border-[var(--evergreen)]'
-                    : 'border-transparent hover:scale-105'
-                }`}
-                style={{ backgroundColor: color }}
-                title={t('annotations.routeAnnotationColor')}
-                aria-label={`${t('annotations.routeAnnotationColor')}: ${color}`}
-                aria-pressed={draftAnnotationColor === color}
-              />
-            ))}
-            <input
-              type="color"
-              value={draftAnnotationColor}
-              onChange={(e) => setDraftAnnotationColor(e.target.value)}
-              className="h-8 w-10 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)]"
-              aria-label={t('annotations.routeAnnotationColor')}
-            />
-          </div>
-        </div>
-
-        <label className="flex items-start gap-2 text-xs text-[var(--evergreen)]">
-          <input type="checkbox" checked={draftShowOnMatchingRoutes} onChange={(event) => setDraftShowOnMatchingRoutes(event.target.checked)} className="mt-0.5 accent-[var(--trail-orange)]" />
-          <span>{t('annotations.showOnMatchingRoutes')}<span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{t('annotations.showOnMatchingRoutesHint')}</span></span>
-        </label>
-        <div className="space-y-2 border-t border-[var(--evergreen)]/10 pt-3">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-[var(--evergreen)]">
-              {canAddAnnotation
-                ? t('annotations.positionReady', { distance: formatDistance(placement?.routeDistance ?? 0, unitSystem) })
-                : t('annotations.noRoutePositionHint')}
-            </p>
-            {placement?.elevation ? (
-              <p className="text-[11px] text-[var(--evergreen-60)] mt-0.5">
-                {t('annotations.routeAnnotationElevation', {
-                  elevation: Math.round(convertElevation(placement.elevation, unitSystem)).toLocaleString(),
-                  unit: unitSystem === 'metric' ? 'm' : 'ft',
-                })}
-              </p>
-              ) : null}
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={handleAddAnnotation}
-              disabled={!canAddAnnotation}
-              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[var(--trail-orange)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:brightness-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus className="w-4 h-4" />
-              {t('annotations.addRouteAnnotation')}
-            </button>
-          </div>
-        </div>
-      </div>
-
-        </div>
-      </details>
     </div>
   );
 }

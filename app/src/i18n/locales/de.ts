@@ -284,6 +284,7 @@ export const de = {
     language: 'Sprache',
   },
   info: {
+    mapDataCredits: 'Kartendaten-Nachweise',
     title: 'Über Trail Replay',
     builtWith: 'Gebaut mit',
     builtWithBody: 'MapLibre GL JS, React, Vite und eine Reihe offener Kartendatenanbieter.',
@@ -539,7 +540,7 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
     iconSearchCount: '{shown} von {total} angezeigt. Ein weiteres Wort grenzt die Suche ein.',
     iconSearchError: 'Die Symbole konnten nicht geladen werden.',
     iconSearchRetry: 'Erneut versuchen',
-    iconSearchCredit: 'Symbole von Pinhead (CC0)',
+    iconSearchCredit: 'Symbole von Pinhead (CC0)', iconBrowseAll: 'Alle Symbole ansehen', iconBrowseClose: 'Schließen', iconTopic: { nature: 'Natur und draußen', food: 'Essen und Trinken', transport: 'Verkehr', places: 'Orte', people: 'Menschen', animals: 'Tiere', symbols: 'Symbole', other: 'Sonstige' },
     slowdownSeconds: 'Verlangsamung (Sekunden)',
     textLanguage: 'Sprache des Anmerkungstexts',
     translationFallback: "Der Text folgt der App-Sprache. Ohne Übersetzung wird der Originaltext angezeigt.",
@@ -901,7 +902,7 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
     addLandmark: 'Wegpunkt hinzufügen', clickMapToPlace: 'Zum Platzieren auf die Karte klicken', empty: 'Noch keine Wegpunkte. Aktiviere oben Routenmomente oder Orte in der Nähe oder füge einen eigenen hinzu.',
     editLandmark: 'Wegpunkt bearbeiten', closeEditor: 'Wegpunkteditor schließen', name: 'Name', icon: 'Symbol', color: 'Farbe', useColor: 'Farbe {color} verwenden', removeFromMap: 'Von der Karte entfernen',
     restoreRemovedLandmark: '{count} entfernten Wegpunkt wiederherstellen', restoreRemovedLandmarks: '{count} entfernte Wegpunkte wiederherstellen',
-    glyphs: { pin: 'Markierung', summit: 'Gipfel', viewpoint: 'Aussichtspunkt', waypoint: 'Wegweiser', town: 'Ort', shelter: 'Hütte', camp: 'Zeltplatz', water: 'Wasser', waterfall: 'Wasserfall' },
+    glyphs: { 'aid-station': 'Verpflegungsstation', pin: 'Markierung', summit: 'Gipfel', viewpoint: 'Aussichtspunkt', waypoint: 'Wegweiser', town: 'Ort', shelter: 'Hütte', camp: 'Zeltplatz', water: 'Wasser', waterfall: 'Wasserfall' },
     types: {
       summit: 'Gipfel', pass: 'Pass', viewpoint: 'Aussichtspunkt', 'high-point': 'Hochpunkt', waterfall: 'Wasserfall', trailhead: 'Ausgangspunkt', hut: 'Hütte', shelter: 'Schutzhütte', camp: 'Zeltplatz', water: 'Wasser', 'aid-station': 'Verpflegungsstation',
       finish: 'Ziel', town: 'Ort', lake: 'See', 'river-crossing': 'Flussquerung', photo: 'Foto', note: 'Notiz', challenge: 'Herausforderung', custom: 'Benutzerdefiniert', 'highest-point': 'Höchster Punkt', 'longest-climb': 'Längster Anstieg', 'major-descent': 'Größter Abstieg', halfway: 'Hälfte',

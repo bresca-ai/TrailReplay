@@ -295,6 +295,7 @@ export const en = {
     language: 'Language',
   },
   info: {
+    mapDataCredits: 'Map data credits',
     title: 'About Trail Replay',
     builtWith: 'Built With',
     builtWithBody: 'MapLibre GL JS, React, Vite, and a stack of open mapping data providers.',
@@ -550,7 +551,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     iconSearchCount: 'Showing {shown} of {total}. Add a word to narrow it down.',
     iconSearchError: 'Icons could not be loaded.',
     iconSearchRetry: 'Try again',
-    iconSearchCredit: 'Icons by Pinhead (CC0)',
+    iconSearchCredit: 'Icons by Pinhead (CC0)', iconBrowseAll: 'Browse all icons', iconBrowseClose: 'Close', iconTopic: { nature: 'Nature & outdoors', food: 'Food & drink', transport: 'Transport', places: 'Places', people: 'People', animals: 'Animals', symbols: 'Symbols', other: 'Other' },
     slowdownSeconds: 'Slowdown (seconds)',
     textLanguage: 'Annotation text language',
     translationFallback: "Annotation text follows the app language. Other languages show the original text until translated.",
@@ -912,7 +913,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     addLandmark: 'Add landmark', clickMapToPlace: 'Click the map to place it', empty: 'No landmarks yet. Turn on route moments or nearby places above, or add your own.',
     editLandmark: 'Edit landmark', closeEditor: 'Close landmark editor', name: 'Name', icon: 'Icon', color: 'Color', useColor: 'Use color {color}', removeFromMap: 'Remove from map',
     restoreRemovedLandmark: 'Restore {count} removed landmark', restoreRemovedLandmarks: 'Restore {count} removed landmarks',
-    glyphs: { pin: 'Pin', summit: 'Peak', viewpoint: 'Viewpoint', waypoint: 'Signpost', town: 'Town', shelter: 'Hut', camp: 'Camp', water: 'Water', waterfall: 'Waterfall' },
+    glyphs: { 'aid-station': 'Aid station', pin: 'Pin', summit: 'Peak', viewpoint: 'Viewpoint', waypoint: 'Signpost', town: 'Town', shelter: 'Hut', camp: 'Camp', water: 'Water', waterfall: 'Waterfall' },
     types: {
       summit: 'Summit', pass: 'Pass', viewpoint: 'Viewpoint', 'high-point': 'High point', waterfall: 'Waterfall', trailhead: 'Trailhead', hut: 'Hut', shelter: 'Shelter', camp: 'Camp', water: 'Water', 'aid-station': 'Aid station',
       finish: 'Finish', town: 'Town', lake: 'Lake', 'river-crossing': 'River crossing', photo: 'Photo', note: 'Note', challenge: 'Challenge', custom: 'Custom', 'highest-point': 'Highest point', 'longest-climb': 'Longest climb', 'major-descent': 'Major descent', halfway: 'Halfway',

@@ -11,18 +11,20 @@ export const PINHEAD_PATHS: Record<string, string> = {
   waterfall: 'M0 3h1c1.09 0 3 .3 3 1.75v3.5c0 2 1.5 3 2.5 3l-.04-.09C6.34 10.87 6 9.9 6 8.25v-3.5C6 3.84 5.35 3.44 5 3c1.09 0 2 .3 2 1.75v3.5c0 2 1.5 3 2.5 3l-.04-.09C9.34 10.87 9 9.9 9 8.25l.1-3.5C9.14 3.84 8.35 3.44 8 3c1.09 0 2 .3 2 1.75v3.5c0 2 1.5 3 2.5 3l-.04-.09c-.12-.29-.46-1.26-.46-2.91v-3.5C12 1.83 9.16 1.04 8.09 1H0zm6.3 11.56l.31-.25a1.44 1.44 0 0 1 1.78 0l.31.25c.36.28.8.44 1.25.44h.1c.45 0 .89-.16 1.25-.44l.31-.25a1.44 1.44 0 0 1 1.78 0l.32.25c.35.28.78.44 1.24.44H15v-2h-.05c-.46 0-.89-.16-1.24-.44l-.32-.25a1.44 1.44 0 0 0-1.78 0l-.31.25c-.36.28-.8.44-1.25.44h-.1c-.45 0-.89-.16-1.25-.44l-.31-.25a1.44 1.44 0 0 0-1.78 0l-.31.25c-.36.28-.8.44-1.25.44h-.1c-.45 0-.89-.16-1.25-.44l-.31-.25a1.44 1.44 0 0 0-1.78 0l-.32.25c-.35.28-.78.44-1.24.44H0v2h.05c.46 0 .89-.16 1.24-.44l.32-.25a1.44 1.44 0 0 1 1.78 0l.31.25c.36.28.8.44 1.25.44h.1c.4 0 .78-.12 1.11-.34z',
   shelter: 'M13.59 6.19c.78.57.38 1.81-.59 1.81v1c.55 0 1 .45 1 1s-.45 1-1 1v1c.55 0 1 .45 1 1s-.45 1-1 1H9v-4H6v4H2c-.55 0-1-.45-1-1s.45-1 1-1v-1c-.55 0-1-.45-1-1s.45-1 1-1V8c-.97 0-1.37-1.24-.59-1.81l5.5-4c.35-.25.83-.25 1.18 0zM3 8v1h9V8zm9 3h-2v1h2zm-9 0v1h2v-1zm4.5-6.76L5.08 6h4.84z',
   camp: 'M14 10.5v1c0 .28-.22.5-.5.5h-12c-.28 0-.5-.22-.5-.5v-1c0-.28.22-.5.5-.5h.75l4.78-8.74c.22-.35.72-.35.94 0L12.75 10h.75c.25 0 .45.18.49.41zm-4-.5L7.5 5L5 10z',
+  'aid-station': 'M10 1h3v2l1 2v8.5c0 .83-.67 1.5-1.5 1.5h-2C9.67 15 9 14.33 9 13.5V5l1-2zM10 6v5h3V6zM.5 9c0-2 1.4-3.2 3.75-3.2S8 7 8 9zm0 1h7.5v1H.5zm0 2h7.5v.5c0 1.1-.9 2-2 2H2.5c-1.1 0-2-.9-2-2z',
   pin: 'm7.5 15l.54-.79C11.01 9.81 12.5 6.74 12.5 5c0-2.76-2.24-5-5-5s-5 2.24-5 5c0 1.84 1.67 5.17 5 10',
 };
 
 /** Every glyph a landmark can be drawn with, in picker order. */
 export const LANDMARK_GLYPH_KEYS = [
-  'pin', 'summit', 'viewpoint', 'waypoint', 'town', 'shelter', 'camp', 'water', 'waterfall',
+  'pin', 'summit', 'viewpoint', 'waypoint', 'town', 'shelter', 'camp', 'water', 'waterfall', 'aid-station',
 ] as const;
 
 export type LandmarkGlyph = (typeof LANDMARK_GLYPH_KEYS)[number];
 
 /** Human label for the icon picker; the glyph keys are drawing names, not places. */
 export const LANDMARK_GLYPH_LABELS: Record<LandmarkGlyph, string> = {
+  'aid-station': 'Aid station',
   pin: 'Pin',
   summit: 'Peak',
   viewpoint: 'Viewpoint',
