@@ -20,17 +20,26 @@ it('draws each route in its own color, and only the current route in per-route m
     track: { points: [{ lon: 3.1, lat: 3 }, { lon: 4.1, lat: 4 }] } } as unknown as ComparisonTrack] });
   journeyState.current = {
     computedJourney: { coordinates: [{ lon: 1, lat: 1 }, { lon: 2, lat: 2 }, { lon: 3, lat: 3 }, { lon: 4, lat: 4 }], segmentTimings: timings },
-    currentSegment: { segment: timings[1] }, currentPosition: { lon: 3, lat: 3 }, completedCoordinates: [], allCoordinates: [],
+    currentSegment: { segment: timings[1] }, currentPosition: { lon: 3.5, lat: 3.5 },
+    completedCoordinates: [[1, 1], [2, 2], [3, 3], [3.5, 3.5]], allCoordinates: [],
   };
   const colors: string[] = [];
   const ctx = { scale: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), lineJoin: '', lineCap: '', strokeStyle: '', lineWidth: 0,
     stroke() { colors.push(this.strokeStyle); } };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
-  render(<RouteOverview containerSize={{ width: 800, height: 600 }} frame={null} />);
+  const { rerender } = render(<RouteOverview containerSize={{ width: 800, height: 600 }} frame={null} />);
   expect(colors).toContain('rgb(255, 140, 140)');
   expect(colors).toContain('rgb(140, 140, 255)');
   expect(colors).toContain('rgb(140, 255, 140)');
+  expect(colors.at(-1)).toBe('rgb(0, 0, 184)');
   colors.length = 0;
+  journeyState.current = { ...journeyState.current, currentSegment: { segment: timings[0] },
+    currentPosition: { lon: 1.5, lat: 1.5 }, completedCoordinates: [[1, 1], [1.5, 1.5]] };
+  rerender(<RouteOverview containerSize={{ width: 800, height: 600 }} frame={null} />);
+  expect(colors.at(-1)).toBe('rgb(184, 0, 0)');
+  colors.length = 0;
+  journeyState.current = { ...journeyState.current, currentSegment: { segment: timings[1] },
+    currentPosition: { lon: 3.5, lat: 3.5 }, completedCoordinates: [[1, 1], [2, 2], [3, 3], [3.5, 3.5]] };
   act(() => useAppStore.getState().setSettings({ routeOverviewPerRoute: true }));
   expect(colors).not.toContain('rgb(255, 140, 140)');
   expect(colors).toContain('rgb(140, 140, 255)');

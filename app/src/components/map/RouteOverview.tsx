@@ -38,7 +38,13 @@ export function RouteOverview({ containerSize, frame }: Props) {
       ? buildJourneyOverviewRoutes(computedJourney, completedCoordinates, selectedSegment, currentPosition, currentTrackColor || settings.trailStyle.trailColor, settings.routeOverviewPerRoute)
       : [{ id: activeTrack?.id ?? 'route', completed: completedCoordinates }];
     const progress = new Map(primary.map((route) => [route.id, route.completed]));
-    return routePaths.map((route) => ({ ...route, completed: progress.get(route.id) ?? route.completed }));
+    const result = routePaths.map((route) => ({ ...route, completed: progress.get(route.id) ?? route.completed }));
+    // Paint the active segment last so its advancing line stays visible where
+    // it overlaps an earlier, later, or comparison route.
+    const activeId = selectedSegment?.type === 'track' ? selectedSegment.segmentId : !computedJourney ? activeTrack?.id : undefined;
+    const activeIndex = result.findIndex((route) => route.id === activeId);
+    if (activeIndex >= 0) result.push(...result.splice(activeIndex, 1));
+    return result;
   }, [computedJourney, completedCoordinates, selectedSegment, currentPosition, currentTrackColor, settings.trailStyle.trailColor, settings.routeOverviewPerRoute, activeTrack, routePaths]);
   const frameWidth = frame?.frameWidth ?? containerSize.width;
   const frameHeight = frame?.frameHeight ?? containerSize.height;

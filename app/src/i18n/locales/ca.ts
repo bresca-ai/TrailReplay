@@ -529,7 +529,6 @@ export const ca = {
     paceMode: 'Mode ritme',
     paceModeCumulative: 'Global',
     paceModePerKm: 'Per km',
-    customMarkerColor: "Color personalitzat",
     routeOverviewPerRoute: "Una ruta cada vegada",
     routeOverviewPerRouteHint: "Mostra la ruta actual per separat durant la reproducció.",
     routeOverview: "Vista general de la ruta", routeOverviewHint: "Vista de la ruta orientada al nord. Arrossega-la per moure-la.", resizeElevationProfile: "Canvia l’alçada del perfil", elevationProfileFill: "Omple sota el perfil", showElevationProfile: 'Perfil d\'altitud',
@@ -916,6 +915,7 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     parseGpxFailed: 'No s\'han pogut analitzar els fitxers GPX',
   },
   routeLandmarks: {
+    customColor: "Color personalitzat",
     styleTitle: "Estil dels llocs",
     styleClassic: "Clàssic",
     styleMinimal: "Minimalista",

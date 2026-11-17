@@ -540,7 +540,6 @@ export const en = {
     paceMode: 'Pace mode',
     paceModeCumulative: 'Overall',
     paceModePerKm: 'Per km',
-    customMarkerColor: "Custom color",
     routeOverviewPerRoute: "One route at a time",
     routeOverviewPerRouteHint: "Show the current route separately during playback.",
     routeOverview: "Route overview", routeOverviewHint: "A north-up route inset. Drag it to reposition.", resizeElevationProfile: "Resize elevation profile", elevationProfileFill: "Fill below profile", showElevationProfile: 'Elevation profile',
@@ -927,6 +926,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     parseGpxFailed: 'Failed to parse GPX files',
   },
   routeLandmarks: {
+    customColor: "Custom color",
     styleTitle: "Place style",
     styleClassic: "Classic",
     styleMinimal: "Minimal",

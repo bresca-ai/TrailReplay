@@ -529,7 +529,6 @@ export const es = {
     paceMode: 'Modo ritmo',
     paceModeCumulative: 'Global',
     paceModePerKm: 'Por km',
-    customMarkerColor: "Color personalizado",
     routeOverviewPerRoute: "Una ruta cada vez",
     routeOverviewPerRouteHint: "Muestra la ruta actual por separado durante la reproducción.",
     routeOverview: "Vista general de la ruta", routeOverviewHint: "Vista de la ruta orientada al norte. Arrástrala para moverla.", resizeElevationProfile: "Cambiar altura del perfil", elevationProfileFill: "Rellenar bajo el perfil", showElevationProfile: 'Perfil de elevación',
@@ -916,6 +915,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     parseGpxFailed: 'No se pudieron analizar los archivos GPX',
   },
   routeLandmarks: {
+    customColor: "Color personalizado",
     styleTitle: "Estilo de lugares",
     styleClassic: "Clásico",
     styleMinimal: "Minimalista",
