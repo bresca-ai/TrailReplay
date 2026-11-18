@@ -113,7 +113,7 @@ const getWaybackItems = async (): Promise<WaybackItem[]> => {
     .sort((a, b) => getReleaseTime(b) - getReleaseTime(a));
 };
 
-export function SettingsPanel() {
+export function SettingsPanel({ section = 'all' }: { section?: 'all' | 'map' | 'camera' }) {
   const { t } = useI18n();
   const landmarkEditorRequested = useAppStore((state) => state.landmarkEditorRequested);
   const clearLandmarkEditorRequest = useAppStore((state) => state.clearLandmarkEditorRequest);
@@ -226,7 +226,7 @@ export function SettingsPanel() {
   return (
     <div className="space-y-6">
       {/* Camera Mode */}
-      <div>
+      {section !== 'map' && <div>
         <div className="mb-3 flex items-center justify-between gap-2">
           <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-[var(--evergreen)]">
             <Video className="h-4 w-4" />{t('settings.cameraTitle')}
@@ -321,8 +321,9 @@ export function SettingsPanel() {
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
+      {section !== 'camera' && <>
       {/* Map Style */}
       <div>
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -592,6 +593,7 @@ export function SettingsPanel() {
           ))}
         </div>
       </div>
+      </>}
     </div>
   );
 }

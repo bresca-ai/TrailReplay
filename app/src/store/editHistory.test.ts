@@ -1,8 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { createAppStore } from './createAppStore';
 import { createEditHistory, historyShortcut, isTextEditingTarget } from './editHistory';
+import { createUserLandmark } from '@/utils/createUserLandmark';
+import type { GPXTrack } from '@/types';
 
 describe('project edit history', () => {
+  it('records route, timeline, map and landmark edits and restores them in order', () => {
+    const store = createAppStore();
+    const track = { id: 'track-1', name: 'Route', activityIcon: 'walk', points: [], color: '#123456', visible: true,
+      totalDistance: 0, totalTime: 0, movingTime: 0, elevationGain: 0, elevationLoss: 0, maxElevation: 0, minElevation: 0,
+      maxSpeed: 0, avgSpeed: 0, avgMovingSpeed: 0, bounds: { minLat: 0, maxLat: 0, minLon: 0, maxLon: 0 } } satisfies GPXTrack;
+    store.getState().addTrack(track);
+    const segmentId = store.getState().journeySegments[0].id;
+    const history = createEditHistory(store);
+    const landmark = createUserLandmark({ lat: 42, lon: 1, progress: 0.2 });
+    store.getState().updateTrackColor(track.id, '#abcdef');
+    store.getState().updateJourneySegmentDuration(segmentId, 30000);
+    store.getState().setSettings({ show3DBuildings: true });
+    store.getState().addLandmark(landmark);
+    expect(history.canUndo()).toBe(true);
+    history.undo();
+    expect(store.getState().userLandmarks).toHaveLength(0);
+    history.undo();
+    expect(store.getState().settings.show3DBuildings).toBe(false);
+    history.undo();
+    expect(store.getState().journeySegments[0].duration).toBe(60000);
+    history.undo();
+    expect(store.getState().tracks[0].color).toBe('#123456');
+    expect(history.canRedo()).toBe(true);
+    history.redo();
+    expect(store.getState().tracks[0].color).toBe('#abcdef');
+    history.dispose();
+  });
   it('undoes and redoes edits without rewinding playback or unrelated settings', () => {
     const store = createAppStore();
     const history = createEditHistory(store);

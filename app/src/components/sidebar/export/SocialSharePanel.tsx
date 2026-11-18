@@ -11,7 +11,7 @@ import { AnnotationSymbolPicker } from '@/components/sidebar/AnnotationSymbolPic
 import { annotationSymbolLabel, annotationSymbolPath } from '@/components/annotations/annotationSymbol';
 import { OverlayFontPicker } from '@/components/sidebar/OverlayFontPicker';
 import { useAppStore } from '@/store/useAppStore';
-import { enterCoverHistory } from '@/hooks/useEditHistory';
+import { enterCoverHistory, notifyCoverHistory } from '@/hooks/useEditHistory';
 import { historyShortcut, isTextEditingTarget } from '@/store/editHistory';
 import { compressCoverPhoto } from './socialShareMedia';
 import { createAddedPhotoSlot, createPhotoSlot, PRESET_ORDER, presetSettings } from './socialSharePresets';
@@ -90,12 +90,12 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     window.addEventListener('input', afterInput);
     return () => { window.removeEventListener('beforeinput', beforeInput, true); window.removeEventListener('input', afterInput); };
   }, []);
-  useEffect(() => enterCoverHistory(), []);
   const lastHistoryRef = useRef<{ key: string; time: number } | null>(null);
   const [undoCount, setUndoCount] = useState(0);
   const captureHistory = (state = useAppStore.getState(), key = '') => {
     if (applyingUndoRef.current || nativeTextHistoryRef.current) return;
     redoRef.current = [];
+    notifyCoverHistory();
     const now = Date.now();
     if (key && lastHistoryRef.current?.key === key && now - lastHistoryRef.current.time < 600) {
       lastHistoryRef.current.time = now;
@@ -112,6 +112,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     if (historyRef.current.length > 100) historyRef.current.shift();
     lastHistoryRef.current = key ? { key, time: now } : null;
     setUndoCount(historyRef.current.length);
+    notifyCoverHistory();
   };
   const captureHistoryRef = useRef(captureHistory);
   useEffect(() => { captureHistoryRef.current = captureHistory; });
@@ -148,11 +149,18 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
     } finally {
       applyingUndoRef.current = false;
       setUndoCount(historyRef.current.length);
+      notifyCoverHistory();
     }
   };
   const undo = () => restoreHistory('undo');
   const historyActionRef = useRef(restoreHistory);
   useEffect(() => { historyActionRef.current = restoreHistory; });
+  useEffect(() => enterCoverHistory({
+    canUndo: () => historyRef.current.length > 0,
+    canRedo: () => redoRef.current.length > 0,
+    undo: () => historyActionRef.current('undo'),
+    redo: () => historyActionRef.current('redo'),
+  }), []);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const action = historyShortcut(event);

@@ -52,6 +52,30 @@ import {
   visibleWidthMetersAtZoom,
 } from '@/utils/cinematicCameraAnchor';
 
+/** Keep aerial framing in sync with height without interrupting a camera fly-in. */
+export function bindAerialHeadroom(map: maplibregl.Map) {
+  const previous = map.getPadding();
+  let pending = false;
+  const apply = (deferWhileMoving: boolean) => {
+    const target = (previous.top ?? 0) + map.getCanvas().clientHeight * 0.16;
+    if (Math.abs((map.getPadding().top ?? 0) - target) < 0.01) return;
+    if (deferWhileMoving && map.isMoving()) {
+      if (!pending) { pending = true; map.once('moveend', onMoveEnd); }
+      return;
+    }
+    map.setPadding({ ...previous, top: target });
+  };
+  const onMoveEnd = () => { pending = false; apply(true); };
+  const onResize = () => apply(true);
+  apply(false);
+  map.on('resize', onResize);
+  return () => {
+    map.off('resize', onResize);
+    if (pending) map.off('moveend', onMoveEnd);
+    map.setPadding(previous);
+  };
+}
+
 interface UseTrailPlaybackCameraParams {
   introStartOverride?: TransitionCameraPose;
   introRegionOverride?: TransitionCameraPose;
@@ -327,11 +351,7 @@ export function useTrailPlaybackCamera({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !isMapLoaded || !aerialHeadroomActive) return;
-    const previous = map.getPadding();
-    const update = () => map.setPadding({ ...previous, top: (previous.top ?? 0) + map.getCanvas().clientHeight * 0.16 });
-    update();
-    map.on('resize', update);
-    return () => { map.off('resize', update); map.setPadding(previous); };
+    return bindAerialHeadroom(map);
   }, [mapRef, isMapLoaded, aerialHeadroomActive]);
 
   // Explicit distance/mode changes should take effect immediately instead of

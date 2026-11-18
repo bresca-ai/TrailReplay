@@ -1,18 +1,26 @@
-import { useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { SidebarPanelContent } from './SidebarPanelContent';
 import { useI18n } from '@/i18n/useI18n';
 import { languageLabels } from '@/i18n/translations';
+import { useRailMapResize } from './useRailMapResize';
+import { useContext, useRef, type TransitionEvent } from 'react';
+import { MenuDesignContext } from './menuDesign';
 import type { UnitSystem } from '@/types';
 import {
-  MapPin,
   Route,
-  Image,
+  ListOrdered,
+  Images,
+  Paintbrush,
+  Clapperboard,
+  Camera,
+  Map,
+  Globe2,
+  ChevronDown,
+  MapPin,
   Palette,
+  Image,
   Video,
   Eye,
-  Globe2,
-  ChevronDown
 } from 'lucide-react';
 
 function SidebarPreferences() {
@@ -57,9 +65,23 @@ function SidebarPreferences() {
 export function Sidebar() {
   const activeTab = useAppStore((state) => state.activePanel);
   const setActiveTab = useAppStore((state) => state.setActivePanel);
+  const panelOpen = useAppStore((state) => state.isSidebarOpen);
+  const setPanelOpen = useAppStore((state) => state.setSidebarOpen);
   const isExporting = useAppStore((state) => state.isExporting);
   const { t } = useI18n();
-  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const railResize = useRailMapResize();
+  const legacy = useContext(MenuDesignContext) === 'previous';
+  const movingElements = useRef(new Set<HTMLElement>());
+  const startResize = (event: TransitionEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget || event.nativeEvent.propertyName !== 'width') return;
+    movingElements.current.add(event.currentTarget);
+    railResize.start();
+  };
+  const stopResize = (event: TransitionEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget || event.nativeEvent.propertyName !== 'width') return;
+    movingElements.current.delete(event.currentTarget);
+    if (!movingElements.current.size) railResize.stop();
+  };
 
   const tracks = useAppStore((state) => state.tracks);
   const pictures = useAppStore((state) => state.pictures);
@@ -67,27 +89,57 @@ export function Sidebar() {
   const textAnnotations = useAppStore((state) => state.textAnnotations);
 
   const tabs = [
-    { id: 'tracks' as const, label: t('sidebar.tabs.tracks'), icon: MapPin, count: tracks.length },
-    { id: 'journey' as const, label: t('sidebar.tabs.journey'), icon: Route, count: 0 },
-    { id: 'annotations' as const, label: t('sidebar.tabs.annotations'), icon: Palette, count: 0 },
-    { id: 'settings' as const, label: t('sidebar.tabs.settings'), icon: Eye, count: 0 },
-    { id: 'pictures' as const, label: t('sidebar.tabs.pictures'), icon: Image, count: pictures.length + videos.length + textAnnotations.length },
-    { id: 'export' as const, label: t('sidebar.tabs.export'), icon: Video, count: 0 },
+    { id: 'tracks' as const, label: t('sidebar.tabs.tracks'), icon: Route, count: tracks.length },
+    { id: 'journey' as const, label: t('sidebar.tabs.journey'), icon: ListOrdered, count: 0 },
+    { id: 'annotations' as const, label: t('sidebar.tabs.annotations'), icon: Paintbrush, count: 0 },
+    { id: 'settings' as const, label: t('sidebar.tabs.map'), icon: Map, count: 0 },
+    { id: 'camera' as const, label: t('sidebar.tabs.camera'), icon: Camera, count: 0 },
+    { id: 'pictures' as const, label: t('sidebar.tabs.pictures'), icon: Images, count: pictures.length + videos.length + textAnnotations.length },
+    { id: 'export' as const, label: t('sidebar.tabs.export'), icon: Clapperboard, count: 0 },
   ];
 
   return (
-    <div className="h-full flex flex-col bg-[var(--canvas)]">
+    <div className="relative flex h-full min-h-0 bg-[var(--canvas)] lg:w-max">
+      <nav aria-label={t('sidebar.navigation')}
+        onTransitionStart={startResize} onTransitionEnd={stopResize} onTransitionCancel={stopResize}
+        className={`group/nav hidden w-14 shrink-0 flex-col overflow-hidden border-r border-[var(--evergreen)]/15 bg-[var(--evergreen)] pt-3 transition-[width] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${legacy ? '' : 'lg:flex'} ${isExporting ? '' : 'hover:w-44 focus-within:w-44'}`}>
+          <div className="flex flex-col gap-1 px-1.5">
+            {tabs.map((tab) => {
+              const isLockedByExport = isExporting && tab.id !== 'export';
+              const selected = panelOpen && activeTab === tab.id;
+              return <button key={tab.id} type="button" aria-label={tab.label} aria-current={selected ? 'page' : undefined}
+                title={tab.label} disabled={isLockedByExport} onClick={(event) => {
+                  setActiveTab(tab.id);
+                  setPanelOpen(true);
+                  // Pointer clicks should collapse the flyout when the mouse
+                  // leaves; keyboard focus keeps it open for navigation.
+                  if (event.detail > 0) event.currentTarget.blur();
+                }}
+                className={`relative flex h-11 w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg px-3 text-left text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)] disabled:cursor-not-allowed disabled:opacity-35 ${selected ? 'bg-[var(--canvas)] text-[var(--evergreen)]' : 'text-[var(--canvas)]/75 hover:bg-white/10 hover:text-white'}`}>
+                {selected && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--trail-orange)]" aria-hidden="true" />}
+                <tab.icon className={`h-5 w-5 shrink-0 ${selected ? 'text-[var(--trail-orange)]' : ''}`} strokeWidth={1.8} aria-hidden="true" />
+                <span aria-hidden="true" className="min-w-0 flex-1 -translate-x-2 whitespace-nowrap opacity-0 transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none group-hover/nav:translate-x-0 group-hover/nav:opacity-100 group-focus-within/nav:translate-x-0 group-focus-within/nav:opacity-100">{tab.label}</span>
+                {tab.count > 0 && <span aria-hidden="true" className={`absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] leading-none group-hover/nav:static group-hover/nav:h-5 group-hover/nav:min-w-5 group-focus-within/nav:static group-focus-within/nav:h-5 group-focus-within/nav:min-w-5 ${selected ? 'bg-[var(--trail-orange)] text-white' : 'bg-white/20 text-white'}`}>{tab.count}</span>}
+              </button>;
+            })}
+          </div>
+      </nav>
+      <div
+        onTransitionStart={startResize} onTransitionEnd={stopResize} onTransitionCancel={stopResize}
+        className={`min-w-0 flex-1 lg:flex-none lg:overflow-hidden lg:transition-[width] lg:duration-[400ms] lg:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${panelOpen || legacy ? 'lg:w-80' : 'lg:w-0'}`}>
+      <div className="flex h-full w-full min-w-0 flex-col lg:w-80" inert={!panelOpen}>
       {/* Tabs */}
-      <div className="grid grid-cols-3 border-b-2 border-[var(--evergreen)] flex-shrink-0">
-        {tabs.map((tab) => {
+      <div className={`grid grid-cols-3 border-b-2 border-[var(--evergreen)] flex-shrink-0 ${legacy ? '' : 'lg:hidden'}`}>
+        {tabs.filter((tab) => tab.id !== 'camera').map((entry) => {
+          const tab = entry.id === 'settings' ? { ...entry, label: t('sidebar.tabs.settings') } : entry;
           const isLockedByExport = isExporting && tab.id !== 'export';
+          const selected = activeTab === tab.id || (tab.id === 'settings' && activeTab === 'camera');
+          const legacyIcons = { tracks: MapPin, journey: Route, annotations: Palette, settings: Eye, pictures: Image, export: Video };
+          const Icon = legacy ? legacyIcons[tab.id as keyof typeof legacyIcons] : tab.icon;
 
           return (
           <button
             key={tab.id}
-            ref={(element) => {
-              tabRefs.current[tab.id] = element;
-            }}
             onClick={() => {
               if (isLockedByExport) return;
               setActiveTab(tab.id);
@@ -96,19 +148,19 @@ export function Sidebar() {
             className={`
               flex min-h-[56px] items-center justify-center gap-1.5 px-2 py-3 text-xs font-medium text-center transition-colors
               border-r border-b border-[var(--evergreen)]/15 last:border-r-0
-              ${activeTab === tab.id
+              ${selected
                 ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
                 : 'text-[var(--evergreen)] hover:bg-[var(--evergreen)]/10'
               }
               ${isLockedByExport ? 'cursor-not-allowed opacity-45 hover:bg-transparent' : ''}
             `}
           >
-            <tab.icon className="h-4 w-4 shrink-0 stroke-[2.25]" />
+            <Icon className="h-4 w-4 shrink-0 stroke-[2.25]" />
             <span>{tab.label}</span>
             {tab.count > 0 && (
               <span className={`
                 ml-1 px-1.5 py-0.5 rounded-full text-[10px]
-                ${activeTab === tab.id
+                ${selected
                   ? 'bg-[var(--trail-orange)]'
                   : 'bg-[var(--evergreen)]/20'
                 }
@@ -144,6 +196,8 @@ export function Sidebar() {
             </a>
           </div>
         </div>
+      </div>
+      </div>
       </div>
     </div>
   );

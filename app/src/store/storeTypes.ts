@@ -100,7 +100,7 @@ export interface AppState {
   exportStage: string;
   isSidebarOpen: boolean;
   exploreMode: boolean;
-  activePanel: 'tracks' | 'journey' | 'annotations' | 'pictures' | 'export' | 'settings';
+  activePanel: 'tracks' | 'journey' | 'annotations' | 'pictures' | 'export' | 'settings' | 'camera';
   isLoading: boolean;
   fileImportStatus: FileImportStatus | null;
   error: string | null;

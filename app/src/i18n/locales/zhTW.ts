@@ -5,6 +5,7 @@ import type { LocaleMessages } from '../languages';
 export const zhTW = {
   locationChapters: { openingOnly: "僅開場", startChecking: "查詢中…", startMissing: "起點無資料", startFailed: "查詢失敗", startNoRoute: "新增路線以查看起點的地點。", startLoading: "正在查詢路線起點的地點…", startNone: "找不到起點的行政區邊界。", startError: "部分層級無法查詢。", startRetry: "重試", zoomDuration: "鏡頭移動時間（秒）", zoomDurationHint: "縮小、停留及返回的總時間。數值越大，移動越慢。", revealDurationHint: "邊界及名稱的顯示時間。開啟縮放時，會在鏡頭移動期間顯示，除非進入下一個地點。", playbackTitle: "播放途中", playbackLevel: "移動時的邊界層級", playbackLevelHint: "選擇沿途要顯示的地點。西班牙的 ADM3 是市鎮；開場層級另外設定。", offAll: "關閉所有地點動畫", playbackZoom: "進入地點時縮小地圖", minimumStay: "停留最短時間（秒）", minimumStayHint: "以影片時間計算。短暫經過市鎮可設為 0；提高數值可減少邊界抖動。", appearanceTitle: "邊界及名稱樣式", introZoom: "開場縮放時框住地點", revealDuration: "顯示時間（秒）", adminLevel: "行政層級", introLevels: "開場邊界層級", introLevelsHint: "選擇要顯示的層級，將依國家至地方的順序播放。地方層級依國家而異，可能包含鄉鎮；無資料的層級會略過。", partialCoverage: "部分邊界無法載入", playHint: '按下播放以預覽沿途的地點動畫。', coverage: '邊界涵蓋範圍不一，可能略過小地點或短暫的跨界。 詳細層級可能需要下載每個國家的大型資料。', loading: '正在載入地理邊界…', privacy: '邊界請求會向 geoBoundaries 和 GitHub 透露路線經過的國家；路線點保留在瀏覽器中。', notReady: '請等待邊界載入，或在匯出前關閉地點章節。', title: "地點與邊界動畫", description: '突顯旅途中經過的地點。', level: '邊界層級', off: '關閉', country: '國家', region: '地區', color: '邊界顏色', width: '邊界寬度', fill: '突顯區域', showName: '顯示地名', showFlag: '顯示國旗', zoom: '縮小以顯示每個地點', introCountryFirst: '開始縮放時先顯示國家，再顯示地區', traceBorder: '描繪邊界', introDuration: '開場時間（秒）', duration: '持續時間（秒）', unavailable: '此路線的邊界資料無法使用。', credit: '邊界：geoBoundaries 及原始資料提供者。國家查詢：Natural Earth。' },
   app: {
+    undo: '復原', redo: '重做',
     title: 'Trail Replay', subtitle: 'GPX 與 KML 軌跡視覺化',
     welcomeTitle: '歡迎使用 TrailReplay',
     welcomeBody: '匯入 GPX、KML 或 FIT 路線，或開啟已儲存的 .replay 專案。',
@@ -19,9 +20,11 @@ export const zhTW = {
     placeSection: '放置新的放大路段', placeSectionHint: '點選剖面圖以放置新的放大路段', adjustSection: '調整第 {index} 段的{edge}', adjustSectionHint: '拖曳以調整路段的{edge}', removeSection: '移除第 {index} 個路段', removeSectionHint: '移除放大路段', addSection: '新增放大路段', cancelSection: '取消新增放大路段',
     mapCanvas: '地圖', resetBearing: '將地圖轉回北方',
   },
+  menuFeedback: { title: "幫助我們改善選單", description: "試用兩種選單，告訴我們你比較喜歡哪一種。", tryPrevious: "試用舊選單", tryNew: "試用新選單", question: "你比較喜歡哪一個？", new: "新選單", previous: "舊選單", oneVote: "每個瀏覽器限投一票，投票後無法更改。", dismiss: "關閉選單意見調查" },
   sidebar: {
+    navigation: "功能區",
     panelLoadError: '無法載入此面板。', panelLoadErrorHelp: '您的作品仍然開啟中。請先從匯出分頁儲存專案，再重新載入並開啟專案。', reloadPage: '重新載入頁面',
-    tabs: { tracks: '路線', journey: '時間軸', annotations: '樣式', pictures: '媒體', export: '製作輸出', settings: '地圖與鏡頭' },
+    tabs: { map: "地圖", camera: "鏡頭", tracks: '路線', journey: '時間軸', annotations: '樣式', pictures: '媒體', export: '製作輸出', settings: '地圖與鏡頭' },
     preferencesTitle: '偏好設定', footerTitle: 'Trail Replay', footerSubtitle: 'GPX 與 KML 軌跡視覺化',
     footerGithub: '在 GitHub 上查看', saveProject: '儲存專案',
   },
@@ -291,7 +294,8 @@ export const zhTW = {
     studioEmailLabel: '接收影片下載連結的電子郵件', studioEmailPlaceholder: 'you@example.com', studioEmailHint: '我們會上傳完成的 MP4，並寄送有效期限為 7 天的私人下載連結；影片不會自動下載。', studioEmailRequired: '請在匯出設定中輸入有效的電子郵件，才能使用精細畫質。', marketingConsent: 'TrailReplay 手機版推出時，請通知我。', marketingConsentHint: '自由選填，可隨時取消訂閱。',
     stageRegisteringDelivery: '正在準備安全傳送…', stageUploadingVideo: '正在上傳完成的影片…', stageEmailingLink: '正在寄送私人下載連結…', stageEmailSent: '完成！已寄出下載連結。', stageDeliveryFailed: '影片已完成，但電子郵件傳送需要處理', deliverySent: '已將私人下載連結寄至 {email}。', deliveryFailed: '無法寄送影片下載連結。請先下載下方的本機副本，保留已完成的影片。', downloadRecovery: '下載本機副本', deliverySetupFailed: '無法啟動精細畫質影片的傳送流程。',
   },
-  workflow: { routeImported: '已匯入路線，接著請設定影片時間。', step: '第 {current}／{total} 步', progressLabel: '影片製作進度', next: '下一步：{step}', videoDurationStatus: '{seconds} 秒影片', routesDescription: '加入路線檔案或開啟已儲存的 .replay 專案。', timelineDescription: '設定影片長度、選擇配速模式，並編排多個路段。', styleDescription: '設定路線、標記、統計資訊與標註的樣式。', mapDescription: '選擇地圖景觀、地形與鏡頭移動方式。', mediaDescription: '沿路線加入照片、影片片段與標註。', generateDescription: '選擇輸出方式，製作完成的影片。' },
+  workflow: {
+    mapCombinedDescription: "選擇地圖景觀、地形與鏡頭移動方式。", routeImported: '已匯入路線，接著請設定影片時間。', step: '第 {current}／{total} 步', progressLabel: '影片製作進度', next: '下一步：{step}', videoDurationStatus: '{seconds} 秒影片', routesDescription: '加入路線檔案或開啟已儲存的 .replay 專案。', timelineDescription: '設定影片長度、選擇配速模式，並編排多個路段。', styleDescription: '設定路線、標記、統計資訊與標註的樣式。', mapDescription: "選擇地圖、地形與風景。", cameraDescription: "選擇鏡頭如何跟隨路線。", mediaDescription: '沿路線加入照片、影片片段與標註。', generateDescription: '選擇輸出方式，製作完成的影片。' },
   help,
   playback: { loadingPanel: '正在載入面板…', play: '播放', pause: '暫停', restart: '重新播放', skipBackward: '往前跳轉', skipForward: '往後跳轉' },
   map: { loading: '正在載入地圖…', preparingReplay: '正在準備重播…', zoomButtonsHint: '動畫播放時，可使用 ＋／− 按鈕調整縮放。' },

@@ -3,6 +3,7 @@ import { help } from './frHelp';
 export const fr = {
   locationChapters: { openingOnly: "À l’ouverture seulement", startChecking: "Vérification…", startMissing: "Absent au départ", startFailed: "Échec de la recherche", startNoRoute: "Ajoutez un itinéraire pour voir les lieux de départ.", startLoading: "Recherche des lieux au départ…", startNone: "Aucun niveau de limites trouvé au départ.", startError: "Certains niveaux n’ont pas pu être vérifiés.", startRetry: "Réessayer", zoomDuration: "Durée du mouvement de caméra (secondes)", zoomDurationHint: "Durée totale pour dézoomer, maintenir la vue et revenir. Une valeur plus élevée ralentit le mouvement.", revealDurationHint: "Durée d’affichage du contour et du nom. Avec le zoom, ils restent visibles pendant le mouvement sauf à l’entrée dans un autre lieu.", playbackTitle: "Pendant la lecture", playbackLevel: "Niveau des limites en mouvement", playbackLevelHint: "Choisissez les lieux affichés pendant le trajet. En Espagne, ADM3 correspond aux communes. Le début se règle séparément.", offAll: "Désactivé — toutes les animations", playbackZoom: "Dézoomer à l’entrée dans un lieu", minimumStay: "Temps minimum dans le lieu (secondes)", minimumStayHint: "Mesuré dans la vidéo. Utilisez 0 pour les passages brefs ; augmentez pour réduire les oscillations aux frontières.", appearanceTitle: "Style du contour et du nom", introZoom: "Cadrer les lieux au début", revealDuration: "Durée de l’animation (secondes)", adminLevel: "Niveau administratif", introLevels: "Niveaux de limites au départ", introLevelsHint: "Choisissez les niveaux, du pays au niveau local. Les niveaux locaux varient selon le pays et peuvent inclure des communes. Les niveaux indisponibles sont ignorés.", partialCoverage: "Certaines limites n’ont pas pu être chargées", playHint: 'Lancez la lecture pour voir les animations le long du parcours.', coverage: 'La couverture varie ; les petits lieux ou passages brefs peuvent manquer. Les niveaux détaillés peuvent nécessiter des téléchargements volumineux par pays.', loading: 'Chargement des limites géographiques…', privacy: 'Les demandes de limites révèlent les pays du parcours à geoBoundaries et GitHub ; les points restent dans votre navigateur.', notReady: 'Attendez le chargement des limites ou désactivez les chapitres géographiques avant l’export.', title: "Animations des lieux et frontières", description: 'Mettez en valeur les lieux traversés.', level: 'Niveau des limites', off: 'Désactivé', country: 'Pays', region: 'Régions', color: 'Couleur du contour', width: 'Épaisseur du contour', fill: 'Mettre la zone en valeur', showName: 'Afficher le nom', showFlag: 'Afficher le drapeau du pays', zoom: 'Dézoomer pour montrer chaque lieu', introCountryFirst: 'Afficher le pays puis la région pendant le zoom initial', traceBorder: 'Tracer la frontière', introDuration: 'Durée de l’ouverture (secondes)', duration: 'Durée (secondes)', unavailable: 'Limites indisponibles pour cet itinéraire.', credit: 'Limites : geoBoundaries et fournisseurs originaux. Recherche de pays : Natural Earth.' },
   app: {
+    undo: 'Annuler', redo: 'Rétablir',
     title: 'Trail Replay',
     subtitle: 'VISUALISATION GPX & KML',
     welcomeTitle: 'Bienvenue sur TrailReplay',
@@ -23,9 +24,11 @@ export const fr = {
     placeSection: 'Placer une section de zoom', placeSectionHint: 'Cliquez sur le profil pour placer une section de zoom', adjustSection: 'Ajuster la section {index} {edge}', adjustSectionHint: 'Faites glisser pour ajuster {edge} de la section', removeSection: 'Supprimer la section {index}', removeSectionHint: 'Supprimer la section de zoom', addSection: 'Ajouter une section de zoom', cancelSection: 'Annuler l’ajout de la section de zoom',
     mapCanvas: 'Carte', resetBearing: 'Orienter la carte vers le nord',
   },
+  menuFeedback: { title: "Aidez-nous à améliorer le menu", description: "Essayez les deux menus et dites-nous lequel vous préférez.", tryPrevious: "Essayer l’ancien menu", tryNew: "Essayer le nouveau menu", question: "Lequel préférez-vous ?", new: "Nouveau menu", previous: "Ancien menu", oneVote: "Un vote par navigateur ; il ne peut pas être modifié.", dismiss: "Fermer la question sur le menu" },
   sidebar: {
+    navigation: "Sections",
     panelLoadError: 'Impossible de charger ce panneau.', panelLoadErrorHelp: 'Votre travail est toujours ouvert. Enregistrez le projet depuis l’onglet Exporter avant de recharger, puis rouvrez-le.', reloadPage: 'Recharger la page',
-    tabs: {
+    tabs: { map: "Carte", camera: "Caméra",
       tracks: 'Parcours',
       journey: 'Chronologie',
       annotations: 'Style',
@@ -885,6 +888,7 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
     deliverySetupFailed: 'La livraison Studio n’a pas pu démarrer.',
   },
   workflow: {
+    mapCombinedDescription: "Choisissez le paysage, le terrain et le mouvement de caméra.",
     routeImported: 'Itinéraire importé. Définissez maintenant le rythme de votre vidéo.',
     step: 'Étape {current} sur {total}',
     progressLabel: 'Progression de création de la vidéo',
@@ -893,7 +897,8 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
     routesDescription: 'Ajoutez des parcours ou ouvrez un projet .replay enregistré.',
     timelineDescription: 'Définissez la durée, le rythme et l’ordre des segments.',
     styleDescription: 'Choisissez le style du tracé, du marqueur, des statistiques et des annotations.',
-    mapDescription: 'Choisissez le paysage, le terrain et le mouvement de caméra.',
+    mapDescription: "Choisissez la carte, le relief et le paysage.",
+    cameraDescription: "Choisissez comment la caméra suit votre parcours.",
     mediaDescription: 'Ajoutez des photos, des clips et des annotations le long du parcours.',
     generateDescription: 'Choisissez une sortie et créez la vidéo finale.',
   },
