@@ -2,10 +2,40 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import {
   useTrailPlaybackCamera,
+  bindAerialHeadroom,
   resolvePlaybackMarkerColor,
   shouldRenderPlaybackAdornment,
   updatePlaybackMarkerElement,
 } from './useTrailPlaybackCamera';
+
+it('preserves the opening camera move when the sidebar resizes the map', () => {
+  let height = 700;
+  let moving = true;
+  let padding = { top: 0, bottom: 0, left: 0, right: 0 };
+  const callbacks: Record<string, () => void> = {};
+  const map = {
+    getPadding: () => padding,
+    getCanvas: () => ({ clientHeight: height }),
+    isMoving: () => moving,
+    setPadding: vi.fn((next) => { padding = next; }),
+    on: vi.fn((type, callback) => { callbacks[type] = callback; }),
+    once: vi.fn((type, callback) => { callbacks[type] = callback; }),
+    off: vi.fn(),
+  };
+  const unbind = bindAerialHeadroom(map as unknown as import('maplibre-gl').Map);
+  expect(map.setPadding).toHaveBeenCalledTimes(1);
+  callbacks.resize(); // A width-only resize must not stop the fly-in.
+  expect(map.setPadding).toHaveBeenCalledTimes(1);
+  height = 600;
+  callbacks.resize();
+  callbacks.resize();
+  expect(map.setPadding).toHaveBeenCalledTimes(1);
+  expect(map.once).toHaveBeenCalledTimes(1);
+  moving = false;
+  callbacks.moveend();
+  expect(map.setPadding).toHaveBeenLastCalledWith({ top: 96, bottom: 0, left: 0, right: 0 });
+  unbind();
+});
 
 describe('playback marker presentation', () => {
   it('preserves the icon, pulse, and label nodes during unchanged playback updates', () => {

@@ -35,6 +35,8 @@ export function createEditHistory(store: StoreApi<AppState>, shouldRecord = () =
   const future: Entry[] = [];
   let applying = false;
   let paused = 0;
+  const listeners = new Set<() => void>();
+  const notify = () => listeners.forEach(listener => listener());
   const unsubscribe = store.subscribe((state, previous) => {
     if (applying || paused || !shouldRecord() || state.isExporting || previous.isExporting || state.isLoading || previous.isLoading) return;
     const changed = fields.filter(field => state[field] !== previous[field]);
@@ -60,6 +62,7 @@ export function createEditHistory(store: StoreApi<AppState>, shouldRecord = () =
       if (past.length > 100) past.shift();
     }
     future.length = 0;
+    notify();
   });
   const apply = (from: Entry[], to: Entry[], direction: 'before' | 'after') => {
     if (store.getState().isExporting || store.getState().isLoading) return false;
@@ -92,12 +95,16 @@ export function createEditHistory(store: StoreApi<AppState>, shouldRecord = () =
     } finally { applying = false; }
     entry.group = null;
     to.push(entry);
+    notify();
     return true;
   };
   return {
     undo: () => apply(past, future, 'before'),
     redo: () => apply(future, past, 'after'),
-    clear: () => { past.length = 0; future.length = 0; },
+    clear: () => { past.length = 0; future.length = 0; notify(); },
+    canUndo: () => past.length > 0,
+    canRedo: () => future.length > 0,
+    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     pause: () => { paused += 1; return () => { paused = Math.max(0, paused - 1); }; },
     dispose: unsubscribe,
   };

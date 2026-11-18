@@ -3,6 +3,7 @@ import { help } from './caHelp';
 export const ca = {
   locationChapters: { openingOnly: "Només a l’inici", startChecking: "Consultant…", startMissing: "No disponible a l’inici", startFailed: "Error de consulta", startNoRoute: "Afegeix una ruta per veure els llocs de l’inici.", startLoading: "Consultant els llocs a l’inici de la ruta…", startNone: "No s’han trobat nivells de límits a l’inici.", startError: "No s’han pogut consultar alguns nivells.", startRetry: "Torna-ho a provar", zoomDuration: "Durada del moviment de càmera (segons)", zoomDurationHint: "Temps total per allunyar, mantenir i tornar. Un valor més alt fa el moviment més lent.", revealDurationHint: "Temps que apareixen el contorn i el nom. Amb zoom, es mantenen durant el moviment tret que s’entri en un altre lloc.", playbackTitle: "Durant la reproducció", playbackLevel: "Nivell de límits en moviment", playbackLevelHint: "Tria quins llocs apareixen durant el recorregut. A Espanya, ADM3 mostra municipis. L’obertura es configura a part.", offAll: "Desactivat — totes les animacions", playbackZoom: "Allunya en entrar en un lloc", minimumStay: "Temps mínim dins (segons)", minimumStayHint: "Es mesura en temps de vídeo. Fes servir 0 per a passos breus; augmenta’l per reduir oscil·lacions.", appearanceTitle: "Estil del contorn i nom", introZoom: "Enquadra els llocs a l’obertura", revealDuration: "Durada de l’animació (segons)", adminLevel: "Nivell administratiu", introLevels: "Nivells de límits a l’inici", introLevelsHint: "Tria els nivells; es mostren del país al nivell local. Els nivells locals varien segons el país i poden incloure municipis. S’ometen els no disponibles.", partialCoverage: "No s’han pogut carregar alguns límits", playHint: 'Prem Reprodueix per veure les animacions al llarg de la ruta.', coverage: 'La cobertura varia; poden faltar llocs petits o passos breus. Els nivells detallats poden requerir descàrregues grans per país.', loading: 'Carregant límits geogràfics…', privacy: 'Les peticions de límits revelen els països de la ruta a geoBoundaries i GitHub; els punts romanen al navegador.', notReady: 'Espera que es carreguin els límits o desactiva els capítols de lloc abans d’exportar.', title: "Animacions de llocs i fronteres", description: 'Destaca els llocs que recorre el viatge.', level: 'Nivell de límits', off: 'Desactivat', country: 'Països', region: 'Regions', color: 'Color del contorn', width: 'Gruix del contorn', fill: 'Ressalta la zona', showName: 'Mostra el nom', showFlag: 'Mostra la bandera del país', zoom: 'Allunya per mostrar cada lloc', introCountryFirst: 'Mostra el país i després la regió durant el zoom inicial', traceBorder: 'Dibuixa el contorn', introDuration: 'Durada de l’obertura (segons)', duration: 'Durada (segons)', unavailable: 'No hi ha límits disponibles per a aquesta ruta.', credit: 'Límits: geoBoundaries i proveïdors originals. Consulta de països: Natural Earth.' },
   app: {
+    undo: 'Desfés', redo: 'Refés',
     title: 'Trail Replay',
     subtitle: 'VISUALITZACIÓ GPX & KML',
     welcomeTitle: 'Benvingut a TrailReplay',
@@ -23,9 +24,11 @@ export const ca = {
     placeSection: 'Col·loca una secció de zoom', placeSectionHint: 'Clica el perfil per col·locar una secció de zoom', adjustSection: 'Ajusta la secció {index} {edge}', adjustSectionHint: 'Arrossega per ajustar {edge} de la secció', removeSection: 'Elimina la secció {index}', removeSectionHint: 'Elimina la secció de zoom', addSection: 'Afegeix una secció de zoom', cancelSection: 'Cancel·la la nova secció de zoom',
     mapCanvas: 'Mapa', resetBearing: 'Orienta el mapa al nord',
   },
+  menuFeedback: { title: "Ajuda’ns a millorar el menú", description: "Prova els dos menús i digues-nos quin prefereixes.", tryPrevious: "Prova el menú anterior", tryNew: "Prova el menú nou", question: "Quin prefereixes?", new: "Menú nou", previous: "Menú anterior", oneVote: "Un vot per navegador; no es pot canviar.", dismiss: "Tanca la pregunta sobre el menú" },
   sidebar: {
+    navigation: "Seccions",
     panelLoadError: 'No s’ha pogut carregar aquest tauler.', panelLoadErrorHelp: 'El teu treball continua obert. Desa el projecte des de la pestanya Crea abans de tornar a carregar i torna’l a obrir.', reloadPage: 'Torna a carregar la pàgina',
-    tabs: {
+    tabs: { map: "Mapa", camera: "Càmera",
       tracks: 'Rutes',
       journey: 'Cronologia',
       annotations: 'Estil',
@@ -885,6 +888,7 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     deliverySetupFailed: 'No s\'ha pogut iniciar el lliurament Studio.',
   },
   workflow: {
+    mapCombinedDescription: "Tria el paisatge, el terreny i el moviment de càmera.",
     routeImported: 'Ruta importada. Defineix ara el temps del teu vídeo.',
     step: 'Pas {current} de {total}',
     progressLabel: 'Progrés de creació del vídeo',
@@ -893,7 +897,8 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     routesDescription: 'Afegeix fitxers de ruta o obre un projecte .replay desat.',
     timelineDescription: 'Defineix la durada, el ritme i l’ordre dels segments de ruta.',
     styleDescription: 'Tria l’aspecte de la ruta, el marcador, les estadístiques i les crides.',
-    mapDescription: 'Tria el paisatge, el terreny i el moviment de càmera.',
+    mapDescription: "Tria el mapa, el terreny i el paisatge.",
+    cameraDescription: "Tria com segueix la càmera la teva ruta.",
     mediaDescription: 'Afegeix fotos, clips i anotacions al llarg de la ruta.',
     generateDescription: 'Tria una sortida i crea el vídeo final.',
   },

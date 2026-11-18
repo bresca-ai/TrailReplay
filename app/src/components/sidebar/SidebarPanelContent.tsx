@@ -5,6 +5,7 @@ import { useAppStore } from '@/store/useAppStore';
 import type { AppState } from '@/store/storeTypes';
 import { WorkflowGuide } from './WorkflowGuide';
 import { PanelErrorBoundary } from './PanelErrorBoundary';
+import { useDesktopSidebar } from './useDesktopSidebar';
 
 const TracksPanel = lazy(() => import('./TracksPanel').then((module) => ({ default: module.TracksPanel })));
 const JourneyPanel = lazy(() => import('./JourneyPanel').then((module) => ({ default: module.JourneyPanel })));
@@ -28,26 +29,28 @@ function PanelFallback() {
 
 const panelRegistry: Record<
   AppState['activePanel'],
-  () => ReactNode
+  (desktop: boolean) => ReactNode
 > = {
   tracks: () => <TracksPanel />,
   journey: () => <JourneyPanel />,
   annotations: () => <AnnotationsPanel />,
   pictures: () => <PicturesPanel />,
   export: () => <ExportPanel />,
-  settings: () => <SettingsPanel />,
+  settings: (desktop) => <SettingsPanel section={desktop ? 'map' : 'all'} />,
+  camera: (desktop) => <SettingsPanel section={desktop ? 'camera' : 'all'} />,
 };
 
 export function SidebarPanelContent() {
   const { t } = useI18n();
   const activePanel = useAppStore((state) => state.activePanel);
+  const desktop = useDesktopSidebar();
   const renderPanel = panelRegistry[activePanel];
 
   return (
     <>
       <WorkflowGuide />
       <PanelErrorBoundary key={activePanel} title={t('sidebar.panelLoadError')} message={t('sidebar.panelLoadErrorHelp')} reloadLabel={t('sidebar.reloadPage')}>
-        <Suspense fallback={<PanelFallback />}>{renderPanel()}</Suspense>
+        <Suspense fallback={<PanelFallback />}>{renderPanel(desktop)}</Suspense>
       </PanelErrorBoundary>
     </>
   );

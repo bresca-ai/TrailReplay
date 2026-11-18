@@ -1,5 +1,8 @@
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { ExportAwareSidebar } from '@/components/sidebar/ExportAwareSidebar';
+import { AnimatedInfoPanel } from '@/components/info/AnimatedInfoPanel';
+import { MenuFeedback } from '@/components/sidebar/MenuFeedback';
+import { MENU_DESIGN_KEY, MenuDesignContext, savedMenuDesign, type MenuDesign } from '@/components/sidebar/menuDesign';
 import { WaypointImportDialog } from '@/components/app/WaypointImportDialog';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
@@ -37,7 +40,6 @@ import { useI18n } from '@/i18n/useI18n';
 import { overlayFontFamily } from '@/utils/typography';
 
 const Sidebar = lazy(() => import('@/components/sidebar/Sidebar').then((module) => ({ default: module.Sidebar })));
-const InfoPanel = lazy(() => import('@/components/info/InfoPanel').then((module) => ({ default: module.InfoPanel })));
 const FeedbackSolicitation = lazy(() => import('@/components/feedback/FeedbackSolicitation').then((module) => ({ default: module.FeedbackSolicitation })));
 const TrailMap = lazy(() => import('@/components/map/TrailMap').then((module) => ({ default: module.TrailMap })));
 
@@ -91,7 +93,8 @@ interface StatsResizeGuide {
 }
 
 function App() {
-  useEditHistory();
+  const editHistory = useEditHistory();
+  const [menuDesign, setMenuDesign] = useState<MenuDesign>(savedMenuDesign);
   const { t } = useI18n();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,6 +112,7 @@ function App() {
   const [statsResizeGuide, setStatsResizeGuide] = useState<StatsResizeGuide | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [infoPanelMounted, setInfoPanelMounted] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isNarrowScreen, setIsNarrowScreen] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
@@ -130,6 +134,13 @@ function App() {
   const tracks = useAppStore((state) => state.tracks);
   const showSidebar = useAppStore((state) => state.isSidebarOpen);
   const setShowSidebar = useAppStore((state) => state.setSidebarOpen);
+  const switchMenu = (design: MenuDesign) => {
+    if (useAppStore.getState().isExporting || design === menuDesign) return;
+    if (design === 'previous' && useAppStore.getState().activePanel === 'camera') useAppStore.getState().setActivePanel('settings');
+    setShowSidebar(true);
+    setMenuDesign(design);
+    try { localStorage.setItem(MENU_DESIGN_KEY, design); } catch { /* keep this session's choice */ }
+  };
   const exploreMode = useAppStore((state) => state.exploreMode);
   const setExploreMode = useAppStore((state) => state.setExploreMode);
   const animationPhase = useAppStore((state) => state.animationPhase);
@@ -597,6 +608,7 @@ function App() {
   }, []);
   
   return (
+    <MenuDesignContext.Provider value={menuDesign}>
     <PlaybackProvider>
       <div
         className="app-container h-screen bg-[var(--canvas)] flex flex-col overflow-hidden"
@@ -609,8 +621,12 @@ function App() {
           showInfoPanel={showInfoPanel}
           showSidebar={showSidebar}
           onToggleFullscreen={toggleFullscreen}
-          onToggleInfoPanel={() => setShowInfoPanel(!showInfoPanel)}
+          onToggleInfoPanel={() => { if (!showInfoPanel) setInfoPanelMounted(true); setShowInfoPanel(!showInfoPanel); }}
           onToggleSidebar={() => setShowSidebar(!showSidebar)}
+          history={editHistory}
+          menuDesign={menuDesign}
+          onSwitchMenu={() => switchMenu(menuDesign === 'new' ? 'previous' : 'new')}
+          menuSwitchDisabled={isExporting}
         />
         
         {/* Main Content */}
@@ -638,6 +654,7 @@ function App() {
                   exportFrame={activeExportCropMetrics}
                 />
               </Suspense>
+              <MenuFeedback design={menuDesign} onSwitch={switchMenu} />
 
 
               {localizedScreenAnnotation && <ScreenAnnotation exportPixelRatio={isExporting ? exportResolution.width / Math.max(1, annotationFrame?.frameWidth ?? annotationContainerSize.width) : undefined} annotation={localizedScreenAnnotation} font={settings.trailStyle.overlayFont} size={Math.max(0.5, Math.min(2, settings.annotationTextScale ?? settings.annotationScale ?? 1))} maxWidth={annotationWidth} maxHeight={Math.max(40, (annotationFrame?.frameHeight ?? annotationContainerSize.height) - annotationBottom - 24)} style={{ right: (annotationFrame?.right ?? 0) + 20, bottom: (annotationFrame?.bottom ?? 0) + annotationBottom }} />}
@@ -835,13 +852,7 @@ function App() {
           </div>
 
           {/* Info Panel (Right Side) */}
-          {showInfoPanel && (
-            <div className="w-80 h-full flex-shrink-0 overflow-hidden">
-              <Suspense fallback={<SidebarFallback />}>
-                <InfoPanel onClose={() => setShowInfoPanel(false)} />
-              </Suspense>
-            </div>
-          )}
+          <AnimatedInfoPanel open={showInfoPanel} mounted={infoPanelMounted} onClose={() => setShowInfoPanel(false)} />
         </main>
         
         <WaypointImportDialog />
@@ -857,6 +868,7 @@ function App() {
         />
       </div>
     </PlaybackProvider>
+    </MenuDesignContext.Provider>
   );
 }
 

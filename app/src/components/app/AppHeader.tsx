@@ -1,9 +1,9 @@
-import { releaseLabels } from '@/releases/releaseLabels';
 import { localizedSitePath } from '@/seo/seoLocale';
-import { BookOpen, History, Info, Maximize2, Menu, Minimize2, X } from 'lucide-react';
+import { BookOpen, Info, Maximize2, Menu, Minimize2, Redo2, Undo2, X } from 'lucide-react';
 import { SupportButton } from '@/components/header/SupportButton';
 import { useI18n } from '@/i18n/useI18n';
 import { trackEvent } from '@/utils/analytics';
+import type { MenuDesign } from '@/components/sidebar/menuDesign';
 
 interface AppHeaderProps {
   isFullscreen: boolean;
@@ -12,6 +12,10 @@ interface AppHeaderProps {
   onToggleFullscreen: () => void;
   onToggleInfoPanel: () => void;
   onToggleSidebar: () => void;
+  history: { canUndo: boolean; canRedo: boolean; undo: () => void; redo: () => void };
+  menuDesign: MenuDesign;
+  onSwitchMenu: () => void;
+  menuSwitchDisabled: boolean;
 }
 
 export function AppHeader({
@@ -21,15 +25,20 @@ export function AppHeader({
   onToggleFullscreen,
   onToggleInfoPanel,
   onToggleSidebar,
+  history,
+  menuDesign,
+  onSwitchMenu,
+  menuSwitchDisabled,
 }: AppHeaderProps) {
   const { t, language } = useI18n();
+  const modifier = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
 
   return (
-    <header className="z-50 flex h-14 items-center justify-between bg-[var(--evergreen)] px-2 text-[var(--canvas)] sm:px-4">
+    <header className="z-50 flex h-14 items-center justify-between bg-[var(--evergreen)] px-2 text-[var(--canvas)] sm:px-4 lg:pl-0">
       <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-3">
         <button
           onClick={onToggleSidebar}
-          className="rounded-lg p-1.5 transition-colors hover:bg-white/10 sm:p-2"
+          className="rounded-lg p-1.5 transition-colors hover:bg-white/10 sm:p-2 lg:flex lg:h-14 lg:w-14 lg:shrink-0 lg:items-center lg:justify-center"
         >
           {showSidebar ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
         </button>
@@ -54,7 +63,9 @@ export function AppHeader({
 
       <div className="ml-2 flex shrink-0 items-center gap-1 sm:gap-2">
         <SupportButton />
-        <a href={localizedSitePath('/releases', language)} className="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white/85 hover:bg-white/10 hover:text-white xl:inline-flex"><History className="h-3.5 w-3.5" /> {releaseLabels[language].title}</a>
+        <button type="button" onClick={onSwitchMenu} disabled={menuSwitchDisabled} className="hidden rounded-lg px-2.5 py-2 text-[11px] font-semibold text-white/85 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40 lg:inline-flex">
+          {t(menuDesign === 'new' ? 'menuFeedback.tryPrevious' : 'menuFeedback.tryNew')}
+        </button>
         <a
           href={localizedSitePath('/tutorial', language)}
           onClick={() => trackEvent('help_cta_clicked', {
@@ -73,6 +84,17 @@ export function AppHeader({
         >
           {isFullscreen ? <Minimize2 className="h-4 w-4 sm:h-5 sm:w-5" /> : <Maximize2 className="h-4 w-4 sm:h-5 sm:w-5" />}
         </button>
+        {([
+          { label: t('app.undo'), shortcut: `${modifier}Z`, enabled: history.canUndo, action: history.undo, Icon: Undo2 },
+          { label: t('app.redo'), shortcut: modifier === '⌘' ? '⇧⌘Z' : 'Ctrl+Shift+Z', enabled: history.canRedo, action: history.redo, Icon: Redo2 },
+        ]).map(({ label, shortcut, enabled, action, Icon }) => (
+          <span key={label} title={`${label} (${shortcut})`} className="inline-flex">
+            <button type="button" aria-label={`${label} (${shortcut})`} disabled={!enabled} onClick={action}
+              className="rounded-lg p-1.5 transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-30 sm:p-2">
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+            </button>
+          </span>
+        ))}
         <button
           onClick={onToggleInfoPanel}
           className="rounded-lg p-1.5 transition-colors hover:bg-white/10 sm:p-2"

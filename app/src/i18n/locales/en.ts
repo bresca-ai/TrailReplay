@@ -5,6 +5,7 @@ export const en = {
     title: "Place & border animations", description: 'Highlight places as your trip crosses them.', level: 'Boundary level', off: 'Off', country: 'Countries', region: 'Regions', color: 'Border color', width: 'Border width', fill: 'Highlight area', showName: 'Show place name', showFlag: 'Show country flag', zoom: 'Zoom out to show each place', introCountryFirst: 'Show country, then region during the opening zoom', traceBorder: 'Trace the border', introDuration: 'Opening duration (seconds)', duration: 'Duration (seconds)', unavailable: 'Location boundaries unavailable for this route.', credit: 'Boundaries: geoBoundaries and original data providers. Country lookup: Natural Earth.',
   },
   app: {
+    undo: 'Undo', redo: 'Redo',
     title: 'Trail Replay',
     subtitle: 'GPX & KML VISUALIZATION',
     welcomeTitle: 'Welcome to TrailReplay',
@@ -25,9 +26,11 @@ export const en = {
     placeSection: 'Place new zoom section', placeSectionHint: 'Click the profile to place a new zoom section', adjustSection: 'Adjust section {index} {edge}', adjustSectionHint: 'Drag to adjust section {edge}', removeSection: 'Remove section {index}', removeSectionHint: 'Remove zoom section', addSection: 'Add zoom section', cancelSection: 'Cancel adding zoom section',
     mapCanvas: 'Map', resetBearing: 'Reset bearing to north',
   },
+  menuFeedback: { title: "Help shape the menu", description: "Try both menu layouts, then tell us which you prefer.", tryPrevious: "Try previous menu", tryNew: "Try new menu", question: "Which do you prefer?", new: "New menu", previous: "Previous menu", oneVote: "One vote per browser; your choice cannot be changed.", dismiss: "Dismiss menu feedback" },
   sidebar: {
+    navigation: "Sections",
     panelLoadError: 'This panel could not be loaded.', panelLoadErrorHelp: 'Your work is still open. Save your project from the Export tab before reloading, then reopen it.', reloadPage: 'Reload page',
-    tabs: {
+    tabs: { map: "Map", camera: "Camera",
       tracks: 'Routes',
       journey: 'Timeline',
       annotations: 'Style',
@@ -896,6 +899,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     deliverySetupFailed: 'Studio delivery could not be started.',
   },
   workflow: {
+    mapCombinedDescription: "Choose the landscape, terrain and camera movement.",
     routeImported: 'Route imported. Set your video timing next.',
     step: 'Step {current} of {total}',
     progressLabel: 'Video creation progress',
@@ -904,7 +908,8 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     routesDescription: 'Add route files or open a saved .replay project.',
     timelineDescription: 'Set video duration, choose timing, and arrange multiple route segments.',
     styleDescription: 'Choose how the trail, marker, stats and callouts look.',
-    mapDescription: 'Choose the landscape, terrain and camera movement.',
+    mapDescription: "Choose the map, terrain and landscape.",
+    cameraDescription: "Choose how the camera follows your route.",
     mediaDescription: 'Add photos, clips, and annotations along the route.',
     generateDescription: 'Choose an output and create the finished video.',
   },
