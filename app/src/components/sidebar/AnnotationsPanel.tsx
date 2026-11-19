@@ -15,6 +15,7 @@ import { OverlayFontPicker } from './OverlayFontPicker';
 import { ComparisonLeaderboardSettings } from './ComparisonLeaderboardSettings';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { colorZoneDistances, distanceAtZoneProgress, zoneProgressAtDistance } from '@/utils/colorZoneDistance';
+import { formatDistance } from '@/utils/units';
 
 function ZonePositionInput({ value, maximum, label, onChange }: {
   value: number; maximum: number; label: string; onChange: (value: number) => void;
@@ -86,7 +87,7 @@ function InlineName({
 
   return (
     <button type="button"
-      className="flex min-w-0 flex-1 items-center justify-between gap-2 border-b border-[var(--evergreen)]/20 py-1 text-left text-sm font-semibold hover:underline decoration-dotted"
+      className="flex w-full min-w-0 flex-1 items-center justify-between gap-2 border-b border-[var(--evergreen)]/20 py-1 text-left text-sm font-semibold hover:underline decoration-dotted"
       style={{ color }}
       title={renameTitle}
       onClick={() => { setDraft(name); setEditing(true); }}
@@ -105,7 +106,13 @@ function TrackStyleSection({
   name,
   onColorChange,
   onNameChange,
-  nameLabel,
+  icon,
+  iconColor,
+  onIconClick,
+  iconTitle,
+  distance,
+  elevation,
+  unitSystem,
   colorLabel,
   renameTitle,
   resolveColorLabel,
@@ -116,22 +123,29 @@ function TrackStyleSection({
   name: string;
   onColorChange: (c: string) => void;
   onNameChange: (n: string) => void;
-  nameLabel: string;
+  icon: string;
+  iconColor: string;
+  onIconClick?: () => void;
+  iconTitle: string;
+  distance: number;
+  elevation: number;
+  unitSystem: 'metric' | 'imperial';
   colorLabel: string;
   renameTitle: string;
   resolveColorLabel: (key: string) => string;
 }) {
   return (
-    <div className="space-y-2">
-      {showLabel && <div className="flex items-center gap-2 pt-1">
-        <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-        <span className="text-xs font-bold text-[var(--evergreen-60)] uppercase tracking-wide">{label}</span>
-      </div>}
-
-      {/* Name row */}
-      <div className="flex items-center gap-2">
-        <Label className="text-xs text-[var(--evergreen-60)] w-[4.25rem] shrink-0">{nameLabel}</Label>
-        <InlineName name={name} color={color} onSave={onNameChange} renameTitle={renameTitle} />
+    <div className="space-y-3 rounded-xl border border-[var(--evergreen)]/15 bg-white/50 p-3">
+      <div className="flex items-center gap-2.5">
+        {onIconClick ? <button type="button" onClick={onIconClick} aria-label={`${iconTitle}: ${name}`} title={iconTitle}
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"
+          style={{ backgroundColor: `${color}30` }}>{renderActivityIcon(icon, { size: 30, color: iconColor })}</button>
+          : <span className="flex size-11 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}30` }}>{renderActivityIcon(icon, { size: 30, color: iconColor })}</span>}
+        <div className="min-w-0 flex-1">
+          {showLabel && <span className="block text-[9px] font-bold uppercase tracking-wide text-[var(--evergreen-60)]">{label}</span>}
+          <InlineName name={name} color="var(--evergreen)" onSave={onNameChange} renameTitle={renameTitle} />
+          <div className="mt-1 flex flex-wrap gap-x-3 text-[10px] text-[var(--evergreen-60)]"><span>{formatDistance(distance, unitSystem)}</span><span>↑{formatDistance(elevation, unitSystem)}</span></div>
+        </div>
       </div>
 
       {/* Color row */}
@@ -189,6 +203,7 @@ export function AnnotationsPanel() {
   const updateComparisonTrackName = useAppStore((state) => state.updateComparisonTrackName);
 
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconTrackId, setIconTrackId] = useState<string | null>(null);
   const [zoneUnit, setZoneUnit] = useState<'percent' | 'km'>('percent');
   const { allCoordinates, currentSegment } = useComputedJourney();
   const zoneDistances = useMemo(() => colorZoneDistances(allCoordinates), [allCoordinates]);
@@ -201,6 +216,7 @@ export function AnnotationsPanel() {
     ? tracks.find((track) => track.id === currentSegment.segment.trackId) ?? activeTrack
     : activeTrack;
   const displayedIcon = markerTrack?.activityIcon ?? trailStyle.currentIcon;
+  const editingTrack = tracks.find(track => track.id === iconTrackId);
 
   // When the active track color changes, also sync trailStyle
   const handleMainColorChange = (trackId: string, color: string) => {
@@ -257,7 +273,11 @@ export function AnnotationsPanel() {
             name={track.name}
             onColorChange={(c) => handleMainColorChange(track.id, c)}
             onNameChange={(n) => updateTrackName(track.id, n)}
-            nameLabel={t('annotations.routeName')}
+            icon={track.activityIcon}
+            iconColor={resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, track.color)}
+            onIconClick={() => { setIconTrackId(track.id); setShowIconPicker(true); }}
+            iconTitle={t('journey.changeTrackIcon')}
+            distance={track.totalDistance} elevation={track.elevationGain} unitSystem={settings.unitSystem}
             colorLabel={t('annotations.trackColor')}
             renameTitle={t('common.clickRename')}
             resolveColorLabel={(key) => t(key)}
@@ -278,7 +298,10 @@ export function AnnotationsPanel() {
             name={ct.name}
             onColorChange={(c) => updateComparisonColor(ct.id, c)}
             onNameChange={(n) => updateComparisonTrackName(ct.id, n)}
-            nameLabel={t('annotations.routeName')}
+            icon={ct.track.activityIcon}
+            iconColor={ct.color}
+            iconTitle={t('journey.changeTrackIcon')}
+            distance={ct.track.totalDistance} elevation={ct.track.elevationGain} unitSystem={settings.unitSystem}
             colorLabel={t('annotations.trackColor')}
             renameTitle={t('common.clickRename')}
             resolveColorLabel={(key) => t(key)}
@@ -406,7 +429,7 @@ export function AnnotationsPanel() {
 
           {trailStyle.showMarker && (
             <>
-              <button type="button" onClick={() => setShowIconPicker(true)}
+              <button type="button" onClick={() => { setIconTrackId(null); setShowIconPicker(true); }}
                 className="group flex w-full items-center gap-3 rounded-xl border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-3 text-left transition-colors hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange)]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
                 <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-white/80" style={{ filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none' }}>
                   {renderActivityIcon(displayedIcon, { size: 44, color: currentIconColor })}
@@ -733,8 +756,9 @@ export function AnnotationsPanel() {
         <div className="px-3 pb-3"><ComparisonLeaderboardSettings /></div>
       </details>}
 
-      {showIconPicker && <ActivityIconPicker value={displayedIcon} color={currentIconColor} onClose={() => setShowIconPicker(false)} onSelect={(value) => {
-        if (markerTrack) updateTrackIcon(markerTrack.id, value);
+      {showIconPicker && <ActivityIconPicker value={editingTrack?.activityIcon ?? displayedIcon} color={editingTrack ? resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, editingTrack.color) : currentIconColor} onClose={() => setShowIconPicker(false)} onSelect={(value) => {
+        if (editingTrack) updateTrackIcon(editingTrack.id, value);
+        else if (markerTrack) updateTrackIcon(markerTrack.id, value);
         else setTrailStyle({ currentIcon: value });
         setTrailStyle({ markerType: 'icon' });
         setShowIconPicker(false);
