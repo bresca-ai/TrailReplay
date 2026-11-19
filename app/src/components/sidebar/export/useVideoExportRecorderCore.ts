@@ -1,3 +1,4 @@
+import { animatedMarkerFramesUrl } from './animatedMarkerFrames';
 import { assertExportCanvasUsable, assertRecordingCanvasResolution } from './exportCanvasResolution';
 import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
 import { calculateCurrentLiveStats } from '@/components/stats/liveStats';
@@ -345,7 +346,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     tracks.forEach((track) => iconValues.add(track.activityIcon));
 
     iconValues.forEach((iconValue) => {
-      if (!isSvgActivityIcon(iconValue)) return;
+      if (!isSvgActivityIcon(iconValue) && !['animated', 'upload'].includes(getActivityIconOption(iconValue)?.kind ?? '')) return;
       const svgIconUrl = getActivityIconOption(iconValue)?.content;
       if (svgIconUrl) {
         preloadSvgMarkerIcon(svgIconUrl);
@@ -354,6 +355,19 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       }
     });
   }, [preloadSvgMarkerIcon, tracks, trailStyle.currentIcon]);
+
+  const prepareAnimatedMarkerFrames = useCallback(async () => {
+    const state = useAppStore.getState();
+    const values = [state.settings.trailStyle.currentIcon, ...state.tracks.map(track => track.activityIcon), ...state.comparisonTracks.map(track => track.track.activityIcon)];
+    const urls = [...new Set(values.map(animatedMarkerFramesUrl).filter((url): url is string => !!url))];
+    await Promise.all(urls.map(async (url) => {
+      if (svgMarkerImageCacheRef.current.has(url)) return;
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      svgMarkerImageCacheRef.current.set(url, image);
+    }));
+  }, []);
 
   const loadCoverImage = useCallback(async () => {
     if (!videoExportSettings.includeCover) return;
@@ -377,7 +391,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     return true;
   }, []);
 
-  const captureFrame = useCallback(() => {
+  const captureFrame = useCallback((timestampMs?: number) => {
     if (recordingCanvasRef.current) {
       assertRecordingCanvasResolution(recordingCanvasRef.current, videoExportSettings.resolution);
       assertRecordingCanvasResolution(recordingCanvasRef.current, useAppStore.getState().videoExportSettings.resolution);
@@ -403,6 +417,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       drawElevationProgress,
       svgMarkerImageCacheRef,
       preloadSvgMarkerIcon,
+      markerTimeMs: timestampMs ?? Math.max(0, performance.now() - recordingStartTimeRef.current),
       getTrackLabel,
       cachedLogoRef,
       overlayLastUpdateRef,
@@ -751,7 +766,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
         await waitForMapFrame();
       }
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      captureFrame();
+      captureFrame(frame.timestampMs);
       await encodeWebCodecsFrame(frame.timestampMs * 1000);
       if (!studioQualityRef.current && !useAppStore.getState().settings.show3DBuildings && frameIndex < frames.length - 1) {
         // Map rendering already consumes part of this frame's budget. Waiting a
@@ -800,7 +815,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       if (frameIndex % getHoldOverlayEvery() === 0 || frameIndex === frames.length - 1) {
         await updateOverlayAsync(recordW, recordH);
       }
-      captureFrame();
+      captureFrame(frame.timestampMs);
       await encodeWebCodecsFrame(frame.timestampMs * 1000);
       if (frameIndex < frames.length - 1) {
         const nextFrameDueAt = phaseStartTime + frame.elapsedMs;
@@ -864,7 +879,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
       if (frameIndex % getHoldOverlayEvery() === 0) {
         await updateOverlayAsync(recordW, recordH);
       }
-      captureFrame();
+      captureFrame(frame.timestampMs);
       await encodeWebCodecsFrame(frame.timestampMs * 1000);
     }
 
@@ -899,7 +914,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
-    loadCoverImage, drawVideoCoverFrame, coverFrameStartTimeRef,
+    loadCoverImage, prepareAnimatedMarkerFrames, drawVideoCoverFrame, coverFrameStartTimeRef,
     applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   };

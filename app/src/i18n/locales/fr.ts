@@ -548,7 +548,7 @@ export const fr = {
     markerTypeDotHint: 'Point plein avec bordure blanche, comme l\'indicateur d\'activité Strava.',
     markerColor: 'Couleur du marqueur',
     markerColorSvgHint: 'Pour les icônes SVG, cela modifie à la fois l\'icône et le cercle du marqueur.',
-    markerColorEmojiHint: 'Pour les icônes emoji, seul le cercle du marqueur est modifié.',
+    markerColorTrackHint: 'Les marqueurs animés et 3D utilisent la couleur du marqueur.', markerColorEmojiHint: 'Pour les icônes emoji, seul le cercle du marqueur est modifié.',
     showMarker: 'Afficher le marqueur',
     size: 'Taille',
     activityIcon: 'Icône d\'activité',

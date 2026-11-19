@@ -4,7 +4,8 @@ import { useI18n } from '@/i18n/useI18n';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { ACTIVITY_ICONS, isSvgActivityIcon, markerIconContrastFilter, renderActivityIcon } from '@/utils/activityIcons';
+import { getActivityIconOption, isSvgActivityIcon, markerIconContrastFilter, renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
+import { ActivityIconPicker } from './ActivityIconPicker';
 import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
@@ -189,14 +190,17 @@ export function AnnotationsPanel() {
 
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [zoneUnit, setZoneUnit] = useState<'percent' | 'km'>('percent');
-  const { allCoordinates } = useComputedJourney();
+  const { allCoordinates, currentSegment } = useComputedJourney();
   const zoneDistances = useMemo(() => colorZoneDistances(allCoordinates), [allCoordinates]);
   const routeLengthKm = zoneDistances[zoneDistances.length - 1] ?? 0;
   const distanceMode = zoneUnit === 'km' && routeLengthKm > 0;
 
   const hasMultiple = tracks.length > 1 || comparisonTracks.length > 0;
   const activeTrack = tracks.find((track) => track.id === activeTrackId) ?? tracks[0] ?? null;
-  const displayedIcon = activeTrack?.activityIcon ?? trailStyle.currentIcon;
+  const markerTrack = currentSegment?.segment.type === 'track'
+    ? tracks.find((track) => track.id === currentSegment.segment.trackId) ?? activeTrack
+    : activeTrack;
+  const displayedIcon = markerTrack?.activityIcon ?? trailStyle.currentIcon;
 
   // When the active track color changes, also sync trailStyle
   const handleMainColorChange = (trackId: string, color: string) => {
@@ -211,9 +215,9 @@ export function AnnotationsPanel() {
     setTrailStyle({ colorMode: checked ? 'heartRate' : 'fixed' });
   };
 
-  const currentIconColor = isSvgActivityIcon(displayedIcon)
-    ? trailStyle.markerColor
-    : undefined;
+  const currentIconColor = resolvePlaybackMarkerColor(
+    trailStyle.markerColor, activeTrack?.color, markerTrack?.color,
+  );
 
   return (
     <div className="space-y-5">
@@ -457,12 +461,12 @@ export function AnnotationsPanel() {
                 {trailStyle.markerType === 'icon' && (
                   <>
                     <p className="text-xs text-[var(--evergreen-60)]">
-                      {isSvgActivityIcon(displayedIcon)
-                        ? t('annotations.markerColorSvgHint')
-                        : t('annotations.markerColorEmojiHint')}
+                      {['animated', '3d'].includes(getActivityIconOption(displayedIcon)?.kind ?? '')
+                        ? t('annotations.markerColorTrackHint')
+                        : isSvgActivityIcon(displayedIcon) ? t('annotations.markerColorSvgHint') : t('annotations.markerColorEmojiHint')}
                     </p>
 
-                    <Label className="text-sm text-[var(--evergreen)]">{t('annotations.activityIcon')}</Label>
+                    <Label className="text-sm text-[var(--evergreen)]">{t('annotations.activityIcon')}{hasMultiple && markerTrack ? ` — ${markerTrack.name}` : ''}</Label>
                     <div className="flex items-center gap-3">
                       <div
                         className="w-12 h-12 flex items-center justify-center"
@@ -726,50 +730,11 @@ export function AnnotationsPanel() {
         <div className="px-3 pb-3"><ComparisonLeaderboardSettings /></div>
       </details>}
 
-      {/* Icon Picker Modal */}
-      {showIconPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--canvas)] border-2 border-[var(--evergreen)] rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-[var(--evergreen)] mb-4">
-              {t('annotations.selectIcon')}
-            </h3>
-            <div className="grid grid-cols-6 gap-2 mb-6">
-              {ACTIVITY_ICONS.map(({ value, labelKey }) => (
-                <button
-                  key={value}
-                  onClick={() => {
-                    if (activeTrack) {
-                      updateTrackIcon(activeTrack.id, value);
-                    } else {
-                      setTrailStyle({ currentIcon: value });
-                    }
-                    setShowIconPicker(false);
-                  }}
-                  title={t(labelKey)}
-                  className={`
-                    flex items-center justify-center p-2 rounded-lg border-2 transition-colors
-                    ${displayedIcon === value
-                      ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]'
-                      : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'
-                    }
-                  `}
-                >
-                  {renderActivityIcon(value, {
-                    size: 32,
-                    color: isSvgActivityIcon(value) ? trailStyle.markerColor : undefined,
-                  })}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowIconPicker(false)}
-              className="w-full tr-btn tr-btn-secondary"
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
+      {showIconPicker && <ActivityIconPicker value={displayedIcon} color={currentIconColor} onClose={() => setShowIconPicker(false)} onSelect={(value) => {
+        if (markerTrack) updateTrackIcon(markerTrack.id, value);
+        else setTrailStyle({ currentIcon: value });
+        setShowIconPicker(false);
+      }} />}
     </div>
   );
 }

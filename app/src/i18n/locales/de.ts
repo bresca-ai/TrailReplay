@@ -548,7 +548,7 @@ export const de = {
     markerTypeDotHint: 'Voller Punkt mit weißem Rand, wie die Strava-Aktivitätsanzeige.',
     markerColor: 'Markierungsfarbe',
     markerColorSvgHint: 'Bei SVG-Symbolen ändert sich dadurch sowohl das Symbol als auch der Markierungskreis.',
-    markerColorEmojiHint: 'Bei Emoji-Symbolen ändert sich dadurch nur der Markierungskreis.',
+    markerColorTrackHint: 'Animierte und 3D-Markierungen verwenden die Markierungsfarbe.', markerColorEmojiHint: 'Bei Emoji-Symbolen ändert sich dadurch nur der Markierungskreis.',
     showMarker: 'Markierung anzeigen',
     size: 'Größe',
     activityIcon: 'Aktivitätssymbol',

@@ -548,7 +548,7 @@ export const es = {
     markerTypeDotHint: 'Punto sólido con borde blanco, como el indicador de actividad de Strava.',
     markerColor: 'Color del marcador',
     markerColorSvgHint: 'Con iconos SVG, esto cambia tanto el icono como el círculo del marcador.',
-    markerColorEmojiHint: 'Con iconos emoji, esto cambia solo el círculo del marcador.',
+    markerColorTrackHint: 'Los marcadores animados y 3D usan el color del marcador.', markerColorEmojiHint: 'Con iconos emoji, esto cambia solo el círculo del marcador.',
     showMarker: 'Mostrar marcador',
     size: 'Tamaño',
     activityIcon: 'Icono de actividad',

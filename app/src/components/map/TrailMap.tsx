@@ -1,3 +1,4 @@
+import { resolvePlaybackMarkerColor } from '@/utils/activityIcons';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
@@ -38,6 +39,7 @@ import { useMapInitialization } from './hooks/useMapInitialization';
 import { useRecordedElevationLayer } from './hooks/useRecordedElevationLayer';
 import { useTrailLayerData } from './hooks/useTrailLayerData';
 import { useTrailPlaybackCamera } from './hooks/useTrailPlaybackCamera';
+import { useRunner3D } from './hooks/useRunner3D';
 import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
 import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
@@ -408,6 +410,10 @@ export function TrailMap(_props: TrailMapProps) {
       trailColor: trailStyle.trailColor,
     },
   });
+
+  useRunner3D({ mapRef: map, markerRef, icon: isInTransport || comparisonActive || trailStyle.markerType !== 'icon' ? '' : currentIcon,
+    coordinates: cameraPathCoordinates, completedCoordinates, progress: routeComparisonActive ? routeProgress : playback.progress,
+    timeMs: playback.currentTime, color: resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, currentTrackColor), isExporting });
 
   useRouteComparisonCamera({
     enabled: comparisonMode === 'route' && playback.progress > 0 && (animationPhase === 'playing' || animationPhase === 'idle'),

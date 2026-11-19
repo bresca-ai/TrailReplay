@@ -559,7 +559,7 @@ export const en = {
     markerTypeDotHint: 'Solid dot with white border, like the Strava activity indicator.',
     markerColor: 'Marker color',
     markerColorSvgHint: 'For SVG icons, this changes both the icon and the marker circle.',
-    markerColorEmojiHint: 'For emoji icons, this changes the marker circle only.',
+    markerColorTrackHint: 'Animated and 3D markers use the marker color.', markerColorEmojiHint: 'For emoji icons, this changes the marker circle only.',
     showMarker: 'Show Marker',
     size: 'Size',
     activityIcon: 'Activity Icon',

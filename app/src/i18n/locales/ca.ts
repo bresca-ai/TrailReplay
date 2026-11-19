@@ -548,7 +548,7 @@ export const ca = {
     markerTypeDotHint: 'Punt sòlid amb vora blanca, com l\'indicador d\'activitat de Strava.',
     markerColor: 'Color del marcador',
     markerColorSvgHint: 'Amb icones SVG, això canvia tant la icona com el cercle del marcador.',
-    markerColorEmojiHint: 'Amb icones emoji, això només canvia el cercle del marcador.',
+    markerColorTrackHint: 'Els marcadors animats i 3D fan servir el color del marcador.', markerColorEmojiHint: 'Amb icones emoji, això només canvia el cercle del marcador.',
     showMarker: 'Mostrar marcador',
     size: 'Mida',
     activityIcon: 'Icona d\'activitat',

@@ -5,7 +5,7 @@ import { OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { applyLocationChapterCamera, getIntroDuration, locationChapterIntroProgressRef, locationIntroEasing, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
-import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
+import { getActivityIconMarkerHtml, resolvePlaybackMarkerColor, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
@@ -166,17 +166,7 @@ interface UseTrailPlaybackCameraParams {
   };
 }
 
-export function resolvePlaybackMarkerColor(
-  configuredMarkerColor: string,
-  activeTrackColor: string | null | undefined,
-  currentTrackColor: string | null | undefined,
-): string {
-  const markerFollowsTrackColors = !!activeTrackColor
-    && configuredMarkerColor.toLowerCase() === activeTrackColor.toLowerCase();
-  return markerFollowsTrackColors && currentTrackColor
-    ? currentTrackColor
-    : configuredMarkerColor;
-}
+export { resolvePlaybackMarkerColor } from '@/utils/activityIcons';
 
 export function shouldRenderPlaybackAdornment({
   activeTextAnnotationId,
@@ -427,8 +417,8 @@ export function useTrailPlaybackCamera({
           flex-shrink: 0;
         "></div>`;
       } else if (trailStyle.showMarker) {
-        const fontSize = Math.round(28 * trailStyle.markerSize);
-        const iconColor = isSvgActivityIcon(icon) ? markerColor : currentColor;
+        const fontSize = 28 * trailStyle.markerSize;
+        const iconColor = markerColor;
         const iconHtml = getActivityIconMarkerHtml(icon, fontSize, iconColor);
         // Keep showCircle as the saved setting for recipe/project compatibility.
         // Contrast follows the icon silhouette, without a disc or pulse animation.
