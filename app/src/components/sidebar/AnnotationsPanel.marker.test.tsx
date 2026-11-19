@@ -14,3 +14,11 @@ it('offers the marker picker up front and activates the chosen icon from dot mod
   fireEvent.click(screen.getByRole('button', { name: 'Choose runner' }));
   expect(useAppStore.getState().settings.trailStyle).toMatchObject({ markerType: 'icon', currentIcon: '3d-runner' });
 });
+
+it('shows route controls first and expanded on opening', () => {
+  const { container } = render(<AnnotationsPanel />);
+  const firstSection = container.querySelector('details');
+  expect(firstSection?.open).toBe(true);
+  expect(firstSection?.contains(screen.getByText(/route name/i))).toBe(true);
+  expect(firstSection?.compareDocumentPosition(screen.getByRole('button', { name: /change icon/i }))! & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
