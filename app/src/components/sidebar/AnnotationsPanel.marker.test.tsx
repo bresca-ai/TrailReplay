@@ -23,9 +23,11 @@ it('shows route controls first and expanded on opening', () => {
   useAppStore.getState().setTrailStyle({ showMarker: true, markerType: 'icon' });
   const { container } = render(<AnnotationsPanel />);
   const firstSection = container.querySelector('details');
-  expect(firstSection?.open).toBe(true);
-  expect(firstSection?.contains(screen.getByText(/route name/i))).toBe(true);
-  expect(firstSection?.compareDocumentPosition(screen.getByRole('button', { name: /change icon/i }))! & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(firstSection).not.toBeNull();
+  if (!firstSection) throw new Error('Route section not found');
+  expect(firstSection.open).toBe(true);
+  expect(firstSection.contains(screen.getByText(/route name/i))).toBe(true);
+  expect(firstSection.compareDocumentPosition(screen.getByRole('button', { name: /change icon/i })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 it('changes only the route chosen from its card', () => {

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Procedural model adapted from JavaScript source.
 // @ts-nocheck
 /* eslint-disable */
 // Adapted from the user's procedural 3D swimmer.
