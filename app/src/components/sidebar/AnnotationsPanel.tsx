@@ -426,7 +426,7 @@ export function AnnotationsPanel() {
 
           {trailStyle.showMarker && (
             <>
-              <button type="button" onClick={() => { setIconTrackId(null); setShowIconPicker(true); }}
+              {trailStyle.markerType === 'icon' && <button type="button" onClick={() => { setIconTrackId(null); setShowIconPicker(true); }}
                 className="group flex w-full items-center gap-3 rounded-xl border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-3 text-left transition-colors hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange)]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
                 <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-white/80" style={{ filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none' }}>
                   {renderActivityIcon(displayedIcon, { size: 44, color: currentIconColor })}
@@ -436,7 +436,7 @@ export function AnnotationsPanel() {
                   <span className="mt-1 block text-sm font-bold text-[var(--evergreen)]">{t('annotations.changeIcon')}</span>
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-[var(--trail-orange)] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </button>
+              </button>}
 
               {/* Icon / Dot toggle */}
               <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">

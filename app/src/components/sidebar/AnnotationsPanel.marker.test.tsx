@@ -7,15 +7,20 @@ vi.mock('./ActivityIconPicker', () => ({ ActivityIconPicker: ({ onSelect }: { on
 beforeEach(() => { vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} }); useAppStore.getState().reset(); useAppStore.getState().setSettings({ language: 'en' }); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it('offers the marker picker up front and activates the chosen icon from dot mode', () => {
+it('only shows the activity icon picker when icon mode is selected', () => {
   useAppStore.getState().setTrailStyle({ showMarker: true, markerType: 'dot' });
   render(<AnnotationsPanel />);
+  expect(screen.queryByRole('button', { name: /change icon/i })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Icon' }));
   fireEvent.click(screen.getByRole('button', { name: /change icon/i }));
   fireEvent.click(screen.getByRole('button', { name: 'Choose runner' }));
   expect(useAppStore.getState().settings.trailStyle).toMatchObject({ markerType: 'icon', currentIcon: '3d-runner' });
+  fireEvent.click(screen.getByRole('button', { name: 'Dot' }));
+  expect(screen.queryByRole('button', { name: /change icon/i })).toBeNull();
 });
 
 it('shows route controls first and expanded on opening', () => {
+  useAppStore.getState().setTrailStyle({ showMarker: true, markerType: 'icon' });
   const { container } = render(<AnnotationsPanel />);
   const firstSection = container.querySelector('details');
   expect(firstSection?.open).toBe(true);
