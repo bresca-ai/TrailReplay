@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 
 export function createRunnerRenderer(canvas: HTMLCanvasElement) {
+
 const INK = 0x1B2A20, ORANGE = 0xC1652F, PAPER = 0xffffff, CREAM = 0xF8F6F0, CANVAS = 0xF8F6F0;
 const BOIL = { value: 0 };   // changes ~8 times a second: makes every line "re-drawn"
 
@@ -126,15 +127,39 @@ function makeRunner() {
   // head
   const head = new THREE.Group(); head.position.y = 1.3; upper.add(head);
   head.add(part(new THREE.SphereGeometry(0.42, 36, 26), M.paper));
-  // spiky hair, a little messier than before
-  const hairG = new THREE.ConeGeometry(0.105, 0.46, 12); hairG.translate(0, 0.23, 0);
-  const spikes = [[-0.04, 0.3, 0, 0.12, 0, 1], [0.13, 0.27, 0.1, -0.32, 0.25, .9], [0.13, 0.27, -0.1, -0.32, -0.25, .9], [-0.14, 0.31, 0.17, 0.38, 0.45, 1], [-0.14, 0.31, -0.17, 0.38, -0.45, 1], [-0.27, 0.23, 0, 0.8, 0, 1.1], [0.25, 0.25, 0, -0.62, 0, .8], [-0.3, 0.16, 0.2, 1.0, 0.5, .9], [-0.3, 0.16, -0.2, 1.0, -0.5, .9], [0.03, 0.33, 0.2, 0, 0.6, .8], [0.03, 0.33, -0.2, 0, -0.6, .8]];
+  // hair: dark cap with chunky hand-drawn locks swept back by the wind
+  const HAIR = fill(0x3A2A20, 0);
   const hair = new THREE.Group(); head.add(hair);
-  for (const [x, y, z, rz, rx, s] of spikes.filter(() => false)) { const sp = part(hairG, M.paper, OUT_T); sp.position.set(x, y, z); sp.rotation.set(rx, 0, rz); sp.scale.setScalar(s); hair.add(sp); }
-  // trail cap with a peak and a headlamp strapped round it
+  const capH = part(new THREE.SphereGeometry(0.438, 36, 18, 0, Math.PI * 2, 0, Math.PI * 0.4), HAIR, OUT_T); capH.rotation.z = 0.32; hair.add(capH);
+  const backH = part(new THREE.SphereGeometry(0.434, 32, 14, 0, Math.PI * 2, 0, Math.PI * 0.36), HAIR, null); backH.rotation.z = 0.9; hair.add(backH);
+  function lockGeo(pts, r0) {
+    const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+    const N = 18, g = new THREE.TubeGeometry(curve, N, 1, 10, false), pos = g.attributes.position, v = new THREE.Vector3();
+    for (let i = 0; i <= N; i++) {
+      const u = i / N, c = curve.getPointAt(u), k = r0 * Math.pow(1 - u, 0.75) + 0.004;
+      for (let j = 0; j <= 10; j++) { const idx = i * 11 + j; v.fromBufferAttribute(pos, idx).sub(c); v.y *= 0.62; v.multiplyScalar(k).add(c); pos.setXYZ(idx, v.x, v.y, v.z); }
+    }
+    g.computeVertexNormals(); return g;
+  }
+  const locks = [];
+  const LOCKS = [
+    [[[0.22, 0.34, 0], [0.12, 0.54, 0], [-0.22, 0.62, 0], [-0.62, 0.52, 0]], 0.13],
+    [[[0.16, 0.34, 0.16], [0.02, 0.5, 0.22], [-0.34, 0.5, 0.27], [-0.66, 0.34, 0.27]], 0.11],
+    [[[0.16, 0.34, -0.16], [0.02, 0.5, -0.22], [-0.34, 0.5, -0.27], [-0.66, 0.34, -0.27]], 0.11],
+    [[[-0.04, 0.4, 0.06], [-0.28, 0.54, 0.08], [-0.58, 0.46, 0.06], [-0.84, 0.26, 0.04]], 0.12],
+    [[[-0.2, 0.3, 0.22], [-0.42, 0.32, 0.28], [-0.62, 0.22, 0.28], [-0.76, 0.08, 0.24]], 0.09],
+    [[[-0.2, 0.3, -0.22], [-0.42, 0.32, -0.28], [-0.62, 0.22, -0.28], [-0.76, 0.08, -0.24]], 0.09],
+    [[[-0.36, 0.04, 0.12], [-0.5, -0.02, 0.15], [-0.64, -0.12, 0.12]], 0.075],
+    [[[-0.36, 0.04, -0.12], [-0.5, -0.02, -0.15], [-0.64, -0.12, -0.12]], 0.075],
+    // little fringe flick over the sweatband
+    [[[0.3, 0.3, 0.06], [0.4, 0.38, 0.1], [0.46, 0.34, 0.16]], 0.06],
+  ];
+  LOCKS.forEach(([pts, r0], i) => {
+    const p0 = new THREE.Vector3(...pts[0]); const g = lockGeo(pts, r0); g.translate(-p0.x, -p0.y, -p0.z);
+    const lk = new THREE.Group(); lk.position.copy(p0); lk.add(part(g, HAIR, OUT_T)); hair.add(lk); locks.push({ lk, i });
+  });
+  // headlamp strapped round the hair
   const HR0 = 0.42;
-  const capC = part(new THREE.SphereGeometry(HR0 + 0.035, 40, 18, 0, Math.PI * 2, 0, Math.PI * 0.42), M.orange, OUT_T); capC.rotation.z = -0.1; head.add(capC);
-  const peak = part(new THREE.CylinderGeometry(0.3, 0.3, 0.03, 28, 1, false, 0, Math.PI), M.orange, OUT_T); peak.position.set(HR0 * 0.72, 0.2, 0); peak.rotation.z = -0.12; peak.scale.set(1, 1, 1.15); head.add(peak);
   const strap = new THREE.Mesh(new THREE.TorusGeometry(HR0 + 0.03, 0.026, 6, 48), M.ink); strap.rotation.x = Math.PI / 2; strap.position.y = 0.21; strap.rotation.y = 0; head.add(strap);
   const lamp = part(new THREE.CylinderGeometry(0.075, 0.08, 0.08, 20), M.paper, OUT_T); lamp.rotation.z = -Math.PI / 2; lamp.position.set(HR0 + 0.06, 0.29, 0); head.add(lamp);
   const lampGlass = new THREE.Mesh(new THREE.CircleGeometry(0.05, 18), new THREE.MeshBasicMaterial({ color: 0xE9B44C })); lampGlass.rotation.y = Math.PI / 2; lampGlass.position.set(HR0 + 0.105, 0.29, 0); head.add(lampGlass);
@@ -217,6 +242,7 @@ function makeRunner() {
     head.rotation.z = 0.12 - 0.04 * Math.cos(2 * ph);
     head.rotation.y = -0.1 + 0.12 * Math.sin(ph);
     hair.rotation.z = 0.05 * Math.cos(2 * ph);
+    for (const L of locks) { L.lk.rotation.z = -0.05 + 0.07 * Math.sin(t * 17 + L.i * 1.3); L.lk.rotation.y = 0.05 * Math.sin(t * 11 + L.i * 2.1); }
     for (const A of arms) {
       const p = ph + (A.side === 1 ? Math.PI : 0);
       A.sh.rotation.z = 0.75 * Math.sin(p) + 0.1;
@@ -230,6 +256,7 @@ function makeRunner() {
   }
   return { root, pose };
 }
+
 
 
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });

@@ -180,7 +180,7 @@ export function renderActivityIcon(
 
   if (icon?.kind === '3d') {
     const src = (MODEL_3D_ICONS as readonly string[]).includes(value)
-      ? `/media/images/3d-marker-previews/${value.slice(3)}.png?v=2` : undefined;
+      ? `/media/images/3d-marker-previews/${value.slice(3)}.png?v=3` : undefined;
     return createElement(Marker3DThumbnail, { value, src, color, size, className });
   }
 
