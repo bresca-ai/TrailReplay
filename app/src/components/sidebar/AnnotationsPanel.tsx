@@ -4,13 +4,13 @@ import { useI18n } from '@/i18n/useI18n';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { getActivityIconOption, isSvgActivityIcon, markerIconContrastFilter, renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
+import { markerIconContrastFilter, renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
 import { ActivityIconPicker } from './ActivityIconPicker';
 import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
-import { ChevronDown, Palette, Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Footprints, Map, Palette, Pencil, BarChart3, Type, Trash2 } from 'lucide-react';
 import { OverlayFontPicker } from './OverlayFontPicker';
 import { ComparisonLeaderboardSettings } from './ComparisonLeaderboardSettings';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -221,11 +221,120 @@ export function AnnotationsPanel() {
 
   return (
     <div className="space-y-5">
-      {/* ── Track colour & name sections ─────────────────────────── */}
-      <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
-          {hasMultiple ? t('annotations.tracksTitle') : t('annotations.trailTitle')}
+      {/* ── Marker settings ──────────────────────────────────────── */}
+      <div className="space-y-4 rounded-2xl border border-[var(--evergreen)]/15 bg-white/55 p-4 shadow-sm">
+        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)]">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]"><Footprints className="size-4" aria-hidden="true" /></span>
+          {t('annotations.markerTitle')}
         </h3>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showMarker')}</Label>
+            <Switch
+              checked={trailStyle.showMarker}
+              onCheckedChange={(checked) => setTrailStyle({ showMarker: checked })}
+            />
+          </div>
+
+          {trailStyle.showMarker && (
+            <>
+              <button type="button" onClick={() => setShowIconPicker(true)}
+                className="group flex w-full items-center gap-3 rounded-xl border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-3 text-left transition-colors hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange)]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-white/80" style={{ filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none' }}>
+                  {renderActivityIcon(displayedIcon, { size: 44, color: currentIconColor })}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--evergreen)]/55">{t('annotations.activityIcon')}{hasMultiple && markerTrack ? ` · ${markerTrack.name}` : ''}</span>
+                  <span className="mt-1 block text-sm font-bold text-[var(--evergreen)]">{t('annotations.changeIcon')}</span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-[var(--trail-orange)] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </button>
+
+              {/* Icon / Dot toggle */}
+              <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
+                <span className="text-xs text-[var(--evergreen)]">{t('annotations.markerType')}</span>
+                <div className="flex rounded-lg overflow-hidden border border-[var(--evergreen)]/20">
+                {(['icon', 'dot'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setTrailStyle({ markerType: type })}
+                    className={`flex-1 py-1.5 text-sm font-medium transition-colors ${
+                      trailStyle.markerType === type
+                        ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
+                        : 'text-[var(--evergreen-60)] hover:text-[var(--evergreen)]'
+                    }`}
+                  >
+                    {t(type === 'icon' ? 'annotations.markerTypeIcon' : 'annotations.markerTypeDot')}
+                  </button>
+                ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-2">
+                <Label className="text-sm text-[var(--evergreen)]">{t('annotations.size')}</Label>
+                <Slider aria-label={t('annotations.size')} value={[trailStyle.markerSize]} onValueChange={([value]) => setTrailStyle({ markerSize: value })} min={0.5} max={3} step={0.1} className="w-full" />
+                <span className="text-xs text-[var(--evergreen-60)] tabular-nums">{trailStyle.markerSize.toFixed(1)}x</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-2">
+                  <Label className="text-xs text-[var(--evergreen)]">{t('annotations.markerColor')}</Label>
+                  <div className="flex min-w-0 items-center gap-1">
+                  <input
+                    type="color"
+                    value={trailStyle.markerColor}
+                    aria-label={t('annotations.markerColor')}
+                    onChange={(e) => setTrailStyle({ markerColor: e.target.value })}
+                    className="h-7 w-7 rounded cursor-pointer border border-[var(--evergreen)]/20 shrink-0"
+                  />
+                  <div className="flex min-w-0 flex-wrap gap-x-0.5 gap-y-1">
+                    {COLOR_PRESETS.map(({ color: preset, labelKey }) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        aria-label={t(labelKey)}
+                        aria-pressed={trailStyle.markerColor === preset}
+                        onClick={() => setTrailStyle({ markerColor: preset })}
+                        title={t(labelKey)}
+                        className={`w-[18px] h-[18px] rounded-full border-2 transition-all ${
+                          trailStyle.markerColor === preset
+                            ? 'border-[var(--evergreen)] scale-110'
+                            : 'border-transparent hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: preset }}
+                      />
+                    ))}
+                  </div>
+                  </div>
+                </div>
+
+
+              </div>
+
+              {trailStyle.markerType === 'icon' && (
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-[var(--evergreen)]">{t('annotations.glowCircle')}</Label>
+                  <Switch
+                    checked={trailStyle.showCircle}
+                    onCheckedChange={(checked) => setTrailStyle({ showCircle: checked })}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      <details className="group rounded-2xl border border-[var(--evergreen)]/15 bg-white/45">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-sm font-bold text-[var(--evergreen)] hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--evergreen)]/5"><Map className="size-4" aria-hidden="true" /></span>
+          <span className="flex-1">{hasMultiple ? t('annotations.tracksTitle') : t('annotations.trailTitle')}</span>
+          <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-4">
+      <div className="space-y-3">
 
         {tracks.length === 0 && comparisonTracks.length === 0 && (
           <div className="space-y-2">
@@ -382,130 +491,16 @@ export function AnnotationsPanel() {
         </div>
       </details>
 
-      {/* ── Marker settings ──────────────────────────────────────── */}
-      <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
-          {t('annotations.markerTitle')}
-        </h3>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showMarker')}</Label>
-            <Switch
-              checked={trailStyle.showMarker}
-              onCheckedChange={(checked) => setTrailStyle({ showMarker: checked })}
-            />
-          </div>
-
-          {trailStyle.showMarker && (
-            <>
-              {/* Icon / Dot toggle */}
-              <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
-                <span className="text-xs text-[var(--evergreen)]">{t('annotations.markerType')}</span>
-                <div className="flex rounded-lg overflow-hidden border border-[var(--evergreen)]/20">
-                {(['icon', 'dot'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setTrailStyle({ markerType: type })}
-                    className={`flex-1 py-1.5 text-sm font-medium transition-colors ${
-                      trailStyle.markerType === type
-                        ? 'bg-[var(--evergreen)] text-[var(--canvas)]'
-                        : 'text-[var(--evergreen-60)] hover:text-[var(--evergreen)]'
-                    }`}
-                  >
-                    {t(type === 'icon' ? 'annotations.markerTypeIcon' : 'annotations.markerTypeDot')}
-                  </button>
-                ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-2">
-                <Label className="text-sm text-[var(--evergreen)]">{t('annotations.size')}</Label>
-                <Slider aria-label={t('annotations.size')} value={[trailStyle.markerSize]} onValueChange={([value]) => setTrailStyle({ markerSize: value })} min={0.5} max={3} step={0.1} className="w-full" />
-                <span className="text-xs text-[var(--evergreen-60)] tabular-nums">{trailStyle.markerSize.toFixed(1)}x</span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-2">
-                  <Label className="text-xs text-[var(--evergreen)]">{t('annotations.markerColor')}</Label>
-                  <div className="flex min-w-0 items-center gap-1">
-                  <input
-                    type="color"
-                    value={trailStyle.markerColor}
-                    aria-label={t('annotations.markerColor')}
-                    onChange={(e) => setTrailStyle({ markerColor: e.target.value })}
-                    className="h-7 w-7 rounded cursor-pointer border border-[var(--evergreen)]/20 shrink-0"
-                  />
-                  <div className="flex min-w-0 flex-wrap gap-x-0.5 gap-y-1">
-                    {COLOR_PRESETS.map(({ color: preset, labelKey }) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        aria-label={t(labelKey)}
-                        aria-pressed={trailStyle.markerColor === preset}
-                        onClick={() => setTrailStyle({ markerColor: preset })}
-                        title={t(labelKey)}
-                        className={`w-[18px] h-[18px] rounded-full border-2 transition-all ${
-                          trailStyle.markerColor === preset
-                            ? 'border-[var(--evergreen)] scale-110'
-                            : 'border-transparent hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: preset }}
-                      />
-                    ))}
-                  </div>
-                  </div>
-                </div>
-
-                {trailStyle.markerType === 'icon' && (
-                  <>
-                    <p className="text-xs text-[var(--evergreen-60)]">
-                      {['animated', '3d'].includes(getActivityIconOption(displayedIcon)?.kind ?? '')
-                        ? t('annotations.markerColorTrackHint')
-                        : isSvgActivityIcon(displayedIcon) ? t('annotations.markerColorSvgHint') : t('annotations.markerColorEmojiHint')}
-                    </p>
-
-                    <Label className="text-sm text-[var(--evergreen)]">{t('annotations.activityIcon')}{hasMultiple && markerTrack ? ` — ${markerTrack.name}` : ''}</Label>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-12 h-12 flex items-center justify-center"
-                        style={{
-                          filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none',
-                        }}
-                      >
-                        {renderActivityIcon(displayedIcon, { size: 32, color: currentIconColor })}
-                      </div>
-                      <button
-                        onClick={() => setShowIconPicker(true)}
-                        className="tr-btn tr-btn-secondary text-sm"
-                      >
-                        {t('annotations.changeIcon')}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {trailStyle.markerType === 'icon' && (
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm text-[var(--evergreen)]">{t('annotations.glowCircle')}</Label>
-                  <Switch
-                    checked={trailStyle.showCircle}
-                    onCheckedChange={(checked) => setTrailStyle({ showCircle: checked })}
-                  />
-                </div>
-              )}
-            </>
-          )}
         </div>
-      </div>
+      </details>
 
-      {/* ── Label visibility ─────────────────────────────────────── */}
+      <details className="group rounded-2xl border border-[var(--evergreen)]/15 bg-white/45">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-sm font-bold text-[var(--evergreen)] hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--evergreen)]/5"><Type className="size-4" aria-hidden="true" /></span>
+          <span className="flex-1">{t('annotations.labelsAndText')}</span><ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-4">
       <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
-          {t('annotations.labelsAndText')}
-        </h3>
         <div className="flex items-center justify-between">
           <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showOnMap')}</Label>
           <Switch
@@ -538,11 +533,16 @@ export function AnnotationsPanel() {
         <details className="text-[11px] text-[var(--evergreen-60)]"><summary className="cursor-pointer">{t('annotations.typographyTitle')}</summary><p className="mt-1">{t('annotations.typographyHint')} {t('annotations.typographyOpenSource')}</p></details>
       </div>
 
-      {/* ── Stats visibility ─────────────────────────────────────── */}
+        </div>
+      </details>
+
+      <details className="group rounded-2xl border border-[var(--evergreen)]/15 bg-white/45">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-sm font-bold text-[var(--evergreen)] hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--evergreen)]/5"><BarChart3 className="size-4" aria-hidden="true" /></span>
+          <span className="flex-1">{t('annotations.statsTitle')}</span><ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="border-t border-[var(--evergreen)]/10 p-4">
       <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
-          {t('annotations.statsTitle')}
-        </h3>
         <div className="grid grid-cols-2 gap-2">
           {(['distance', 'duration', 'movingDuration', 'pace', 'elevation', 'heartRate', 'speed', 'altitude'] as const).map((id) => {
             const unavailable = !isStatAvailable(id, availability);
@@ -725,6 +725,9 @@ export function AnnotationsPanel() {
         <p className="text-xs text-[var(--evergreen-60)]">{t('annotations.statsHint')}</p>
       </div>
 
+        </div>
+      </details>
+
       {comparisonTracks.length > 0 && <details className="rounded-lg bg-[var(--evergreen)]/5">
         <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-[var(--evergreen)]">{t('tracks.leaderboard')}</summary>
         <div className="px-3 pb-3"><ComparisonLeaderboardSettings /></div>
@@ -733,6 +736,7 @@ export function AnnotationsPanel() {
       {showIconPicker && <ActivityIconPicker value={displayedIcon} color={currentIconColor} onClose={() => setShowIconPicker(false)} onSelect={(value) => {
         if (markerTrack) updateTrackIcon(markerTrack.id, value);
         else setTrailStyle({ currentIcon: value });
+        setTrailStyle({ markerType: 'icon' });
         setShowIconPicker(false);
       }} />}
     </div>
