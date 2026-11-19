@@ -135,7 +135,7 @@ function TrackStyleSection({
   resolveColorLabel: (key: string) => string;
 }) {
   return (
-    <div className="space-y-3 rounded-xl border border-[var(--evergreen)]/15 bg-white/50 p-3">
+    <div className="space-y-2 rounded-xl border border-[var(--evergreen)]/15 bg-white/50 p-2.5">
       <div className="flex items-center gap-2.5">
         {onIconClick ? <button type="button" onClick={onIconClick} aria-label={`${iconTitle}: ${name}`} title={iconTitle}
           className="flex size-11 shrink-0 items-center justify-center rounded-lg transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"
@@ -148,10 +148,8 @@ function TrackStyleSection({
         </div>
       </div>
 
-      {/* Color row */}
-      <div className="grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-2">
-        <Label className="text-xs text-[var(--evergreen)]">{colorLabel}</Label>
-        <div className="flex min-w-0 items-center gap-1">
+      {/* Colour controls use accessible labels without repeating visible text on every card. */}
+      <div className="flex min-w-0 items-center gap-1.5">
         <input
           type="color"
           value={color}
@@ -159,7 +157,7 @@ function TrackStyleSection({
           aria-label={colorLabel}
           className="h-7 w-7 rounded cursor-pointer border border-[var(--evergreen)]/20 shrink-0"
         />
-        <div className="flex min-w-0 flex-wrap gap-x-0.5 gap-y-1">
+        <div className="flex min-w-0 flex-nowrap items-center gap-0.5">
           {COLOR_PRESETS.map(({ color: preset, labelKey }) => (
             <button
               key={preset}
@@ -168,7 +166,7 @@ function TrackStyleSection({
               aria-pressed={color === preset}
               onClick={() => onColorChange(preset)}
               title={resolveColorLabel(labelKey)}
-              className={`w-[18px] h-[18px] rounded-full border-2 transition-all ${
+              className={`w-[18px] h-[18px] shrink-0 rounded-full border-2 transition-all ${
                 color === preset
                   ? 'border-[var(--evergreen)] scale-110'
                   : 'border-transparent hover:scale-105'
@@ -176,7 +174,6 @@ function TrackStyleSection({
               style={{ backgroundColor: preset }}
             />
           ))}
-        </div>
         </div>
       </div>
     </div>
@@ -237,13 +234,13 @@ export function AnnotationsPanel() {
 
   return (
     <div className="space-y-5">
-      <details open className="group rounded-2xl border border-[var(--evergreen)]/15 bg-white/45">
-        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-sm font-bold text-[var(--evergreen)] hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--evergreen)]/5"><Map className="size-4" aria-hidden="true" /></span>
+      <details open className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)] transition-colors hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+          <Map className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="flex-1">{hasMultiple ? t('annotations.tracksTitle') : t('annotations.trailTitle')}</span>
-          <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
         </summary>
-        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-4">
+        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-3">
       <div className="space-y-3">
 
         {tracks.length === 0 && comparisonTracks.length === 0 && (
@@ -412,9 +409,9 @@ export function AnnotationsPanel() {
       </details>
 
       {/* ── Marker settings ──────────────────────────────────────── */}
-      <div className="space-y-4 rounded-2xl border border-[var(--evergreen)]/15 bg-white/55 p-4 shadow-sm">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)]">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--trail-orange-15)] text-[var(--trail-orange)]"><Footprints className="size-4" aria-hidden="true" /></span>
+      <div className="space-y-3 rounded-xl border border-[var(--evergreen)]/15 bg-white/20 p-3">
+        <h3 className="flex items-center gap-2 text-[11px] font-bold text-[var(--evergreen)]">
+          <Footprints className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {t('annotations.markerTitle')}
         </h3>
 
@@ -517,12 +514,12 @@ export function AnnotationsPanel() {
         </div>
       </div>
 
-      <details className="group rounded-2xl border border-[var(--evergreen)]/15 bg-white/45">
-        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-sm font-bold text-[var(--evergreen)] hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--evergreen)]/5"><Type className="size-4" aria-hidden="true" /></span>
-          <span className="flex-1">{t('annotations.labelsAndText')}</span><ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+      <details className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)] transition-colors hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+          <Type className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{t('annotations.labelsAndText')}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
         </summary>
-        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-4">
+        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-3">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showOnMap')}</Label>
@@ -559,12 +556,12 @@ export function AnnotationsPanel() {
         </div>
       </details>
 
-      <details className="group rounded-2xl border border-[var(--evergreen)]/15 bg-white/45">
-        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 text-sm font-bold text-[var(--evergreen)] hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--evergreen)]/5"><BarChart3 className="size-4" aria-hidden="true" /></span>
-          <span className="flex-1">{t('annotations.statsTitle')}</span><ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden="true" />
+      <details className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)] transition-colors hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+          <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{t('annotations.statsTitle')}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
         </summary>
-        <div className="border-t border-[var(--evergreen)]/10 p-4">
+        <div className="border-t border-[var(--evergreen)]/10 p-3">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
           {(['distance', 'duration', 'movingDuration', 'pace', 'elevation', 'heartRate', 'speed', 'altitude'] as const).map((id) => {
