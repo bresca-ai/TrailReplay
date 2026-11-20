@@ -925,6 +925,12 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
   map: {
     loading: 'Loading map...',
     preparingReplay: 'Preparing replay…',
+    preparingTerrainAndPlaces: "Preparing terrain and places…",
+    preparingTerrain: "Preparing the 3D terrain…",
+    preparingPlaces: "Loading place boundaries…",
+    preparingTiles: "Loading map views along your route…",
+    startReplayNow: "Start now",
+    startReplayNowHint: "The map will keep loading during playback; some details may appear late.",
     zoomButtonsHint: 'Use the + and - buttons to change the zoom while the animation plays.',
   },
   errors: {

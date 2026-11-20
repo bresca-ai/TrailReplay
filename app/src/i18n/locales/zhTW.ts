@@ -298,7 +298,16 @@ export const zhTW = {
     mapCombinedDescription: "選擇地圖景觀、地形與鏡頭移動方式。", routeImported: '已匯入路線，接著請設定影片時間。', step: '第 {current}／{total} 步', progressLabel: '影片製作進度', next: '下一步：{step}', videoDurationStatus: '{seconds} 秒影片', routesDescription: '加入路線檔案或開啟已儲存的 .replay 專案。', timelineDescription: '設定影片長度、選擇配速模式，並編排多個路段。', styleDescription: '設定路線、標記、統計資訊與標註的樣式。', mapDescription: "選擇地圖、地形與風景。", cameraDescription: "選擇鏡頭如何跟隨路線。", mediaDescription: '沿路線加入照片、影片片段與標註。', generateDescription: '選擇輸出方式，製作完成的影片。' },
   help,
   playback: { loadingPanel: '正在載入面板…', play: '播放', pause: '暫停', restart: '重新播放', skipBackward: '往前跳轉', skipForward: '往後跳轉' },
-  map: { loading: '正在載入地圖…', preparingReplay: '正在準備重播…', zoomButtonsHint: '動畫播放時，可使用 ＋／− 按鈕調整縮放。' },
+  map: {
+    loading: '正在載入地圖…', preparingReplay: '正在準備重播…',
+    preparingTerrainAndPlaces: "正在準備地形與地點…",
+    preparingTerrain: "正在準備 3D 地形…",
+    preparingPlaces: "正在載入地點邊界…",
+    preparingTiles: "正在載入沿路的地圖畫面…",
+    startReplayNow: "立即開始",
+    startReplayNowHint: "地圖會在播放期間繼續載入，部分細節可能較晚出現。",
+    zoomButtonsHint: '動畫播放時，可使用 ＋／− 按鈕調整縮放。'
+  },
   errors: { noValidGpx: '找不到有效的 GPX、KML 或 FIT 檔案', parseGpxFailed: '無法解析 GPX 檔案' },
   routeLandmarks: {
     customColor: "自訂顏色",

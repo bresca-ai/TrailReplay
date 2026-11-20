@@ -914,6 +914,12 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
   map: {
     loading: 'Karte wird geladen...',
     preparingReplay: 'Wiedergabe wird vorbereitet…',
+    preparingTerrainAndPlaces: "Gelände und Orte werden vorbereitet…",
+    preparingTerrain: "3D-Gelände wird vorbereitet…",
+    preparingPlaces: "Ortsgrenzen werden geladen…",
+    preparingTiles: "Kartenansichten entlang der Route werden geladen…",
+    startReplayNow: "Jetzt starten",
+    startReplayNowHint: "Die Karte lädt während der Wiedergabe weiter; einige Details können später erscheinen.",
     zoomButtonsHint: 'Verwende die Tasten „+“ und „-“, um den Zoom zu ändern, während die Animation abgespielt wird.',
   },
   errors: {

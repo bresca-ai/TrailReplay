@@ -914,6 +914,12 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
   map: {
     loading: 'Carregant mapa...',
     preparingReplay: 'Preparant la reproducció…',
+    preparingTerrainAndPlaces: "Preparant el terreny i els llocs…",
+    preparingTerrain: "Preparant el terreny 3D…",
+    preparingPlaces: "Carregant els límits dels llocs…",
+    preparingTiles: "Carregant vistes del mapa al llarg de la ruta…",
+    startReplayNow: "Comença ara",
+    startReplayNowHint: "El mapa continuarà carregant-se durant la reproducció; alguns detalls poden aparèixer més tard.",
     zoomButtonsHint: 'Fes servir els botons + i - per canviar el nivell de zoom mentre es reprodueix l’animació.',
   },
   errors: {

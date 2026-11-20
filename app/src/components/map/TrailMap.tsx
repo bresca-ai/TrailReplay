@@ -16,6 +16,7 @@ import { MapElevationProfile } from './MapElevationProfile';
 import { MapBuildingAttribution } from './MapBuildingAttribution';
 import { ComparisonLeaderboard } from './ComparisonLeaderboard';
 import { LocationChapterLabel } from './LocationChapterLabel';
+import { ReplayPreparationOverlay } from './ReplayPreparationOverlay';
 import { COMPARISON_MARKER_SIZE } from '@/utils/comparisonMarker';
 import { useI18n } from '@/i18n/useI18n';
 import { areFollowingSamePath } from '@/utils/routeComparisonSharedPath';
@@ -652,12 +653,11 @@ export function TrailMap(_props: TrailMapProps) {
       )}
 
       {animationPhase === 'preloading' && !isExporting && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(9,14,19,0.55)] backdrop-blur-[1px]">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/12 bg-[rgba(9,14,19,0.88)] px-4 py-3 text-white shadow-[0_16px_36px_rgba(0,0,0,0.28)]">
-            <div className="w-6 h-6 border-2 border-[var(--trail-orange)] border-t-transparent rounded-full animate-spin" />
-            <span>{t('map.preparingReplay')}</span>
-          </div>
-        </div>
+        <ReplayPreparationOverlay
+          terrainLoading={cameraMode === 'aerial-follow' && terrainExaggeration > 0 && cameraPathCoordinates.length >= 2 && !matchingTerrainPlan}
+          boundariesLoading={locationChapter.loading}
+          onStartNow={() => setAnimationPhase('intro')}
+        />
       )}
 
       {isMobile && showZoomButtonsHint && isMapLoaded && allCoordinates.length > 0 && (

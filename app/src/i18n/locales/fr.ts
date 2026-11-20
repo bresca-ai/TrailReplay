@@ -914,6 +914,12 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
   map: {
     loading: 'Chargement de la carte...',
     preparingReplay: 'Préparation de la rediffusion…',
+    preparingTerrainAndPlaces: "Préparation du relief et des lieux…",
+    preparingTerrain: "Préparation du relief 3D…",
+    preparingPlaces: "Chargement des limites des lieux…",
+    preparingTiles: "Chargement des vues de la carte le long du parcours…",
+    startReplayNow: "Démarrer maintenant",
+    startReplayNowHint: "La carte continuera à se charger pendant la lecture ; certains détails peuvent apparaître plus tard.",
     zoomButtonsHint: 'Utilisez les boutons + et - pour modifier le zoom pendant l\'animation.',
   },
   errors: {

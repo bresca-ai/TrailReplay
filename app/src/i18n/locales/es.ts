@@ -914,6 +914,12 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
   map: {
     loading: 'Cargando mapa...',
     preparingReplay: 'Preparando la repetición…',
+    preparingTerrainAndPlaces: "Preparando el terreno y los lugares…",
+    preparingTerrain: "Preparando el terreno 3D…",
+    preparingPlaces: "Cargando los límites de los lugares…",
+    preparingTiles: "Cargando vistas del mapa a lo largo de la ruta…",
+    startReplayNow: "Empezar ahora",
+    startReplayNowHint: "El mapa seguirá cargándose durante la reproducción; algunos detalles pueden aparecer más tarde.",
     zoomButtonsHint: 'Usa los botones + y - para cambiar el nivel de zoom mientras se reproduce la animación.',
   },
   errors: {
