@@ -559,7 +559,7 @@ export const en = {
     markerTypeDotHint: 'Solid dot with white border, like the Strava activity indicator.',
     markerColor: 'Marker color',
     markerColorSvgHint: 'For SVG icons, this changes both the icon and the marker circle.',
-    markerColorEmojiHint: 'For emoji icons, this changes the marker circle only.',
+    markerColorTrackHint: 'Animated and 3D markers use the marker color.', markerColorEmojiHint: 'For emoji icons, this changes the marker circle only.',
     showMarker: 'Show Marker',
     size: 'Size',
     activityIcon: 'Activity Icon',
@@ -925,6 +925,12 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
   map: {
     loading: 'Loading map...',
     preparingReplay: 'Preparing replay…',
+    preparingTerrainAndPlaces: "Preparing terrain and places…",
+    preparingTerrain: "Preparing the 3D terrain…",
+    preparingPlaces: "Loading place boundaries…",
+    preparingTiles: "Loading map views along your route…",
+    startReplayNow: "Start now",
+    startReplayNowHint: "The map will keep loading during playback; some details may appear late.",
     zoomButtonsHint: 'Use the + and - buttons to change the zoom while the animation plays.',
   },
   errors: {

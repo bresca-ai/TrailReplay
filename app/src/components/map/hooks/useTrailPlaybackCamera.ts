@@ -4,8 +4,8 @@ import * as maplibregl from 'maplibre-gl';
 import { OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { applyLocationChapterCamera, getIntroDuration, locationChapterIntroProgressRef, locationIntroEasing, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
-import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
-import { getActivityIconMarkerHtml, isSvgActivityIcon, markerIconContrastFilter } from '@/utils/activityIcons';
+import { TRANSPORT_MARKERS } from '@/utils/journeyUtils';
+import { getActivityIconMarkerHtml, is3DActivityIcon, resolvePlaybackMarkerColor, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
@@ -125,6 +125,7 @@ interface UseTrailPlaybackCameraParams {
   followBehindZoomLevel: number;
   followBehindPitch?: number | null;
   isInTransport: boolean;
+  transportModelsEnabled?: boolean;
   isMapLoaded: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
   markerRef: React.MutableRefObject<PaintedTrailMarker | null>;
@@ -166,16 +167,11 @@ interface UseTrailPlaybackCameraParams {
   };
 }
 
-export function resolvePlaybackMarkerColor(
-  configuredMarkerColor: string,
-  activeTrackColor: string | null | undefined,
-  currentTrackColor: string | null | undefined,
-): string {
-  const markerFollowsTrackColors = !!activeTrackColor
-    && configuredMarkerColor.toLowerCase() === activeTrackColor.toLowerCase();
-  return markerFollowsTrackColors && currentTrackColor
-    ? currentTrackColor
-    : configuredMarkerColor;
+export { resolvePlaybackMarkerColor } from '@/utils/activityIcons';
+
+/** Transport models replace the route dot only during their own segment. */
+export function shouldUseDotForPlaybackMarker(markerType: 'dot' | 'icon', isTransport: boolean, icon: string): boolean {
+  return markerType === 'dot' && !(isTransport && is3DActivityIcon(icon));
 }
 
 export function shouldRenderPlaybackAdornment({
@@ -270,6 +266,7 @@ export function useTrailPlaybackCamera({
   isPlaying,
   sharedComparisonColors,
   isInTransport,
+  transportModelsEnabled = true,
   isMapLoaded,
   mapRef,
   markerRef,
@@ -398,7 +395,7 @@ export function useTrailPlaybackCamera({
     });
     const currentColor = currentTrackColor || trailStyle.trailColor;
     const icon = isInTransport
-      ? TRANSPORT_ICONS[currentSegment?.segment.transportMode || 'car'] || '🚗'
+      ? TRANSPORT_MARKERS[currentSegment?.segment.transportMode || 'car'] || '🚗'
       : currentIcon || trailStyle.currentIcon;
 
     if (!shouldShowPlaybackAdornment) {
@@ -412,7 +409,7 @@ export function useTrailPlaybackCamera({
       );
       let markerHtml = '';
 
-      if (trailStyle.showMarker && trailStyle.markerType === 'dot') {
+      if (trailStyle.showMarker && shouldUseDotForPlaybackMarker(trailStyle.markerType, isInTransport && transportModelsEnabled, icon)) {
         const dotSize = Math.round(14 * trailStyle.markerSize);
         const dotColors = [markerColor, ...(sharedComparisonColors ?? [])];
         const dotFill = dotColors.length === 1 ? markerColor : `conic-gradient(${dotColors.map((color, index) =>
@@ -427,8 +424,8 @@ export function useTrailPlaybackCamera({
           flex-shrink: 0;
         "></div>`;
       } else if (trailStyle.showMarker) {
-        const fontSize = Math.round(28 * trailStyle.markerSize);
-        const iconColor = isSvgActivityIcon(icon) ? markerColor : currentColor;
+        const fontSize = 28 * trailStyle.markerSize;
+        const iconColor = markerColor;
         const iconHtml = getActivityIconMarkerHtml(icon, fontSize, iconColor);
         // Keep showCircle as the saved setting for recipe/project compatibility.
         // Contrast follows the icon silhouette, without a disc or pulse animation.
@@ -958,6 +955,7 @@ export function useTrailPlaybackCamera({
     followBehindZoomLevel,
     followBehindPitch,
     isInTransport,
+    transportModelsEnabled,
     isMapLoaded,
     locationChapterCameraCue,
     mapRef,

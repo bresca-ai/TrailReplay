@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import {
   useTrailPlaybackCamera,
+  shouldUseDotForPlaybackMarker,
   bindAerialHeadroom,
   resolvePlaybackMarkerColor,
   shouldRenderPlaybackAdornment,
@@ -228,4 +229,13 @@ it.each([false, true])('keeps automatic cinematic terrain height stable during e
   expect(setCenterClampedToGround).toHaveBeenCalledWith(false);
   unmount();
   expect(setCenterClampedToGround).toHaveBeenLastCalledWith(true);
+});
+
+it('uses the default transport model while preserving route dots', () => {
+  expect(shouldUseDotForPlaybackMarker('dot', false, '3d-runner')).toBe(true);
+  expect(shouldUseDotForPlaybackMarker('dot', true, '3d-plane')).toBe(false);
+  expect(shouldUseDotForPlaybackMarker('dot', true, '3d-train')).toBe(false);
+  expect(shouldUseDotForPlaybackMarker('dot', true, '3d-sailboat')).toBe(false);
+  expect(shouldUseDotForPlaybackMarker('dot', true, '3d-bus')).toBe(false);
+  expect(shouldUseDotForPlaybackMarker('dot', true, '🚗')).toBe(true);
 });

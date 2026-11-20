@@ -4,16 +4,18 @@ import { useI18n } from '@/i18n/useI18n';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { ACTIVITY_ICONS, isSvgActivityIcon, markerIconContrastFilter, renderActivityIcon } from '@/utils/activityIcons';
+import { markerIconContrastFilter, renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
+import { ActivityIconPicker } from './ActivityIconPicker';
 import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
-import { ChevronDown, Palette, Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Footprints, Map, Palette, Pencil, BarChart3, Type, Trash2 } from 'lucide-react';
 import { OverlayFontPicker } from './OverlayFontPicker';
 import { ComparisonLeaderboardSettings } from './ComparisonLeaderboardSettings';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { colorZoneDistances, distanceAtZoneProgress, zoneProgressAtDistance } from '@/utils/colorZoneDistance';
+import { formatDistance } from '@/utils/units';
 
 function ZonePositionInput({ value, maximum, label, onChange }: {
   value: number; maximum: number; label: string; onChange: (value: number) => void;
@@ -85,7 +87,7 @@ function InlineName({
 
   return (
     <button type="button"
-      className="flex min-w-0 flex-1 items-center justify-between gap-2 border-b border-[var(--evergreen)]/20 py-1 text-left text-sm font-semibold hover:underline decoration-dotted"
+      className="flex w-full min-w-0 flex-1 items-center justify-between gap-2 border-b border-[var(--evergreen)]/20 py-1 text-left text-sm font-semibold hover:underline decoration-dotted"
       style={{ color }}
       title={renameTitle}
       onClick={() => { setDraft(name); setEditing(true); }}
@@ -104,7 +106,13 @@ function TrackStyleSection({
   name,
   onColorChange,
   onNameChange,
-  nameLabel,
+  icon,
+  iconColor,
+  onIconClick,
+  iconTitle,
+  distance,
+  elevation,
+  unitSystem,
   colorLabel,
   renameTitle,
   resolveColorLabel,
@@ -115,28 +123,33 @@ function TrackStyleSection({
   name: string;
   onColorChange: (c: string) => void;
   onNameChange: (n: string) => void;
-  nameLabel: string;
+  icon: string;
+  iconColor: string;
+  onIconClick?: () => void;
+  iconTitle: string;
+  distance: number;
+  elevation: number;
+  unitSystem: 'metric' | 'imperial';
   colorLabel: string;
   renameTitle: string;
   resolveColorLabel: (key: string) => string;
 }) {
   return (
-    <div className="space-y-2">
-      {showLabel && <div className="flex items-center gap-2 pt-1">
-        <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-        <span className="text-xs font-bold text-[var(--evergreen-60)] uppercase tracking-wide">{label}</span>
-      </div>}
-
-      {/* Name row */}
-      <div className="flex items-center gap-2">
-        <Label className="text-xs text-[var(--evergreen-60)] w-[4.25rem] shrink-0">{nameLabel}</Label>
-        <InlineName name={name} color={color} onSave={onNameChange} renameTitle={renameTitle} />
+    <div className="space-y-2 rounded-xl border border-[var(--evergreen)]/15 bg-white/50 p-2.5">
+      <div className="flex items-center gap-2.5">
+        {onIconClick ? <button type="button" onClick={onIconClick} aria-label={`${iconTitle}: ${name}`} title={iconTitle}
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"
+          style={{ backgroundColor: `${color}30` }}>{renderActivityIcon(icon, { size: 30, color: iconColor })}</button>
+          : <span className="flex size-11 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${color}30` }}>{renderActivityIcon(icon, { size: 30, color: iconColor })}</span>}
+        <div className="min-w-0 flex-1">
+          {showLabel && <span className="block text-[9px] font-bold uppercase tracking-wide text-[var(--evergreen-60)]">{label}</span>}
+          <InlineName name={name} color="var(--evergreen)" onSave={onNameChange} renameTitle={renameTitle} />
+          <div className="mt-1 flex flex-wrap gap-x-3 text-[10px] text-[var(--evergreen-60)]"><span>{formatDistance(distance, unitSystem)}</span><span>↑{formatDistance(elevation, unitSystem)}</span></div>
+        </div>
       </div>
 
-      {/* Color row */}
-      <div className="grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-2">
-        <Label className="text-xs text-[var(--evergreen)]">{colorLabel}</Label>
-        <div className="flex min-w-0 items-center gap-1">
+      {/* Colour controls use accessible labels without repeating visible text on every card. */}
+      <div className="flex min-w-0 items-center gap-1.5">
         <input
           type="color"
           value={color}
@@ -144,7 +157,7 @@ function TrackStyleSection({
           aria-label={colorLabel}
           className="h-7 w-7 rounded cursor-pointer border border-[var(--evergreen)]/20 shrink-0"
         />
-        <div className="flex min-w-0 flex-wrap gap-x-0.5 gap-y-1">
+        <div className="flex min-w-0 flex-nowrap items-center gap-0.5">
           {COLOR_PRESETS.map(({ color: preset, labelKey }) => (
             <button
               key={preset}
@@ -153,7 +166,7 @@ function TrackStyleSection({
               aria-pressed={color === preset}
               onClick={() => onColorChange(preset)}
               title={resolveColorLabel(labelKey)}
-              className={`w-[18px] h-[18px] rounded-full border-2 transition-all ${
+              className={`w-[18px] h-[18px] shrink-0 rounded-full border-2 transition-all ${
                 color === preset
                   ? 'border-[var(--evergreen)] scale-110'
                   : 'border-transparent hover:scale-105'
@@ -161,7 +174,6 @@ function TrackStyleSection({
               style={{ backgroundColor: preset }}
             />
           ))}
-        </div>
         </div>
       </div>
     </div>
@@ -188,15 +200,20 @@ export function AnnotationsPanel() {
   const updateComparisonTrackName = useAppStore((state) => state.updateComparisonTrackName);
 
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconTrackId, setIconTrackId] = useState<string | null>(null);
   const [zoneUnit, setZoneUnit] = useState<'percent' | 'km'>('percent');
-  const { allCoordinates } = useComputedJourney();
+  const { allCoordinates, currentSegment } = useComputedJourney();
   const zoneDistances = useMemo(() => colorZoneDistances(allCoordinates), [allCoordinates]);
   const routeLengthKm = zoneDistances[zoneDistances.length - 1] ?? 0;
   const distanceMode = zoneUnit === 'km' && routeLengthKm > 0;
 
   const hasMultiple = tracks.length > 1 || comparisonTracks.length > 0;
   const activeTrack = tracks.find((track) => track.id === activeTrackId) ?? tracks[0] ?? null;
-  const displayedIcon = activeTrack?.activityIcon ?? trailStyle.currentIcon;
+  const markerTrack = currentSegment?.segment.type === 'track'
+    ? tracks.find((track) => track.id === currentSegment.segment.trackId) ?? activeTrack
+    : activeTrack;
+  const displayedIcon = markerTrack?.activityIcon ?? trailStyle.currentIcon;
+  const editingTrack = tracks.find(track => track.id === iconTrackId);
 
   // When the active track color changes, also sync trailStyle
   const handleMainColorChange = (trackId: string, color: string) => {
@@ -211,17 +228,20 @@ export function AnnotationsPanel() {
     setTrailStyle({ colorMode: checked ? 'heartRate' : 'fixed' });
   };
 
-  const currentIconColor = isSvgActivityIcon(displayedIcon)
-    ? trailStyle.markerColor
-    : undefined;
+  const currentIconColor = resolvePlaybackMarkerColor(
+    trailStyle.markerColor, activeTrack?.color, markerTrack?.color,
+  );
 
   return (
     <div className="space-y-5">
-      {/* ── Track colour & name sections ─────────────────────────── */}
+      <details open className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)] transition-colors hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+          <Map className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{hasMultiple ? t('annotations.tracksTitle') : t('annotations.trailTitle')}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+        </summary>
+        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-3">
       <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
-          {hasMultiple ? t('annotations.tracksTitle') : t('annotations.trailTitle')}
-        </h3>
 
         {tracks.length === 0 && comparisonTracks.length === 0 && (
           <div className="space-y-2">
@@ -250,7 +270,11 @@ export function AnnotationsPanel() {
             name={track.name}
             onColorChange={(c) => handleMainColorChange(track.id, c)}
             onNameChange={(n) => updateTrackName(track.id, n)}
-            nameLabel={t('annotations.routeName')}
+            icon={track.activityIcon}
+            iconColor={resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, track.color)}
+            onIconClick={() => { setIconTrackId(track.id); setShowIconPicker(true); }}
+            iconTitle={t('journey.changeTrackIcon')}
+            distance={track.totalDistance} elevation={track.elevationGain} unitSystem={settings.unitSystem}
             colorLabel={t('annotations.trackColor')}
             renameTitle={t('common.clickRename')}
             resolveColorLabel={(key) => t(key)}
@@ -271,7 +295,10 @@ export function AnnotationsPanel() {
             name={ct.name}
             onColorChange={(c) => updateComparisonColor(ct.id, c)}
             onNameChange={(n) => updateComparisonTrackName(ct.id, n)}
-            nameLabel={t('annotations.routeName')}
+            icon={ct.track.activityIcon}
+            iconColor={ct.color}
+            iconTitle={t('journey.changeTrackIcon')}
+            distance={ct.track.totalDistance} elevation={ct.track.elevationGain} unitSystem={settings.unitSystem}
             colorLabel={t('annotations.trackColor')}
             renameTitle={t('common.clickRename')}
             resolveColorLabel={(key) => t(key)}
@@ -378,9 +405,13 @@ export function AnnotationsPanel() {
         </div>
       </details>
 
+        </div>
+      </details>
+
       {/* ── Marker settings ──────────────────────────────────────── */}
-      <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
+      <div className="space-y-3 rounded-xl border border-[var(--evergreen)]/15 bg-white/20 p-3">
+        <h3 className="flex items-center gap-2 text-[11px] font-bold text-[var(--evergreen)]">
+          <Footprints className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {t('annotations.markerTitle')}
         </h3>
 
@@ -395,6 +426,18 @@ export function AnnotationsPanel() {
 
           {trailStyle.showMarker && (
             <>
+              {trailStyle.markerType === 'icon' && <button type="button" onClick={() => { setIconTrackId(null); setShowIconPicker(true); }}
+                className="group flex w-full items-center gap-3 rounded-xl border border-[var(--trail-orange)]/30 bg-[var(--trail-orange-15)] p-3 text-left transition-colors hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange)]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+                <span className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-white/80" style={{ filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none' }}>
+                  {renderActivityIcon(displayedIcon, { size: 44, color: currentIconColor })}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--evergreen)]/55">{t('annotations.activityIcon')}{hasMultiple && markerTrack ? ` · ${markerTrack.name}` : ''}</span>
+                  <span className="mt-1 block text-sm font-bold text-[var(--evergreen)]">{t('annotations.changeIcon')}</span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-[var(--trail-orange)] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </button>}
+
               {/* Icon / Dot toggle */}
               <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-2">
                 <span className="text-xs text-[var(--evergreen)]">{t('annotations.markerType')}</span>
@@ -454,33 +497,7 @@ export function AnnotationsPanel() {
                   </div>
                 </div>
 
-                {trailStyle.markerType === 'icon' && (
-                  <>
-                    <p className="text-xs text-[var(--evergreen-60)]">
-                      {isSvgActivityIcon(displayedIcon)
-                        ? t('annotations.markerColorSvgHint')
-                        : t('annotations.markerColorEmojiHint')}
-                    </p>
 
-                    <Label className="text-sm text-[var(--evergreen)]">{t('annotations.activityIcon')}</Label>
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-12 h-12 flex items-center justify-center"
-                        style={{
-                          filter: trailStyle.showCircle ? markerIconContrastFilter() : 'none',
-                        }}
-                      >
-                        {renderActivityIcon(displayedIcon, { size: 32, color: currentIconColor })}
-                      </div>
-                      <button
-                        onClick={() => setShowIconPicker(true)}
-                        className="tr-btn tr-btn-secondary text-sm"
-                      >
-                        {t('annotations.changeIcon')}
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
 
               {trailStyle.markerType === 'icon' && (
@@ -497,11 +514,13 @@ export function AnnotationsPanel() {
         </div>
       </div>
 
-      {/* ── Label visibility ─────────────────────────────────────── */}
+      <details className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)] transition-colors hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+          <Type className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{t('annotations.labelsAndText')}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+        </summary>
+        <div className="space-y-4 border-t border-[var(--evergreen)]/10 p-3">
       <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
-          {t('annotations.labelsAndText')}
-        </h3>
         <div className="flex items-center justify-between">
           <Label className="text-sm text-[var(--evergreen)]">{t('annotations.showOnMap')}</Label>
           <Switch
@@ -534,11 +553,16 @@ export function AnnotationsPanel() {
         <details className="text-[11px] text-[var(--evergreen-60)]"><summary className="cursor-pointer">{t('annotations.typographyTitle')}</summary><p className="mt-1">{t('annotations.typographyHint')} {t('annotations.typographyOpenSource')}</p></details>
       </div>
 
-      {/* ── Stats visibility ─────────────────────────────────────── */}
+        </div>
+      </details>
+
+      <details className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)] transition-colors hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
+          <BarChart3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="flex-1">{t('annotations.statsTitle')}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
+        </summary>
+        <div className="border-t border-[var(--evergreen)]/10 p-3">
       <div className="space-y-3">
-        <h3 className="flex items-center gap-3 text-sm font-bold text-[var(--evergreen)] uppercase tracking-wide after:h-px after:flex-1 after:bg-[var(--evergreen)]/15">
-          {t('annotations.statsTitle')}
-        </h3>
         <div className="grid grid-cols-2 gap-2">
           {(['distance', 'duration', 'movingDuration', 'pace', 'elevation', 'heartRate', 'speed', 'altitude'] as const).map((id) => {
             const unavailable = !isStatAvailable(id, availability);
@@ -721,55 +745,21 @@ export function AnnotationsPanel() {
         <p className="text-xs text-[var(--evergreen-60)]">{t('annotations.statsHint')}</p>
       </div>
 
+        </div>
+      </details>
+
       {comparisonTracks.length > 0 && <details className="rounded-lg bg-[var(--evergreen)]/5">
         <summary className="cursor-pointer px-3 py-3 text-sm font-semibold text-[var(--evergreen)]">{t('tracks.leaderboard')}</summary>
         <div className="px-3 pb-3"><ComparisonLeaderboardSettings /></div>
       </details>}
 
-      {/* Icon Picker Modal */}
-      {showIconPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--canvas)] border-2 border-[var(--evergreen)] rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-[var(--evergreen)] mb-4">
-              {t('annotations.selectIcon')}
-            </h3>
-            <div className="grid grid-cols-6 gap-2 mb-6">
-              {ACTIVITY_ICONS.map(({ value, labelKey }) => (
-                <button
-                  key={value}
-                  onClick={() => {
-                    if (activeTrack) {
-                      updateTrackIcon(activeTrack.id, value);
-                    } else {
-                      setTrailStyle({ currentIcon: value });
-                    }
-                    setShowIconPicker(false);
-                  }}
-                  title={t(labelKey)}
-                  className={`
-                    flex items-center justify-center p-2 rounded-lg border-2 transition-colors
-                    ${displayedIcon === value
-                      ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]'
-                      : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'
-                    }
-                  `}
-                >
-                  {renderActivityIcon(value, {
-                    size: 32,
-                    color: isSvgActivityIcon(value) ? trailStyle.markerColor : undefined,
-                  })}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowIconPicker(false)}
-              className="w-full tr-btn tr-btn-secondary"
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
+      {showIconPicker && <ActivityIconPicker value={editingTrack?.activityIcon ?? displayedIcon} color={editingTrack ? resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, editingTrack.color) : currentIconColor} onClose={() => setShowIconPicker(false)} onSelect={(value) => {
+        if (editingTrack) updateTrackIcon(editingTrack.id, value);
+        else if (markerTrack) updateTrackIcon(markerTrack.id, value);
+        else setTrailStyle({ currentIcon: value });
+        setTrailStyle({ markerType: 'icon' });
+        setShowIconPicker(false);
+      }} />}
     </div>
   );
 }

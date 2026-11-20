@@ -13,6 +13,16 @@ export function captureSocialMap(
 
     try {
       for (const layer of map.getStyle().layers ?? []) {
+        // Playback adornments are not part of the finished-route cover.
+        // DOM markers are outside the map canvas; comparison dots and the
+        // opening beacon are MapLibre layers and must be hidden for capture.
+        if (layer.id.startsWith('comparison-position-glow-')
+          || layer.id.startsWith('comparison-track-label-')
+          || layer.id.startsWith('location-start-cue-')) {
+          visibility.push({ id: layer.id, value: map.getLayoutProperty(layer.id, 'visibility') as 'visible' | 'none' | undefined });
+          map.setLayoutProperty(layer.id, 'visibility', 'none');
+          continue;
+        }
         if (['route-landmarks-icon', 'route-landmarks-emoji', 'route-landmarks-label', 'carto-labels'].includes(layer.id)) {
           visibility.push({ id: layer.id, value: map.getLayoutProperty(layer.id, 'visibility') as 'visible' | 'none' | undefined });
           map.setLayoutProperty(layer.id, 'visibility', options.showPlaces ? 'visible' : 'none');

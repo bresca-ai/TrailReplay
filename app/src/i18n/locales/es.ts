@@ -548,7 +548,7 @@ export const es = {
     markerTypeDotHint: 'Punto sólido con borde blanco, como el indicador de actividad de Strava.',
     markerColor: 'Color del marcador',
     markerColorSvgHint: 'Con iconos SVG, esto cambia tanto el icono como el círculo del marcador.',
-    markerColorEmojiHint: 'Con iconos emoji, esto cambia solo el círculo del marcador.',
+    markerColorTrackHint: 'Los marcadores animados y 3D usan el color del marcador.', markerColorEmojiHint: 'Con iconos emoji, esto cambia solo el círculo del marcador.',
     showMarker: 'Mostrar marcador',
     size: 'Tamaño',
     activityIcon: 'Icono de actividad',
@@ -914,6 +914,12 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
   map: {
     loading: 'Cargando mapa...',
     preparingReplay: 'Preparando la repetición…',
+    preparingTerrainAndPlaces: "Preparando el terreno y los lugares…",
+    preparingTerrain: "Preparando el terreno 3D…",
+    preparingPlaces: "Cargando los límites de los lugares…",
+    preparingTiles: "Cargando vistas del mapa a lo largo de la ruta…",
+    startReplayNow: "Empezar ahora",
+    startReplayNowHint: "El mapa seguirá cargándose durante la reproducción; algunos detalles pueden aparecer más tarde.",
     zoomButtonsHint: 'Usa los botones + y - para cambiar el nivel de zoom mientras se reproduce la animación.',
   },
   errors: {

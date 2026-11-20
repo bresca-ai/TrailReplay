@@ -195,7 +195,7 @@ export const zhTW = {
     paceMode: '配速模式', paceModeCumulative: '全程平均', paceModePerKm: '每公里', routeOverview: "路線總覽", routeOverviewHint: "朝北的路線總覽，可拖曳調整位置。", resizeElevationProfile: "調整海拔剖面高度", elevationProfileFill: "填滿海拔剖面下方", showElevationProfile: '海拔剖面圖', elevationProfilePerRoute: '各路線海拔剖面', elevationProfilePerRouteHint: '播放時分別顯示各條路線。',
     dynamicElevationProfile: '動態路段', dynamicElevationProfileHint: '播放時，自動聚焦主要的持續爬升與下降路段。',
     dynamicElevationProfileGuideTitle: '操作說明', dynamicElevationProfileGuideAutomatic: '剖面圖會標記接下來的爬升與下降，並在播放時平順地放大各路段。', dynamicElevationProfileGuideEdit: '暫停後可編輯：拖曳兩端把手以調整路段範圍。', dynamicElevationProfileGuideAddRemove: '點選 ＋，再點選剖面圖以新增路段；點選路段上的 × 可移除。',
-    markerTitle: '移動標記', markerTypeIcon: '圖示', markerTypeDot: '圓點', markerTypeDotHint: '白色外框的實心圓點，類似 Strava 的活動指示標記。', markerColor: '標記顏色', markerColorSvgHint: '使用 SVG 圖示時，會同時調整圖示與標記圓圈的顏色。', markerColorEmojiHint: '使用表情符號時，只會調整標記圓圈的顏色。',
+    markerTitle: '移動標記', markerTypeIcon: '圖示', markerTypeDot: '圓點', markerTypeDotHint: '白色外框的實心圓點，類似 Strava 的活動指示標記。', markerColor: '標記顏色', markerColorSvgHint: '使用 SVG 圖示時，會同時調整圖示與標記圓圈的顏色。', markerColorTrackHint: '動畫和 3D 標記使用標記顏色。', markerColorEmojiHint: '使用表情符號時，只會調整標記圓圈的顏色。',
     showMarker: '顯示標記', size: '大小', activityIcon: '活動圖示', changeIcon: '更換圖示', glowCircle: '圖示外框', selectIcon: '選擇活動圖示',
     routeAnnotationsTitle: '路線標註', routeAnnotationsHint: '在目前播放位置新增透明的地圖文字或旅途筆記。旅途筆記顯示時會放慢重播，讓觀眾有時間閱讀。', presentationLabel: '呈現方式', annotationSize: '標註大小', annotationMarkerSize: '標記大小', annotationTextSize: '標註文字大小', sharedTiming: "所有標註的預設時間", defaultPinLead: "提前顯示標記（秒）", defaultSlowdown: "減速時間（秒）", pinLeadOverride: "標記提前時間（秒）", slowdownOverride: "自訂減速時間（秒）", timingOverrideHint: "留空以使用共用設定。", markerFilled: '填滿標記', presentationMapCard: '地圖文字', presentationSidePanel: '旅途筆記',
     codeLabel: '站點代碼', routeDetailsLabel: '路線資訊（距離 · 時間）', routeDetailsPlaceholder: '10.2 公里 · 15:30–19:30', descriptionLabel: '說明', logoLabel: '符號', emojiLabel: '表情符號',
@@ -298,7 +298,16 @@ export const zhTW = {
     mapCombinedDescription: "選擇地圖景觀、地形與鏡頭移動方式。", routeImported: '已匯入路線，接著請設定影片時間。', step: '第 {current}／{total} 步', progressLabel: '影片製作進度', next: '下一步：{step}', videoDurationStatus: '{seconds} 秒影片', routesDescription: '加入路線檔案或開啟已儲存的 .replay 專案。', timelineDescription: '設定影片長度、選擇配速模式，並編排多個路段。', styleDescription: '設定路線、標記、統計資訊與標註的樣式。', mapDescription: "選擇地圖、地形與風景。", cameraDescription: "選擇鏡頭如何跟隨路線。", mediaDescription: '沿路線加入照片、影片片段與標註。', generateDescription: '選擇輸出方式，製作完成的影片。' },
   help,
   playback: { loadingPanel: '正在載入面板…', play: '播放', pause: '暫停', restart: '重新播放', skipBackward: '往前跳轉', skipForward: '往後跳轉' },
-  map: { loading: '正在載入地圖…', preparingReplay: '正在準備重播…', zoomButtonsHint: '動畫播放時，可使用 ＋／− 按鈕調整縮放。' },
+  map: {
+    loading: '正在載入地圖…', preparingReplay: '正在準備重播…',
+    preparingTerrainAndPlaces: "正在準備地形與地點…",
+    preparingTerrain: "正在準備 3D 地形…",
+    preparingPlaces: "正在載入地點邊界…",
+    preparingTiles: "正在載入沿路的地圖畫面…",
+    startReplayNow: "立即開始",
+    startReplayNowHint: "地圖會在播放期間繼續載入，部分細節可能較晚出現。",
+    zoomButtonsHint: '動畫播放時，可使用 ＋／− 按鈕調整縮放。'
+  },
   errors: { noValidGpx: '找不到有效的 GPX、KML 或 FIT 檔案', parseGpxFailed: '無法解析 GPX 檔案' },
   routeLandmarks: {
     customColor: "自訂顏色",

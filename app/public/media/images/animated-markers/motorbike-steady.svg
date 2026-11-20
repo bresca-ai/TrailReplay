@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-140 220 2020 1560" role="img" aria-label="Loading">
+<style>
+svg{--ink:#1B2A20;--orange:#C1652F;--paper:#fff;--gold:#E9B44C}
+.k{stroke:var(--ink);stroke-linecap:round}.w{stroke:var(--paper);stroke-linecap:round}
+.o{stroke:var(--orange);stroke-linecap:round;fill:none;stroke-linejoin:round}.ko{stroke:var(--ink);stroke-linecap:round;fill:none;stroke-linejoin:round}
+.skin{fill:var(--paper);stroke:var(--ink);stroke-width:46}.eye{fill:var(--ink)}
+.ln{fill:none;stroke:var(--ink);stroke-width:18;stroke-linecap:round;stroke-linejoin:round}
+.lid{fill:var(--paper)}
+.gear{fill:var(--orange);stroke:var(--ink);stroke-width:38;stroke-linejoin:round}.gear.dark{fill:var(--ink)}
+.pom{fill:var(--paper);stroke:var(--ink);stroke-width:34}.gog{fill:var(--orange);stroke:var(--ink);stroke-width:26;stroke-linejoin:round}
+.shell{fill:var(--orange);stroke:var(--ink);stroke-width:46}.visor{fill:var(--paper);stroke:var(--ink);stroke-width:30;stroke-linejoin:round}.stripe{fill:none;stroke:var(--paper);stroke-width:26;stroke-linecap:round}
+.body{fill:var(--orange);stroke:var(--ink);stroke-width:56;stroke-linejoin:round}.glass{fill:var(--paper);stroke:var(--ink);stroke-width:34;stroke-linejoin:round}
+.inkfill{fill:var(--ink);stroke:var(--ink);stroke-width:30;stroke-linejoin:round}.paperfill{fill:var(--paper);stroke:var(--ink);stroke-width:30;stroke-linejoin:round}
+.tyre{fill:var(--paper);stroke:var(--ink)}.spoke{stroke:var(--ink);stroke-width:14;opacity:.75}.valve{fill:var(--orange)}.hub{fill:var(--ink)}
+.knob{fill:none;stroke:var(--ink);stroke-width:30;stroke-dasharray:34 30}
+.puff{fill:var(--paper);stroke:var(--ink);stroke-width:16;opacity:0}
+.bit{fill:var(--ink);opacity:0}.snow{fill:var(--paper);stroke:var(--ink);stroke-width:12;opacity:0}
+.blink{opacity:0;animation:blink 4s infinite}@keyframes blink{0%,92%{opacity:0}93%,97%{opacity:1}98%,100%{opacity:0}}
+@keyframes spin{to{rotate:360deg}}@keyframes unspin{to{rotate:-360deg}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}.hide-still{opacity:0!important}}
+.spin{animation:spin .45s infinite linear}
+.vib{animation:vib .09s infinite linear alternate}@keyframes vib{from{translate:0 -3px}to{translate:0 4px}}
+.wheelie{animation:wheelie 3.2s infinite ease-in-out}@keyframes wheelie{0%,52%{rotate:0deg}64%{rotate:-11deg}72%{rotate:-9deg}84%{rotate:1.5deg}92%,100%{rotate:0deg}}
+.rider{animation:rider .5s infinite ease-in-out alternate}@keyframes rider{from{translate:0 -5px;rotate:-1deg}to{translate:0 9px;rotate:1.5deg}}
+.head{animation:nod .5s infinite ease-in-out alternate}@keyframes nod{from{rotate:-3deg}to{rotate:3deg}}
+.puff{animation:pufffly .9s infinite ease-out}@keyframes pufffly{0%{opacity:0;translate:0 0;scale:.4}18%{opacity:1}100%{opacity:0;translate:-330px -60px;scale:1.7}}
+.flap{animation:flap .2s infinite ease-in-out alternate}@keyframes flap{from{rotate:-6deg}to{rotate:8deg}}</style>
+<defs><filter id="ink" filterUnits="userSpaceOnUse" x="-440" y="-80" width="2620" height="2160"><feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="2" seed="21"/><feDisplacementMap in="SourceGraphic" scale="22" xChannelSelector="R" yChannelSelector="G"/></filter></defs>
+<g class="wheelie" style="transform-origin:380px 1725px"><g class="vib">
+<circle class="tyre" cx="380" cy="1400" r="262" stroke-width="126"/><g class="spin" style="transform-origin:380px 1400px"><line class="spoke" x1="189.0" y1="1400" x2="571.0" y2="1400" transform="rotate(0 380 1400)"/><line class="spoke" x1="189.0" y1="1400" x2="571.0" y2="1400" transform="rotate(60 380 1400)"/><line class="spoke" x1="189.0" y1="1400" x2="571.0" y2="1400" transform="rotate(120 380 1400)"/><circle class="valve" cx="539.0" cy="1400" r="24"/></g><circle class="hub" cx="380" cy="1400" r="58"/><circle class="tyre" cx="1450" cy="1400" r="262" stroke-width="126"/><g class="spin" style="transform-origin:1450px 1400px"><line class="spoke" x1="1259.0" y1="1400" x2="1641.0" y2="1400" transform="rotate(0 1450 1400)"/><line class="spoke" x1="1259.0" y1="1400" x2="1641.0" y2="1400" transform="rotate(60 1450 1400)"/><line class="spoke" x1="1259.0" y1="1400" x2="1641.0" y2="1400" transform="rotate(120 1450 1400)"/><circle class="valve" cx="1609.0" cy="1400" r="24"/></g><circle class="hub" cx="1450" cy="1400" r="58"/>
+<g filter="url(#ink)"><line class="k" x1="700" y1="1300" x2="380" y2="1400" stroke-width="66"/>
+<line class="k" x1="1262" y1="1000" x2="1450" y2="1400" stroke-width="70"/><line class="w" x1="1300" y1="1090" x2="1410" y2="1290" stroke-width="24"/>
+<path class="k " fill="none" stroke-linejoin="round" stroke-width="96" d="M720,1290 L330,1210"/><path class="w " fill="none" stroke-linejoin="round" stroke-width="34" d="M720,1290 L330,1210"/>
+<path class="body" d="M410,1010 L600,1060 L880,930 L1210,930 Q1330,960 1350,1090 L1090,1330 L650,1330 L520,1130 L400,1090 Z"/>
+<path class="glass" d="M1210,930 L1300,800 Q1350,790 1340,860 L1320,990 Z"/>
+<path class="inkfill" d="M430,1000 L640,1040 L840,960 L800,920 L620,960 L440,950 Z"/>
+<circle class="paperfill" cx="940" cy="1140" r="92"/><path class="ln" style="stroke-width:26" d="M940,1196 V1090 l-30,26"/>
+<line class="k" x1="1240" y1="960" x2="1300" y2="930" stroke-width="44"/></g>
+<g class="rider" style="transform-origin:640px 1000px"><g filter="url(#ink)"><path class="k " fill="none" stroke-linejoin="round" stroke-width="156" d="M606,1000 L884,1104 L724,1290"/><path class="w " fill="none" stroke-linejoin="round" stroke-width="72" d="M606,1000 L884,1104 L724,1290"/><path class="inkfill" d="M660,1250 H800 L820,1310 H660 Z"/><path class="k " fill="none" stroke-linejoin="round" stroke-width="204" d="M600,976 Q760,760 968,752"/><path class="w " fill="none" stroke-linejoin="round" stroke-width="112" d="M600,976 Q760,760 968,752"/></g><g class="head" style="transform-origin:1050px 746px"><circle class="shell" cx="1090" cy="596" r="176"/><path class="stripe" d="M954,526 Q1080,384 1196,486"/><path class="visor" d="M1084,522 H1222 Q1256,582 1226,646 H1084 Q1044,584 1084,522 Z"/><ellipse class="eye" cx="1142" cy="584" rx="19" ry="28"/><ellipse class="eye" cx="1198" cy="581" rx="12" ry="22"/><g class="blink hide-still"><path class="lid" d="M1110,544 H1216 V584 H1110 Z"/><path class="ln" d="M1118,590 L1164,587 M1184,585 L1210,583"/></g></g><g filter="url(#ink)"><path class="k " fill="none" stroke-linejoin="round" stroke-width="142" d="M970,772 Q1090,930 1262,948"/><path class="w " fill="none" stroke-linejoin="round" stroke-width="62" d="M970,772 Q1090,930 1262,948"/><g class="flap" style="transform-origin:930px 740px"><path class="ko" stroke-width="78" d="M930,740 q-110,-46 -200,6 q-60,30 -120,0"/><path class="o" stroke-width="40" d="M930,740 q-110,-46 -200,6 q-60,30 -120,0"/></g></g></g>
+</g><circle class="puff hide-still" cx="290" cy="1200" r="46"/><circle class="puff hide-still" cx="290" cy="1200" r="36" style="animation-delay:-.3s"/><circle class="puff hide-still" cx="290" cy="1200" r="54" style="animation-delay:-.6s"/></g></svg>

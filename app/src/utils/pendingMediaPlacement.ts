@@ -3,7 +3,7 @@ import { isImageFile, isVideoFile } from '@/utils/files';
 import { createRenderableImageAsset } from '@/utils/imagePreview';
 import { readVideoDuration } from '@/utils/videoMetadata';
 import { useAppStore } from '@/store/useAppStore';
-import { buildComputedJourney, buildJourneyDistanceProfile, getJourneyDistanceAtProgress, getJourneyPointAtDistance, getJourneyPointAtProgress, getSegmentAtProgress, segmentAnchorForRouteDistance, uniformJourneyWithCameraTransitions } from '@/utils/journeyUtils';
+import { buildComputedJourney, buildJourneyDistanceProfile, getJourneyDistanceAtProgress, getJourneyPointAtDistance, getJourneyPointAtProgress, getSegmentAtProgress, segmentAnchorForRouteDistance, uniformJourneyWithCameraTransitions, uniformJourneyWithTransportDurations } from '@/utils/journeyUtils';
 
 export const ANNOTATION_DRAG_TYPE = 'application/x-trailreplay-annotation';
 export const PLACED_MEDIA_DRAG_TYPE = 'application/x-trailreplay-placed-media';
@@ -26,13 +26,15 @@ export function placementAtProgress(progress: number): MediaRoutePlacement | nul
   let journey = buildComputedJourney(state.journeySegments, state.tracks);
   if (!journey) return null;
   const hasCamera = journey.segmentTimings.some((segment) => segment.transportMode === 'camera');
+  const hasTransport = journey.segmentTimings.some((segment) => segment.type === 'transport' && segment.transportMode !== 'camera');
   const uniform = state.playback.routeTimingMode === 'uniform';
-  if (hasCamera && uniform) journey = uniformJourneyWithCameraTransitions(journey);
+  if (hasTransport && uniform) journey = uniformJourneyWithTransportDurations(journey);
+  else if (hasCamera && uniform) journey = uniformJourneyWithCameraTransitions(journey);
   const profile = buildJourneyDistanceProfile(journey.coordinates);
   if (!profile) return null;
   const clamped = Math.max(0, Math.min(1, progress));
-  const distance = uniform && !hasCamera ? profile.totalDistance * clamped : getJourneyDistanceAtProgress(clamped, profile, journey.segmentTimings);
-  const point = uniform && !hasCamera ? getJourneyPointAtDistance(profile, distance) : getJourneyPointAtProgress(clamped, journey.coordinates, journey.segmentTimings);
+  const distance = uniform && !hasCamera && !hasTransport ? profile.totalDistance * clamped : getJourneyDistanceAtProgress(clamped, profile, journey.segmentTimings);
+  const point = uniform && !hasCamera && !hasTransport ? getJourneyPointAtDistance(profile, distance) : getJourneyPointAtProgress(clamped, journey.coordinates, journey.segmentTimings);
   if (!point || point.transportMode === 'camera') return null;
   const timing = journey.segmentTimings.find((segment) => segment.segmentIndex === point.segmentIndex);
   const anchor = timing ? { segmentId: timing.segmentId, segmentDistance: Math.max(0, Math.min(timing.endDistance - timing.startDistance, distance - timing.startDistance)) } : segmentAnchorForRouteDistance(journey.segmentTimings, distance);

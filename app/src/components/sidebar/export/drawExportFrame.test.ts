@@ -14,7 +14,7 @@ function frameOptions() {
     recordingContextRef: { current: context as unknown as CanvasRenderingContext2D },
     videoExportSettings: { ...createDefaultVideoExportSettings(), resolution: { width: 1080, height: 1920 } },
     cachedOverlayRef: { current: null }, drawVideoFrame: vi.fn(), drawStatsValues: vi.fn(), drawElevationProgress: vi.fn(),
-    svgMarkerImageCacheRef: { current: new Map() }, preloadSvgMarkerIcon: vi.fn(), getTrackLabel: () => null,
+    svgMarkerImageCacheRef: { current: new Map() }, preloadSvgMarkerIcon: vi.fn(), markerTimeMs: 0, getTrackLabel: () => null,
     cachedLogoRef: { current: null }, overlayLastUpdateRef: { current: Date.now() }, overlayBusyRef: { current: false },
     overlayFramesSinceRefreshRef: { current: 0 }, overlayRefreshIntervalMs: 1000,
     updateOverlayAsync: vi.fn(), t: (key) => key,
@@ -186,4 +186,61 @@ it('copies the live route overview to its position in the export', () => {
   drawExportFrame(options);
   const scale = 1920 / 607.5;
   expect(context.drawImage).toHaveBeenCalledWith(overview, (420 - 369.140625) * scale, (720 - 656.25) * scale, 200 * scale, 144 * scale);
+});
+
+it('draws different animated marker frames at different video timestamps', () => {
+  const marker = document.createElement('div');
+  marker.className = 'tr-marker';
+  marker.getBoundingClientRect = () => new DOMRect(100, 200, 28, 28);
+  marker.innerHTML = '<div data-marker-icon style="filter:none"><span data-animated-icon="/media/images/animated-markers/runner-steady.svg" style="width:28px;height:28px"></span></div>';
+  document.body.appendChild(marker);
+  const { options } = frameOptions();
+  const sprite = document.createElement('img');
+  options.svgMarkerImageCacheRef.current.set('/media/images/animated-marker-frames/runner-steady.png', sprite);
+  const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn() };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  options.markerTimeMs = 0;
+  drawExportFrame(options);
+  options.markerTimeMs = 320;
+  drawExportFrame(options);
+  const frames = context.drawImage.mock.calls.filter(([image]) => image === sprite);
+  expect(frames).toHaveLength(2);
+  expect(frames[0].slice(1, 3)).toEqual([0, 0]);
+  expect(frames[1].slice(1, 3)).toEqual([1280, 0]);
+});
+
+
+it('renders the 3D marker at the video timestamp before compositing it', () => {
+  const marker = document.createElement('div');
+  marker.className = 'tr-marker';
+  marker.getBoundingClientRect = () => new DOMRect(100, 200, 28, 28);
+  marker.innerHTML = '<div data-marker-icon style="filter:none"><span data-runner-3d style="width:28px;height:28px"><canvas></canvas></span></div>';
+  document.body.appendChild(marker);
+  const canvas = marker.querySelector('canvas')! as HTMLCanvasElement & { renderRunnerAt: (time: number) => void };
+  canvas.renderRunnerAt = vi.fn();
+  const { options } = frameOptions();
+  const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn() };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  options.markerTimeMs = 1250;
+  drawExportFrame(options);
+  expect(canvas.renderRunnerAt).toHaveBeenCalledWith(1250);
+  expect(context.drawImage.mock.calls.some(([image]) => image === canvas)).toBe(true);
+});
+
+it('uses uploaded animation frames for video export', async () => {
+  const { CUSTOM_ANIMATION_PREFIX, CUSTOM_ANIMATION_DURATION, customAnimationKey } = await import('@/utils/customMarker');
+  const { getActivityIconMarkerHtml } = await import('@/utils/activityIcons');
+  const data = { svg: 'data:image/svg+xml,%3Csvg%2F%3E', sprite: 'data:image/png;base64,AAAA', duration: CUSTOM_ANIMATION_DURATION };
+  const value = CUSTOM_ANIMATION_PREFIX + btoa(JSON.stringify(data));
+  const marker = document.createElement('div'); marker.className = 'tr-marker';
+  marker.getBoundingClientRect = () => new DOMRect(100, 200, 28, 28);
+  marker.innerHTML = `<div data-marker-icon style="filter:none">${getActivityIconMarkerHtml(value, 28, '#000000')}</div>`;
+  expect(marker.querySelector('span')?.dataset.customAnimation).toBe(customAnimationKey(value));
+  document.body.appendChild(marker);
+  const { options } = frameOptions(); const sprite = document.createElement('img');
+  options.svgMarkerImageCacheRef.current.set(data.sprite, sprite);
+  const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn() };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  options.markerTimeMs = 1000; drawExportFrame(options);
+  expect(context.drawImage.mock.calls.some(([image]) => image === sprite)).toBe(true);
 });
