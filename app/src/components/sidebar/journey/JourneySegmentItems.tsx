@@ -7,7 +7,7 @@ import { renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activity
 import { ActivityIconPicker } from '../ActivityIconPicker';
 import { ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { transitionSettings } from '@/utils/cameraTransition';
-import { TRANSPORT_MODES, renderJourneyTransportIcon } from './journeyTransport';
+import { TRANSPORT_MODES, renderJourneyTransportIcon, renderJourneyTransportPreview } from './journeyTransport';
 
 interface SegmentItemProps {
   segment: JourneySegment;
@@ -110,6 +110,7 @@ export function TransportSegmentItem({
   onCameraSettingChange,
 }: SegmentItemProps) {
   const { t } = useI18n();
+  const markerStyle = useAppStore((state) => state.settings.trailStyle);
   if (segment.type !== 'transport') return null;
 
   const durationSeconds = (segment.duration || 0) / 1000;
@@ -168,7 +169,7 @@ export function TransportSegmentItem({
         className="w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
         style={{ backgroundColor: modeInfo ? `${modeInfo.color}30` : '#888' }}
       >
-        {renderJourneyTransportIcon(segment.mode, 24, modeInfo?.color)}
+        {renderJourneyTransportPreview(segment.mode, 28, markerStyle.markerColor, markerStyle.markerType)}
       </div>
 
       <div className="flex-1">

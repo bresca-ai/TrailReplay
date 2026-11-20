@@ -57,4 +57,26 @@ describe('useComputedJourney', () => {
     },
   );
 
+  it('honours a seven-second transport between one-minute routes in uniform mode', () => {
+    const first = track();
+    const second = { ...track(), id: 'second', points: track().points.map(point => ({ ...point, lon: point.lon + 0.011 })) };
+    useAppStore.setState(state => {
+      state.tracks = [first, second];
+      state.activeTrackId = first.id;
+      state.journeySegments = [
+        { id: 'first', type: 'track', trackId: first.id, duration: 60000 },
+        { id: 'bus', type: 'transport', mode: 'bus', from: { lat: 42.01, lon: 1.01 }, to: { lat: 42, lon: 1.011 }, duration: 7000, distance: 0 },
+        { id: 'second', type: 'track', trackId: second.id, duration: 60000 },
+      ];
+      state.playback.routeTimingMode = 'uniform';
+      state.playback.progress = 63.5 / 127;
+    });
+    const { result } = renderHook(() => useComputedJourney());
+    expect(result.current.currentSegment?.segment.segmentId).toBe('bus');
+    expect(result.current.currentSegment?.localProgress).toBeCloseTo(0.5);
+    expect(result.current.currentPosition?.segmentType).toBe('transport');
+    expect(result.current.currentIcon).toBe('3d-bus');
+    expect(result.current.currentPosition?.lat).toBeCloseTo(42.005, 3);
+  });
+
 });

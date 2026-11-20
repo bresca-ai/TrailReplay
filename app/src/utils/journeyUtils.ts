@@ -393,7 +393,8 @@ export function progressForRouteDistance(
   routeTimingMode: RouteTimingMode = 'recorded'
 ): number | null {
   if (segmentTimings.length === 0 || !Number.isFinite(routeDistance)) return null;
-  if (routeTimingMode === 'uniform' && segmentTimings.some((segment) => segment.transportMode === 'camera')) {
+  const hasTimedTransport = segmentTimings.some((segment) => segment.type === 'transport' && segment.transportMode !== 'camera');
+  if (routeTimingMode === 'uniform' && !hasTimedTransport && segmentTimings.some((segment) => segment.transportMode === 'camera')) {
     const totalDuration = segmentTimings.at(-1)?.endTime ?? 0;
     const adjusted = uniformJourneyWithCameraTransitions({ coordinates, segmentTimings, totalDuration, totalDistance: segmentTimings.at(-1)?.endDistance ?? 0, trackDuration: 0, transportDuration: 0 });
     return progressForRouteDistance(adjusted.coordinates, adjusted.segmentTimings, routeDistance, 'recorded');
@@ -412,9 +413,9 @@ export function progressForRouteDistance(
 
   if (routeTimingMode === 'uniform') {
     const localRatio = span > 0 ? localDistance / span : 0;
-    return clamp01(
-      timing.distanceStartRatio + localRatio * (timing.distanceEndRatio - timing.distanceStartRatio)
-    );
+    const start = hasTimedTransport ? timing.progressStartRatio : timing.distanceStartRatio;
+    const end = hasTimedTransport ? timing.progressEndRatio : timing.distanceEndRatio;
+    return clamp01(start + localRatio * (end - start));
   }
 
   // Find the exact point at this route distance, then use that point's GPX
@@ -1006,4 +1007,21 @@ export function uniformJourneyWithCameraTransitions(journey: ComputedJourney): C
     return { ...segment, duration, startTime, endTime: elapsed, progressStartRatio: startTime / totalTime, progressEndRatio: elapsed / totalTime };
   });
   return { ...journey, coordinates, segmentTimings };
+}
+
+/** Keep each timeline segment's duration while moving at a uniform pace within it. */
+export function uniformJourneyWithTransportDurations(journey: ComputedJourney): ComputedJourney {
+  const coordinates = journey.coordinates.map((point) => ({ ...point }));
+  for (const segment of journey.segmentTimings) {
+    if (segment.transportMode === 'camera') continue;
+    const first = coordinates[segment.startCoordIndex];
+    const last = coordinates[segment.endCoordIndex];
+    if (!first || !last) continue;
+    const span = last.distance - first.distance;
+    for (let index = segment.startCoordIndex; index <= segment.endCoordIndex; index++) {
+      const point = coordinates[index];
+      if (point) point.recordedProgress = span > 0 ? Math.max(0, Math.min(1, (point.distance - first.distance) / span)) : 0;
+    }
+  }
+  return { ...journey, coordinates };
 }
