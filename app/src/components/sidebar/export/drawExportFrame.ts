@@ -1,3 +1,4 @@
+import { customAnimationByKey } from '@/utils/customMarker';
 import { drawBuildingsAttribution } from './mapAttribution';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
@@ -7,6 +8,7 @@ import { DEFAULT_SKY_COLOR } from '@/components/map/mapSky';
 import { getVideoCropRegion } from '@/utils/crop';
 import type { VideoExportSettings } from '@/types';
 import { markerIconContrastFilter } from '@/utils/activityIcons';
+import { animatedMarkerFramesUrl, coloredMarkerSprite, markerAnimationDuration, markerFramePosition, MARKER_FRAME_SIZE } from './animatedMarkerFrames';
 import { overlayCanvasFontFamily } from '@/utils/typography';
 import type { useExportOverlayCapture } from './useExportOverlayCapture';
 import { drawComparisonLeaderboard } from './drawComparisonLeaderboard';
@@ -141,6 +143,7 @@ interface DrawExportFrameOptions {
   drawElevationProgress: OverlayCapture['drawElevationProgress'];
   svgMarkerImageCacheRef: RefObject<Map<string, HTMLImageElement>>;
   preloadSvgMarkerIcon: (url: string) => void;
+  markerTimeMs: number;
   getTrackLabel: (progress: number) => { color: string; text: string } | null;
   cachedLogoRef: RefObject<HTMLImageElement | null>;
   overlayLastUpdateRef: OverlayCapture['overlayLastUpdateRef'];
@@ -171,6 +174,7 @@ export function drawExportFrame({
   drawElevationProgress,
   svgMarkerImageCacheRef,
   preloadSvgMarkerIcon,
+  markerTimeMs,
   getTrackLabel,
   cachedLogoRef,
   overlayLastUpdateRef,
@@ -348,7 +352,32 @@ export function drawExportFrame({
         const maskImage = markerIcon.style.maskImage || markerIcon.style.webkitMaskImage || '';
         const maskUrl = extractCssUrl(maskImage);
 
-        if (maskUrl) {
+        const animatedUrl = markerIcon.dataset.animatedIcon;
+        if (markerIcon.hasAttribute('data-runner-3d')) {
+          const canvas = markerIcon.querySelector('canvas') as (HTMLCanvasElement & { renderRunnerAt?: (time: number) => void }) | null;
+          if (canvas?.renderRunnerAt) {
+            canvas.renderRunnerAt(markerTimeMs);
+            context.drawImage(canvas, markerX - markerIconWidth, markerY - markerIconHeight * 1.65, markerIconWidth * 2, markerIconHeight * 2);
+          }
+        } else if (animatedUrl) {
+          const custom = markerIcon.dataset.customAnimation ? customAnimationByKey(markerIcon.dataset.customAnimation) : undefined;
+          const name = custom ? undefined : animatedUrl.split('/').pop()?.replace(/\.svg$/, '');
+          const spriteUrl = custom?.sprite ?? (name ? animatedMarkerFramesUrl(`animated-${name}`) : undefined);
+          const sprite = spriteUrl ? svgMarkerImageCacheRef.current.get(spriteUrl) : undefined;
+          const image = svgMarkerImageCacheRef.current.get(animatedUrl);
+          if (sprite) {
+            const frame = markerFramePosition(markerTimeMs, custom?.duration ?? markerAnimationDuration(`animated-${name}`));
+            context.drawImage(!custom || /%23c1652f/i.test(custom.svg) ? coloredMarkerSprite(sprite, markerIcon.dataset.markerColor ?? '') : sprite, frame.x, frame.y, MARKER_FRAME_SIZE, MARKER_FRAME_SIZE,
+              markerX - markerIconWidth / 2, markerY - markerIconHeight / 2, markerIconWidth, markerIconHeight);
+          } else if (image) {
+            const fit = Math.min(markerIconWidth / image.naturalWidth, markerIconHeight / image.naturalHeight);
+            const width = image.naturalWidth * fit;
+            const height = image.naturalHeight * fit;
+            context.drawImage(image, markerX - width / 2, markerY - height / 2, width, height);
+          } else {
+            preloadSvgMarkerIcon(animatedUrl);
+          }
+        } else if (maskUrl) {
           const markerSvg = svgMarkerImageCacheRef.current.get(maskUrl);
           if (markerSvg) {
             const backingUrl = markerIcon.dataset.iconBacking;

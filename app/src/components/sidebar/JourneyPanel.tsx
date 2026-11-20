@@ -5,7 +5,7 @@ import { formatDistance, formatDuration } from '@/utils/units';
 import { useI18n } from '@/i18n/useI18n';
 import { createId } from '@/utils/id';
 import { TrackSegmentItem, TransportSegmentItem } from './journey/JourneySegmentItems';
-import { TRANSPORT_MODES, renderJourneyTransportIcon } from './journey/journeyTransport';
+import { TRANSPORT_MODES, renderJourneyTransportPreview } from './journey/journeyTransport';
 import { createTransportSegment } from './journey/createTransportSegment';
 import { trackEvent } from '@/utils/analytics';
 import { JourneyComparisonEditor } from './journey/JourneyComparisonEditor';
@@ -297,7 +297,7 @@ export function JourneyPanel() {
       {/* Transport Mode Selector */}
       {showTransportMenu && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--canvas)] border-2 border-[var(--evergreen)] rounded-xl p-6 max-w-sm w-full mx-4">
+          <div className="max-h-[90vh] overflow-y-auto bg-[var(--canvas)] border-2 border-[var(--evergreen)] rounded-xl p-6 max-w-sm w-full mx-4">
             <h3 className="text-lg font-bold text-[var(--evergreen)] mb-2">
               {t('journey.selectTransportTitle')}
             </h3>
@@ -305,13 +305,13 @@ export function JourneyPanel() {
               {t('journey.selectTransportHint')}
             </p>
             <div className="grid grid-cols-3 gap-3">
-              {TRANSPORT_MODES.map(({ mode, labelKey, color }) => (
+              {TRANSPORT_MODES.map(({ mode, labelKey }) => (
                 <button
                   key={mode}
                   onClick={() => addTransport(mode)}
-                  className="flex flex-col items-center gap-2 p-3 border-2 border-[var(--evergreen)]/20 rounded-lg hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)] transition-colors"
+                  className="flex flex-col items-center gap-2 rounded-xl border border-[var(--evergreen)]/20 bg-white/40 p-2.5 transition-colors hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]"
                 >
-                  {renderJourneyTransportIcon(mode, 24, color)}
+                  <span aria-hidden="true" className="flex h-16 w-full items-center justify-center rounded-lg bg-white/70">{renderJourneyTransportPreview(mode, 54, settings.trailStyle.markerColor, settings.trailStyle.markerType)}</span>
                   <span className="text-xs text-[var(--evergreen)]">{t(labelKey)}</span>
                 </button>
               ))}
