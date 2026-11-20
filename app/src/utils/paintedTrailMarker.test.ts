@@ -67,6 +67,7 @@ describe('render-only playback marker', () => {
     h.emit('render');
     expect(h.marker.minimumRevision).toBe(373);
     expect(h.map.project).toHaveBeenLastCalledWith([1.3, 41.4]);
+    expect(h.marker.getPosition()).toEqual([1.3, 41.4]);
     expect(h.map.querySourceFeatures).toHaveBeenLastCalledWith('trail-completed', {
       filter: ['==', ['get', 'kind'], 'playback-tip'],
     });
@@ -75,7 +76,8 @@ describe('render-only playback marker', () => {
 
   it('positions the existing marker at a 3D layer’s projected screen point', () => {
     const h = harness();
-    h.marker.renderAt(123.5, 87.25);
+    h.marker.renderAt(123.5, 87.25, [2.1, 41.5]);
+    expect(h.marker.getPosition()).toEqual([2.1, 41.5]);
     expect(h.element.style.transform).toContain('123.5px, 87.25px');
     expect(h.element.style.visibility).toBe('visible');
   });

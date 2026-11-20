@@ -1,3 +1,4 @@
+import { resolvePlaybackMarkerColor } from '@/utils/activityIcons';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
@@ -15,6 +16,7 @@ import { MapElevationProfile } from './MapElevationProfile';
 import { MapBuildingAttribution } from './MapBuildingAttribution';
 import { ComparisonLeaderboard } from './ComparisonLeaderboard';
 import { LocationChapterLabel } from './LocationChapterLabel';
+import { ReplayPreparationOverlay } from './ReplayPreparationOverlay';
 import { COMPARISON_MARKER_SIZE } from '@/utils/comparisonMarker';
 import { useI18n } from '@/i18n/useI18n';
 import { areFollowingSamePath } from '@/utils/routeComparisonSharedPath';
@@ -38,6 +40,7 @@ import { useMapInitialization } from './hooks/useMapInitialization';
 import { useRecordedElevationLayer } from './hooks/useRecordedElevationLayer';
 import { useTrailLayerData } from './hooks/useTrailLayerData';
 import { useTrailPlaybackCamera } from './hooks/useTrailPlaybackCamera';
+import { useRunner3D } from './hooks/useRunner3D';
 import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
 import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
@@ -385,6 +388,7 @@ export function TrailMap(_props: TrailMapProps) {
     isPlaying: playback.isPlaying,
     sharedComparisonColors: sharedRouteComparisons.map((track) => track.color),
     isInTransport,
+    transportModelsEnabled: !comparisonActive,
     isMapLoaded,
     mapRef: map,
     markerRef,
@@ -408,6 +412,10 @@ export function TrailMap(_props: TrailMapProps) {
       trailColor: trailStyle.trailColor,
     },
   });
+
+  useRunner3D({ mapRef: map, markerRef, icon: comparisonActive || (!isInTransport && trailStyle.markerType !== 'icon') ? '' : currentIcon,
+    coordinates: cameraPathCoordinates, completedCoordinates, progress: routeComparisonActive ? routeProgress : playback.progress,
+    timeMs: playback.currentTime, color: resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, currentTrackColor), isExporting });
 
   useRouteComparisonCamera({
     enabled: comparisonMode === 'route' && playback.progress > 0 && (animationPhase === 'playing' || animationPhase === 'idle'),
@@ -645,12 +653,11 @@ export function TrailMap(_props: TrailMapProps) {
       )}
 
       {animationPhase === 'preloading' && !isExporting && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[rgba(9,14,19,0.55)] backdrop-blur-[1px]">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/12 bg-[rgba(9,14,19,0.88)] px-4 py-3 text-white shadow-[0_16px_36px_rgba(0,0,0,0.28)]">
-            <div className="w-6 h-6 border-2 border-[var(--trail-orange)] border-t-transparent rounded-full animate-spin" />
-            <span>{t('map.preparingReplay')}</span>
-          </div>
-        </div>
+        <ReplayPreparationOverlay
+          terrainLoading={cameraMode === 'aerial-follow' && terrainExaggeration > 0 && cameraPathCoordinates.length >= 2 && !matchingTerrainPlan}
+          boundariesLoading={locationChapter.loading}
+          onStartNow={() => setAnimationPhase('intro')}
+        />
       )}
 
       {isMobile && showZoomButtonsHint && isMapLoaded && allCoordinates.length > 0 && (

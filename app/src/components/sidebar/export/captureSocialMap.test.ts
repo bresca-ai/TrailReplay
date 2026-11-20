@@ -10,6 +10,11 @@ function harness(fail = false) {
     { id: 'comparison-trail-line-yellow', type: 'line', paint: { 'line-color': '#f1de09', 'line-width': 4, 'line-opacity': 0.5 } },
     { id: 'comparison-trail-completed-yellow', type: 'line', paint: { 'line-color': '#f1de09', 'line-width': 6 } },
     { id: 'places', type: 'symbol', paint: {} },
+    { id: 'comparison-position-glow-yellow', type: 'circle', paint: {} },
+    { id: 'comparison-track-label-yellow', type: 'symbol', paint: {} },
+    { id: 'location-start-cue-dot', type: 'circle', paint: {} },
+    { id: 'location-start-cue-ring', type: 'circle', paint: {} },
+    { id: 'location-start-cue-halo', type: 'circle', paint: {} },
     { id: 'route-landmarks-icon', type: 'symbol', paint: {} },
     { id: 'route-landmarks-emoji', type: 'symbol', paint: {} },
     { id: 'route-landmarks-label', type: 'symbol', paint: {} },
@@ -69,6 +74,9 @@ describe('finished replay map capture', () => {
       expect(snapshot.layouts.get(complete)).toBe('none');
     }
     expect(snapshot.layouts.get('places')).toBeUndefined();
+    for (const id of ['comparison-position-glow-yellow', 'comparison-track-label-yellow', 'location-start-cue-dot', 'location-start-cue-ring', 'location-start-cue-halo']) {
+      expect(snapshot.layouts.get(id)).toBe('none');
+    }
     expect(JSON.stringify([...h.paints])).toBe(h.initialPaint);
     expect(JSON.stringify([...h.layouts])).toBe(h.initialLayout);
   });
