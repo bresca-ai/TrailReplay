@@ -47,7 +47,7 @@ describe('useComputedJourney', () => {
     expect(result.current.computedJourney?.coordinates).toBe(initialCoordinates);
     expect(result.current.totalDuration).toBe(30_000);
   });
-  it.each([['plane', '3d-plane'], ['train', '3d-train'], ['ferry', '3d-sailboat']] as const)(
+  it.each([['bus', '3d-bus'], ['plane', '3d-plane'], ['train', '3d-train'], ['ferry', '3d-sailboat']] as const)(
     'selects the default %s marker during transport', (mode, icon) => {
       useAppStore.getState().addTransportSegment({ lat: 42, lon: 1 }, { lat: 42.1, lon: 1.1 }, mode);
       useAppStore.getState().setPlayback({ progress: 0.5 });

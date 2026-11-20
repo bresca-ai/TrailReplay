@@ -188,5 +188,6 @@ it('uses 3D plane, train and sailboat markers for transport segments', () => {
   expect(TRANSPORT_ICONS.plane).toBe('✈️');
   expect(TRANSPORT_MARKERS.train).toBe('3d-train');
   expect(TRANSPORT_MARKERS.ferry).toBe('3d-sailboat');
-  expect(TRANSPORT_MARKERS.bus).toBe('🚌');
+  expect(TRANSPORT_MARKERS.bus).toBe('3d-bus');
+  expect(TRANSPORT_ICONS.bus).toBe('🚌');
 });

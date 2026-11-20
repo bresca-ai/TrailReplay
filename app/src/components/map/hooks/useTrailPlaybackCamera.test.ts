@@ -236,5 +236,6 @@ it('uses the default transport model while preserving route dots', () => {
   expect(shouldUseDotForPlaybackMarker('dot', true, '3d-plane')).toBe(false);
   expect(shouldUseDotForPlaybackMarker('dot', true, '3d-train')).toBe(false);
   expect(shouldUseDotForPlaybackMarker('dot', true, '3d-sailboat')).toBe(false);
-  expect(shouldUseDotForPlaybackMarker('dot', true, '🚌')).toBe(true);
+  expect(shouldUseDotForPlaybackMarker('dot', true, '3d-bus')).toBe(false);
+  expect(shouldUseDotForPlaybackMarker('dot', true, '🚗')).toBe(true);
 });

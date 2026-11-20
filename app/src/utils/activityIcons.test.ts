@@ -20,8 +20,8 @@ describe('custom activity icons', () => {
 
 
 it('registers every built-in 3D model as an available route marker', () => {
-  expect(MODEL_3D_ICONS).toHaveLength(18);
-  expect(MODEL_3D_ICONS).toEqual(expect.arrayContaining(['3d-motocross', '3d-race-motorbike', '3d-paraglider', '3d-plane', '3d-train', '3d-boat', '3d-sailboat']));
+  expect(MODEL_3D_ICONS).toHaveLength(19);
+  expect(MODEL_3D_ICONS).toEqual(expect.arrayContaining(['3d-motocross', '3d-race-motorbike', '3d-paraglider', '3d-bus', '3d-plane', '3d-train', '3d-boat', '3d-sailboat']));
   for (const value of MODEL_3D_ICONS) {
     expect(is3DActivityIcon(value)).toBe(true);
     expect(getActivityIconOption(value)?.kind).toBe('3d');
