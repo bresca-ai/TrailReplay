@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import {
   buildComputedJourney,
   uniformJourneyWithCameraTransitions,
+  uniformJourneyWithTransportDurations,
   buildJourneyDistanceProfile,
   calculateBearing,
   getBearingAtProgress,
@@ -16,7 +17,7 @@ import {
   getSegmentAtDistance,
   getSegmentAtProgress,
   getAllJourneyCoordinates,
-  TRANSPORT_ICONS,
+  TRANSPORT_MARKERS,
   type ComputedJourney,
   type JourneyDistanceProfile,
   type JourneyPoint,
@@ -205,13 +206,15 @@ export function useComputedJourney() {
   const routeComparisonActive = comparisonMode === 'route' && comparisonTracks.some((track) => track.visible);
   const selectedTimingMode = routeComparisonActive ? 'uniform' : storedPlayback.routeTimingMode;
   const hasCameraTransition = journeySegments.some((segment) => segment.type === 'transport' && segment.mode === 'camera');
-  const routeTimingMode = hasCameraTransition && selectedTimingMode === 'uniform' ? 'recorded' : selectedTimingMode;
+  const hasTransport = journeySegments.some((segment) => segment.type === 'transport' && segment.mode !== 'camera');
+  const routeTimingMode = (hasCameraTransition || hasTransport) && selectedTimingMode === 'uniform' ? 'recorded' : selectedTimingMode;
 
   // Build the computed journey whenever segments or tracks change
   const computedJourney = useMemo<ComputedJourney | null>(() => {
     const journey = getCachedComputedJourney(journeySegments, tracks);
+    if (journey && hasTransport && selectedTimingMode === 'uniform') return uniformJourneyWithTransportDurations(journey);
     return journey && hasCameraTransition && selectedTimingMode === 'uniform' ? uniformJourneyWithCameraTransitions(journey) : journey;
-  }, [journeySegments, tracks, hasCameraTransition, selectedTimingMode]);
+  }, [journeySegments, tracks, hasCameraTransition, hasTransport, selectedTimingMode]);
 
   // Get active track for single-track mode
   const activeTrack = useMemo(() => {
@@ -456,7 +459,7 @@ export function useComputedJourney() {
   // Get the current icon based on segment type
   const currentIcon = useMemo<string>(() => {
     if (currentSegment?.segment.type === 'transport') {
-      return TRANSPORT_ICONS[currentSegment.segment.transportMode || 'car'] || '🚗';
+      return TRANSPORT_MARKERS[currentSegment.segment.transportMode || 'car'] || '🚗';
     }
     if (currentSegment?.segment.type === 'track' && currentSegment.segment.trackId) {
       return tracks.find((track) => track.id === currentSegment.segment.trackId)?.activityIcon || DEFAULT_ACTIVITY_ICON;

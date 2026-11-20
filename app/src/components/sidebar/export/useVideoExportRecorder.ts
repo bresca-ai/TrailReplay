@@ -52,7 +52,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     mediaRecorderRef, recordedChunksRef, recordingStartTimeRef, isRecordingRef, recordingCancelledRef, mp4EncoderRef, useWebCodecsRef, setUseWebCodecs,
     frameRequestRef, frameCleanupRef, cachedLogoRef, studioQualityRef, studioStatsRef, wakeLockRef, hiddenSinceRef,
     hiddenMsRef, studioDeliveryJobRef, captureFrame, encodeWebCodecsFrame, startFrameCapture, waitForMapFrame, waitForExportFrame,
-    loadCoverImage, drawVideoCoverFrame, coverFrameStartTimeRef,
+    loadCoverImage, prepareAnimatedMarkerFrames, drawVideoCoverFrame, coverFrameStartTimeRef,
     applyStudioMapSettings, restoreStudioMapSettings, setStudioMapTime, restoreStudioMapTime, requestScreenWakeLock, preloadExportOpeningTiles, captureDeterministicPhase, capturePictureHold, captureVideoHold,
     waitForVideoPopup,
   } = useVideoExportRecorderCore(options);
@@ -312,7 +312,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       await waitForExportFrame();
 
       if (!isRecordingRef.current || recordingCancelledRef.current) break;
-      captureFrame();
+      captureFrame(encodedDurationMs + frameDurationMs);
       // Match the original `(fixedBase + frameIndex * frameDurationMs)`
       // timestamp math exactly: increment before encoding, so frame 1 lands
       // at `INTRO_DURATION + frameDurationMs`, not `INTRO_DURATION` (which
@@ -644,6 +644,8 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       recordingCanvasRef.current.height = height;
       recordingContextRef.current = recordingCanvasRef.current.getContext('2d');
       await loadCoverImage();
+      await prepareAnimatedMarkerFrames();
+      if (recordingCancelledRef.current) return;
 
       setExportStage(t('export.stageLoadOverlay'));
       await loadHtml2Canvas();
@@ -842,7 +844,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       }
       setUseWebCodecs(false);
     }
-  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, coverFrameStartTimeRef, drawVideoCoverFrame, exportProfileMetadata, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadCoverImage, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, restoreStudioMapTime, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
+  }, [actualFormat, applyStudioMapSettings, cachedLogoRef, cameraSettings, coverFrameStartTimeRef, drawVideoCoverFrame, exportProfileMetadata, finishRecording, hiddenMsRef, hiddenSinceRef, includeElevation, includeStats, isRecordingRef, journeySegments, language, loadCoverImage, prepareAnimatedMarkerFrames, loadHtml2Canvas, mapStyle, mp4EncoderRef, pictures.length, play, playback.totalDuration, preloadExportOpeningTiles, recordedChunksRef, recordingCancelledRef, recordingCanvasRef, recordingContextRef, recordingStartTimeRef, requestScreenWakeLock, resetOverlayCapture, resetPlayback, restoreStudioMapSettings, restoreStudioMapTime, runDeterministicExport, setCinematicPlayed, setExportProgress, setExportStage, setExportedBlob, setIsDeterministicExport, setIsExporting, setSpeed, setStudioDeliveryError, setStudioDeliveryStatus, setUseWebCodecs, setupMediaRecorderFallback, show3DTerrain, startFrameCapture, studioDelivery, studioDeliveryJobRef, studioQualityRef, studioStatsRef, studioSupported, t, tracks.length, updateOverlayAsync, useWebCodecsRef, videoExportSettings]);
 
   // `requestAnimationFrame` does not fire while the tab is hidden, so the whole
   // export — standard and studio alike — stalls until the user comes back.

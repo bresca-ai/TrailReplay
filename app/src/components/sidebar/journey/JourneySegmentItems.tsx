@@ -3,10 +3,11 @@ import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import type { JourneySegment } from '@/types';
 import { formatDistance, formatDuration } from '@/utils/units';
-import { ACTIVITY_ICONS, isSvgActivityIcon, renderActivityIcon } from '@/utils/activityIcons';
+import { renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
+import { ActivityIconPicker } from '../ActivityIconPicker';
 import { ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { transitionSettings } from '@/utils/cameraTransition';
-import { TRANSPORT_MODES, renderJourneyTransportIcon } from './journeyTransport';
+import { TRANSPORT_MODES, renderJourneyTransportIcon, renderJourneyTransportPreview } from './journeyTransport';
 
 interface SegmentItemProps {
   segment: JourneySegment;
@@ -27,6 +28,7 @@ export function TrackSegmentItem({
   const { t } = useI18n();
   const tracks = useAppStore((state) => state.tracks);
   const settings = useAppStore((state) => state.settings);
+  const activeTrackId = useAppStore((state) => state.activeTrackId);
   const updateTrackIcon = useAppStore((state) => state.updateTrackIcon);
   const [showIconPicker, setShowIconPicker] = useState(false);
 
@@ -35,6 +37,7 @@ export function TrackSegmentItem({
   const track = tracks.find((trackItem) => trackItem.id === segment.trackId);
   if (!track) return null;
 
+  const markerColor = resolvePlaybackMarkerColor(settings.trailStyle.markerColor, tracks.find(item => item.id === activeTrackId)?.color, track.color);
   const durationSeconds = (segment.duration || 0) / 1000;
 
   return (
@@ -54,7 +57,7 @@ export function TrackSegmentItem({
       >
         {renderActivityIcon(track.activityIcon, {
           size: 22,
-          color: isSvgActivityIcon(track.activityIcon) ? track.color : undefined,
+          color: markerColor,
         })}
       </button>
 
@@ -89,47 +92,11 @@ export function TrackSegmentItem({
         </button>
       </div>
 
-      {showIconPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[var(--canvas)] border-2 border-[var(--evergreen)] rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-[var(--evergreen)] mb-4">
-              {t('annotations.selectIcon')}
-            </h3>
-            <div className="grid grid-cols-6 gap-2 mb-6">
-              {ACTIVITY_ICONS.map(({ value, labelKey }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    updateTrackIcon(track.id, value);
-                    setShowIconPicker(false);
-                  }}
-                  title={t(labelKey)}
-                  className={`
-                    flex items-center justify-center p-2 rounded-lg border-2 transition-colors
-                    ${track.activityIcon === value
-                      ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]'
-                      : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'
-                    }
-                  `}
-                >
-                  {renderActivityIcon(value, {
-                    size: 24,
-                    color: isSvgActivityIcon(value) ? track.color : undefined,
-                  })}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowIconPicker(false)}
-              className="w-full tr-btn tr-btn-secondary"
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
+      {showIconPicker && <ActivityIconPicker value={track.activityIcon} color={markerColor} onClose={() => setShowIconPicker(false)} onSelect={(value) => {
+        updateTrackIcon(track.id, value);
+        useAppStore.getState().setTrailStyle({ markerType: 'icon' });
+        setShowIconPicker(false);
+      }} />}
     </div>
   );
 }
@@ -143,6 +110,7 @@ export function TransportSegmentItem({
   onCameraSettingChange,
 }: SegmentItemProps) {
   const { t } = useI18n();
+  const markerStyle = useAppStore((state) => state.settings.trailStyle);
   if (segment.type !== 'transport') return null;
 
   const durationSeconds = (segment.duration || 0) / 1000;
@@ -201,7 +169,7 @@ export function TransportSegmentItem({
         className="w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
         style={{ backgroundColor: modeInfo ? `${modeInfo.color}30` : '#888' }}
       >
-        {renderJourneyTransportIcon(segment.mode, 24, modeInfo?.color)}
+        {renderJourneyTransportPreview(segment.mode, 28, markerStyle.markerColor, markerStyle.markerType)}
       </div>
 
       <div className="flex-1">

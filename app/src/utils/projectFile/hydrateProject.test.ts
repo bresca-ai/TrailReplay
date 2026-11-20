@@ -19,6 +19,32 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves an uploaded PNG marker when saving and reopening', async () => {
+    const icon = 'data:image/png;base64,iVBORw0KGgo=';
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().updateTrackIcon(source.getState().tracks[0].id, icon);
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'marker.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().tracks[0].activityIcon).toBe(icon);
+  });
+
+  it.each([
+    'data:model/gltf-binary;base64,Z2xURg==',
+    'trailreplay-animation:' + btoa(JSON.stringify({ svg: 'data:image/svg+xml,%3Csvg%2F%3E', sprite: 'data:image/png;base64,AAAA', duration: 8000 })),
+  ])('preserves a custom animation or model in a saved project', async (icon) => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    source.getState().updateTrackIcon(source.getState().tracks[0].id, icon);
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'marker.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().tracks[0].activityIcon).toBe(icon);
+  });
+
   it('restores supported map styles and falls back for unavailable providers', async () => {
     const source = createAppStore();
     source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
