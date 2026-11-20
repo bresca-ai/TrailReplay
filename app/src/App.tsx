@@ -4,6 +4,7 @@ import { AnimatedInfoPanel } from '@/components/info/AnimatedInfoPanel';
 import { MenuFeedback } from '@/components/sidebar/MenuFeedback';
 import { MENU_DESIGN_KEY, MenuDesignContext, savedMenuDesign, type MenuDesign } from '@/components/sidebar/menuDesign';
 import { WaypointImportDialog } from '@/components/app/WaypointImportDialog';
+import { ReelsOverlayPreview } from '@/components/app/ReelsOverlayPreview';
 import { VideoLogoPreview } from '@/components/app/VideoLogoPreview';
 import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo, type CSSProperties } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -159,6 +160,7 @@ function App() {
   const exportAspectRatio = useAppStore((state) => state.videoExportSettings.aspectRatio);
   const exportResolution = useAppStore((state) => state.videoExportSettings.resolution);
   const socialShareAspectRatio = useAppStore((state) => state.socialShareSettings.aspectRatio);
+  const showReelsOverlay = useAppStore((state) => state.showReelsOverlay);
   const exportSubMode = useAppStore((state) => state.exportSubMode);
   const isExporting = useAppStore((state) => state.isExporting);
   const isDeterministicExport = useAppStore((state) => state.isDeterministicExport);
@@ -664,6 +666,10 @@ function App() {
               {/* Aspect ratio crop preview when in Export panel */}
               {activePanel === 'export' && (
                 <CropPreviewBars ratio={activeCropRatio} containerRef={mapContainerRef} videoCrop={exportSubMode !== 'image'} />
+              )}
+
+              {activePanel === 'export' && exportSubMode === 'video' && (exportAspectRatio === '9:16' || exportAspectRatio === '4:5') && showReelsOverlay && !isExporting && activeExportCropMetrics && (
+                <ReelsOverlayPreview frame={activeExportCropMetrics} ratio={exportAspectRatio} />
               )}
 
               {hasTracks && activeExportCropMetrics && (

@@ -827,6 +827,8 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
     shareFeature: 'Wir würden Dein Video gern in unseren Community-Storys zeigen.',
     downloadAgain: 'Erneut herunterladen',
     newExport: 'Neuer Export',
+    reelsOverlay: 'Instagram-Reels-Überlagerung',
+    reelsOverlayReference: '(nur zur Orientierung)',
     mp4Unsupported:
       'MP4 wird in diesem Browser nicht nativ unterstützt, stattdessen wird als WebM aufgezeichnet. Verwende Safari oder Chrome für den nativen MP4-Export.',
     mp4Supported: 'Native MP4-Aufnahme wird unterstützt.',

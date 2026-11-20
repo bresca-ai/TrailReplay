@@ -22,6 +22,8 @@ export function ExportPanel() {
   const setCoverPreviewUrl = useAppStore((state) => state.setVideoCoverImageUrl);
   const playback = useAppStore((state) => state.playback);
   const exportMode = useAppStore((state) => state.exportSubMode);
+  const showReelsOverlay = useAppStore((state) => state.showReelsOverlay);
+  const setShowReelsOverlay = useAppStore((state) => state.setShowReelsOverlay);
   const setExportMode = useAppStore((state) => state.setExportSubMode);
   const tracks = useAppStore((state) => state.tracks);
   const isAppExporting = useAppStore((state) => state.isExporting);
@@ -194,6 +196,7 @@ export function ExportPanel() {
       ) : (
         <>
           <VideoSettingsInline
+            showReelsOverlay={showReelsOverlay} onShowReelsOverlayChange={setShowReelsOverlay}
             settings={exportedBlob && exportedVideoSettings ? exportedVideoSettings : videoExportSettings} onChange={setVideoExportSettings} disabled={isExporting || !!exportedBlob}
             mp4Supported={mp4Supported} studioSupported={studioSupported} estimatedSize={estimatedSize}
             durationSeconds={Math.round(estimatedDurationMs / 1000)} studioDeliveryEmail={studioDeliveryEmail}

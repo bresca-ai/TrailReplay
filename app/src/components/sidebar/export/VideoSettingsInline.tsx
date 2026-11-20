@@ -1,3 +1,4 @@
+import { Instagram } from '@/components/icons/brandIcons';
 import type { VideoExportSettings } from '@/types';
 import { ASPECT_RATIO_OPTIONS, FPS_OPTIONS, getQualityOptionLabel, getResolution, QUALITY_OPTIONS } from './exportConfig';
 import { localStudioDownload } from './studioDelivery';
@@ -6,6 +7,8 @@ type Props = {
   settings: VideoExportSettings;
   onChange: (settings: Partial<VideoExportSettings>) => void;
   disabled: boolean;
+  showReelsOverlay?: boolean;
+  onShowReelsOverlayChange?: (show: boolean) => void;
   mp4Supported: boolean;
   studioSupported: boolean;
   estimatedSize: string;
@@ -18,7 +21,7 @@ type Props = {
   t: (key: string, params?: Record<string, string | number>) => string;
 };
 
-export function VideoSettingsInline({ settings, onChange, disabled, mp4Supported, studioSupported, estimatedSize, durationSeconds, studioDeliveryEmail, onStudioDeliveryEmailChange, marketingConsent, consentDefaultsLoaded, onMarketingConsentChange, t }: Props) {
+export function VideoSettingsInline({ settings, onChange, disabled, showReelsOverlay = false, onShowReelsOverlayChange, mp4Supported, studioSupported, estimatedSize, durationSeconds, studioDeliveryEmail, onStudioDeliveryEmailChange, marketingConsent, consentDefaultsLoaded, onMarketingConsentChange, t }: Props) {
   const selectClass = 'min-w-0 w-44 max-w-[70%] rounded-md border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-2 py-2 text-xs font-semibold text-[var(--evergreen)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] disabled:opacity-50';
   const rowClass = 'flex min-h-11 items-center justify-between gap-2 border-b border-[var(--evergreen)]/10 py-1 text-xs text-[var(--evergreen)]';
   const studioDisabled = !studioSupported || settings.format !== 'mp4';
@@ -51,6 +54,14 @@ export function VideoSettingsInline({ settings, onChange, disabled, mp4Supported
           ))}
         </div>
       </div>
+      {(settings.aspectRatio === '9:16' || settings.aspectRatio === '4:5') && <div className="space-y-1 pb-2">
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[var(--evergreen)]">
+          <input type="checkbox" checked={showReelsOverlay} disabled={disabled} onChange={(event) => onShowReelsOverlayChange?.(event.target.checked)} className="accent-[var(--trail-orange)]" />
+          <Instagram className="h-4 w-4" aria-hidden="true" />
+          {t('export.reelsOverlay')}
+          <span className="font-normal text-[var(--evergreen-60)]">{t('export.reelsOverlayReference')}</span>
+        </label>
+      </div>}
       <label className={rowClass}><span>{t('export.quality')}</span><select aria-label={t('export.quality')} className={selectClass} value={selectedQuality} disabled={disabled} onChange={(event) => {
         const quality = event.target.value as VideoExportSettings['quality'];
         onChange({ quality, resolution: getResolution(quality, settings.aspectRatio) });
