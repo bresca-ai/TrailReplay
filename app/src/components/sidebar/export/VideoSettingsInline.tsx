@@ -1,3 +1,4 @@
+import { Instagram } from '@/components/icons/brandIcons';
 import type { VideoExportSettings } from '@/types';
 import { ASPECT_RATIO_OPTIONS, FPS_OPTIONS, getQualityOptionLabel, getResolution, QUALITY_OPTIONS } from './exportConfig';
 import { localStudioDownload } from './studioDelivery';
@@ -56,9 +57,9 @@ export function VideoSettingsInline({ settings, onChange, disabled, showReelsOve
       {(settings.aspectRatio === '9:16' || settings.aspectRatio === '4:5') && <div className="space-y-1 pb-2">
         <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[var(--evergreen)]">
           <input type="checkbox" checked={showReelsOverlay} disabled={disabled} onChange={(event) => onShowReelsOverlayChange?.(event.target.checked)} className="accent-[var(--trail-orange)]" />
+          <Instagram className="h-4 w-4" aria-hidden="true" />
           {t('export.reelsOverlay')}
         </label>
-        <p className="pl-5 text-[11px] leading-relaxed text-[var(--evergreen-60)]">{t('export.reelsOverlayHint')}</p>
       </div>}
       <label className={rowClass}><span>{t('export.quality')}</span><select aria-label={t('export.quality')} className={selectClass} value={selectedQuality} disabled={disabled} onChange={(event) => {
         const quality = event.target.value as VideoExportSettings['quality'];

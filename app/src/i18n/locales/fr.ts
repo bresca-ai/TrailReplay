@@ -828,7 +828,6 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
     downloadAgain: 'Télécharger à nouveau',
     newExport: 'Nouvelle exportation',
     reelsOverlay: 'Superposition Instagram Reels',
-    reelsOverlayHint: 'Aperçu uniquement. La disposition varie selon l’appareil et peut changer. Faites glisser les statistiques ou le profil d’altitude pour les déplacer.',
     mp4Unsupported: 
       'Le format MP4 n\'est pas pris en charge nativement par ce navigateur. L\'enregistrement sera effectué en WebM. Utilisez Safari ou Chrome pour un export MP4 natif.',
     mp4Supported: 'L\'enregistrement MP4 natif est pris en charge.',
