@@ -548,7 +548,7 @@ export const fr = {
     markerTypeDotHint: 'Point plein avec bordure blanche, comme l\'indicateur d\'activité Strava.',
     markerColor: 'Couleur du marqueur',
     markerColorSvgHint: 'Pour les icônes SVG, cela modifie à la fois l\'icône et le cercle du marqueur.',
-    markerColorEmojiHint: 'Pour les icônes emoji, seul le cercle du marqueur est modifié.',
+    markerColorTrackHint: 'Les marqueurs animés et 3D utilisent la couleur du marqueur.', markerColorEmojiHint: 'Pour les icônes emoji, seul le cercle du marqueur est modifié.',
     showMarker: 'Afficher le marqueur',
     size: 'Taille',
     activityIcon: 'Icône d\'activité',
@@ -914,6 +914,12 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
   map: {
     loading: 'Chargement de la carte...',
     preparingReplay: 'Préparation de la rediffusion…',
+    preparingTerrainAndPlaces: "Préparation du relief et des lieux…",
+    preparingTerrain: "Préparation du relief 3D…",
+    preparingPlaces: "Chargement des limites des lieux…",
+    preparingTiles: "Chargement des vues de la carte le long du parcours…",
+    startReplayNow: "Démarrer maintenant",
+    startReplayNowHint: "La carte continuera à se charger pendant la lecture ; certains détails peuvent apparaître plus tard.",
     zoomButtonsHint: 'Utilisez les boutons + et - pour modifier le zoom pendant l\'animation.',
   },
   errors: {

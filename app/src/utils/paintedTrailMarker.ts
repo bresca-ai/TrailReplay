@@ -9,6 +9,7 @@ export class PaintedTrailMarker {
   minimumRevision: number;
   private element: HTMLElement;
   private tip: PaintedTip | null = null;
+  private position: [number, number] | null = null;
 
   constructor(element: HTMLElement, container: HTMLElement, minimumRevision: number) {
     this.element = element;
@@ -21,6 +22,7 @@ export class PaintedTrailMarker {
   }
 
   getElement(): HTMLElement { return this.element; }
+  getPosition(): [number, number] | null { return this.position; }
 
   render(tip: PaintedTip | null, map: Pick<PaintedMarkerMap, 'project'>): void {
     if (tip && tip.revision >= this.minimumRevision) {
@@ -33,12 +35,13 @@ export class PaintedTrailMarker {
     if (!this.tip) return;
     const point = map.project(this.tip.position);
     if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
-    this.renderAt(point.x, point.y);
+    this.renderAt(point.x, point.y, this.tip.position);
   }
 
   /** Position the same DOM adornment at a screen point painted by a 3D layer. */
-  renderAt(x: number, y: number): void {
+  renderAt(x: number, y: number, position?: [number, number]): void {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (position) this.position = position;
     const transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
     if (this.element.style.transform !== transform) this.element.style.transform = transform;
     this.element.style.visibility = 'visible';

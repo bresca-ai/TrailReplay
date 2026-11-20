@@ -1,5 +1,5 @@
 import type { GPXTrack, JourneySegment, RouteTimingMode, TextAnnotation } from '@/types';
-import { buildComputedJourney, progressForRouteDistance, uniformJourneyWithCameraTransitions } from './journeyUtils';
+import { buildComputedJourney, progressForRouteDistance, uniformJourneyWithCameraTransitions, uniformJourneyWithTransportDurations } from './journeyUtils';
 import { projectCoordinateToTrack } from './routeProjection';
 
 /** Matches within 50 m accommodate ordinary GPS variation without matching distant routes. */
@@ -13,9 +13,10 @@ export function resolveSharedRouteMoments(annotations: TextAnnotation[], segment
   if (cache && cache.annotations === annotations && cache.segments === segments && cache.tracks === tracks && cache.mode === mode) return cache.result;
   const journey = buildComputedJourney(segments, tracks);
   if (!journey) return annotations;
+  const hasTransport = journey.segmentTimings.some((segment) => segment.type === 'transport' && segment.transportMode !== 'camera');
   const hasTransition = journey.segmentTimings.some((segment) => segment.transportMode === 'camera');
-  const adjusted = mode === 'uniform' && hasTransition ? uniformJourneyWithCameraTransitions(journey) : journey;
-  const projectionMode = mode === 'uniform' && hasTransition ? 'recorded' : mode;
+  const adjusted = mode === 'uniform' && hasTransport ? uniformJourneyWithTransportDurations(journey) : mode === 'uniform' && hasTransition ? uniformJourneyWithCameraTransitions(journey) : journey;
+  const projectionMode = mode === 'uniform' && (hasTransport || hasTransition) ? 'recorded' : mode;
   const routes = adjusted.segmentTimings.filter((segment) => segment.type === 'track');
   const result = annotations.flatMap((annotation) => {
     if (!annotation.showOnMatchingRoutes) return [annotation];

@@ -548,7 +548,7 @@ export const ca = {
     markerTypeDotHint: 'Punt sòlid amb vora blanca, com l\'indicador d\'activitat de Strava.',
     markerColor: 'Color del marcador',
     markerColorSvgHint: 'Amb icones SVG, això canvia tant la icona com el cercle del marcador.',
-    markerColorEmojiHint: 'Amb icones emoji, això només canvia el cercle del marcador.',
+    markerColorTrackHint: 'Els marcadors animats i 3D fan servir el color del marcador.', markerColorEmojiHint: 'Amb icones emoji, això només canvia el cercle del marcador.',
     showMarker: 'Mostrar marcador',
     size: 'Mida',
     activityIcon: 'Icona d\'activitat',
@@ -914,6 +914,12 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
   map: {
     loading: 'Carregant mapa...',
     preparingReplay: 'Preparant la reproducció…',
+    preparingTerrainAndPlaces: "Preparant el terreny i els llocs…",
+    preparingTerrain: "Preparant el terreny 3D…",
+    preparingPlaces: "Carregant els límits dels llocs…",
+    preparingTiles: "Carregant vistes del mapa al llarg de la ruta…",
+    startReplayNow: "Comença ara",
+    startReplayNowHint: "El mapa continuarà carregant-se durant la reproducció; alguns detalls poden aparèixer més tard.",
     zoomButtonsHint: 'Fes servir els botons + i - per canviar el nivell de zoom mentre es reprodueix l’animació.',
   },
   errors: {
