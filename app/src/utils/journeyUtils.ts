@@ -20,11 +20,11 @@ const TRANSPORT_SPEEDS: Record<string, number> = {
 export const TRANSPORT_ICONS: Record<string, string> = {
   car: '🚗',
   bus: '🚌',
-  train: '🚆',
-  plane: '✈️',
+  train: '3d-train',
+  plane: '3d-plane',
   bike: '🚲',
   walk: '🚶',
-  ferry: '⛴️',
+  ferry: '3d-sailboat',
 };
 
 /**

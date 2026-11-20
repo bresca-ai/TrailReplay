@@ -5,7 +5,7 @@ import { OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { applyLocationChapterCamera, getIntroDuration, locationChapterIntroProgressRef, locationIntroEasing, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
 import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
-import { getActivityIconMarkerHtml, resolvePlaybackMarkerColor, markerIconContrastFilter } from '@/utils/activityIcons';
+import { getActivityIconMarkerHtml, is3DActivityIcon, resolvePlaybackMarkerColor, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
 import { buildColorZoneLineFeatures } from '@/utils/trailColorFeatures';
@@ -125,6 +125,7 @@ interface UseTrailPlaybackCameraParams {
   followBehindZoomLevel: number;
   followBehindPitch?: number | null;
   isInTransport: boolean;
+  transportModelsEnabled?: boolean;
   isMapLoaded: boolean;
   mapRef: React.MutableRefObject<maplibregl.Map | null>;
   markerRef: React.MutableRefObject<PaintedTrailMarker | null>;
@@ -167,6 +168,11 @@ interface UseTrailPlaybackCameraParams {
 }
 
 export { resolvePlaybackMarkerColor } from '@/utils/activityIcons';
+
+/** Transport models replace the route dot only during their own segment. */
+export function shouldUseDotForPlaybackMarker(markerType: 'dot' | 'icon', isTransport: boolean, icon: string): boolean {
+  return markerType === 'dot' && !(isTransport && is3DActivityIcon(icon));
+}
 
 export function shouldRenderPlaybackAdornment({
   activeTextAnnotationId,
@@ -260,6 +266,7 @@ export function useTrailPlaybackCamera({
   isPlaying,
   sharedComparisonColors,
   isInTransport,
+  transportModelsEnabled = true,
   isMapLoaded,
   mapRef,
   markerRef,
@@ -402,7 +409,7 @@ export function useTrailPlaybackCamera({
       );
       let markerHtml = '';
 
-      if (trailStyle.showMarker && trailStyle.markerType === 'dot') {
+      if (trailStyle.showMarker && shouldUseDotForPlaybackMarker(trailStyle.markerType, isInTransport && transportModelsEnabled, icon)) {
         const dotSize = Math.round(14 * trailStyle.markerSize);
         const dotColors = [markerColor, ...(sharedComparisonColors ?? [])];
         const dotFill = dotColors.length === 1 ? markerColor : `conic-gradient(${dotColors.map((color, index) =>
@@ -948,6 +955,7 @@ export function useTrailPlaybackCamera({
     followBehindZoomLevel,
     followBehindPitch,
     isInTransport,
+    transportModelsEnabled,
     isMapLoaded,
     locationChapterCameraCue,
     mapRef,

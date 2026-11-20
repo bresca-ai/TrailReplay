@@ -387,6 +387,7 @@ export function TrailMap(_props: TrailMapProps) {
     isPlaying: playback.isPlaying,
     sharedComparisonColors: sharedRouteComparisons.map((track) => track.color),
     isInTransport,
+    transportModelsEnabled: !comparisonActive,
     isMapLoaded,
     mapRef: map,
     markerRef,
@@ -411,7 +412,7 @@ export function TrailMap(_props: TrailMapProps) {
     },
   });
 
-  useRunner3D({ mapRef: map, markerRef, icon: isInTransport || comparisonActive || trailStyle.markerType !== 'icon' ? '' : currentIcon,
+  useRunner3D({ mapRef: map, markerRef, icon: comparisonActive || (!isInTransport && trailStyle.markerType !== 'icon') ? '' : currentIcon,
     coordinates: cameraPathCoordinates, completedCoordinates, progress: routeComparisonActive ? routeProgress : playback.progress,
     timeMs: playback.currentTime, color: resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, currentTrackColor), isExporting });
 

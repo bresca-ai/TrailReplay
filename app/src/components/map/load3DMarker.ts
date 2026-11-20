@@ -17,6 +17,10 @@ export async function create3DMarker(canvas: HTMLCanvasElement, icon: string) {
               : icon === '3d-motocross' ? import('./motocross3d')
               : icon === '3d-race-motorbike' ? import('./race-motorbike3d')
               : icon === '3d-paraglider' ? import('./paraglider3d')
+              : icon === '3d-plane' ? import('./plane3d')
+              : icon === '3d-train' ? import('./train3d')
+              : icon === '3d-boat' ? import('./boat3d')
+              : icon === '3d-sailboat' ? import('./sailboat3d')
     : icon === '3d-race-car' ? import('./race-car3d')
       : icon === '3d-rally' ? import('./rally3d') : import('./runner3d'));
   return module.createRunnerRenderer(canvas);
