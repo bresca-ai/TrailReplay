@@ -59,6 +59,7 @@ export function VideoSettingsInline({ settings, onChange, disabled, showReelsOve
           <input type="checkbox" checked={showReelsOverlay} disabled={disabled} onChange={(event) => onShowReelsOverlayChange?.(event.target.checked)} className="accent-[var(--trail-orange)]" />
           <Instagram className="h-4 w-4" aria-hidden="true" />
           {t('export.reelsOverlay')}
+          <span className="font-normal text-[var(--evergreen-60)]">{t('export.reelsOverlayReference')}</span>
         </label>
       </div>}
       <label className={rowClass}><span>{t('export.quality')}</span><select aria-label={t('export.quality')} className={selectClass} value={selectedQuality} disabled={disabled} onChange={(event) => {

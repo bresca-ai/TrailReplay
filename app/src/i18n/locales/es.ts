@@ -828,6 +828,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     downloadAgain: 'Descargar de nuevo',
     newExport: 'Nueva exportación',
     reelsOverlay: 'Superposición de Instagram Reels',
+    reelsOverlayReference: '(solo orientativo)',
     mp4Unsupported:
       'MP4 no es compatible de forma nativa en este navegador. Se grabará como WebM. Usa Safari o Chrome para exportar MP4 nativo.',
     mp4Supported: 'Grabación MP4 nativa compatible.',

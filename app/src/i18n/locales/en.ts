@@ -839,6 +839,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     downloadAgain: 'Download Again',
     newExport: 'New Export',
     reelsOverlay: 'Instagram Reels overlay',
+    reelsOverlayReference: '(reference only)',
     mp4Unsupported:
       'MP4 is not natively supported in this browser. Will record as WebM instead. Use Safari or Chrome for native MP4 export.',
     mp4Supported: 'Native MP4 recording supported.',

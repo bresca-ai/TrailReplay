@@ -32,14 +32,14 @@ describe('inline video settings', () => {
     const onShowReelsOverlayChange = vi.fn();
     const settings = { ...createDefaultVideoExportSettings(), aspectRatio: '9:16' as const };
     setup({ settings, onShowReelsOverlayChange });
-    fireEvent.click(screen.getByRole('checkbox', { name: 'export.reelsOverlay' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /export\.reelsOverlay/ }));
     expect(onShowReelsOverlayChange).toHaveBeenCalledWith(true);
     cleanup();
     setup({ settings: { ...settings, aspectRatio: '4:5' } });
-    expect(screen.getByRole('checkbox', { name: 'export.reelsOverlay' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /export\.reelsOverlay/ })).toBeInTheDocument();
     cleanup();
     setup();
-    expect(screen.queryByRole('checkbox', { name: 'export.reelsOverlay' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /export\.reelsOverlay/ })).not.toBeInTheDocument();
   });
   it('prevents Studio with WebM', () => {
     const settings = { ...createDefaultVideoExportSettings(), format: 'webm' as const };
