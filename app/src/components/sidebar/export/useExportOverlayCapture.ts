@@ -392,6 +392,7 @@ export function useExportOverlayCapture({
             const rect = getElevationOverlayDrawRect({
               captureCanvas: { width: captureCanvas.width / elevationCaptureScale, height: captureCanvas.height / elevationCaptureScale },
               scaleToRecording, recordW, recordH, margin,
+              elevationOffset: useAppStore.getState().settings.elevationProfileOffset,
             });
             overlayContext.drawImage(captureCanvas, 0, 0, captureCanvas.width, captureCanvas.height, rect.drawX, rect.drawY, rect.drawWidth, rect.drawHeight);
           } catch { /* Skip overlay when capture fails. */ }
@@ -704,6 +705,7 @@ export function useExportOverlayCapture({
       recordW,
       recordH,
       margin: Math.round(recordW * 0.025),
+      elevationOffset: useAppStore.getState().settings.elevationProfileOffset,
     });
     const elementScaleX = overlayRect.drawWidth / elementRect.width;
     const elementScaleY = overlayRect.drawHeight / elementRect.height;

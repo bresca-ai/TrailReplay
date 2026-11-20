@@ -49,6 +49,14 @@ describe('exportOverlay', () => {
     expect(rect.drawY + rect.drawHeight).toBe(1920 - 27);
   });
 
+  it('applies the elevation profile offset to exported frames', () => {
+    const input = { captureCanvas: { width: 800, height: 60 }, scaleToRecording: 1, recordW: 1080, recordH: 1920, margin: 27 };
+    const original = getElevationOverlayDrawRect(input);
+    const moved = getElevationOverlayDrawRect({ ...input, elevationOffset: 0.25 });
+    expect(moved.drawY).toBe(original.drawY - 480);
+    expect(moved.drawX).toBe(original.drawX);
+  });
+
   it('centers the stats overlay for portrait exports without an arbitrary width cap', () => {
     const rect = getStatsOverlayDrawRect({
       captureCanvas: { width: 920, height: 220 },
@@ -83,6 +91,14 @@ describe('exportOverlay', () => {
 
     expect(large.drawWidth).toBeCloseTo(normal.drawWidth * 1.5);
     expect(large.drawHeight).toBeCloseTo(normal.drawHeight * 1.5);
+  });
+
+  it('applies the elevation profile offset to exported frames', () => {
+    const input = { captureCanvas: { width: 800, height: 60 }, scaleToRecording: 1, recordW: 1080, recordH: 1920, margin: 27 };
+    const original = getElevationOverlayDrawRect(input);
+    const moved = getElevationOverlayDrawRect({ ...input, elevationOffset: 0.25 });
+    expect(moved.drawY).toBe(original.drawY - 480);
+    expect(moved.drawX).toBe(original.drawX);
   });
 
   it('centers the stats overlay in landscape exports', () => {

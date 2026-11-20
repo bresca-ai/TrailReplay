@@ -22,6 +22,7 @@ interface MapElevationProfileProps {
 export function MapElevationProfile({ className = '', exportFrame = null }: MapElevationProfileProps) {
   const { t } = useI18n();
   const resizeStart = useRef<{ y: number; height: number } | null>(null);
+  const dragStart = useRef<{ y: number; offset: number; pointerId: number } | null>(null);
   const playback = useAppStore((state) => state.playback);
   const settings = useAppStore((state) => state.settings);
   const trailStyle = useAppStore((state) => state.settings.trailStyle);
@@ -278,7 +279,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     ? {
         left: exportFrame.frameLeft + (exportFrame.frameWidth * 0.075) - labelOverflowPadding,
         right: exportFrame.frameLeft + (exportFrame.frameWidth * 0.075) - labelOverflowPadding,
-        bottom: exportFrame.bottom + 10,
+        bottom: exportFrame.bottom + 10 + (settings.elevationProfileOffset ?? 0) * exportFrame.frameHeight,
       }
     : {
         left: -labelOverflowPadding,
@@ -295,7 +296,25 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
       style={{
         ...exportProfileStyle,
         fontFamily: 'var(--font-family-overlay)',
+        cursor: exportFrame && !isExporting ? 'grab' : undefined,
+        touchAction: exportFrame && !isExporting ? 'none' : undefined,
       }}
+      onPointerDown={(event) => {
+        if (!exportFrame || isExporting || event.button !== 0) return;
+        event.stopPropagation();
+        dragStart.current = { y: event.clientY, offset: settings.elevationProfileOffset ?? 0, pointerId: event.pointerId };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const start = dragStart.current;
+        if (!start || !exportFrame || start.pointerId !== event.pointerId) return;
+        event.stopPropagation();
+        const height = event.currentTarget.getBoundingClientRect().height;
+        const maxOffset = Math.max(0, 1 - (height + 10) / exportFrame.frameHeight);
+        setSettings({ elevationProfileOffset: Math.max(0, Math.min(maxOffset, start.offset + (start.y - event.clientY) / exportFrame.frameHeight)) });
+      }}
+      onPointerUp={(event) => { if (dragStart.current?.pointerId === event.pointerId) dragStart.current = null; }}
+      onPointerCancel={() => { dragStart.current = null; }}
       id="mapElevationProfile"
     >
       <div
@@ -332,7 +351,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
             type="button" role="slider" aria-label={t('annotations.resizeElevationProfile')}
             aria-valuemin={50} aria-valuemax={300} aria-valuenow={Math.round(profileHeightScale * 100)}
             className="absolute -top-3 left-1/2 z-30 flex h-6 w-14 -translate-x-1/2 cursor-ns-resize touch-none items-center justify-center rounded-full border border-white/40 bg-[#17251f]/80 text-white/90 opacity-60 transition hover:opacity-100 focus-visible:opacity-100"
-            onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); resizeStart.current = { y: event.clientY, height: profileHeightScale }; }}
+            onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); resizeStart.current = { y: event.clientY, height: profileHeightScale }; }}
             onPointerMove={(event) => { if (!resizeStart.current) return; const scale = resizeStart.current.height + (resizeStart.current.y - event.clientY) / 60; setSettings({ elevationProfileHeight: Math.max(0.5, Math.min(3, scale)) }); }}
             onPointerUp={() => { resizeStart.current = null; }}
             onPointerCancel={() => { resizeStart.current = null; }}

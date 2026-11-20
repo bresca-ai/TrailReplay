@@ -94,6 +94,7 @@ export interface AppState {
   /** Runtime-only delivery address for repeated Studio exports in the current project. */
   studioDeliveryEmail: string;
   exportSubMode: 'video' | 'image';
+  showReelsOverlay: boolean;
   isExporting: boolean;
   isDeterministicExport: boolean;
   exportProgress: number;
@@ -206,6 +207,7 @@ export interface AppState {
   setVideoCoverImageUrl: (url: string | null) => void;
   setStudioDeliveryEmail: (email: string) => void;
   setExportSubMode: (mode: 'video' | 'image') => void;
+  setShowReelsOverlay: (show: boolean) => void;
   setIsExporting: (isExporting: boolean) => void;
   setIsDeterministicExport: (isDeterministic: boolean) => void;
   setExportProgress: (progress: number) => void;

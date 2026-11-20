@@ -28,6 +28,8 @@ type SettingsSlice = Pick<
   | 'setVideoExportSettings'
   | 'setSocialShareSettings'
   | 'setVideoCoverImageUrl'
+  | 'showReelsOverlay'
+  | 'setShowReelsOverlay'
   | 'exportSubMode'
   | 'setExportSubMode'
   | 'setIsExporting'
@@ -45,6 +47,7 @@ export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
   socialShareSettings: createDefaultSocialShareSettings(),
   videoCoverImageUrl: null,
   exportSubMode: 'video',
+  showReelsOverlay: false,
   isExporting: false,
   isDeterministicExport: false,
   exportProgress: 0,
@@ -96,6 +99,8 @@ export const createSettingsSlice: AppSliceCreator<SettingsSlice> = (set) => ({
     set((state) => {
       state.videoCoverImageUrl = url;
     }),
+
+  setShowReelsOverlay: (show) => set((state) => { state.showReelsOverlay = show; }),
 
   setExportSubMode: (mode) =>
     set((state) => {

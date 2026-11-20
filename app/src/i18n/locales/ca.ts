@@ -827,6 +827,8 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     shareFeature: 'Ens encantaria compartir el teu vídeo a les nostres històries de la comunitat.',
     downloadAgain: 'Torna a descarregar',
     newExport: 'Nova exportació',
+    reelsOverlay: 'Superposició d’Instagram Reels',
+    reelsOverlayHint: 'Només vista prèvia. El disseny varia segons el dispositiu i pot canviar. Arrossega les estadístiques o el perfil d’elevació per moure’ls.',
     mp4Unsupported:
       'MP4 no és compatible de forma nativa amb aquest navegador. Es gravarà com a WebM. Usa Safari o Chrome per exportar MP4 natiu.',
     mp4Supported: 'Gravació MP4 nativa compatible.',

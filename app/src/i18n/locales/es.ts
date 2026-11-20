@@ -827,6 +827,8 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     shareFeature: 'Nos encantará destacar tu vídeo en nuestras historias de la comunidad.',
     downloadAgain: 'Descargar de nuevo',
     newExport: 'Nueva exportación',
+    reelsOverlay: 'Superposición de Instagram Reels',
+    reelsOverlayHint: 'Solo vista previa. El diseño varía según el dispositivo y puede cambiar. Arrastra las estadísticas o el perfil de elevación para moverlos.',
     mp4Unsupported:
       'MP4 no es compatible de forma nativa en este navegador. Se grabará como WebM. Usa Safari o Chrome para exportar MP4 nativo.',
     mp4Supported: 'Grabación MP4 nativa compatible.',

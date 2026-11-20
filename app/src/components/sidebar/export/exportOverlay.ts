@@ -126,6 +126,7 @@ export function getElevationOverlayDrawRect(params: {
   recordW: number;
   recordH: number;
   margin: number;
+  elevationOffset?: number;
 }) {
   const rawWidth = params.captureCanvas.width * params.scaleToRecording;
   const drawWidth = Math.min(rawWidth, params.recordW * 0.85);
@@ -133,7 +134,7 @@ export function getElevationOverlayDrawRect(params: {
 
   return {
     drawX: (params.recordW - drawWidth) / 2,
-    drawY: params.recordH - drawHeight - params.margin,
+    drawY: Math.max(0, params.recordH - drawHeight - params.margin - (params.elevationOffset ?? 0) * params.recordH),
     drawWidth,
     drawHeight,
   };

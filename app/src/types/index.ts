@@ -502,6 +502,8 @@ export interface AppSettings {
   showLeaderboard: boolean;
   paceMode: 'cumulative' | 'per-km';
   showElevationProfile: boolean;
+  /** Upward offset as a fraction of the export frame height. */
+  elevationProfileOffset?: number;
   /** Fill the area below the elevation line. */
   elevationProfileFilled: boolean;
   /** Height multiplier for the on-map elevation chart. */
