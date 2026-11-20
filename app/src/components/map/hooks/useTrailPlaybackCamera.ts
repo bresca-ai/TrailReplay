@@ -4,7 +4,7 @@ import * as maplibregl from 'maplibre-gl';
 import { OUTRO_DURATION } from '@/components/playback/PlaybackProvider';
 import { applyLocationChapterCamera, getIntroDuration, locationChapterIntroProgressRef, locationIntroEasing, type LocationChapterCameraCue } from '@/utils/locationChapterCamera';
 import { transitionCameraPose, transitionSettings, type TransitionCameraPose } from '@/utils/cameraTransition';
-import { TRANSPORT_ICONS } from '@/utils/journeyUtils';
+import { TRANSPORT_MARKERS } from '@/utils/journeyUtils';
 import { getActivityIconMarkerHtml, is3DActivityIcon, resolvePlaybackMarkerColor, markerIconContrastFilter } from '@/utils/activityIcons';
 import { getHeartRateColor } from '@/utils/gpxParser';
 import { buildSegmentLineFeatures } from '@/utils/trailColorFeatures';
@@ -395,7 +395,7 @@ export function useTrailPlaybackCamera({
     });
     const currentColor = currentTrackColor || trailStyle.trailColor;
     const icon = isInTransport
-      ? TRANSPORT_ICONS[currentSegment?.segment.transportMode || 'car'] || '🚗'
+      ? TRANSPORT_MARKERS[currentSegment?.segment.transportMode || 'car'] || '🚗'
       : currentIcon || trailStyle.currentIcon;
 
     if (!shouldShowPlaybackAdornment) {

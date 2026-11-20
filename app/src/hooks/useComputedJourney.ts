@@ -16,7 +16,7 @@ import {
   getSegmentAtDistance,
   getSegmentAtProgress,
   getAllJourneyCoordinates,
-  TRANSPORT_ICONS,
+  TRANSPORT_MARKERS,
   type ComputedJourney,
   type JourneyDistanceProfile,
   type JourneyPoint,
@@ -456,7 +456,7 @@ export function useComputedJourney() {
   // Get the current icon based on segment type
   const currentIcon = useMemo<string>(() => {
     if (currentSegment?.segment.type === 'transport') {
-      return TRANSPORT_ICONS[currentSegment.segment.transportMode || 'car'] || '🚗';
+      return TRANSPORT_MARKERS[currentSegment.segment.transportMode || 'car'] || '🚗';
     }
     if (currentSegment?.segment.type === 'track' && currentSegment.segment.trackId) {
       return tracks.find((track) => track.id === currentSegment.segment.trackId)?.activityIcon || DEFAULT_ACTIVITY_ICON;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GPXPoint, GPXTrack, JourneySegment } from '@/types';
 import {
   TRANSPORT_ICONS,
+  TRANSPORT_MARKERS,
   buildComputedJourney,
   buildJourneyDistanceProfile,
   getCompletedCoordinates,
@@ -183,8 +184,9 @@ describe('camera transitions', () => {
 });
 
 it('uses 3D plane, train and sailboat markers for transport segments', () => {
-  expect(TRANSPORT_ICONS.plane).toBe('3d-plane');
-  expect(TRANSPORT_ICONS.train).toBe('3d-train');
-  expect(TRANSPORT_ICONS.ferry).toBe('3d-sailboat');
-  expect(TRANSPORT_ICONS.bus).toBe('🚌');
+  expect(TRANSPORT_MARKERS.plane).toBe('3d-plane');
+  expect(TRANSPORT_ICONS.plane).toBe('✈️');
+  expect(TRANSPORT_MARKERS.train).toBe('3d-train');
+  expect(TRANSPORT_MARKERS.ferry).toBe('3d-sailboat');
+  expect(TRANSPORT_MARKERS.bus).toBe('🚌');
 });

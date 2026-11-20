@@ -20,10 +20,18 @@ const TRANSPORT_SPEEDS: Record<string, number> = {
 export const TRANSPORT_ICONS: Record<string, string> = {
   car: '🚗',
   bus: '🚌',
-  train: '3d-train',
-  plane: '3d-plane',
+  train: '🚆',
+  plane: '✈️',
   bike: '🚲',
   walk: '🚶',
+  ferry: '⛴️',
+};
+
+// Moving map markers can use 3D models; text overlays still use emoji.
+export const TRANSPORT_MARKERS: Record<string, string> = {
+  ...TRANSPORT_ICONS,
+  train: '3d-train',
+  plane: '3d-plane',
   ferry: '3d-sailboat',
 };
 
