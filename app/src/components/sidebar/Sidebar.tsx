@@ -2,8 +2,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { SidebarPanelContent } from './SidebarPanelContent';
 import { useI18n } from '@/i18n/useI18n';
 import { languageLabels } from '@/i18n/translations';
-import { useRailMapResize } from './useRailMapResize';
-import { useContext, useEffect, useRef, useState, type CSSProperties, type TransitionEvent } from 'react';
+import { useContext, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { MenuDesignContext } from './menuDesign';
 import type { UnitSystem } from '@/types';
 import {
@@ -81,7 +80,6 @@ export function Sidebar() {
   const setPanelOpen = useAppStore((state) => state.setSidebarOpen);
   const isExporting = useAppStore((state) => state.isExporting);
   const { t } = useI18n();
-  const railResize = useRailMapResize();
   const legacy = useContext(MenuDesignContext) === 'previous';
   const [panelWidth, setPanelWidth] = useState(initialPanelWidth);
   const [resizing, setResizing] = useState(false);
@@ -95,23 +93,11 @@ export function Sidebar() {
     if (!dragStart.current) return;
     dragStart.current = null;
     setResizing(false);
-    railResize.stop();
   };
-  const movingElements = useRef(new Set<HTMLElement>());
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (panelOpen && scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [activeTab, panelOpen]);
-  const startResize = (event: TransitionEvent<HTMLElement>) => {
-    if (event.target !== event.currentTarget || event.nativeEvent.propertyName !== 'width') return;
-    movingElements.current.add(event.currentTarget);
-    railResize.start();
-  };
-  const stopResize = (event: TransitionEvent<HTMLElement>) => {
-    if (event.target !== event.currentTarget || event.nativeEvent.propertyName !== 'width') return;
-    movingElements.current.delete(event.currentTarget);
-    if (!movingElements.current.size) railResize.stop();
-  };
 
   const tracks = useAppStore((state) => state.tracks);
   const pictures = useAppStore((state) => state.pictures);
@@ -131,7 +117,6 @@ export function Sidebar() {
   return (
     <div style={{ '--sidebar-panel-width': `${panelWidth}px` } as CSSProperties} className={`relative flex min-h-0 lg:h-full lg:w-max ${legacy ? 'h-full bg-[var(--canvas)]' : 'flex-col-reverse lg:flex-row lg:bg-[var(--canvas)]'}`}>
       <nav aria-label={t('sidebar.navigation')}
-        onTransitionStart={startResize} onTransitionEnd={stopResize} onTransitionCancel={stopResize}
         className={`relative z-10 hidden w-14 shrink-0 flex-col border-r border-[var(--evergreen)]/15 bg-[var(--evergreen)] pt-3 ${legacy ? '' : 'lg:flex'}`}>
           <div className="flex flex-col gap-1 px-1.5">
             {tabs.map((tab) => {
@@ -167,7 +152,6 @@ export function Sidebar() {
         })}
       </div>}
       <div
-        onTransitionStart={startResize} onTransitionEnd={stopResize} onTransitionCancel={stopResize}
         className={`min-w-0 overflow-hidden transition-[height,width] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:flex-none ${resizing ? '!transition-none' : ''} ${legacy ? 'flex-1' : panelOpen ? 'h-[min(55vh,32rem)] px-2 pb-2 lg:px-0 lg:pb-0' : 'h-0 px-2 lg:px-0'} ${legacy ? 'lg:w-80 lg:h-full' : panelOpen ? 'lg:w-[var(--sidebar-panel-width)] lg:h-full' : 'lg:w-0 lg:h-full'}`}>
       <div className={`flex w-full min-w-0 flex-col bg-[var(--canvas)] lg:h-full ${legacy ? 'h-full lg:w-80' : 'lg:w-[var(--sidebar-panel-width)] h-[calc(min(55vh,32rem)-0.5rem)] overflow-hidden rounded-t-2xl border border-[var(--evergreen)]/15 shadow-xl lg:rounded-none lg:border-0 lg:shadow-none'}`} inert={!panelOpen}>
       {!legacy && <div className="flex shrink-0 items-center justify-between px-4 pt-1.5 lg:hidden"><span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--evergreen)]/60">{tabs.find((tab) => tab.id === activeTab)?.label}</span><button type="button" aria-label={t('common.close')} onClick={() => setPanelOpen(false)} className="grid h-8 w-8 place-items-center rounded-full text-[var(--evergreen)]/70 transition-colors hover:bg-[var(--evergreen)]/10 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><X className="h-4 w-4" aria-hidden="true" /></button></div>}
@@ -243,7 +227,7 @@ export function Sidebar() {
       </div>
       </div>
       {!legacy && panelOpen && <div role="separator" aria-label={t('sidebar.resizePanel')} aria-orientation="vertical" aria-valuemin={MIN_PANEL_WIDTH} aria-valuemax={MAX_PANEL_WIDTH} aria-valuenow={panelWidth} tabIndex={0}
-        onPointerDown={(event) => { if (event.button !== 0) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); dragStart.current = { x: event.clientX, width: panelWidth }; setResizing(true); railResize.start(); }}
+        onPointerDown={(event) => { if (event.button !== 0) return; event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); dragStart.current = { x: event.clientX, width: panelWidth }; setResizing(true); }}
         onPointerMove={(event) => { if (dragStart.current) updateWidth(dragStart.current.width + event.clientX - dragStart.current.x); }}
         onPointerUp={finishDrag} onPointerCancel={finishDrag} onLostPointerCapture={finishDrag}
         onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); updateWidth(panelWidth + (event.key === 'ArrowLeft' ? -16 : 16)); } else if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); updateWidth(event.key === 'Home' ? MIN_PANEL_WIDTH : MAX_PANEL_WIDTH); } }}
