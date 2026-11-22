@@ -76,3 +76,19 @@ it('switches layouts without remounting the current panel', () => {
   fireEvent.click(within(bar).getByRole('button', { name: 'Map' }));
   expect(useAppStore.getState().isSidebarOpen).toBe(false);
 });
+
+it('resizes the desktop panel within bounds and remembers its width', () => {
+  localStorage.removeItem('trailreplay-sidebar-width');
+  useAppStore.getState().setSidebarOpen(true);
+  const view = render(<Sidebar />);
+  const handle = screen.getByRole('separator', { name: 'Resize menu' });
+  expect(handle).toHaveAttribute('aria-valuenow', '320');
+  fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+  expect(handle).toHaveAttribute('aria-valuenow', '320');
+  fireEvent.keyDown(handle, { key: 'End' });
+  expect(handle).toHaveAttribute('aria-valuenow', '480');
+  view.unmount();
+  render(<Sidebar />);
+  expect(screen.getByRole('separator', { name: 'Resize menu' })).toHaveAttribute('aria-valuenow', '480');
+  localStorage.removeItem('trailreplay-sidebar-width');
+});
