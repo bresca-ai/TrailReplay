@@ -1,4 +1,5 @@
-import { useMemo, useRef } from 'react';
+import { useContext, useMemo, useRef } from 'react';
+import { MenuDesignContext } from '@/components/sidebar/menuDesign';
 import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -30,6 +31,8 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   const tracks = useAppStore((state) => state.tracks);
   const isExporting = useAppStore((state) => state.isExporting);
   const activePanel = useAppStore((state) => state.activePanel);
+  const panelOpen = useAppStore((state) => state.isSidebarOpen);
+  const newMenu = useContext(MenuDesignContext) === 'new';
   const videoExportSettings = useAppStore((state) => state.videoExportSettings);
   const setSettings = useAppStore((state) => state.setSettings);
   const exportAspectRatio = videoExportSettings.aspectRatio;
@@ -284,7 +287,6 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
     : {
         left: -labelOverflowPadding,
         right: -labelOverflowPadding,
-        bottom: 0,
       };
 
   const sectionColors = new Map(
@@ -292,7 +294,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
   );
   return (
     <div
-      className={`absolute z-20 ${className}`}
+      className={`absolute z-20 transition-[bottom] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${!exportFrame && newMenu && !isExporting ? (panelOpen ? 'bottom-[calc(3.5rem+min(55vh,32rem))] lg:bottom-0' : 'bottom-14 lg:bottom-0') : 'bottom-0'} ${className}`}
       style={{
         ...exportProfileStyle,
         fontFamily: 'var(--font-family-overlay)',

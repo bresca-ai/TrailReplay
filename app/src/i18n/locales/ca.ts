@@ -26,6 +26,7 @@ export const ca = {
   },
   menuFeedback: { title: "Ajuda’ns a millorar el menú", description: "Prova els dos menús i digues-nos quin prefereixes.", tryPrevious: "Prova el menú anterior", tryNew: "Prova el menú nou", question: "Quin prefereixes?", new: "Menú nou", previous: "Menú anterior", oneVote: "Un vot per navegador; no es pot canviar.", dismiss: "Tanca la pregunta sobre el menú" },
   sidebar: {
+    resizePanel: 'Canvia la mida del menú',
     navigation: "Seccions",
     panelLoadError: 'No s’ha pogut carregar aquest tauler.', panelLoadErrorHelp: 'El teu treball continua obert. Desa el projecte des de la pestanya Crea abans de tornar a carregar i torna’l a obrir.', reloadPage: 'Torna a carregar la pàgina',
     tabs: { map: "Mapa", camera: "Càmera",

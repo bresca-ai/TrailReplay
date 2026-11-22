@@ -22,6 +22,7 @@ export const zhTW = {
   },
   menuFeedback: { title: "幫助我們改善選單", description: "試用兩種選單，告訴我們你比較喜歡哪一種。", tryPrevious: "試用舊選單", tryNew: "試用新選單", question: "你比較喜歡哪一個？", new: "新選單", previous: "舊選單", oneVote: "每個瀏覽器限投一票，投票後無法更改。", dismiss: "關閉選單意見調查" },
   sidebar: {
+    resizePanel: '調整選單大小',
     navigation: "功能區",
     panelLoadError: '無法載入此面板。', panelLoadErrorHelp: '您的作品仍然開啟中。請先從匯出分頁儲存專案，再重新載入並開啟專案。', reloadPage: '重新載入頁面',
     tabs: { map: "地圖", camera: "鏡頭", tracks: '路線', journey: '時間軸', annotations: '樣式', pictures: '媒體', export: '製作輸出', settings: '地圖與鏡頭' },

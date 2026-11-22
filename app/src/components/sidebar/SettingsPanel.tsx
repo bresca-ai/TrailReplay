@@ -119,6 +119,17 @@ export function SettingsPanel({ section = 'all' }: { section?: 'all' | 'map' | '
   const clearLandmarkEditorRequest = useAppStore((state) => state.clearLandmarkEditorRequest);
   const landmarkSectionRef = useRef<HTMLDetailsElement>(null);
   const cameraCarouselRef = useRef<HTMLDivElement>(null);
+  const mapStylesRef = useRef<HTMLDivElement>(null);
+  const [visibleMapStyles, setVisibleMapStyles] = useState(3);
+  useEffect(() => {
+    const element = mapStylesRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      setVisibleMapStyles(Math.min(MAP_STYLES.length, Math.max(3, Math.floor((entry.contentRect.width + 8) / 98))));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [section]);
   useEffect(() => {
     if (!landmarkEditorRequested || !landmarkSectionRef.current) return;
     landmarkSectionRef.current.open = true;
@@ -129,8 +140,9 @@ export function SettingsPanel({ section = 'all' }: { section?: 'all' | 'map' | '
   const displayedMapStyle = settings.mapStyle === 'outdoor' ? 'topo' : settings.mapStyle;
   const [mapStyleWindow, setMapStyleWindow] = useState(() => ({ style: displayedMapStyle, start: Math.max(0, MAP_STYLES.findIndex(style => style.id === displayedMapStyle) - 2) }));
   const selectedStyleIndex = MAP_STYLES.findIndex(style => style.id === displayedMapStyle);
-  const mapStyleStart = mapStyleWindow.style === displayedMapStyle || selectedStyleIndex < 0 ? mapStyleWindow.start
-    : selectedStyleIndex < mapStyleWindow.start ? selectedStyleIndex : selectedStyleIndex >= mapStyleWindow.start + 3 ? selectedStyleIndex - 2 : mapStyleWindow.start;
+  const requestedMapStyleStart = mapStyleWindow.style === displayedMapStyle || selectedStyleIndex < 0 ? mapStyleWindow.start
+    : selectedStyleIndex < mapStyleWindow.start ? selectedStyleIndex : selectedStyleIndex >= mapStyleWindow.start + visibleMapStyles ? selectedStyleIndex - visibleMapStyles + 1 : mapStyleWindow.start;
+  const mapStyleStart = Math.min(requestedMapStyleStart, Math.max(0, MAP_STYLES.length - visibleMapStyles));
   const cameraSettings = useAppStore((state) => state.cameraSettings);
   const setSettings = useAppStore((state) => state.setSettings);
   const setCameraSettings = useAppStore((state) => state.setCameraSettings);
@@ -240,7 +252,7 @@ export function SettingsPanel({ section = 'all' }: { section?: 'all' | 'map' | '
           {CAMERA_MODES.map((mode) => {
             const Icon = mode.id === 'overview' ? MapIcon : mode.id === 'follow' ? LocateFixed : mode.id === 'follow-behind' ? Navigation2 : Navigation;
             return <button key={mode.id} type="button" onClick={() => selectCameraMode(mode.id)} aria-pressed={displayedCameraMode === mode.id}
-              className={`min-w-0 flex-[0_0_46%] snap-start rounded-lg border-2 p-1.5 text-left text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)] ${displayedCameraMode === mode.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
+              className={`flex min-w-0 flex-[0_0_min(132px,46%)] flex-col justify-start snap-start rounded-lg border-2 p-1.5 text-left text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)] ${displayedCameraMode === mode.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
               <span className="relative flex h-14 items-center justify-center overflow-hidden rounded bg-[var(--evergreen)]/10">
                 <img src="/media/images/map-previews/topo.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" />
                 <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[var(--canvas)]/95 text-[var(--trail-orange)] shadow-sm"><Icon className="h-4 w-4" aria-hidden="true" /></span>
@@ -334,17 +346,17 @@ export function SettingsPanel({ section = 'all' }: { section?: 'all' | 'map' | '
           <div className="flex items-center gap-1">
             <button type="button" aria-label={t('settings.previousMapStyles')} disabled={mapStyleStart === 0} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.max(0, mapStyleStart - 1) })}
               className="flex h-9 w-9 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronLeft className="h-4 w-4" aria-hidden="true" /></button>
-            <button type="button" aria-label={t('settings.nextMapStyles')} disabled={mapStyleStart >= MAP_STYLES.length - 3} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.min(MAP_STYLES.length - 3, mapStyleStart + 1) })}
+            <button type="button" aria-label={t('settings.nextMapStyles')} disabled={mapStyleStart >= MAP_STYLES.length - visibleMapStyles} onClick={() => setMapStyleWindow({ style: displayedMapStyle, start: Math.min(MAP_STYLES.length - visibleMapStyles, mapStyleStart + 1) })}
               className="flex h-9 w-9 items-center justify-center rounded text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5 disabled:opacity-25 focus-visible:outline-2 focus-visible:outline-[var(--trail-orange)]"><ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
           </div>
         </div>
-        <div className="overflow-hidden">
+        <div ref={mapStylesRef} className="overflow-hidden">
           <div className="flex gap-2 transition-transform duration-300 ease-out motion-reduce:transition-none"
-            style={{ transform: `translateX(calc(-${mapStyleStart * 100 / 3}% - ${mapStyleStart / 6}rem))` }}>
+            style={{ transform: `translateX(calc(-${mapStyleStart} * (min(90px, (100% - 1rem) / 3) + 0.5rem)))` }}>
             {MAP_STYLES.map((style, index) => {
-              const visible = index >= mapStyleStart && index < mapStyleStart + 3;
+              const visible = index >= mapStyleStart && index < mapStyleStart + visibleMapStyles;
               return <button key={style.id} type="button" onClick={() => selectMapStyle(style.id)} aria-pressed={displayedMapStyle === style.id}
-                aria-hidden={!visible || undefined} tabIndex={visible ? 0 : -1} style={{ flex: '0 0 calc((100% - 1rem) / 3)' }}
+                aria-hidden={!visible || undefined} tabIndex={visible ? 0 : -1} style={{ flex: '0 0 min(90px, calc((100% - 1rem) / 3))' }}
                 className={`min-w-0 rounded-lg border-2 p-1 text-center text-xs font-medium text-[var(--evergreen)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--trail-orange)] ${displayedMapStyle === style.id ? 'border-[var(--trail-orange)] bg-[var(--trail-orange-15)]' : 'border-[var(--evergreen)]/20 hover:border-[var(--trail-orange)]/50'}`}>
                 <img src={`/media/images/map-previews/${style.id === 'satellite' || style.id === 'esri-clarity' || style.id === 'wayback' ? 'satellite.jpg' : style.id === 'mapbox-streets' ? 'street.png' : `${style.id}.png`}`} alt="" className="h-14 w-full rounded object-cover" />
                 <span className="block py-1 break-words">{t(style.nameKey)}</span>

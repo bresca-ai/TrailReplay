@@ -5,8 +5,6 @@ import { Sidebar } from './Sidebar';
 import { MenuDesignContext } from './menuDesign';
 
 vi.mock('./SidebarPanelContent', () => ({ SidebarPanelContent: () => <div>Panel content</div> }));
-const resize = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
-vi.mock('./useRailMapResize', () => ({ useRailMapResize: () => resize }));
 
 beforeEach(() => { useAppStore.getState().reset(); useAppStore.getState().setSettings({ language: 'en' }); });
 afterEach(cleanup);
@@ -42,19 +40,6 @@ it('clears the selected rail icon while the panel is closed and reopens it on se
   expect(within(navigation).getByRole('button', { name: 'Camera' })).toHaveAttribute('aria-current', 'page');
 });
 
-it('starts and stops map resizing for native width transition events', () => {
-  render(<Sidebar />);
-  const navigation = screen.getByRole('navigation', { name: 'Sections' });
-  const start = new Event('transitionstart', { bubbles: true });
-  Object.defineProperty(start, 'propertyName', { value: 'width' });
-  const end = new Event('transitionend', { bubbles: true });
-  Object.defineProperty(end, 'propertyName', { value: 'width' });
-  fireEvent(navigation, start);
-  expect(resize.start).toHaveBeenCalled();
-  fireEvent(navigation, end);
-  expect(resize.stop).toHaveBeenCalled();
-});
-
 it('switches layouts without remounting the current panel', () => {
   const view = render(<MenuDesignContext.Provider value="new"><Sidebar /></MenuDesignContext.Provider>);
   const panel = screen.getByText('Panel content');
@@ -62,4 +47,33 @@ it('switches layouts without remounting the current panel', () => {
   expect(screen.getByText('Panel content')).toBe(panel);
   expect(screen.getByRole('button', { name: 'Map & Camera' })).toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: 'Sections', hidden: true })).not.toHaveClass('lg:flex');
+});
+
+ it('opens, switches and closes the mobile panel from its icon bar', () => {
+  render(<Sidebar />);
+  const bar = screen.getByRole('group', { name: 'Sections' });
+  act(() => useAppStore.getState().setSidebarOpen(false));
+  fireEvent.click(within(bar).getByRole('button', { name: 'Camera' }));
+  expect(useAppStore.getState()).toMatchObject({ isSidebarOpen: true, activePanel: 'camera' });
+  expect(within(bar).getByRole('button', { name: 'Camera' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(within(bar).getByRole('button', { name: 'Map' }));
+  expect(useAppStore.getState()).toMatchObject({ isSidebarOpen: true, activePanel: 'settings' });
+  fireEvent.click(within(bar).getByRole('button', { name: 'Map' }));
+  expect(useAppStore.getState().isSidebarOpen).toBe(false);
+});
+
+it('resizes the desktop panel within bounds and remembers its width', () => {
+  localStorage.removeItem('trailreplay-sidebar-width');
+  useAppStore.getState().setSidebarOpen(true);
+  const view = render(<Sidebar />);
+  const handle = screen.getByRole('separator', { name: 'Resize menu' });
+  expect(handle).toHaveAttribute('aria-valuenow', '320');
+  fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+  expect(handle).toHaveAttribute('aria-valuenow', '320');
+  fireEvent.keyDown(handle, { key: 'End' });
+  expect(handle).toHaveAttribute('aria-valuenow', '480');
+  view.unmount();
+  render(<Sidebar />);
+  expect(screen.getByRole('separator', { name: 'Resize menu' })).toHaveAttribute('aria-valuenow', '480');
+  localStorage.removeItem('trailreplay-sidebar-width');
 });
