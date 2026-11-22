@@ -185,7 +185,8 @@ export function renderActivityIcon(
   const icon = getActivityIconOption(value);
 
   if (icon?.kind === '3d') {
-    const src = (MODEL_3D_ICONS as readonly string[]).includes(value)
+    // Models without a bundled snapshot (the kayak) render their live model instead.
+    const src = (MODEL_3D_ICONS as readonly string[]).includes(value) && value !== '3d-kayak'
       ? `/media/images/3d-marker-previews/${value.slice(3)}.png?v=3` : undefined;
     return createElement(Marker3DThumbnail, { value, src, color, size, className });
   }
