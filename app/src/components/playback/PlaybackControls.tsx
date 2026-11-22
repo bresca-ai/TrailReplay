@@ -17,7 +17,7 @@ import { usePlayPauseShortcut } from '@/hooks/usePlayPauseShortcut';
 
 const SPEED_OPTIONS = [0.25, 0.5, 1, 2, 4, 8];
 
-export function PlaybackControls() {
+export function PlaybackControls({ compactMobile = false }: { compactMobile?: boolean }) {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const playback = useAppStore((state) => state.playback);
@@ -64,7 +64,7 @@ export function PlaybackControls() {
   return (
     <div className="h-full flex items-center gap-2 sm:gap-4 px-2 sm:px-4 min-w-0">
       {/* Time Display */}
-      <div className={`flex-shrink-0 text-sm font-mono text-[var(--evergreen)] ${isMobile ? 'hidden' : ''}`}>
+      <div className={`flex-shrink-0 text-sm font-mono text-[var(--evergreen)] ${isMobile ? 'hidden' : ''} ${compactMobile ? 'hidden lg:block' : ''}`}>
         <span className="font-bold">{formatDuration(playback.currentTime / 1000 / playback.speed)}</span>
         <span className="text-[var(--evergreen-60)] mx-1">/</span>
         <span className="text-[var(--evergreen-60)]">{formatDuration(playback.totalDuration / 1000 / playback.speed)}</span>
@@ -85,7 +85,7 @@ export function PlaybackControls() {
       {/* Controls */}
       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {/* Speed Selector */}
-        <div className={`items-center gap-1 bg-[var(--evergreen)]/10 rounded-lg p-1 ${isMobile ? 'hidden' : 'flex'}`}>
+        <div className={`items-center gap-1 bg-[var(--evergreen)]/10 rounded-lg p-1 ${isMobile ? 'hidden' : 'flex'} ${compactMobile ? '!hidden lg:!flex' : ''}`}>
           {SPEED_OPTIONS.map((speed) => (
             <button
               key={speed}
@@ -120,7 +120,7 @@ export function PlaybackControls() {
         {/* Restart */}
         <button
           onClick={restart}
-          className={`p-1.5 sm:p-2 hover:bg-[var(--evergreen)]/10 rounded-lg transition-colors ${isMobile ? 'hidden' : 'inline-flex'}`}
+          className={`p-1.5 sm:p-2 hover:bg-[var(--evergreen)]/10 rounded-lg transition-colors ${isMobile ? 'hidden' : 'inline-flex'} ${compactMobile ? '!hidden lg:!inline-flex' : ''}`}
           aria-label={t('playback.restart')}
           title={t('playback.restart')}
         >
@@ -130,7 +130,7 @@ export function PlaybackControls() {
         {/* Play/Pause */}
         <button
           onClick={() => togglePlayback('play_button')}
-          className="tr-playback-btn shrink-0"
+          className={`tr-playback-btn shrink-0 ${compactMobile ? '!h-9 !w-9 lg:!h-14 lg:!w-14' : ''}`}
           style={isMobile ? { width: '48px', height: '48px' } : undefined}
           aria-label={playback.isPlaying ? t('playback.pause') : t('playback.play')}
           title={playback.isPlaying ? t('playback.pause') : t('playback.play')}

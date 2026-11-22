@@ -28,6 +28,7 @@ export const en = {
   },
   menuFeedback: { title: "Help shape the menu", description: "Try both menu layouts, then tell us which you prefer.", tryPrevious: "Try previous menu", tryNew: "Try new menu", question: "Which do you prefer?", new: "New menu", previous: "Previous menu", oneVote: "One vote per browser; your choice cannot be changed.", dismiss: "Dismiss menu feedback" },
   sidebar: {
+    resizePanel: 'Resize menu',
     navigation: "Sections",
     panelLoadError: 'This panel could not be loaded.', panelLoadErrorHelp: 'Your work is still open. Save your project from the Export tab before reloading, then reopen it.', reloadPage: 'Reload page',
     tabs: { map: "Map", camera: "Camera",

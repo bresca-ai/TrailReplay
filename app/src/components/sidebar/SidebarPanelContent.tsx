@@ -1,11 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppState } from '@/store/storeTypes';
 import { WorkflowGuide } from './WorkflowGuide';
 import { PanelErrorBoundary } from './PanelErrorBoundary';
-import { useDesktopSidebar } from './useDesktopSidebar';
+import { MenuDesignContext } from './menuDesign';
 
 const TracksPanel = lazy(() => import('./TracksPanel').then((module) => ({ default: module.TracksPanel })));
 const JourneyPanel = lazy(() => import('./JourneyPanel').then((module) => ({ default: module.JourneyPanel })));
@@ -43,7 +43,7 @@ const panelRegistry: Record<
 export function SidebarPanelContent() {
   const { t } = useI18n();
   const activePanel = useAppStore((state) => state.activePanel);
-  const desktop = useDesktopSidebar();
+  const desktop = useContext(MenuDesignContext) === 'new';
   const renderPanel = panelRegistry[activePanel];
 
   return (
