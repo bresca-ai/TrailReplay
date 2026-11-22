@@ -632,7 +632,7 @@ function App() {
         />
         
         {/* Main Content */}
-        <main className="flex-1 flex overflow-hidden">
+        <main className={`relative flex-1 flex overflow-hidden ${menuDesign === 'new' && !isExporting ? 'pb-[calc(3rem+env(safe-area-inset-bottom))] lg:pb-0' : ''}`}>
           {/* Sidebar */}
           <ExportAwareSidebar open={showSidebar} exporting={isExporting}>
             <Suspense fallback={<SidebarFallback />}>
@@ -641,7 +641,7 @@ function App() {
           </ExportAwareSidebar>
           
           {/* Map Area */}
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col relative">
+          <div className={`flex-1 min-w-0 min-h-0 flex flex-col ${menuDesign === 'new' ? 'lg:relative' : 'relative'}`}>
             {/* Map Container */}
             <div
               id="map-capture-container"
@@ -850,9 +850,9 @@ function App() {
             
             {/* Playback Controls */}
             {hasTracks && (
-              <div className="shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]">
+              <div className={menuDesign === 'new' ? `absolute inset-x-2 z-40 rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)] shadow-lg transition-[bottom] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:static lg:inset-auto lg:shrink-0 lg:rounded-none lg:border-0 lg:border-t-2 lg:border-[var(--evergreen)] lg:shadow-none ${showSidebar ? 'bottom-[calc(3.5rem+env(safe-area-inset-bottom)+min(55vh,32rem))]' : 'bottom-[calc(3.5rem+env(safe-area-inset-bottom))]'}` : 'shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]'}>
                 {activePanel === 'pictures' && showSidebar && !isExporting && <MediaTimeline />}
-                <div className="h-20"><PlaybackControls /></div>
+                <div className={menuDesign === 'new' ? 'h-12 lg:h-20' : 'h-20'}><PlaybackControls compactMobile={menuDesign === 'new'} /></div>
               </div>
             )}
           </div>

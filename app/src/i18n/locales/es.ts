@@ -26,6 +26,7 @@ export const es = {
   },
   menuFeedback: { title: "Ayúdanos a mejorar el menú", description: "Prueba los dos menús y dinos cuál prefieres.", tryPrevious: "Probar menú anterior", tryNew: "Probar menú nuevo", question: "¿Cuál prefieres?", new: "Menú nuevo", previous: "Menú anterior", oneVote: "Un voto por navegador; no se puede cambiar.", dismiss: "Cerrar la pregunta sobre el menú" },
   sidebar: {
+    resizePanel: 'Cambiar tamaño del menú',
     navigation: "Secciones",
     panelLoadError: 'No se ha podido cargar este panel.', panelLoadErrorHelp: 'Tu trabajo sigue abierto. Guarda el proyecto desde la pestaña Crear antes de recargar y vuelve a abrirlo.', reloadPage: 'Recargar página',
     tabs: { map: "Mapa", camera: "Cámara",

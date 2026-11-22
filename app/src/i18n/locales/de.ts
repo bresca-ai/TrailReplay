@@ -26,6 +26,7 @@ export const de = {
   },
   menuFeedback: { title: "Hilf uns, das Menü zu verbessern", description: "Probiere beide Menüs aus und sag uns, welches dir besser gefällt.", tryPrevious: "Altes Menü testen", tryNew: "Neues Menü testen", question: "Welches gefällt dir besser?", new: "Neues Menü", previous: "Altes Menü", oneVote: "Eine Stimme pro Browser; sie kann nicht geändert werden.", dismiss: "Menüfrage schließen" },
   sidebar: {
+    resizePanel: 'Menügröße ändern',
     navigation: "Bereiche",
     panelLoadError: 'Dieser Bereich konnte nicht geladen werden.', panelLoadErrorHelp: 'Deine Arbeit ist noch geöffnet. Speichere das Projekt vor dem Neuladen im Export-Tab und öffne es danach erneut.', reloadPage: 'Seite neu laden',
     tabs: { map: "Karte", camera: "Kamera",

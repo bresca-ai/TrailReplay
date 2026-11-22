@@ -48,3 +48,32 @@ it('switches layouts without remounting the current panel', () => {
   expect(screen.getByRole('button', { name: 'Map & Camera' })).toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: 'Sections', hidden: true })).not.toHaveClass('lg:flex');
 });
+
+ it('opens, switches and closes the mobile panel from its icon bar', () => {
+  render(<Sidebar />);
+  const bar = screen.getByRole('group', { name: 'Sections' });
+  act(() => useAppStore.getState().setSidebarOpen(false));
+  fireEvent.click(within(bar).getByRole('button', { name: 'Camera' }));
+  expect(useAppStore.getState()).toMatchObject({ isSidebarOpen: true, activePanel: 'camera' });
+  expect(within(bar).getByRole('button', { name: 'Camera' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(within(bar).getByRole('button', { name: 'Map' }));
+  expect(useAppStore.getState()).toMatchObject({ isSidebarOpen: true, activePanel: 'settings' });
+  fireEvent.click(within(bar).getByRole('button', { name: 'Map' }));
+  expect(useAppStore.getState().isSidebarOpen).toBe(false);
+});
+
+it('resizes the desktop panel within bounds and remembers its width', () => {
+  localStorage.removeItem('trailreplay-sidebar-width');
+  useAppStore.getState().setSidebarOpen(true);
+  const view = render(<Sidebar />);
+  const handle = screen.getByRole('separator', { name: 'Resize menu' });
+  expect(handle).toHaveAttribute('aria-valuenow', '320');
+  fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+  expect(handle).toHaveAttribute('aria-valuenow', '320');
+  fireEvent.keyDown(handle, { key: 'End' });
+  expect(handle).toHaveAttribute('aria-valuenow', '480');
+  view.unmount();
+  render(<Sidebar />);
+  expect(screen.getByRole('separator', { name: 'Resize menu' })).toHaveAttribute('aria-valuenow', '480');
+  localStorage.removeItem('trailreplay-sidebar-width');
+});
