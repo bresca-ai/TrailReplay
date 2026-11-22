@@ -46,6 +46,9 @@ export function useMapInitialization({
       bearing: 0,
       localIdeographFontFamily: TRADITIONAL_CHINESE_FONT_FAMILY,
       maxPitch: REPLAY_CAMERA_MAX_PITCH,
+      // MapLibre observes container changes and throttles resize/redraw itself,
+      // including while the sidebar or info panel changes width.
+      trackResize: true,
       // Allow a Studio export to render a high-resolution crop on small screens.
       // MapLibre still clamps to the device's actual WebGL limits.
       maxCanvasSize: [8192, 8192],

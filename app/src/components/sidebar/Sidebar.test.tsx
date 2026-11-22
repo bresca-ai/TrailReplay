@@ -5,8 +5,6 @@ import { Sidebar } from './Sidebar';
 import { MenuDesignContext } from './menuDesign';
 
 vi.mock('./SidebarPanelContent', () => ({ SidebarPanelContent: () => <div>Panel content</div> }));
-const resize = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
-vi.mock('./useRailMapResize', () => ({ useRailMapResize: () => resize }));
 
 beforeEach(() => { useAppStore.getState().reset(); useAppStore.getState().setSettings({ language: 'en' }); });
 afterEach(cleanup);
@@ -40,19 +38,6 @@ it('clears the selected rail icon while the panel is closed and reopens it on se
   fireEvent.click(within(navigation).getByRole('button', { name: 'Camera' }));
   expect(useAppStore.getState().isSidebarOpen).toBe(true);
   expect(within(navigation).getByRole('button', { name: 'Camera' })).toHaveAttribute('aria-current', 'page');
-});
-
-it('starts and stops map resizing for native width transition events', () => {
-  render(<Sidebar />);
-  const navigation = screen.getByRole('navigation', { name: 'Sections' });
-  const start = new Event('transitionstart', { bubbles: true });
-  Object.defineProperty(start, 'propertyName', { value: 'width' });
-  const end = new Event('transitionend', { bubbles: true });
-  Object.defineProperty(end, 'propertyName', { value: 'width' });
-  fireEvent(navigation, start);
-  expect(resize.start).toHaveBeenCalled();
-  fireEvent(navigation, end);
-  expect(resize.stop).toHaveBeenCalled();
 });
 
 it('switches layouts without remounting the current panel', () => {

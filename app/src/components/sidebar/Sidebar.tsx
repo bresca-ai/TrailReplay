@@ -2,8 +2,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { SidebarPanelContent } from './SidebarPanelContent';
 import { useI18n } from '@/i18n/useI18n';
 import { languageLabels } from '@/i18n/translations';
-import { useRailMapResize } from './useRailMapResize';
-import { useContext, useRef, type TransitionEvent } from 'react';
+import { useContext } from 'react';
 import { MenuDesignContext } from './menuDesign';
 import type { UnitSystem } from '@/types';
 import {
@@ -69,19 +68,7 @@ export function Sidebar() {
   const setPanelOpen = useAppStore((state) => state.setSidebarOpen);
   const isExporting = useAppStore((state) => state.isExporting);
   const { t } = useI18n();
-  const railResize = useRailMapResize();
   const legacy = useContext(MenuDesignContext) === 'previous';
-  const movingElements = useRef(new Set<HTMLElement>());
-  const startResize = (event: TransitionEvent<HTMLElement>) => {
-    if (event.target !== event.currentTarget || event.nativeEvent.propertyName !== 'width') return;
-    movingElements.current.add(event.currentTarget);
-    railResize.start();
-  };
-  const stopResize = (event: TransitionEvent<HTMLElement>) => {
-    if (event.target !== event.currentTarget || event.nativeEvent.propertyName !== 'width') return;
-    movingElements.current.delete(event.currentTarget);
-    if (!movingElements.current.size) railResize.stop();
-  };
 
   const tracks = useAppStore((state) => state.tracks);
   const pictures = useAppStore((state) => state.pictures);
@@ -101,7 +88,6 @@ export function Sidebar() {
   return (
     <div className="relative flex h-full min-h-0 bg-[var(--canvas)] lg:w-max">
       <nav aria-label={t('sidebar.navigation')}
-        onTransitionStart={startResize} onTransitionEnd={stopResize} onTransitionCancel={stopResize}
         className={`group/nav hidden w-14 shrink-0 flex-col overflow-hidden border-r border-[var(--evergreen)]/15 bg-[var(--evergreen)] pt-3 transition-[width] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${legacy ? '' : 'lg:flex'} ${isExporting ? '' : 'hover:w-44 focus-within:w-44'}`}>
           <div className="flex flex-col gap-1 px-1.5">
             {tabs.map((tab) => {
@@ -125,7 +111,6 @@ export function Sidebar() {
           </div>
       </nav>
       <div
-        onTransitionStart={startResize} onTransitionEnd={stopResize} onTransitionCancel={stopResize}
         className={`min-w-0 flex-1 lg:flex-none lg:overflow-hidden lg:transition-[width] lg:duration-[400ms] lg:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${panelOpen || legacy ? 'lg:w-80' : 'lg:w-0'}`}>
       <div className="flex h-full w-full min-w-0 flex-col lg:w-80" inert={!panelOpen}>
       {/* Tabs */}
