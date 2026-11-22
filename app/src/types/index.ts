@@ -64,6 +64,10 @@ export interface TransportSegment {
   /** Legacy settings from earlier drafts, retained when reopening projects. */
   cameraZoomOut?: number;
   cameraZoomIn?: number;
+  /** Skip the 3D marker get-off / get-on animation into this segment. */
+  skipMarkerTransition?: boolean;
+  /** Length of that animation in ms; defaults to the clips' natural length. */
+  markerTransitionDuration?: number;
 }
 
 export interface TrackSegment {
@@ -71,6 +75,10 @@ export interface TrackSegment {
   type: 'track';
   trackId: string;
   duration: number;
+  /** Skip the 3D marker get-off / get-on animation into this segment. */
+  skipMarkerTransition?: boolean;
+  /** Length of that animation in ms; defaults to the clips' natural length. */
+  markerTransitionDuration?: number;
 }
 
 export type JourneySegment = TrackSegment | TransportSegment;

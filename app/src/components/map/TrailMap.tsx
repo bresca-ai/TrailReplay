@@ -41,6 +41,7 @@ import { useRecordedElevationLayer } from './hooks/useRecordedElevationLayer';
 import { useTrailLayerData } from './hooks/useTrailLayerData';
 import { useTrailPlaybackCamera } from './hooks/useTrailPlaybackCamera';
 import { useRunner3D } from './hooks/useRunner3D';
+import { computeMarkerTransitions } from '@/utils/markerTransitions';
 import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
 import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
@@ -413,9 +414,14 @@ export function TrailMap(_props: TrailMapProps) {
     },
   });
 
+  const markerTransitions = useMemo(() => computeMarkerTransitions({
+    segments: annotationJourneySegments, tracks, routeTimingMode: playback.routeTimingMode,
+    markerType: trailStyle.markerType, comparisonActive: comparisonTracks.some((track) => track.visible),
+  }).filter((transition) => !transition.skipped), [annotationJourneySegments, tracks, playback.routeTimingMode, trailStyle.markerType, comparisonTracks]);
   useRunner3D({ mapRef: map, markerRef, icon: comparisonActive || (!isInTransport && trailStyle.markerType !== 'icon') ? '' : currentIcon,
     coordinates: cameraPathCoordinates, completedCoordinates, progress: routeComparisonActive ? routeProgress : playback.progress,
-    timeMs: playback.currentTime, color: resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, currentTrackColor), isExporting });
+    timeMs: playback.currentTime, color: resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, currentTrackColor), isExporting,
+    transitions: markerTransitions, totalDuration: playback.totalDuration });
 
   useRouteComparisonCamera({
     enabled: comparisonMode === 'route' && playback.progress > 0 && (animationPhase === 'playing' || animationPhase === 'idle'),

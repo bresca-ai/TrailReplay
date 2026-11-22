@@ -1,3 +1,4 @@
+import { markerTransitionHoldsForState } from '@/utils/markerTransitions';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { applyBasemapVisibility } from '@/components/map/basemapVisibility';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
@@ -250,7 +251,7 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
     const store = useAppStore.getState();
     const introDuration = getIntroDuration(store.settings.locationChapters);
     const routeDurationMs = store.playback.totalDuration;
-    const annotations = resolveSharedRouteMoments(store.textAnnotations, store.journeySegments, store.tracks, store.playback.routeTimingMode);
+    const annotations = [...resolveSharedRouteMoments(store.textAnnotations, store.journeySegments, store.tracks, store.playback.routeTimingMode), ...markerTransitionHoldsForState(store)];
     const outputDurationMs = playbackTimeForRoute(routeDurationMs, routeDurationMs, annotations, store.settings.annotationHoldDuration ?? 5000);
     // Preview speed only affects interactive playback. Export always preserves
     // the configured journey duration on the encoded timeline.

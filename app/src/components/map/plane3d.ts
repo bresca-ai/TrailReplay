@@ -4,7 +4,7 @@
 // Adapted from the user's procedural 3D model.
 import * as THREE from 'three';
 
-export function createRunnerRenderer(canvas: HTMLCanvasElement) {
+function buildModel(canvas: HTMLCanvasElement | null) {
 
 
 const INK = 0x1B2A20, ORANGE = 0xC1652F, PAPER = 0xffffff, CREAM = 0xF8F6F0, CANVAS = 0xF8F6F0;
@@ -254,6 +254,14 @@ function makeRunner() {
   const f1 = arc(0.3, 0.9, 0.018, M.ink); f1.position.y = 0.24; ws.add(f1);
   // the pilot: leather flying helmet, goggles, scarf
   const pl = pilot(body, { x: -0.18, y: 0.1, s: 0.66, suit: LEATHER, glove: M.ink, hat: 'aviator' });
+  // cockpit side hatch, hinged at the bottom; only shown in the marker transition (see `fx`)
+  const hatches = [1, -1].map((s) => {
+    const h = new THREE.Group(); h.position.set(-0.18, 0.04, 0.42 * s); h.visible = false; body.add(h);
+    const p = box(0.6, 0.32, 0.035, M.orange, OUT); p.position.y = 0.16; h.add(p);
+    const lining = box(0.54, 0.27, 0.02, M.ink, null); lining.position.set(0, 0.16, -0.025 * s); h.add(lining);
+    const hd = box(0.12, 0.03, 0.03, M.paper, null); hd.position.set(0.12, 0.25, 0.025 * s); h.add(hd);
+    return { s, h };
+  });
   // low wing: rectangular planform, a touch of dihedral, track-colour tips
   const af = (c, t) => shapeOf((s) => { s.moveTo(0.5 * c, 0); s.quadraticCurveTo(0.55 * c, t, 0.1 * c, t); s.quadraticCurveTo(-0.3 * c, t * 0.9, -0.5 * c, 0.01); s.quadraticCurveTo(0, -t * 0.25, 0.5 * c, 0); });
   for (const s of [1, -1]) {
@@ -293,8 +301,22 @@ function makeRunner() {
     waveArm(pl.arms[0], t, 5, rest); rest(pl.arms[1]);
     const blink = (t % 3.84) > 3.66; for (const e of pl.eyes) e.scale.y = blink ? 0.15 : 1;
   }
-  return { root, pose };
+  /** Marker transition only: the hatch on the boarding side, 0 shut … 1 folded down open. */
+  function fx({ door = 0, side = 1 }) {
+    for (const H of hatches) { H.h.visible = H.s === side && door > 0.02; H.h.rotation.x = H.s * (-0.38 + 2.2 * door); }
+  }
+  return { root, pose, crew: [pl.P], fx };
 }
+
+
+
+
+  // Scene-only mode: the marker transition renders this model inside its own stage.
+
+
+
+
+  if (!canvas) return { model: makeRunner(), kit: { part, fill, M, OUT, OUT_T, BOIL } };
 
 
 
@@ -334,4 +356,16 @@ function makeRunner() {
     plateTex.dispose(); stripeTex.dispose(); renderer.dispose();
   }
   return { render, dispose };
+}
+
+export function createRunnerRenderer(canvas: HTMLCanvasElement): {
+  render: (timeMs: number, heading: number, mapBearing: number, pitch: number, color?: string, preview?: boolean) => void;
+  dispose: () => void;
+} {
+  return buildModel(canvas);
+}
+
+/** The model on its own (no renderer), for the marker transition stage. */
+export function createModelScene() {
+  return buildModel(null);
 }

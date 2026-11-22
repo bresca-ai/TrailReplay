@@ -661,6 +661,7 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
     emptyTitle: 'Keine Segmente in der Reise',
     emptySubtitle: 'Routen und Übergänge hinzufügen',
     cameraSettings: 'Kameraeinstellungen', cameraTransitionZoom: 'Übergangszoom', cameraZoomWide: 'Weiter', cameraZoomClose: 'Näher', cameraTransitionPitch: 'Übergangsneigung', cameraPitchTopDown: 'Von oben', cameraPitchTilted: 'Geneigt',
+    markerTransition: 'Animation', markerTransitionDuration: 'Dauer der Animation in Sekunden',
     addTransport: 'Übergang hinzufügen',
     runsSimultaneously: 'Läuft gleichzeitig',
     runsSimultaneouslyHint: 'Diese Tracks sind gleichzeitig mit Deiner Hauptreise von Anfang bis Ende animiert.',

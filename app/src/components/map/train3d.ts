@@ -4,7 +4,7 @@
 // Adapted from the user's procedural 3D model.
 import * as THREE from 'three';
 
-export function createRunnerRenderer(canvas: HTMLCanvasElement) {
+function buildModel(canvas: HTMLCanvasElement | null) {
 
 
 const INK = 0x1B2A20, ORANGE = 0xC1652F, PAPER = 0xffffff, CREAM = 0xF8F6F0, CANVAS = 0xF8F6F0;
@@ -319,8 +319,18 @@ function makeRunner() {
     waveArm(en.arms[0], t + 2, 5, rest); rest(en.arms[1]);
     const blink = (t % 3.84) > 3.66; for (const e of en.eyes) e.scale.y = blink ? 0.15 : 1;
   }
-  return { root, pose };
+  return { root, pose, crew: [en.P] };
 }
+
+
+
+
+  // Scene-only mode: the marker transition renders this model inside its own stage.
+
+
+
+
+  if (!canvas) return { model: makeRunner(), kit: { part, fill, M, OUT, OUT_T, BOIL } };
 
 
 
@@ -360,4 +370,16 @@ function makeRunner() {
     plateTex.dispose(); stripeTex.dispose(); renderer.dispose();
   }
   return { render, dispose };
+}
+
+export function createRunnerRenderer(canvas: HTMLCanvasElement): {
+  render: (timeMs: number, heading: number, mapBearing: number, pitch: number, color?: string, preview?: boolean) => void;
+  dispose: () => void;
+} {
+  return buildModel(canvas);
+}
+
+/** The model on its own (no renderer), for the marker transition stage. */
+export function createModelScene() {
+  return buildModel(null);
 }

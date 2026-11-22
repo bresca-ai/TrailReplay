@@ -661,6 +661,7 @@ annotationSize: 'Taille des annotations', annotationMarkerSize: 'Taille du marqu
     emptyTitle: 'Aucun segment dans le trajet',
     emptySubtitle: 'Ajouter des parcours et des transitions',
     cameraSettings: 'Réglages de caméra', cameraTransitionZoom: 'Zoom de transition', cameraZoomWide: 'Plus large', cameraZoomClose: 'Plus près', cameraTransitionPitch: 'Inclinaison de transition', cameraPitchTopDown: 'Vue du dessus', cameraPitchTilted: 'Incliné',
+    markerTransition: 'Animation', markerTransitionDuration: 'Durée de l\'animation en secondes',
     addTransport: 'Ajouter une transition',
     runsSimultaneously: 'Exécuté simultanément',
     runsSimultaneouslyHint: 'Ces parcours sont animés en même temps que votre trajet principal, du début à la fin.',

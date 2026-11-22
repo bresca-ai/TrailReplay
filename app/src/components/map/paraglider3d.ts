@@ -4,7 +4,7 @@
 // Adapted from the user's procedural 3D model.
 import * as THREE from 'three';
 
-export function createRunnerRenderer(canvas: HTMLCanvasElement) {
+function buildModel(canvas: HTMLCanvasElement | null) {
 
 
 const INK = 0x1B2A20, ORANGE = 0xC1652F, PAPER = 0xffffff, CREAM = 0xF8F6F0, CANVAS = 0xF8F6F0;
@@ -96,7 +96,11 @@ function makeRunner() {
   const KIT = M.orange, SUIT = M.green, SKIN = M.paper;
 
   /* ---------------- wing: arched canopy of cells, alternating track colour and white, open cell mouths ---------------- */
-  const wing = new THREE.Group(); glider.add(wing);
+  // canopy = wing + lines, so the marker transition can lay it on the ground and inflate it (see `fx`)
+  const RISER_Y = 1.2 + 1.3 * 1.6;
+  const canopyPivot = new THREE.Group(); canopyPivot.position.set(0.13, RISER_Y, 0); glider.add(canopyPivot);
+  const canopy = new THREE.Group(); canopy.position.set(-0.13, -RISER_Y, 0); canopyPivot.add(canopy);
+  const wing = new THREE.Group(); canopy.add(wing);
   const N = 15, R = 3.4, CY = 3.5, A0 = THREE.MathUtils.degToRad(68);
   const cells = [], attach = [];
   for (let i = 0; i < N; i++) {
@@ -178,7 +182,7 @@ function makeRunner() {
   }
 
   /* ---------------- suspension lines: A and C lines to the risers, brake lines to the hands ---------------- */
-  const LINES = new THREE.Group(); glider.add(LINES);
+  const LINES = new THREE.Group(); canopy.add(LINES);
   for (const P of attach) {
     const rz = P.th > 0 ? RISER[0] : RISER[1];
     LINES.add(line(P.a, rz)); LINES.add(line(P.b, rz.clone().add(V(-0.04, 0, 0))));
@@ -203,8 +207,24 @@ function makeRunner() {
     for (const m of brakes) { arms[m.userData.side].hand.getWorldPosition(tmp); glider.worldToLocal(tmp); setLine(m, m.userData.te, tmp); }
     const blink = (t % 3.84) > 3.66; for (const e of eyes) e.scale.y = blink ? 0.15 : 1;
   }
-  return { root, pose };
+  /** Marker transition only: 0 the wing lies deflated on the ground behind `x`, 1 flying overhead (the normal look). */
+  function fx({ inflate = 1, inflateX = 0 }) {
+    const k = Math.max(0, Math.min(1, inflate)), q = 1 - k;
+    canopyPivot.position.set(0.13 + (inflateX - 0.13) * q, RISER_Y + (0.75 - RISER_Y) * q, 0);
+    canopyPivot.rotation.z = 1.5 * q;
+    for (const C of cells) C.cell.scale.set(1 - 0.45 * q, C.cell.scale.y * (1 - 0.7 * q), 1);
+    for (const m of brakes) m.visible = k > 0.98;
+  }
+  return { root, pose, crew: [pilot], fx };
 }
+
+
+
+  // Scene-only mode: the marker transition renders this model inside its own stage.
+
+
+
+  if (!canvas) return { model: makeRunner(), kit: { part, fill, M, OUT, OUT_T, BOIL } };
 
 
 
@@ -243,4 +263,16 @@ function makeRunner() {
     bibTex.dispose(); renderer.dispose();
   }
   return { render, dispose };
+}
+
+export function createRunnerRenderer(canvas: HTMLCanvasElement): {
+  render: (timeMs: number, heading: number, mapBearing: number, pitch: number, color?: string, preview?: boolean) => void;
+  dispose: () => void;
+} {
+  return buildModel(canvas);
+}
+
+/** The model on its own (no renderer), for the marker transition stage. */
+export function createModelScene() {
+  return buildModel(null);
 }
