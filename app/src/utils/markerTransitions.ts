@@ -18,7 +18,7 @@ export const MARKER_TRANSITION_GROUPS: Record<string, MarkerTransitionGroup> = {
   '3d-road-bike': 'ride', '3d-gravel-bike': 'ride', '3d-mountain-bike': 'ride',
   '3d-motorbike': 'ride', '3d-race-motorbike': 'ride', '3d-motocross': 'ride',
   '3d-race-car': 'climb', '3d-rally': 'climb', '3d-bus': 'climb', '3d-train': 'climb',
-  '3d-plane': 'climb', '3d-boat': 'climb', '3d-sailboat': 'climb',
+  '3d-plane': 'climb', '3d-boat': 'climb', '3d-sailboat': 'climb', '3d-kayak': 'climb',
   '3d-swimmer': 'swim', '3d-paraglider': 'glide',
 };
 
@@ -31,7 +31,7 @@ const CLIP_SECONDS: Record<string, { enter: number; exit: number }> = {
   '3d-motorbike': { enter: 5.25, exit: 4.65 }, '3d-race-motorbike': { enter: 5.25, exit: 4.65 }, '3d-motocross': { enter: 5.25, exit: 4.65 },
   '3d-race-car': { enter: 3.7, exit: 4.0 }, '3d-rally': { enter: 3.8, exit: 4.15 },
   '3d-bus': { enter: 4.2, exit: 4.35 }, '3d-train': { enter: 4.3, exit: 4.4 }, '3d-plane': { enter: 4.8, exit: 5.15 },
-  '3d-boat': { enter: 4.3, exit: 4.55 }, '3d-sailboat': { enter: 4.3, exit: 4.55 },
+  '3d-boat': { enter: 4.3, exit: 4.55 }, '3d-sailboat': { enter: 4.3, exit: 4.55 }, '3d-kayak': { enter: 4.45, exit: 4.75 },
   '3d-swimmer': { enter: 3.85, exit: 4.25 }, '3d-paraglider': { enter: 4.6, exit: 4.1 },
 };
 

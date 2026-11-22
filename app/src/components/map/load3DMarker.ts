@@ -42,6 +42,7 @@ function importModelModule(icon: string) {
               : icon === '3d-train' ? import('./train3d')
               : icon === '3d-boat' ? import('./boat3d')
               : icon === '3d-sailboat' ? import('./sailboat3d')
+              : icon === '3d-kayak' ? import('./kayak3d')
     : icon === '3d-race-car' ? import('./race-car3d')
       : icon === '3d-rally' ? import('./rally3d') : import('./runner3d'));
 }

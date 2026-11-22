@@ -23,7 +23,7 @@ type ActivityIconOption = {
 const svgIconBasePath = '/media/images/activity-icons';
 
 export const RUNNER_3D_ICON = '3d-runner';
-export const MODEL_3D_ICONS = [RUNNER_3D_ICON, '3d-motorbike', '3d-motocross', '3d-race-motorbike', '3d-paraglider', '3d-bus', '3d-plane', '3d-train', '3d-boat', '3d-sailboat', '3d-race-car', '3d-rally', '3d-road-runner', '3d-trail-runner', '3d-hiker', '3d-swimmer', '3d-road-bike', '3d-gravel-bike', '3d-mountain-bike'] as const;
+export const MODEL_3D_ICONS = [RUNNER_3D_ICON, '3d-motorbike', '3d-motocross', '3d-race-motorbike', '3d-paraglider', '3d-bus', '3d-plane', '3d-train', '3d-boat', '3d-sailboat', '3d-kayak', '3d-race-car', '3d-rally', '3d-road-runner', '3d-trail-runner', '3d-hiker', '3d-swimmer', '3d-road-bike', '3d-gravel-bike', '3d-mountain-bike'] as const;
 export function is3DActivityIcon(value: string): boolean { return value.startsWith(CUSTOM_MODEL_PREFIX) || (MODEL_3D_ICONS as readonly string[]).includes(value); }
 
 export const ACTIVITY_ICONS: ActivityIconOption[] = [
@@ -44,6 +44,7 @@ export const ACTIVITY_ICONS: ActivityIconOption[] = [
   { value: '3d-train', labelKey: 'stats.transportLabels.train', label: 'Train', kind: '3d', content: '/media/images/animated-markers/runner-steady.svg' },
   { value: '3d-boat', labelKey: 'stats.transportLabels.ferry', label: 'Motorboat', kind: '3d', content: '/media/images/animated-markers/runner-steady.svg' },
   { value: '3d-sailboat', labelKey: 'stats.transportLabels.ferry', label: 'Sailboat', kind: '3d', content: '/media/images/animated-markers/runner-steady.svg' },
+  { value: '3d-kayak', labelKey: 'activities.kayak', label: 'Kayak', kind: '3d', content: '/media/images/animated-markers/runner-steady.svg' },
   { value: '3d-race-car', labelKey: 'activities.car', label: 'Race car', kind: '3d', content: '/media/images/animated-markers/race-car-steady.svg' },
   { value: '3d-rally', labelKey: 'activities.car', label: 'Rally car', kind: '3d', content: '/media/images/animated-markers/rally-steady.svg' },
   { value: 'animated-runner-steady', labelKey: 'activities.running', label: 'Runner Steady', kind: 'animated', content: '/media/images/animated-markers/runner-steady.svg' },

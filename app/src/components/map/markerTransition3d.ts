@@ -56,6 +56,8 @@ export const MODEL_STAGING = {
   // boats: along the jetty, a leg over the side, and the boat rocks
   '3d-boat': { group: 'climb', kind: 'boat', noun: 'boat', ...JETTY, floor: 0.76, seat: 'auto' },
   '3d-sailboat': { group: 'climb', kind: 'sailboat', noun: 'sailboat', ...JETTY, floor: 0.7, seat: 'auto' },
+  // kayak: along a low jetty, sit on the edge, slide down into the cockpit, take the paddle
+  '3d-kayak': { group: 'climb', kind: 'kayak', noun: 'kayak', into: 'sit', prop: 'jetty', seat: 'auto', seatPose: { lean: 0, L: [{ f: 1.5, a: 0.1, k: 0.12, n: 0.3 }, { f: 1.5, a: 0.1, k: 0.12, n: 0.3 }], A: [{ f: 0.9, a: 0.25, e: 0.9 }, { f: 0.9, a: 0.25, e: 0.9 }] } },
   '3d-swimmer': { group: 'swim', noun: 'swimmer', seat: { x: -0.55, y: 0.06, z: 0 }, stand: { x: -1.45, z: 0 }, person: { s: 0.81, legK: 1.3, torsoK: 1.5, armK: 1.4 } },
   '3d-paraglider': { group: 'glide', noun: 'wing', seat: 'auto', stand: { x: 0, z: 0 }, air: { g: 0, f: 1.3 } },
 };
@@ -66,7 +68,7 @@ const FRAMES = {
   '3d-motorbike': [-2.9, 2.9, 3.75, -2.05, 1], '3d-motocross': [-2.9, 2.9, 3.75, -2.05, 1], '3d-race-motorbike': [-2.9, 2.9, 3.75, -2.05, 1],
   '3d-race-car': [-2.9, 2.9, 3.75, -2.05, 1], '3d-rally': [-2.9, 2.9, 3.75, -2.05, 1],
   '3d-bus': [-4.2, 4.2, 4.2, -4.2, 1.25], '3d-train': [-4.8, 4.8, 4.8, -4.8, 1.3], '3d-plane': [-4.4, 4.4, 4.4, -4.4, 1.9],
-  '3d-boat': [-4.2, 4.2, 4.2, -4.2, 1.5], '3d-sailboat': [-4.5, 4.5, 4.5, -4.5, 2.2], '3d-swimmer': [-2.4, 2.4, 2.4, -2.4, 0], '3d-paraglider': [-4.2, 4.2, 4.2, -4.2, 3.4],
+  '3d-boat': [-4.2, 4.2, 4.2, -4.2, 1.5], '3d-sailboat': [-4.5, 4.5, 4.5, -4.5, 2.2], '3d-kayak': [-2.9, 2.9, 2.9, -2.9, 0.5], '3d-swimmer': [-2.4, 2.4, 2.4, -2.4, 0], '3d-paraglider': [-4.2, 4.2, 4.2, -4.2, 3.4],
 };
 
 /* ---------- kit-bound pieces: the neutral person and the poofs use the model module's own materials ---------- */
@@ -439,7 +441,19 @@ function choreography(c, X) {
       const h = k < 0.8 ? lerp(hS + (A.y || 0), hS + F, sm(sp(k, 0.3, 0.62))) + 0.12 * s * Math.sin(PI * sp(k, 0.2, 0.62)) : lerp(hS + F, Sy, sm(sp(k, 0.8, 1)));
       return W(limbs, { x: lerp(A.x, S.x, kx), z: lerp(A.z, S.z, kx), fix: 1, hipY: h, yaw: lerp(yaw, 0, sm(sp(k, 0.75, 1))) });
     };
-    const into = c.into === 'drop' ? drop : c.into === 'window' ? windowIn : c.into === 'step' ? stepOver : c.into === 'walk' ? null : hopFrom;
+    // crouch, sit on the jetty edge with the legs over the boat, then slide down into the cockpit facing forward
+    const sitIn = (k, A, yaw) => {
+      const edgeZ = A.z - 0.16, eH = (A.y || 0) + 0.1 * s;
+      const edge = W(base(), { lean: 0.12, headZ: 0.1, L: [{ f: 1.35, a: 0.12, k: 1.25, n: 0.2 }, { f: 1.4, a: 0.12, k: 1.1, n: 0.2 }], A: [{ f: -0.55, a: 0.35, e: 0.15 }, { f: -0.55, a: 0.35, e: 0.15 }] });
+      const reachIn = W(edge, { lean: -0.05, L: [{ f: 1.5, k: 0.4 }, { f: 1.5, k: 0.35 }], A: [{ f: -0.2, a: 0.6, e: 0.4 }, { f: -0.2, a: 0.6, e: 0.4 }] });
+      const limbs = keys(k, [[0, base()], [0.25, crouch], [0.48, edge], [0.62, edge], [0.8, reachIn], [1, seat]]);
+      const kz = sm(sp(k, 0.62, 0.95));
+      const x = lerp(A.x, S.x, kz), z = k < 0.62 ? lerp(A.z, edgeZ, sm(sp(k, 0.15, 0.48))) : lerp(edgeZ, S.z, kz);
+      const h = k < 0.25 ? lerp(hS, hC, sm(k / 0.25)) + (A.y || 0) : k < 0.62 ? lerp(hC + (A.y || 0), eH, sm(sp(k, 0.25, 0.48))) : lerp(eH, Sy, sm(sp(k, 0.62, 1))) + 0.07 * s * Math.sin(PI * sp(k, 0.62, 0.92));
+      return W(limbs, { x, z, fix: 1, hipY: h, yaw: k < 0.62 ? yaw : lerp(yaw, 0, sm(sp(k, 0.62, 0.95))) });
+    };
+    const into = c.into === 'drop' ? drop : c.into === 'window' ? windowIn : c.into === 'step' ? stepOver : c.into === 'sit' ? sitIn : c.into === 'walk' ? null : hopFrom;
+    const ownCrouch = c.into === 'step' || c.into === 'sit';
 
     /* ---- per vehicle: the path from the ground to where they get in, the timeline, the extras ---- */
     let P, T, prop = null, fxIn = () => ({}), fxOut = () => ({});
@@ -480,6 +494,18 @@ function choreography(c, X) {
         prop: { v: popIn(sp(t, T.pop, T.pop + 0.35)) * (1 - sp(t, T.tS + 0.85, T.tS + 1.15)), x: -2.6 * rampUp(t, T.tS + 0.05, 0.8) } });
       fxOut = (t) => ({ rock: damped(t, 1.0, 0.05) + damped(t, landOut, 0.11), sail: sail ? 1 - es(t, 0.15, 0.9) : 1,
         prop: { v: es(t, 0, 0.3) * (t < T.vpop ? 1 : popOut(sp(t, T.vpop, T.vpop + 0.35))), x: 2.6 * (arrEnd - rampDown(Math.min(t, 2), 0.3, 0.75)) } });
+    } else if (c.kind === 'kayak') {
+      const x = S.x, hw = 0.62;
+      prop = { kind: 'jetty', x0: x - 0.95, x1: x + 0.85, z0: hw, z1: hw + 1.4, y: 0.3, sx: x };
+      P = [{ x, z: hw + 1.95, y: 0 }, { x, z: hw + 1.55, y: 0.15 }, { x, z: hw + 1.2, y: 0.3 }, { x, z: hw + 0.24, y: 0.3 }];
+      T = { walk: [0.35, 1.1], pop: 1.1, climb: [1.3, 2.0], into: [2.05, 3.1], tS: 3.25, xS: 1.2, out: [1.35, 2.4], down: [2.5, 3.15], vpop: 3.25, home: 3.45 };
+      const tip = (a, b, f) => a + f * (b - a);
+      const landIn = tip(T.into[0], T.into[1], 0.9), feetIn = tip(T.into[0], T.into[1], 0.62), landOut = tip(T.out[0], T.out[1], 0.12);
+      // a kayak is tippy: it wobbles as the legs go in, rocks hard when they drop into the seat
+      fxIn = (t) => ({ stow: t < T.tS ? 1 : 0, rock: damped(t, feetIn, 0.07) + damped(t, landIn, 0.17),
+        prop: { v: popIn(sp(t, T.pop, T.pop + 0.35)) * (1 - sp(t, T.tS + 0.85, T.tS + 1.15)), x: -2.0 * rampUp(t, T.tS + 0.05, 0.8) } });
+      fxOut = (t) => ({ stow: t >= T.xS ? 1 : 0, rock: damped(t, 1.0, 0.05) + damped(t, landOut, 0.15),
+        prop: { v: es(t, 0, 0.3) * (t < T.vpop ? 1 : popOut(sp(t, T.vpop, T.vpop + 0.35))), x: 2.0 * (arrEnd - rampDown(Math.min(t, 2), 0.3, 0.75)) } });
     } else if (c.kind === 'race-car') {
       P = [{ x: S.x, z: 1.75, y: 0 }, { x: S.x, z: 1.25, y: 0 }];
       T = { walk: [0.4, 1.0], pop: 0.95, climb: [1.05, 1.3], into: [1.4, 2.2], tS: 2.4, xS: 1.1, out: [1.3, 2.0], down: [2.2, 2.45], vpop: 2.5, home: 2.7 };
@@ -494,7 +520,7 @@ function choreography(c, X) {
       if (t > T.walk[1]) p = turnTo(standAt(P[0], yawOf(C, P[0])), yawOf(P[0], P[1]), es(t, T.walk[1], T.walk[1] + 0.2));
       if (t > T.climb[0]) p = route(t, T.climb[0], T.climb[1], P, 0.5);
       if (into) {
-        if (t > T.climb[1]) p = mix(standAt(A, yIn), crouchAt(A, yIn), es(t, T.climb[1], T.into[0]) * (c.into === 'step' ? 0 : 1));
+        if (t > T.climb[1]) p = mix(standAt(A, yIn), crouchAt(A, yIn), es(t, T.climb[1], T.into[0]) * (ownCrouch ? 0 : 1));
         if (t > T.into[0]) p = into(sp(t, T.into[0], T.into[1]), A, yIn);
         if (t > T.into[1]) p = W(seat, { hipY: Sy - 0.06 * Math.sin(PI * sp(t, T.into[1], T.into[1] + 0.2)) });
       } else if (t > T.climb[1]) p = turnTo(standAt(A, yIn), 0, es(t, T.climb[1], T.climb[1] + 0.2));
@@ -506,7 +532,7 @@ function choreography(c, X) {
         p = seat;
         if (t > T.xS + 0.1) p = mix(seat, W(seat, { hipY: Sy + 0.08, lean: -0.2, L: [{ f: 1.0, k: 1.1 }, { f: 1.0, k: 1.1 }] }), es(t, T.xS + 0.1, T.out[0]));
         if (t > T.out[0]) p = into(1 - sp(t, T.out[0], T.out[1]), A, yIn);
-        if (t > T.out[1]) p = turnTo(mix(c.into === 'step' ? standAt(A, yIn) : crouchAt(A, yIn), standAt(A, yIn), es(t, T.out[1], T.down[0])), yOut, es(t, T.out[1], T.down[0]));
+        if (t > T.out[1]) p = turnTo(mix(ownCrouch ? standAt(A, yIn) : crouchAt(A, yIn), standAt(A, yIn), es(t, T.out[1], T.down[0])), yOut, es(t, T.out[1], T.down[0]));
       } else p = turnTo(standAt(A, 0), yOut, es(t, T.xS, T.xS + 0.2));
       if (t > T.down[0]) p = route(t, T.down[0], T.down[1], P.slice().reverse(), 0.5);
       if (t > T.down[1]) p = homeward(t, T.home, P[0], yawOf(P[1], P[0]));
@@ -667,7 +693,7 @@ function buildStage(icon, mod, role) {
     const buzz = st.shake ? 0.03 * st.shake * (Math.floor(t * 12) % 2 ? 1 : -1) : 0;
     airG.position.y = (st.airY ?? g0) + buzz; airG.rotation.z = st.pitch ?? 0; airG.rotation.x = st.rock ?? 0;
     model.pose(st.mt ?? 0);
-    model.fx?.({ door: st.door ?? 0, sail: st.sail ?? 1, inflate: st.inflate ?? 1, inflateX: st.inflateX ?? 0, side: mirrored ? -1 : 1 });
+    model.fx?.({ door: st.door ?? 0, sail: st.sail ?? 1, stow: st.stow ?? 0, inflate: st.inflate ?? 1, inflateX: st.inflateX ?? 0, side: mirrored ? -1 : 1 });
     if (prop) prop.set(st.prop);
     // poofs on the head or a foot follow the person
     let events = st.puffs || [];
