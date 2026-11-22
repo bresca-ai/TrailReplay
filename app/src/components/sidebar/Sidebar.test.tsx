@@ -63,3 +63,16 @@ it('switches layouts without remounting the current panel', () => {
   expect(screen.getByRole('button', { name: 'Map & Camera' })).toBeInTheDocument();
   expect(screen.getByRole('navigation', { name: 'Sections', hidden: true })).not.toHaveClass('lg:flex');
 });
+
+ it('opens, switches and closes the mobile panel from its icon bar', () => {
+  render(<Sidebar />);
+  const bar = screen.getByRole('group', { name: 'Sections' });
+  act(() => useAppStore.getState().setSidebarOpen(false));
+  fireEvent.click(within(bar).getByRole('button', { name: 'Camera' }));
+  expect(useAppStore.getState()).toMatchObject({ isSidebarOpen: true, activePanel: 'camera' });
+  expect(within(bar).getByRole('button', { name: 'Camera' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(within(bar).getByRole('button', { name: 'Map' }));
+  expect(useAppStore.getState()).toMatchObject({ isSidebarOpen: true, activePanel: 'settings' });
+  fireEvent.click(within(bar).getByRole('button', { name: 'Map' }));
+  expect(useAppStore.getState().isSidebarOpen).toBe(false);
+});

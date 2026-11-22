@@ -2,6 +2,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { SidebarPanelContent } from './SidebarPanelContent';
+import { MenuDesignContext } from './menuDesign';
 
 vi.mock('./SettingsPanel', () => ({ SettingsPanel: ({ section }: { section: string }) => <div>Settings section: {section}</div> }));
 vi.mock('./WorkflowGuide', () => ({ WorkflowGuide: () => null }));
@@ -21,7 +22,7 @@ it('separates map and camera on desktop', async () => {
 it('keeps map and camera together on mobile', async () => {
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   useAppStore.getState().setActivePanel('settings');
-  render(<SidebarPanelContent />);
+  render(<MenuDesignContext.Provider value="previous"><SidebarPanelContent /></MenuDesignContext.Provider>);
   expect(await screen.findByText('Settings section: all')).toBeInTheDocument();
   act(() => useAppStore.getState().setActivePanel('camera'));
   expect(await screen.findByText('Settings section: all')).toBeInTheDocument();

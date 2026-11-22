@@ -38,7 +38,7 @@ export function AppHeader({
       <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-3">
         <button
           onClick={onToggleSidebar}
-          className="rounded-lg p-1.5 transition-colors hover:bg-white/10 sm:p-2 lg:flex lg:h-14 lg:w-14 lg:shrink-0 lg:items-center lg:justify-center"
+          className={`${menuDesign === 'new' ? 'hidden' : ''} rounded-lg p-1.5 transition-colors hover:bg-white/10 sm:p-2 lg:flex lg:h-14 lg:w-14 lg:shrink-0 lg:items-center lg:justify-center`}
         >
           {showSidebar ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
         </button>
