@@ -9,8 +9,10 @@ const makeTrack = (name: string, points: string, icon: string) => ({
   activityIcon: icon,
 });
 const run = makeTrack('Run', '<trkpt lat="42" lon="1"/><trkpt lat="42" lon="1.01"/>', '3d-runner');
-const ride = makeTrack('Ride', '<trkpt lat="42" lon="1.02"/><trkpt lat="42" lon="1.05"/>', '3d-road-bike');
-const tracks = [run, ride];
+const ride = makeTrack('Ride', '<trkpt lat="42" lon="1.01"/><trkpt lat="42" lon="1.05"/>', '3d-road-bike');
+// starts 1.6 km from where the run ends
+const farRide = makeTrack('Far ride', '<trkpt lat="42" lon="1.03"/><trkpt lat="42" lon="1.05"/>', '3d-road-bike');
+const tracks = [run, ride, farRide];
 const input = (segments: JourneySegment[], extra: Partial<Parameters<typeof computeMarkerTransitions>[0]> = {}) => ({
   segments, tracks, routeTimingMode: 'recorded' as const, markerType: 'icon' as const, comparisonActive: false, ...extra,
 });
@@ -19,7 +21,7 @@ describe('marker transitions', () => {
   it('adds one at each change of 3D model, timed at the boundary', () => {
     const segments: JourneySegment[] = [
       { id: 'run', type: 'track', trackId: run.id, duration: 10000 },
-      { id: 'bus', type: 'transport', mode: 'bus', from: { lat: 42, lon: 1.01 }, to: { lat: 42, lon: 1.02 }, duration: 10000, distance: 800 },
+      { id: 'bus', type: 'transport', mode: 'bus', from: { lat: 42, lon: 1.01 }, to: { lat: 42, lon: 1.01 }, duration: 10000, distance: 0 },
       { id: 'ride', type: 'track', trackId: ride.id, duration: 20000 },
     ];
     const transitions = computeMarkerTransitions(input(segments));
@@ -40,9 +42,15 @@ describe('marker transitions', () => {
       { id: 'cam', type: 'transport', mode: 'camera', from: { lat: 42, lon: 1.01 }, to: { lat: 42, lon: 1.02 }, duration: 3000, distance: 0 },
       { id: 'ride', type: 'track', trackId: ride.id, duration: 10000 },
     ];
-    expect(computeMarkerTransitions(input(pair)).map((entry) => entry.segmentId)).toEqual(['ride']);
-    expect(computeMarkerTransitions(input(pair, { markerType: 'dot' }))).toEqual([]);
-    expect(computeMarkerTransitions(input(pair, { comparisonActive: true }))).toEqual([]);
+    // the marker swaps during a camera move without an animation
+    expect(computeMarkerTransitions(input(pair))).toEqual([]);
+    const joined: JourneySegment[] = [pair[0], pair[2]];
+    expect(computeMarkerTransitions(input(joined)).map((entry) => entry.segmentId)).toEqual(['ride']);
+    expect(computeMarkerTransitions(input(joined, { markerType: 'dot' }))).toEqual([]);
+    expect(computeMarkerTransitions(input(joined, { comparisonActive: true }))).toEqual([]);
+    // routes that don't join up never animate between them, even with nothing in between
+    const apart: JourneySegment[] = [pair[0], { id: 'far', type: 'track', trackId: farRide.id, duration: 10000 }];
+    expect(computeMarkerTransitions(input(apart))).toEqual([]);
   });
 
   it('holds playback for the clips unless switched off in the chronology', () => {

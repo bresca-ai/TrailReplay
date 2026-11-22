@@ -1,3 +1,4 @@
+import { withGapCameraTransitions } from '@/utils/journeyGaps';
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { TransportMode } from '@/types';
@@ -183,6 +184,9 @@ export function JourneyPanel() {
   
   const handleDragEnd = () => {
     setDraggedIndex(null);
+    // A new order can leave two routes that don't join up side by side.
+    const withGaps = withGapCameraTransitions(journeySegments, tracks);
+    if (withGaps !== journeySegments) reorderJourneySegments(withGaps);
   };
 
   return (

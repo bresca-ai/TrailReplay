@@ -1,5 +1,6 @@
 import type { GPXTrack, JourneySegment, RouteTimingMode, TextAnnotation } from '@/types';
 import { annotationExtraTime } from './annotationTiming';
+import { isUnjoinedTrackPair } from './journeyGaps';
 import { buildComputedJourney, TRANSPORT_MARKERS, uniformJourneyWithCameraTransitions, uniformJourneyWithTransportDurations } from './journeyUtils';
 
 /**
@@ -108,9 +109,10 @@ function buildTransitions({ segments, tracks, routeTimingMode, markerType, compa
 
   const transitions: MarkerTransition[] = [];
   let previous: string | null = null;
-  segments.forEach((segment) => {
-    // Camera moves between routes carry no marker: pair the routes either side of them.
-    if (segment.type === 'transport' && segment.mode === 'camera') return;
+  segments.forEach((segment, index) => {
+    // A camera move between routes, or a jump between routes that don't join up, swaps the marker without an animation.
+    if (segment.type === 'transport' && segment.mode === 'camera') { previous = null; return; }
+    if (isUnjoinedTrackPair(segments[index - 1], segment, tracks)) previous = null;
     const icon = segmentIcon(segment, tracks, markerType);
     const timing = journey.segmentTimings.find((entry) => entry.segmentId === segment.id);
     if (previous && icon && timing && previous !== icon && supportsMarkerTransition(previous) && supportsMarkerTransition(icon)) {

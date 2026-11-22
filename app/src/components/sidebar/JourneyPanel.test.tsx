@@ -12,6 +12,15 @@ describe('Timeline editor', () => {
       const track = parseGPX(`<gpx><trk><name>${name}</name><trkseg><trkpt lat="42" lon="1"><ele>100</ele><time>2026-10-25T10:00:00Z</time></trkpt><trkpt lat="42.01" lon="1.01"><ele>200</ele><time>2026-10-25T10:30:00Z</time></trkpt></trkseg></trk></gpx>`, `${name}.gpx`);
       useAppStore.getState().addTrack(track);
     }
+    // Both loops start where the other one does not end, so a camera move is added between them by default; start without it.
+    const { journeySegments, reorderJourneySegments } = useAppStore.getState();
+    reorderJourneySegments(journeySegments.filter((segment) => segment.type === 'track'));
+  });
+
+  it('puts a camera transition between routes that do not join up', () => {
+    useAppStore.getState().reset();
+    for (const lon of [1, 1.2]) useAppStore.getState().addTrack(parseGPX(`<gpx><trk><trkseg><trkpt lat="42" lon="${lon}"/><trkpt lat="42" lon="${lon + 0.1}"/></trkseg></trk></gpx>`, `leg-${lon}.gpx`));
+    expect(useAppStore.getState().journeySegments.map((segment) => segment.type === 'transport' ? segment.mode : 'track')).toEqual(['track', 'camera', 'track']);
   });
   afterEach(cleanup);
 
@@ -87,12 +96,15 @@ describe('Timeline editor', () => {
     render(<JourneyPanel />);
     fireEvent.click(screen.getByRole('button', { name: 'Add Transition' }));
     fireEvent.click(screen.getByRole('button', { name: 'Camera transition' }));
-    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ type: 'transport', mode: 'camera', duration: 5000, distance: 0 });
+    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ type: 'transport', mode: 'camera', duration: 3000, distance: 0 });
     expect(screen.getByText('Camera transition')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Camera settings'));
     fireEvent.change(screen.getByRole('slider', { name: /Transition zoom/ }), { target: { value: '6' } });
-    fireEvent.change(screen.getByRole('slider', { name: /Transition tilt/ }), { target: { value: '45' } });
-    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ cameraTransitionZoom: 6, cameraTransitionPitch: 45 });
+    fireEvent.change(screen.getByRole('slider', { name: /Transition tilt/ }), { target: { value: '25' } });
+    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ cameraTransitionZoom: 6, cameraTransitionPitch: 25 });
+    // the Auto buttons hand both back to the distance-based defaults
+    for (const button of screen.getAllByRole('button', { name: 'Auto' })) fireEvent.click(button);
+    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ cameraTransitionZoom: undefined, cameraTransitionPitch: undefined });
   });
 
 });

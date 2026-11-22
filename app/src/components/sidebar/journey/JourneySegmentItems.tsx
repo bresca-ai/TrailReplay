@@ -6,7 +6,7 @@ import { formatDistance, formatDuration } from '@/utils/units';
 import { renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
 import { ActivityIconPicker } from '../ActivityIconPicker';
 import { ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { transitionSettings } from '@/utils/cameraTransition';
+import { automaticTransitionPeak, transitionSettings } from '@/utils/cameraTransition';
 import { TRANSPORT_MODES, renderJourneyTransportIcon, renderJourneyTransportPreview } from './journeyTransport';
 
 interface SegmentItemProps {
@@ -15,7 +15,7 @@ interface SegmentItemProps {
   onRemove: () => void;
   onEditDuration: () => void;
   onSeek: () => void;
-  onCameraSettingChange?: (key: 'cameraTransitionZoom' | 'cameraTransitionPitch', value: number) => void;
+  onCameraSettingChange?: (key: 'cameraTransitionZoom' | 'cameraTransitionPitch', value: number | undefined) => void;
 }
 
 export function TrackSegmentItem({
@@ -118,7 +118,12 @@ export function TransportSegmentItem({
   const modeLabel = t(`stats.transportLabels.${segment.mode}`);
 
   if (segment.mode === 'camera') {
-    const { zoom, pitch } = transitionSettings(segment);
+    // Unset values are automatic: they follow how far the camera flies. Show what that works out to.
+    const manual = transitionSettings(segment), auto = automaticTransitionPeak(segment.from, segment.to);
+    const zoom = manual.zoom ?? auto.zoom, pitch = manual.pitch ?? auto.pitch;
+    const autoTag = (isAuto: boolean, key: 'cameraTransitionZoom' | 'cameraTransitionPitch') => isAuto
+      ? <span className="ml-1 rounded bg-[var(--evergreen)]/10 px-1 text-[9px] font-normal text-[var(--evergreen-60)]">{t('journey.cameraAuto')}</span>
+      : <button type="button" onClick={() => onCameraSettingChange?.(key, undefined)} className="ml-1 rounded px-1 text-[9px] font-normal text-[var(--trail-orange)] hover:bg-[var(--evergreen)]/10">{t('journey.cameraAuto')}</button>;
     return (
       <div className="ml-4 overflow-hidden rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)]">
         <div className="flex items-center gap-2 px-3 py-2.5">
@@ -141,16 +146,16 @@ export function TransportSegmentItem({
             <span className="font-normal text-[var(--evergreen-40)]">{zoom.toFixed(1)} · {pitch}°</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
           </summary>
           <div className="space-y-4 px-3 pb-3 pt-1">
-            <label className="block text-[10px] text-[var(--evergreen)]">
-              <span className="flex items-center justify-between font-semibold"><span>{t('journey.cameraTransitionZoom')}</span><span className="tabular-nums">{zoom.toFixed(1)}</span></span>
-              <input type="range" min="0" max="18" step="0.5" value={zoom} onChange={(event) => onCameraSettingChange?.('cameraTransitionZoom', Number(event.target.value))} className="mt-1 w-full accent-[var(--trail-orange)]" />
+            <div className="block text-[10px] text-[var(--evergreen)]">
+              <span className="flex items-center justify-between font-semibold"><span>{t('journey.cameraTransitionZoom')}{autoTag(manual.zoom === undefined, 'cameraTransitionZoom')}</span><span className="tabular-nums">{zoom.toFixed(1)}</span></span>
+              <input type="range" aria-label={t('journey.cameraTransitionZoom')} min="0" max="18" step="0.5" value={zoom} onChange={(event) => onCameraSettingChange?.('cameraTransitionZoom', Number(event.target.value))} className="mt-1 w-full accent-[var(--trail-orange)]" />
               <span className="mt-0.5 flex justify-between text-[9px] text-[var(--evergreen-60)]"><span>{t('journey.cameraZoomWide')}</span><span>{t('journey.cameraZoomClose')}</span></span>
-            </label>
-            <label className="block text-[10px] text-[var(--evergreen)]">
-              <span className="flex items-center justify-between font-semibold"><span>{t('journey.cameraTransitionPitch')}</span><span className="tabular-nums">{pitch}°</span></span>
-              <input type="range" min="0" max="60" step="5" value={pitch} onChange={(event) => onCameraSettingChange?.('cameraTransitionPitch', Number(event.target.value))} className="mt-1 w-full accent-[var(--trail-orange)]" />
+            </div>
+            <div className="block text-[10px] text-[var(--evergreen)]">
+              <span className="flex items-center justify-between font-semibold"><span>{t('journey.cameraTransitionPitch')}{autoTag(manual.pitch === undefined, 'cameraTransitionPitch')}</span><span className="tabular-nums">{pitch}°</span></span>
+              <input type="range" aria-label={t('journey.cameraTransitionPitch')} min="0" max="60" step="5" value={pitch} onChange={(event) => onCameraSettingChange?.('cameraTransitionPitch', Number(event.target.value))} className="mt-1 w-full accent-[var(--trail-orange)]" />
               <span className="mt-0.5 flex justify-between text-[9px] text-[var(--evergreen-60)]"><span>{t('journey.cameraPitchTopDown')}</span><span>{t('journey.cameraPitchTilted')}</span></span>
-            </label>
+            </div>
           </div>
         </details>
       </div>

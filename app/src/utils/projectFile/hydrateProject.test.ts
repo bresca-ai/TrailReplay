@@ -576,8 +576,9 @@ describe('cinematic camera keyframes in a saved project', () => {
 
     const state = store.getState();
     expect(state.tracks).toHaveLength(3);
-    expect(state.journeySegments).toHaveLength(3);
-    expect(state.journeySegments.map((s) => (s as { trackId: string }).trackId))
+    // the sample loop does not end where it starts, so the legs are joined by camera moves
+    expect(state.journeySegments.map((s) => s.type === 'transport' ? s.mode : 'track')).toEqual(['track', 'camera', 'track', 'camera', 'track']);
+    expect(state.journeySegments.flatMap((s) => s.type === 'track' ? [s.trackId] : []))
       .toEqual(state.tracks.map((t) => t.id));
   });
 

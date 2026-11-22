@@ -660,7 +660,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     dragToReorder: 'Arrastra para reordenar',
     emptyTitle: 'No hay segmentos en el recorrido',
     emptySubtitle: 'Añade rutas y transiciones',
-    cameraSettings: 'Ajustes de cámara', cameraTransitionZoom: 'Zoom de transición', cameraZoomWide: 'Más lejos', cameraZoomClose: 'Más cerca', cameraTransitionPitch: 'Inclinación de transición', cameraPitchTopDown: 'Cenital', cameraPitchTilted: 'Inclinado',
+    cameraSettings: 'Ajustes de cámara', cameraAuto: 'Auto', cameraTransitionZoom: 'Zoom de transición', cameraZoomWide: 'Más lejos', cameraZoomClose: 'Más cerca', cameraTransitionPitch: 'Inclinación de transición', cameraPitchTopDown: 'Cenital', cameraPitchTilted: 'Inclinado',
     markerTransition: 'Animación', markerTransitionDuration: 'Duración de la animación en segundos',
     addTransport: 'Añadir transición',
     runsSimultaneously: 'Se ejecutan simultáneamente',

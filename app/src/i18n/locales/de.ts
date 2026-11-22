@@ -660,7 +660,7 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
     dragToReorder: 'Zum Neuanordnen ziehen',
     emptyTitle: 'Keine Segmente in der Reise',
     emptySubtitle: 'Routen und Übergänge hinzufügen',
-    cameraSettings: 'Kameraeinstellungen', cameraTransitionZoom: 'Übergangszoom', cameraZoomWide: 'Weiter', cameraZoomClose: 'Näher', cameraTransitionPitch: 'Übergangsneigung', cameraPitchTopDown: 'Von oben', cameraPitchTilted: 'Geneigt',
+    cameraSettings: 'Kameraeinstellungen', cameraAuto: 'Auto', cameraTransitionZoom: 'Übergangszoom', cameraZoomWide: 'Weiter', cameraZoomClose: 'Näher', cameraTransitionPitch: 'Übergangsneigung', cameraPitchTopDown: 'Von oben', cameraPitchTilted: 'Geneigt',
     markerTransition: 'Animation', markerTransitionDuration: 'Dauer der Animation in Sekunden',
     addTransport: 'Übergang hinzufügen',
     runsSimultaneously: 'Läuft gleichzeitig',

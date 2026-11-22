@@ -671,7 +671,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     dragToReorder: 'Drag to reorder',
     emptyTitle: 'No segments in journey',
     emptySubtitle: 'Add routes and transitions',
-    cameraSettings: 'Camera settings', cameraTransitionZoom: 'Transition zoom', cameraZoomWide: 'Wider', cameraZoomClose: 'Closer', cameraTransitionPitch: 'Transition tilt', cameraPitchTopDown: 'Top down', cameraPitchTilted: 'Tilted',
+    cameraSettings: 'Camera settings', cameraAuto: 'Auto', cameraTransitionZoom: 'Transition zoom', cameraZoomWide: 'Wider', cameraZoomClose: 'Closer', cameraTransitionPitch: 'Transition tilt', cameraPitchTopDown: 'Top down', cameraPitchTilted: 'Tilted',
     markerTransition: 'Animation', markerTransitionDuration: 'Animation length in seconds',
     addTransport: 'Add Transition',
     runsSimultaneously: 'Runs Simultaneously',
