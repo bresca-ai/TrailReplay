@@ -494,6 +494,9 @@ export interface AppSettings {
   statsLayout: 'auto' | 'horizontal' | 'vertical';
   /** `panel` is the dark rounded card; `transparent` leaves only the text over the map. */
   statsBackground: 'panel' | 'transparent';
+  statsPanelColor: string;
+  statsIconColor: string;
+  statsTextColor: string;
   statsColumns: number | null;
   /** Position within the available space around the scaled leaderboard (0–1). */
   leaderboardPosition: { x: number; y: number } | null;

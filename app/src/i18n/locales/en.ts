@@ -536,7 +536,7 @@ export const en = {
     ghostTrailOpacityHint: 'Set to 0 to hide the full route preview and reveal it only as playback progresses.',
     statsTitle: 'Stats',
     statsHint: 'Drag the stats box on the map to reposition it.',
-    statsBackground: 'Stats background',
+    statsColors: 'Colors', statsPanelColor: 'Panel', statsIconColor: 'Icons', statsTextColor: 'Text', statsBackground: 'Stats background',
     statsBackgroundPanel: 'Panel',
     statsBackgroundTransparent: 'Transparent',
     statsNeedTiming: 'Duration, pace and speed need recorded timestamps, and this route has none.',

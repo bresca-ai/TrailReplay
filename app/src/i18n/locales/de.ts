@@ -525,7 +525,7 @@ export const de = {
     ghostTrailOpacityHint: 'Lege den Wert auf 0 fest, um die vollständige Routenvorschau auszublenden und sie erst bei fortschreitender Wiedergabe anzuzeigen.',
     statsTitle: 'Statistiken',
     statsHint: 'Ziehe das Statistikfeld auf der Karte, um es neu zu positionieren.',
-    statsBackground: 'Hintergrund der Statistiken',
+    statsColors: 'Farben', statsPanelColor: 'Hintergrund', statsIconColor: 'Symbole', statsTextColor: 'Text', statsBackground: 'Hintergrund der Statistiken',
     statsBackgroundPanel: 'Panel',
     statsBackgroundTransparent: 'Transparent',
     statsNeedTiming: 'Dauer, Tempo und Geschwindigkeit brauchen aufgezeichnete Zeitstempel, und diese Route hat keine.',

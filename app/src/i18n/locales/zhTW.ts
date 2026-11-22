@@ -190,7 +190,7 @@ export const zhTW = {
     fontModern: '現代 — Inter', fontEditorial: '書刊 — Source Serif 4', fontTechnical: '等寬 — JetBrains Mono', fontCondensed: '窄體 — Barlow Condensed', fontGeometric: '幾何 — Montserrat', fontPoster: '海報 — Anton', fontDisplay: '標題 — Bebas Neue', typographyOpenSource: '七款字體皆以 SIL Open Font License 授權並隨程式提供。',
     trackColor: '軌跡顏色', heartRateTitle: '心率', colorZonesTitle: '分段顏色', colorZonesEnable: '依區間上色', colorZonesAdd: '新增區間', colorZonesFrom: '從', colorZonesTo: '至', colorZonesEmpty: '尚未設定區間，整條軌跡皆使用軌跡顏色。',
     ghostTrailTitle: '全程路線預覽', ghostTrailOpacityLabel: '不透明度', ghostTrailOpacityHint: '設為 0 可隱藏完整路線，僅隨播放進度逐步顯示。',
-    statsTitle: '統計資訊', statsHint: '拖曳地圖上的統計資訊方塊，即可調整位置。', statsBackground: '統計資訊背景', statsBackgroundPanel: '底板', statsBackgroundTransparent: '透明',
+    statsTitle: '統計資訊', statsHint: '拖曳地圖上的統計資訊方塊，即可調整位置。', statsColors: '顏色', statsPanelColor: '底板', statsIconColor: '圖示', statsTextColor: '文字', statsBackground: '統計資訊背景', statsBackgroundPanel: '底板', statsBackgroundTransparent: '透明',
     statsNeedTiming: '時間、配速與速度需要記錄時間戳記，但這條路線沒有時間資料。', statsNeedHeartRate: '心率需要感測器記錄，但這條路線沒有心率資料。',
     routeOverviewPerRoute: '一次顯示一條路線', routeOverviewPerRouteHint: '播放時單獨顯示目前的路線。',
     paceMode: '配速模式', paceModeCumulative: '全程平均', paceModePerKm: '每公里', routeOverview: "路線總覽", routeOverviewHint: "朝北的路線總覽，可拖曳調整位置。", resizeElevationProfile: "調整海拔剖面高度", elevationProfileFill: "填滿海拔剖面下方", showElevationProfile: '海拔剖面圖', elevationProfilePerRoute: '各路線海拔剖面', elevationProfilePerRouteHint: '播放時分別顯示各條路線。',

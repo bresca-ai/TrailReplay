@@ -184,8 +184,8 @@ html, body {
 
 /* Stats Overlay */
 .tr-stats-overlay {
-  background: rgba(9, 14, 19, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(9, 20, 18, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 18px;
   padding: 0.8rem 0.9rem 0.92rem;
   font-family: var(--font-family-overlay);
@@ -199,11 +199,11 @@ html, body {
 }
 
 .tr-stats-overlay--narrow {
-  background: rgba(9, 14, 19, 0.88);
+  background: rgba(9, 20, 18, 0.9);
 }
 
 .tr-stats-overlay--export {
-  background: rgba(9, 14, 19, 0.88);
+  background: rgba(9, 20, 18, 0.9);
   border-color: rgba(255, 255, 255, 0.12);
   border-radius: 16px;
   box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
@@ -220,7 +220,11 @@ html, body {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 1), 0 2px 8px rgba(0, 0, 0, 1);
+}
+
+.tr-stats-overlay--plain [data-export-stat-header] svg {
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 1));
 }
 
 .tr-stat-item {

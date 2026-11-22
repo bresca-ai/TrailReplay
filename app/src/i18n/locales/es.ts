@@ -525,7 +525,7 @@ export const es = {
     ghostTrailOpacityHint: 'Pon 0 para ocultar la vista previa completa de la ruta y revelarla solo a medida que avanza la reproducción.',
     statsTitle: 'Estadísticas',
     statsHint: 'Arrastra el cuadro de estadísticas en el mapa para reposicionarlo.',
-    statsBackground: 'Fondo de las estadísticas',
+    statsColors: 'Colores', statsPanelColor: 'Panel', statsIconColor: 'Iconos', statsTextColor: 'Texto', statsBackground: 'Fondo de las estadísticas',
     statsBackgroundPanel: 'Panel',
     statsBackgroundTransparent: 'Transparente',
     statsNeedTiming: 'La duración, el ritmo y la velocidad necesitan marcas de tiempo grabadas, y esta ruta no tiene.',
