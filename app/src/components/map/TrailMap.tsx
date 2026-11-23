@@ -14,6 +14,7 @@ import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
 import { useSuggestedFollowBehindDistance } from '@/components/map/hooks/useSuggestedFollowBehindDistance';
 import { MapElevationProfile } from './MapElevationProfile';
 import { MapBuildingAttribution } from './MapBuildingAttribution';
+import { showCartoLabels } from '@/utils/cartoLabels';
 import { ComparisonLeaderboard } from './ComparisonLeaderboard';
 import { LocationChapterLabel } from './LocationChapterLabel';
 import { ReplayPreparationOverlay } from './ReplayPreparationOverlay';
@@ -628,6 +629,7 @@ export function TrailMap(_props: TrailMapProps) {
       data-aerial-planned-bearing={import.meta.env.DEV && matchingTerrainPlan?.plan ? terrainPlanBearing(matchingTerrainPlan.plan, playback.progress).toFixed(1) : undefined}>
       <div ref={mapContainer} className="w-full h-full" style={{ backgroundColor: DEFAULT_SKY_COLOR }} />
       {settings.show3DBuildings && <MapBuildingAttribution />}
+      {showCartoLabels(settings) && <div className="absolute bottom-1 right-1 z-10 rounded bg-black/75 px-1 text-[10px] text-white">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a> · © <a href="https://carto.com/attributions/" target="_blank" rel="noreferrer">CARTO</a></div>}
 
       <span hidden data-location-chapters-status={locationChapter.loading ? "loading" : "ready"} />
       {locationChapter.label && <LocationChapterLabel label={locationChapter.label} accent={settings.locationChapters?.color ?? '#ffbd66'} font={trailStyle.overlayFont} />}

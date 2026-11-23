@@ -1,5 +1,7 @@
 import { DEFAULT_MAP_SKY } from './mapSky';
 
+import { CARTO_LABELS_TEMPLATE } from '@/utils/cartoLabels';
+
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 
 // A coarse, low-zoom parent layer covers the distant horizon with a small
@@ -78,9 +80,9 @@ export const MAP_STYLE = {
     },
     'carto-labels': {
       type: 'raster',
-      tiles: ['https://cartodb-basemaps-a.global.ssl.fastly.net/light_only_labels/{z}/{x}/{y}.png'],
+      tiles: CARTO_LABELS_TEMPLATE ? [CARTO_LABELS_TEMPLATE] : [],
       tileSize: 256,
-      attribution: '© CartoDB',
+      attribution: '© OpenStreetMap contributors, © CARTO',
     },
     'enhanced-hillshade': {
       type: 'raster',

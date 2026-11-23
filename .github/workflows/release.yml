@@ -42,6 +42,8 @@ jobs:
           node -e 'const expected = require("./package.json").version; if (process.env.RELEASE_VERSION !== expected) { console.error(`Requested ${process.env.RELEASE_VERSION}, expected ${expected}`); process.exit(1) }'
 
       - name: Verify release metadata and production build
+        env:
+          VITE_CARTO_BASEMAPS_KEY: ${{ vars.VITE_CARTO_BASEMAPS_KEY }}
         run: |
           npm run verify:release -- --publish
           npm run build
