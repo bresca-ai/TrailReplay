@@ -46,4 +46,6 @@ jobs:
         run: npm run verify:release
 
       - name: Production build
+        env:
+          VITE_CARTO_BASEMAPS_KEY: ${{ vars.VITE_CARTO_BASEMAPS_KEY }}
         run: npm --prefix app run build && npm run check:pages-assets

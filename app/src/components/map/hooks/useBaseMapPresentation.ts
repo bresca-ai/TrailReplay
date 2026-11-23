@@ -6,6 +6,7 @@ import { applyBasemapFilter } from '@/components/map/mapFilters';
 import { applyBasemapVisibility } from '@/components/map/basemapVisibility';
 import { applyConsistentBasemapTileLod } from '@/components/map/basemapTileLod';
 import { effectiveTerrainExaggeration } from '@/utils/terrainExaggeration';
+import { showCartoLabels } from '@/utils/cartoLabels';
 import {
   BASEMAP_FALLBACK_MAX_ZOOM,
 } from '@/components/map/mapStyle';
@@ -48,8 +49,7 @@ export function useBaseMapPresentation({
       map.setLayoutProperty('aspect-overlay', 'visibility', settings.mapOverlays?.aspectOverlay ? 'visible' : 'none');
     }
 
-    const showLabels = ['street', 'topo', 'outdoor'].includes(settings.mapStyle)
-      || (!!settings.mapOverlays?.placeLabels && settings.mapStyle !== 'mapbox-streets');
+    const showLabels = showCartoLabels(settings);
     if (map.getLayer('carto-labels')) {
       map.setLayoutProperty('carto-labels', 'visibility', showLabels ? 'visible' : 'none');
     }

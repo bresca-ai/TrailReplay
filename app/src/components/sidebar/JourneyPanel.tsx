@@ -1,3 +1,4 @@
+import { withGapCameraTransitions } from '@/utils/journeyGaps';
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import type { TransportMode } from '@/types';
@@ -5,6 +6,8 @@ import { formatDistance, formatDuration } from '@/utils/units';
 import { useI18n } from '@/i18n/useI18n';
 import { createId } from '@/utils/id';
 import { TrackSegmentItem, TransportSegmentItem } from './journey/JourneySegmentItems';
+import { MarkerTransitionRow } from './journey/MarkerTransitionRow';
+import { computeMarkerTransitions } from '@/utils/markerTransitions';
 import { TRANSPORT_MODES, renderJourneyTransportPreview } from './journey/journeyTransport';
 import { createTransportSegment } from './journey/createTransportSegment';
 import { trackEvent } from '@/utils/analytics';
@@ -38,6 +41,11 @@ export function JourneyPanel() {
   const routeTimingMode = useAppStore((state) => state.playback.routeTimingMode);
   const setRouteTimingMode = useAppStore((state) => state.setRouteTimingMode);
   const seekToProgress = useAppStore((state) => state.seekToProgress);
+  const markerType = useAppStore((state) => state.settings.trailStyle.markerType);
+  // Every place the 3D marker changes model, keyed by the segment it changes into (switched-off ones included).
+  const markerTransitions = new Map(computeMarkerTransitions({
+    segments: journeySegments, tracks, routeTimingMode, markerType, comparisonActive: comparisonTracks.some((track) => track.visible),
+  }).map((transition) => [transition.segmentId, transition]));
   
   const setActivePanel = useAppStore((state) => state.setActivePanel);
   const [editorMode, setEditorMode] = useState<'sequence' | 'compare'>(comparisonTracks.length > 0 ? 'compare' : 'sequence');
@@ -176,6 +184,9 @@ export function JourneyPanel() {
   
   const handleDragEnd = () => {
     setDraggedIndex(null);
+    // A new order can leave two routes that don't join up side by side.
+    const withGaps = withGapCameraTransitions(journeySegments, tracks);
+    if (withGaps !== journeySegments) reorderJourneySegments(withGaps);
   };
 
   return (
@@ -226,6 +237,12 @@ export function JourneyPanel() {
             {journeySegments.map((segment, index) => (
               <div key={segment.id} className={draggedIndex === index ? 'opacity-50' : ''} draggable
                 onDragStart={() => handleDragStart(index)} onDragOver={(event) => handleDragOver(event, index)} onDragEnd={handleDragEnd}>
+                {markerTransitions.has(segment.id) && <MarkerTransitionRow transition={markerTransitions.get(segment.id)!}
+                  onChange={({ skip, durationMs }) => reorderJourneySegments(journeySegments.map((item) => item.id !== segment.id ? item : {
+                    ...item,
+                    ...(skip !== undefined ? { skipMarkerTransition: skip || undefined } : {}),
+                    ...(durationMs !== undefined ? { markerTransitionDuration: durationMs === markerTransitions.get(segment.id)!.defaultDuration ? undefined : durationMs } : {}),
+                  }))} />}
                 {segment.type === 'track' ? <TrackSegmentItem segment={segment} index={index}
                   onRemove={() => removeJourneySegment(segment.id)}
                   onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 30000) / 1000); }}

@@ -580,9 +580,12 @@ export function useTrailPlaybackCamera({
           ? getSmoothedCameraAnchor({ coordinates: cameraCoordinates, progress: endProgress, smoothingHalfWindow: anchorWindow, markerPosition: to, zoom: target.zoom })
           : to;
         const endPose: TransitionCameraPose = { center: endCenter, zoom: endZoom, pitch: target?.pitch ?? start.pitch, bearing: target?.bearing ?? start.bearing };
+        // The same fly path as the opening fly-in: how high it climbs depends on how far it goes, unless the user set it.
         const { zoom, pitch } = transitionSettings(segment);
-        const wideZoom = Math.max(mapRef.current.getMinZoom(), Math.min(mapRef.current.getMaxZoom(), zoom));
-        const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, wideZoom, pitch);
+        const peakZoom = zoom === undefined ? undefined : Math.max(mapRef.current.getMinZoom(), Math.min(mapRef.current.getMaxZoom(), zoom));
+        const container = mapRef.current.getContainer?.();
+        const viewportPx = Math.max(container?.clientWidth ?? 0, container?.clientHeight ?? 0) || 1000;
+        const pose = transitionCameraPose(start, endPose, currentSegment.localProgress ?? 0, { viewportPx, peakZoom, pitch });
         const cue = animationPhase === 'playing' ? locationChapterCameraCue?.current ?? null : null;
         const shotPose = cameraMode === 'aerial-follow' || cameraMode === 'cinematic'
           ? applyLocalCinematicShots({ basePose: pose, keyframes: cinematicKeyframes ?? [], coordinates: cameraCoordinates,

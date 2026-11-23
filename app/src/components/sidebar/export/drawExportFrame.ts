@@ -1,5 +1,6 @@
 import { customAnimationByKey } from '@/utils/customMarker';
-import { drawBuildingsAttribution } from './mapAttribution';
+import { drawBuildingsAttribution, drawCartoAttribution } from './mapAttribution';
+import { showCartoLabels } from '@/utils/cartoLabels';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -354,10 +355,11 @@ export function drawExportFrame({
 
         const animatedUrl = markerIcon.dataset.animatedIcon;
         if (markerIcon.hasAttribute('data-runner-3d')) {
-          const canvas = markerIcon.querySelector('canvas') as (HTMLCanvasElement & { renderRunnerAt?: (time: number) => void }) | null;
+          const canvas = markerIcon.querySelector('canvas:not([data-marker-transition])') as (HTMLCanvasElement & { renderRunnerAt?: (time: number) => void }) | null;
           if (canvas?.renderRunnerAt) {
             canvas.renderRunnerAt(markerTimeMs);
-            context.drawImage(canvas, markerX - markerIconWidth, markerY - markerIconHeight * 1.65, markerIconWidth * 2, markerIconHeight * 2);
+            const transitionCanvas = markerIcon.querySelector('canvas[data-marker-transition]:not([hidden])') as HTMLCanvasElement | null;
+            context.drawImage(transitionCanvas ?? canvas, markerX - markerIconWidth, markerY - markerIconHeight * 1.65, markerIconWidth * 2, markerIconHeight * 2);
           }
         } else if (animatedUrl) {
           const custom = markerIcon.dataset.customAnimation ? customAnimationByKey(markerIcon.dataset.customAnimation) : undefined;
@@ -435,6 +437,7 @@ export function drawExportFrame({
     }
 
     if (currentState.settings.show3DBuildings) drawBuildingsAttribution(context, recordW, recordH);
+    if (showCartoLabels(currentState.settings)) drawCartoAttribution(context, recordW, recordH);
 
     overlayFramesSinceRefreshRef.current += 1;
     const overlayDue = overlayLastUpdateRef.current === 0

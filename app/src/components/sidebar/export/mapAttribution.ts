@@ -13,3 +13,18 @@ export function drawBuildingsAttribution(ctx: CanvasRenderingContext2D, width: n
   ctx.fillText(text, padding, height - padding);
   ctx.restore();
 }
+
+export function drawCartoAttribution(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const size = Math.max(12, Math.round(width * 0.012));
+  const text = '© OpenStreetMap contributors · © CARTO';
+  const padding = size * 0.35;
+  ctx.save();
+  ctx.font = `${size}px sans-serif`;
+  ctx.textBaseline = 'bottom';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(width - ctx.measureText(text).width - padding * 2, height - size - padding * 2, ctx.measureText(text).width + padding * 2, size + padding * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fillText(text, width - padding, height - padding);
+  ctx.restore();
+}
