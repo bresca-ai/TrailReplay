@@ -37,7 +37,7 @@ npm run build
 
 Vite builds this package for the site root, and production output is written to `app/dist`.
 
-Set `VITE_CARTO_BASEMAPS_KEY` at build time to enable the CARTO place-label overlay. Obtain a Basemaps key from CARTO and restrict it to the appropriate production and preview origins; Vite embeds this key in the public browser bundle. Without a key the overlay is hidden, while the underlying maps remain available. Configure the variable in each deployment environment before rebuilding.
+Set `VITE_CARTO_BASEMAPS_KEY` at build time to enable the CARTO place-label overlay. Obtain a Basemaps key from CARTO and restrict it to the appropriate production and preview origins; Vite embeds this key in the public browser bundle. Without a key the overlay is hidden, while the underlying maps remain available. Configure the GitHub Actions variable and the Cloudflare Pages production and preview build variables before rebuilding. Store the Pages variables as encrypted secrets so deployments using the Wrangler configuration retain them.
 
 ## Fork Pull Request Previews
 
