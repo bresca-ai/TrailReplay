@@ -525,7 +525,7 @@ export const ca = {
     ghostTrailOpacityHint: 'Posa 0 per amagar la previsualització completa de la ruta i revelar-la només a mesura que avança la reproducció.',
     statsTitle: 'Estadístiques',
     statsHint: 'Arrossega el quadre d\'estadístiques al mapa per reposicionar-lo.',
-    statsBackground: 'Fons de les estadístiques',
+    statsColors: 'Colors', statsPanelColor: 'Panell', statsIconColor: 'Icones', statsTextColor: 'Text', statsBackground: 'Fons de les estadístiques',
     statsBackgroundPanel: 'Panell',
     statsBackgroundTransparent: 'Transparent',
     statsNeedTiming: 'La durada, el ritme i la velocitat necessiten marques de temps gravades, i aquest recorregut no en té.',

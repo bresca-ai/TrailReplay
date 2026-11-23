@@ -583,7 +583,7 @@ export function useExportOverlayCapture({
     // SVG (or the static overlay snapshot fails entirely).
     statsElement.querySelectorAll<HTMLElement>('[data-export-stat-header]').forEach((header) => {
       const icon = header.querySelector('svg');
-      const label = header.querySelector('span:last-child');
+      const label = header.querySelector('[data-export-stat-label]');
       if (!icon || !label) return;
 
       const iconRect = icon.getBoundingClientRect();
@@ -603,6 +603,11 @@ export function useExportOverlayCapture({
         context.lineWidth = Number(icon.getAttribute('stroke-width')) || 2;
         context.lineCap = 'round';
         context.lineJoin = 'round';
+        if (statsElement.classList.contains('tr-stats-overlay--plain')) {
+          context.shadowColor = 'rgba(0, 0, 0, 0.95)';
+          context.shadowBlur = 4;
+          context.shadowOffsetY = 2;
+        }
         drawExportStatIcon(context, icon);
         context.restore();
       }
@@ -622,8 +627,8 @@ export function useExportOverlayCapture({
       context.textBaseline = 'middle';
       context.fillStyle = style.color || '#ffffff';
       if (statsElement.classList.contains('tr-stats-overlay--plain')) {
-        context.shadowColor = 'rgba(0, 0, 0, 0.85)';
-        context.shadowBlur = Math.max(2, fontSize * 0.25);
+        context.shadowColor = 'rgba(0, 0, 0, 0.95)';
+        context.shadowBlur = Math.max(4, fontSize * 0.5);
         context.shadowOffsetY = Math.max(1, fontSize * 0.06);
       }
       context.fillText(label.textContent || '', centerX, centerY);
@@ -637,8 +642,8 @@ export function useExportOverlayCapture({
 
       const rect = valueElement.getBoundingClientRect();
       const style = getComputedStyle(valueElement);
-      const leftX = drawRect.drawX
-        + (rect.left - statsRect.left) * elementScaleX;
+      const centerX = drawRect.drawX
+        + (rect.left + rect.width / 2 - statsRect.left) * elementScaleX;
       const centerY = drawRect.drawY
         + (rect.top + rect.height / 2 - statsRect.top) * elementScaleY;
       // The labels in the cached html2canvas bitmap scale from the overlay's
@@ -654,7 +659,7 @@ export function useExportOverlayCapture({
 
       context.save();
       context.font = `${style.fontWeight || '600'} ${fontSize}px ${style.fontFamily || 'sans-serif'}`;
-      context.textAlign = 'left';
+      context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = style.color || '#ffffff';
       // With no panel behind them the values sit straight on the map, where a
@@ -662,11 +667,11 @@ export function useExportOverlayCapture({
       // CSS text-shadow, which never reaches these hand-drawn numbers, so the
       // same shadow is applied to the canvas.
       if (statsElement.classList.contains('tr-stats-overlay--plain')) {
-        context.shadowColor = 'rgba(0, 0, 0, 0.85)';
-        context.shadowBlur = Math.max(2, fontSize * 0.25);
+        context.shadowColor = 'rgba(0, 0, 0, 0.95)';
+        context.shadowBlur = Math.max(4, fontSize * 0.5);
         context.shadowOffsetY = Math.max(1, fontSize * 0.06);
       }
-      context.fillText(value, leftX, centerY);
+      context.fillText(value, centerX, centerY);
       context.restore();
     });
   }, [getStatsValues, includeStats]);

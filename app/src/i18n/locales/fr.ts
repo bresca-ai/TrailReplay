@@ -525,7 +525,7 @@ export const fr = {
     ghostTrailOpacityHint: 'Mettre à 0 pour masquer l\'aperçu complet du tracé et ne le révéler qu\'au fur et à mesure de la lecture.',
     statsTitle: 'Statistiques',
     statsHint: 'Glissez la boîte de stats sur la carte pour la repositionner.',
-    statsBackground: 'Fond des statistiques',
+    statsColors: 'Couleurs', statsPanelColor: 'Panneau', statsIconColor: 'Icônes', statsTextColor: 'Texte', statsBackground: 'Fond des statistiques',
     statsBackgroundPanel: 'Panneau',
     statsBackgroundTransparent: 'Transparent',
     statsNeedTiming: 'La durée, l’allure et la vitesse exigent des horodatages enregistrés, et ce parcours n’en a pas.',

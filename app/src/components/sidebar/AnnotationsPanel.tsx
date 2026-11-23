@@ -10,7 +10,7 @@ import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
-import { ChevronDown, ChevronRight, Footprints, Map, Palette, Pencil, BarChart3, Type, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Footprints, Map, Palette, Pencil, BarChart3, Type, Trash2, ArrowUp, Clock, Heart, Mountain, Route, Timer, TimerReset, Zap } from 'lucide-react';
 import { OverlayFontPicker } from './OverlayFontPicker';
 import { ComparisonLeaderboardSettings } from './ComparisonLeaderboardSettings';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -36,6 +36,8 @@ function ZonePositionInput({ value, maximum, label, onChange }: {
     onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
     className="w-full min-w-0 rounded border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-1 py-1.5 text-center text-xs tabular-nums text-[var(--evergreen)] focus:border-[var(--trail-orange)] focus:outline-none" />;
 }
+
+const STAT_ICONS = { distance: Route, duration: Timer, movingDuration: TimerReset, pace: Clock, elevation: Mountain, heartRate: Heart, speed: Zap, altitude: ArrowUp } as const;
 
 const COLOR_PRESETS = [
   { color: '#C1652F', labelKey: 'colors.trailOrange' },
@@ -563,8 +565,9 @@ export function AnnotationsPanel() {
         </summary>
         <div className="border-t border-[var(--evergreen)]/10 p-3">
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {(['distance', 'duration', 'movingDuration', 'pace', 'elevation', 'heartRate', 'speed', 'altitude'] as const).map((id) => {
+            const Icon = STAT_ICONS[id];
             const unavailable = !isStatAvailable(id, availability);
             const reason = TIME_DEPENDENT_STATS.includes(id)
               ? t('annotations.statsNeedTiming')
@@ -583,19 +586,15 @@ export function AnnotationsPanel() {
                     : [...settings.visibleStats, id];
                   setSettings({ visibleStats: next });
                 }}
-                className={`flex min-h-9 items-center gap-2 px-1 py-1 text-sm transition-colors text-left ${
+                className={`flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1 text-center text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)] ${
                   unavailable
-                    ? 'text-[var(--evergreen-40)] opacity-50 cursor-not-allowed'
+                    ? 'cursor-not-allowed border-[var(--evergreen)]/10 text-[var(--evergreen-40)] opacity-50'
                     : checked
-                      ? 'text-[var(--evergreen)]'
-                      : 'text-[var(--evergreen-60)] hover:text-[var(--evergreen)]'
+                      ? 'border-[var(--evergreen)] bg-[var(--evergreen)] text-[var(--canvas)]'
+                      : 'border-[var(--evergreen)]/20 bg-white/40 text-[var(--evergreen-60)] hover:border-[var(--evergreen)]/50 hover:text-[var(--evergreen)]'
                 }`}
               >
-                <span className={`w-3 h-3 rounded border flex-shrink-0 flex items-center justify-center ${
-                  checked ? 'bg-[var(--trail-orange)] border-[var(--trail-orange)]' : 'border-[var(--evergreen-60)]'
-                }`}>
-                  {checked && <span className="text-[var(--canvas)] text-[8px] leading-none">✓</span>}
-                </span>
+                <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
                 {t(`stats.label_${id}`)}
               </button>
             );
@@ -652,6 +651,26 @@ export function AnnotationsPanel() {
               >
                 {mode === 'panel' ? t('annotations.statsBackgroundPanel') : t('annotations.statsBackgroundTransparent')}
               </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xs text-[var(--evergreen)]">{t('annotations.statsColors')}</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {([
+              ['statsPanelColor', 'annotations.statsPanelColor', '#091412'],
+              ['statsIconColor', 'annotations.statsIconColor', '#ff9248'],
+              ['statsTextColor', 'annotations.statsTextColor', '#ffffff'],
+            ] as const).map(([key, label, fallback]) => (
+              <label key={key} className={`flex items-center gap-1.5 text-xs text-[var(--evergreen-60)] ${key === 'statsPanelColor' && settings.statsBackground === 'transparent' ? 'opacity-40' : ''}`}>
+                <span className="truncate">{t(label)}</span>
+                <span className="flex items-center">
+                  <input type="color" aria-label={t(label)} value={settings[key] || fallback}
+                    disabled={key === 'statsPanelColor' && settings.statsBackground === 'transparent'}
+                    onChange={(event) => setSettings({ [key]: event.target.value })}
+                    className="h-6 w-7 shrink-0 cursor-pointer rounded border border-[var(--evergreen)]/20 bg-transparent p-0.5 disabled:cursor-not-allowed" />
+                </span>
+              </label>
             ))}
           </div>
         </div>
