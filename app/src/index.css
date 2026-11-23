@@ -72,6 +72,15 @@ html, body {
   :root { --mobile-panel-height: min(55svh, 32rem); }
 }
 
+/* Continue the mobile navigation color into the space revealed when browser
+   controls retract, without changing the legacy menu or other pages. */
+@media (max-width: 1023px) {
+  html:has(.app-container[data-menu-design="new"]),
+  body:has(.app-container[data-menu-design="new"]) {
+    background: var(--evergreen);
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

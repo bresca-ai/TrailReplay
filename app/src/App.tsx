@@ -614,6 +614,7 @@ function App() {
     <PlaybackProvider>
       <div
         className="app-container bg-[var(--canvas)] flex flex-col overflow-hidden"
+        data-menu-design={menuDesign}
         aria-busy={fileImportStatus !== null}
         style={{ '--font-family-overlay': overlayFontFamily(settings.trailStyle.overlayFont) } as CSSProperties}
       >
