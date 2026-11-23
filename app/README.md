@@ -37,6 +37,8 @@ npm run build
 
 Vite builds this package for the site root, and production output is written to `app/dist`.
 
+Set `VITE_CARTO_BASEMAPS_KEY` at build time to enable the CARTO place-label overlay. Obtain a Basemaps key from CARTO and restrict it to the appropriate production and preview origins; Vite embeds this key in the public browser bundle. Without a key the overlay is hidden, while the underlying maps remain available. Configure the variable in each deployment environment before rebuilding.
+
 ## Fork Pull Request Previews
 
 Cloudflare Pages does not automatically preview pull requests opened from forks. A maintainer can create one from **Actions → Approved fork preview** by entering the pull request number. The workflow builds the exact fork commit in a job without deployment credentials, then deploys its static output with Wrangler and reports the Cloudflare deployment against that commit. The repository must have a `CLOUDFLARE_API_TOKEN` Actions secret scoped to edit this Pages project.

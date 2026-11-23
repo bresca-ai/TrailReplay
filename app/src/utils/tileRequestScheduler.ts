@@ -1,3 +1,5 @@
+import { CARTO_LABELS_TEMPLATE } from './cartoLabels';
+
 export interface TileRequest {
   key: string;
   priority: number;
@@ -177,11 +179,11 @@ export class TileRequestScheduler {
   }
 }
 
-const TILE_TEMPLATES: Record<string, string> = {
+const TILE_TEMPLATES: Record<string, string | undefined> = {
   osm: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   opentopomap: 'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  'carto-labels': 'https://cartodb-basemaps-a.global.ssl.fastly.net/light_only_labels/{z}/{x}/{y}.png',
+  'carto-labels': CARTO_LABELS_TEMPLATE,
   'enhanced-hillshade': 'https://cloud.sdsc.edu/v1/AUTH_opentopography/Raster/ASTER_GDEM/{z}/{x}/{y}.png',
   opensnowmap: 'https://tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png',
   'esri-clarity': 'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
