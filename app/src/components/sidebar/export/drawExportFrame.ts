@@ -1,5 +1,6 @@
 import { customAnimationByKey } from '@/utils/customMarker';
-import { drawBuildingsAttribution } from './mapAttribution';
+import { drawBuildingsAttribution, drawCartoAttribution } from './mapAttribution';
+import { showCartoLabels } from '@/utils/cartoLabels';
 import { getVideoLogoBox, VIDEO_LOGO_OPACITY } from './videoExportBrand';
 import type { RefObject } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -436,6 +437,7 @@ export function drawExportFrame({
     }
 
     if (currentState.settings.show3DBuildings) drawBuildingsAttribution(context, recordW, recordH);
+    if (showCartoLabels(currentState.settings)) drawCartoAttribution(context, recordW, recordH);
 
     overlayFramesSinceRefreshRef.current += 1;
     const overlayDue = overlayLastUpdateRef.current === 0
