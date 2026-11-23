@@ -4,7 +4,7 @@
 // Adapted from the user's procedural 3D model.
 import * as THREE from 'three';
 
-export function createRunnerRenderer(canvas: HTMLCanvasElement) {
+function buildModel(canvas: HTMLCanvasElement | null) {
 
 
 const INK = 0x1B2A20, ORANGE = 0xC1652F, PAPER = 0xffffff, CREAM = 0xF8F6F0, CANVAS = 0xF8F6F0;
@@ -272,7 +272,26 @@ function makeRunner() {
   for (const x of [2.53, -2.53]) { const g = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.1, 0.7), GLASS); g.rotation.y = Math.PI / 2; g.position.set(x, 1.575, 0); body.add(g); }
   const mid = box(0.06, 0.74, 0.07, M.orange, OUT_T); mid.position.set(2.5, 1.575, 0); body.add(mid);
   // front door on the right side: tall glass leaves with ink frames
-  for (const x of [1.72, 2.0]) { const d = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 1.45), GLASS); d.position.set(x, 1.2, HZ + 0.06); body.add(d); for (const dy of [-0.72, 0.72]) { const f = box(0.28, 0.03, 0.03, M.ink, null); f.position.set(x, 1.2 + dy, HZ + 0.07); body.add(f); } for (const dx of [-0.13, 0.13]) { const f = box(0.03, 1.45, 0.03, M.ink, null); f.position.set(x + dx, 1.2, HZ + 0.07); body.add(f); } }
+  // Each leaf is two hinged glass panels that fold outwards. The far side's doors and the
+  // pull-out step only show in the marker transition (see `fx`).
+  const glassPanel = (dir) => {
+    const g = new THREE.Group();
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 1.45), GLASS); d.position.x = 0.065 * dir; g.add(d);
+    for (const dy of [-0.72, 0.72]) { const f = box(0.14, 0.04, 0.04, M.ink, null); f.position.set(0.065 * dir, dy, 0.01); g.add(f); }
+    for (const dx of [0, 0.13]) { const f = box(0.04, 1.45, 0.04, M.ink, null); f.position.set(dx * dir, 0, 0.01); g.add(f); }
+    const kick = box(0.11, 0.42, 0.02, M.orange, OUT_T); kick.position.set(0.065 * dir, -0.5, 0.005); g.add(kick);
+    return g;
+  };
+  const doorSides = [1, -1].map((s) => {
+    const g = new THREE.Group(); g.visible = s > 0; body.add(g);
+    const leaves = [[1.59, 1], [2.13, -1]].map(([hx, dir]) => {
+      const a = glassPanel(dir); a.position.set(hx, 1.2, (HZ + 0.06) * s); g.add(a);
+      const b = glassPanel(dir); b.position.x = 0.13 * dir; a.add(b);
+      return { a, b, dir };
+    });
+    const step = box(0.56, 0.05, 0.36, M.ink, OUT_T); step.visible = false; body.add(step);
+    return { s, g, leaves, step };
+  });
   // destination sign
   const signTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 96; const g = c.getContext('2d'); g.fillStyle = '#1B2A20'; g.fillRect(0, 0, 512, 96); g.fillStyle = '#F2C14E'; g.font = '800 62px system-ui,sans-serif'; g.textBaseline = 'middle'; g.fillText('42', 22, 52); g.font = '700 50px system-ui,sans-serif'; g.fillText('TRAILHEAD', 118, 52); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; })();
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.19), new THREE.MeshBasicMaterial({ map: signTex })); sign.rotation.y = Math.PI / 2; sign.position.set(2.61, 2.12, 0); body.add(sign);
@@ -309,8 +328,27 @@ function makeRunner() {
     for (const p of [p1, p2]) p.P.position.y = 0.76 + 0.015 * Math.abs(Math.sin(t * 11 + p.P.position.x));
     const blink = (t % 3.84) > 3.66; for (const p of [dv, p1, p2]) for (const e of p.eyes) e.scale.y = blink ? 0.15 : 1;
   }
-  return { root, pose };
+  /** Marker transition only: fold the doors on one side open (0 shut … 1 open) and pull the step out. */
+  function fx({ door = 0, side = 1 }) {
+    for (const D of doorSides) {
+      const k = D.s === side ? door : 0, th = 1.35 * k;
+      D.g.visible = D.s > 0 || side < 0;
+      for (const L of D.leaves) { L.a.rotation.y = -th * L.dir * D.s; L.b.rotation.y = 2 * th * L.dir * D.s; }
+      D.step.visible = k > 0.02; D.step.position.set(1.86, 0.27, (HZ - 0.12 + 0.3 * k) * D.s);
+    }
+  }
+  return { root, pose, crew: [dv.P], fx };
 }
+
+
+
+
+  // Scene-only mode: the marker transition renders this model inside its own stage.
+
+
+
+
+  if (!canvas) return { model: makeRunner(), kit: { part, fill, M, OUT, OUT_T, BOIL } };
 
 
 
@@ -350,4 +388,16 @@ function makeRunner() {
     plateTex.dispose(); stripeTex.dispose(); renderer.dispose();
   }
   return { render, dispose };
+}
+
+export function createRunnerRenderer(canvas: HTMLCanvasElement): {
+  render: (timeMs: number, heading: number, mapBearing: number, pitch: number, color?: string, preview?: boolean) => void;
+  dispose: () => void;
+} {
+  return buildModel(canvas);
+}
+
+/** The model on its own (no renderer), for the marker transition stage. */
+export function createModelScene() {
+  return buildModel(null);
 }

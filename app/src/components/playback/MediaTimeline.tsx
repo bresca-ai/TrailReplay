@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEv
 import { Image as ImageIcon, Video } from 'lucide-react';
 import * as maplibregl from 'maplibre-gl';
 import { mapGlobalRef } from '@/utils/mapRef';
+import { computeMarkerTransitions, markerTransitionHolds } from '@/utils/markerTransitions';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { ANNOTATION_DRAG_TYPE, importMediaAtPlacement, movePlacedMedia, moveTimelineAnnotation, PENDING_MEDIA_DRAG_TYPE, PLACED_MEDIA_DRAG_TYPE, placePendingMedia, placementAtProgress } from '@/utils/pendingMediaPlacement';
@@ -80,18 +81,23 @@ export function MediaTimeline() {
   }, [previewPosition, draggedPictureId, pictures]);
   const routeDuration = playback.totalDuration;
   const moments = useMemo(() => resolveSharedRouteMoments(annotations, segments, tracks, playback.routeTimingMode).map((annotation) => ({ ...annotation, holdDuration: annotation.holdDuration ?? defaultHold })), [annotations, segments, tracks, playback.routeTimingMode, defaultHold]);
-  const timeline = useMemo(() => buildMediaTimeline(routeDuration, moments, pictures, videos), [routeDuration, moments, pictures, videos]);
+  const markerType = useAppStore((state) => state.settings.trailStyle.markerType);
+  const comparisonVisible = useAppStore((state) => state.comparisonTracks.some((track) => track.visible));
+  const timing = useMemo(() => [...moments, ...markerTransitionHolds(computeMarkerTransitions({
+    segments, tracks, routeTimingMode: playback.routeTimingMode, markerType, comparisonActive: comparisonVisible,
+  }))], [moments, segments, tracks, playback.routeTimingMode, markerType, comparisonVisible]);
+  const timeline = useMemo(() => buildMediaTimeline(routeDuration, timing, pictures, videos), [routeDuration, timing, pictures, videos]);
   const items = useMemo(() => [
     ...pictures.map((item) => ({ ...item, kind: 'picture' as const })),
     ...videos.map((item) => ({ ...item, kind: 'video' as const })),
   ], [pictures, videos]);
   const total = Math.max(timeline.totalMs, 1);
   const placementForTime = (item: MediaId, timeMs: number) => {
-    const otherMoments = item.kind === 'annotation' ? moments.filter((entry) => entry.id !== item.id) : moments;
+    const otherMoments = item.kind === 'annotation' ? timing.filter((entry) => entry.id !== item.id) : timing;
     const without = buildMediaTimeline(routeDuration, otherMoments, pictures.filter((p) => item.kind !== 'picture' || p.id !== item.id), videos.filter((v) => item.kind !== 'video' || v.id !== item.id));
     const originalProgress = item.anchorProgress ?? annotations.find((entry) => entry.id === item.id)?.progress;
     const annotationOffset = item.kind === 'annotation' && originalProgress !== undefined
-      ? progressToTimelineTime(originalProgress, routeDuration, moments, timeline.blocks) - progressToTimelineTime(originalProgress, routeDuration, otherMoments, without.blocks)
+      ? progressToTimelineTime(originalProgress, routeDuration, timing, timeline.blocks) - progressToTimelineTime(originalProgress, routeDuration, otherMoments, without.blocks)
       : 0;
     return placementAtProgress(timelineTimeToProgress(timeMs - annotationOffset, routeDuration, otherMoments, without.blocks));
   };
@@ -119,7 +125,7 @@ export function MediaTimeline() {
         if (item && typeof item === 'object' && 'kind' in item && 'id' in item && (item.kind === 'picture' || item.kind === 'video') && typeof item.id === 'string') { moveToTime(item as MediaId, time); setSelected(item as MediaId); }
         return;
       }
-      const placement = placementAtProgress(timelineTimeToProgress(time, routeDuration, moments, timeline.blocks));
+      const placement = placementAtProgress(timelineTimeToProgress(time, routeDuration, timing, timeline.blocks));
       if (!placement) { setError(t('media.bulkNoTimelinePosition')); return; }
       if (files.length) { void importMediaAtPlacement(files, placement).catch(() => setError(t('media.timelineImportError'))); return; }
       const ids: unknown = JSON.parse(raw);
@@ -168,7 +174,7 @@ export function MediaTimeline() {
     }
   };
   const activeBlock = clock && timeline.blocks.find((block) => block.kind === clock.kind && block.id === clock.id);
-  const playhead = activeBlock && clock ? activeBlock.startMs + Math.min(activeBlock.durationMs, Math.max(0, clock.elapsedMs)) : progressToTimelineTime(playback.progress, routeDuration, moments, timeline.blocks);
+  const playhead = activeBlock && clock ? activeBlock.startMs + Math.min(activeBlock.durationMs, Math.max(0, clock.elapsedMs)) : progressToTimelineTime(playback.progress, routeDuration, timing, timeline.blocks);
   const laneWidth = Math.max(1, viewport.width, Math.ceil(total / 1000 * (zoom ?? 0)));
   useEffect(() => {
     if (clock) wasHoldingMedia.current = true;
@@ -244,9 +250,9 @@ export function MediaTimeline() {
               const arrival = annotation.progress * routeDuration;
               const startRoute = Math.max(0, arrival - 500);
               const endRoute = Math.min(routeDuration, arrival + 500);
-              const start = progressToTimelineTime(routeDuration ? startRoute / routeDuration : 0, routeDuration, moments, timeline.blocks);
-              const endTime = progressToTimelineTime(routeDuration ? endRoute / routeDuration : 0, routeDuration, moments, timeline.blocks);
-              const arrivalTime = progressToTimelineTime(annotation.progress, routeDuration, moments, timeline.blocks);
+              const start = progressToTimelineTime(routeDuration ? startRoute / routeDuration : 0, routeDuration, timing, timeline.blocks);
+              const endTime = progressToTimelineTime(routeDuration ? endRoute / routeDuration : 0, routeDuration, timing, timeline.blocks);
+              const arrivalTime = progressToTimelineTime(annotation.progress, routeDuration, timing, timeline.blocks);
               const active = previewGesture?.item.kind === 'annotation' && previewGesture.item.id === annotation.id ? previewGesture : null;
               const delta = active ? (dragDelta ?? 0) : 0;
               const displayStart = active?.mode === 'move' ? Math.max(0, start + delta) : active?.mode === 'start' ? Math.max(0, Math.min(endTime - MIN_PICTURE_MS, start + delta)) : start;

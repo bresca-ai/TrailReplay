@@ -4,7 +4,7 @@
 // Adapted from the user's procedural 3D model.
 import * as THREE from 'three';
 
-export function createRunnerRenderer(canvas: HTMLCanvasElement) {
+function buildModel(canvas: HTMLCanvasElement | null) {
 
 
 const INK = 0x1B2A20, ORANGE = 0xC1652F, PAPER = 0xffffff, CREAM = 0xF8F6F0, CANVAS = 0xF8F6F0;
@@ -235,6 +235,7 @@ function waveArm(A, t, period, rest) {
 }
 
 /* ---------- the sailboat: small sloop (faces +X, on the water line, heeling a little) ---------- */
+const lerpN = (a, b, k) => a + (b - a) * k;
 function makeRunner() {
   const root = new THREE.Group();
   const boat = new THREE.Group(); boat.position.y = 0.1; root.add(boat);
@@ -280,7 +281,9 @@ function makeRunner() {
   const foam = clouds(root, 7, 0.1);
   const wake = []; for (let i = 0; i < 4; i++) { const w = new THREE.Mesh(new THREE.CapsuleGeometry(0.016, 0.55, 3, 6), M.ink); w.rotation.z = Math.PI / 2; root.add(w); wake.push(w); }
 
+  let lastT = 0;
   function pose(t) {
+    lastT = t;
     const gust = Math.sin(t * 0.6);
     boat.rotation.x = -0.12 - 0.04 * gust;                   // heel away from the wind
     boat.rotation.z = 0.02 * Math.sin(t * 1.6);
@@ -300,8 +303,27 @@ function makeRunner() {
     waveArm(sl.arms[0], t + 3, 6, rest); rest(sl.arms[1]);
     const blink = (t % 3.84) > 3.66; for (const e of sl.eyes) e.scale.y = blink ? 0.15 : 1;
   }
-  return { root, pose };
+  /** Marker transition only: 0 the sails hang slack and flap, 1 they are full (the normal look). */
+  function fx({ sail = 1 }) {
+    if (sail >= 1) return;
+    const t = lastT, k = sail, flap = Math.sin(t * 13) * Math.sin(t * 7.3);
+    main.rotation.y = lerpN(0.05 + 0.1 * flap, main.rotation.y, k);
+    jib.rotation.y = lerpN(0.04 - 0.08 * flap, jib.rotation.y, k);
+    mainSail.scale.z = lerpN(0.15 + 1.1 * Math.abs(flap), mainSail.scale.z, k); jibSail.scale.z = mainSail.scale.z;
+    boat.rotation.x = lerpN(0, boat.rotation.x, k);
+  }
+  return { root, pose, crew: [sl.P], fx };
 }
+
+
+
+
+  // Scene-only mode: the marker transition renders this model inside its own stage.
+
+
+
+
+  if (!canvas) return { model: makeRunner(), kit: { part, fill, M, OUT, OUT_T, BOIL } };
 
 
 
@@ -341,4 +363,16 @@ function makeRunner() {
     plateTex.dispose(); stripeTex.dispose(); renderer.dispose();
   }
   return { render, dispose };
+}
+
+export function createRunnerRenderer(canvas: HTMLCanvasElement): {
+  render: (timeMs: number, heading: number, mapBearing: number, pitch: number, color?: string, preview?: boolean) => void;
+  dispose: () => void;
+} {
+  return buildModel(canvas);
+}
+
+/** The model on its own (no renderer), for the marker transition stage. */
+export function createModelScene() {
+  return buildModel(null);
 }

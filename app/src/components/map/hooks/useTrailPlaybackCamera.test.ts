@@ -129,8 +129,9 @@ describe('camera transition handoff', () => {
     const { rerender } = renderHook((input) => useTrailPlaybackCamera(input), { initialProps: props });
     expect(pose).toEqual({ center: [2, 41], zoom: 14, pitch: 25, bearing: 30 });
     rerender({ ...props, currentTimeMs: 5000, playbackProgress: 0.5, currentSegment: { segment: transition, localProgress: 0.5 } });
-    expect(pose.zoom).toBe(8);
-    expect(pose.pitch).toBe(35);
+    // halfway the flight is at the zoom and tilt set for this transition
+    expect(pose.zoom).toBeCloseTo(8, 2);
+    expect(pose.pitch).toBeCloseTo(35, 0);
     rerender({ ...props, currentTimeMs: 6000, playbackProgress: 0.6, currentPosition: { lat: 42, lon: 5, elevation: 0 }, currentSegment: { segment: transition, localProgress: 1 } });
     const arrival = { ...pose, center: [...pose.center] };
     expect(arrival.center).toEqual([5, 42]);

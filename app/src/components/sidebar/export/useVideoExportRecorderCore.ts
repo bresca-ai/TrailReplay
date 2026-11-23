@@ -1,3 +1,4 @@
+import { markerTransitionHoldsForState } from '@/utils/markerTransitions';
 import { animatedMarkerFramesUrl } from './animatedMarkerFrames';
 import { assertExportCanvasUsable, assertRecordingCanvasResolution } from './exportCanvasResolution';
 import { prepareBuildingFrame } from '@/components/map/buildingFrameReadiness';
@@ -149,7 +150,7 @@ export function useVideoExportRecorderCore(options: UseVideoExportRecorderOption
   );
   const actualFormat = videoExportSettings.format === 'mp4' && !mp4Supported ? 'webm' : videoExportSettings.format;
   const annotations = resolveSharedRouteMoments(textAnnotations, journeySegments, tracks, playback.routeTimingMode);
-  const estimatedDurationMs = estimateVideoDuration({ routeDuration: playback.totalDuration, annotations, annotationHoldDuration: annotationHoldDuration ?? 5000,
+  const estimatedDurationMs = estimateVideoDuration({ routeDuration: playback.totalDuration, annotations: [...annotations, ...markerTransitionHoldsForState(useAppStore.getState())], annotationHoldDuration: annotationHoldDuration ?? 5000,
     introDuration: getIntroDuration(locationChapters), outroDuration: OUTRO_DELAY + OUTRO_DURATION,
     includeCover: videoExportSettings.includeCover ?? false, pictures, videos });
   const estimatedSize = estimateFileSize(estimatedDurationMs, videoExportSettings);

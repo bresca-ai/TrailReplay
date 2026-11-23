@@ -4,7 +4,7 @@
 // Adapted from the user's procedural 3D model.
 import * as THREE from 'three';
 
-export function createRunnerRenderer(canvas: HTMLCanvasElement) {
+function buildModel(canvas: HTMLCanvasElement | null) {
 const INK = 0x1B2A20, ORANGE = 0xC1652F, PAPER = 0xffffff, CREAM = 0xF8F6F0, CANVAS = 0xF8F6F0;
 const BOIL = { value: 0 };   // changes ~8 times a second: makes every line "re-drawn"
 
@@ -194,8 +194,14 @@ function makeRunner() {
     for (const [i, b] of bits.entries()) { const k = ((t * 2.1 + i / bits.length) % 1); b.position.set(RX - 0.4 - k * 1.3, 0.12 + 0.9 * k - 1.1 * k * k, (i % 2 ? 1 : -1) * 0.74); b.visible = onGround && k < 0.9; }
     const blink = (t % 3.84) > 3.66; for (const e of eyes) e.scale.y = blink ? 0.15 : 1;
   }
-  return { root, pose };
+  return { root, pose, crew: [drv] };
 }
+
+
+  // Scene-only mode: the marker transition renders this model inside its own stage.
+
+
+  if (!canvas) return { model: makeRunner(), kit: { part, fill, M, OUT, OUT_T, BOIL } };
 
 
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
@@ -233,4 +239,16 @@ function makeRunner() {
     plateTex.dispose(); renderer.dispose();
   }
   return { render, dispose };
+}
+
+export function createRunnerRenderer(canvas: HTMLCanvasElement): {
+  render: (timeMs: number, heading: number, mapBearing: number, pitch: number, color?: string, preview?: boolean) => void;
+  dispose: () => void;
+} {
+  return buildModel(canvas);
+}
+
+/** The model on its own (no renderer), for the marker transition stage. */
+export function createModelScene() {
+  return buildModel(null);
 }

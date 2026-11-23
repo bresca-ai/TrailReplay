@@ -1,6 +1,7 @@
 import type { TransportMode, TransportSegment } from '@/types';
 import { createId } from '@/utils/id';
 import { calculateDistance } from '@/utils/journeyUtils';
+import { defaultCameraTransitionDurationMs } from '@/utils/cameraTransition';
 
 const TRANSPORT_SPEEDS: Record<TransportMode, number> = {
   car: 50,
@@ -29,7 +30,7 @@ export function createTransportSegment(
     mode,
     from,
     to,
-    duration: mode === 'camera' ? 5000 : Math.min(defaultDuration, 10000),
+    duration: mode === 'camera' ? defaultCameraTransitionDurationMs(distanceKm) : Math.min(defaultDuration, 10000),
     distance,
   };
 }

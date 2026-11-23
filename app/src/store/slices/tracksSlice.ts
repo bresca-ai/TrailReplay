@@ -7,6 +7,7 @@ import { getTrackTimeRange } from '@/utils/trackTimeOverlap';
 import { comparisonIssueForMode, getComparisonAvailability } from '@/utils/comparisonAvailability';
 import { translate } from '@/i18n/translations';
 import type { GPXTrack } from '@/types';
+import { withGapCameraTransitions } from '@/utils/journeyGaps';
 
 type TracksSlice = Pick<
   AppState,
@@ -116,6 +117,7 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
   addTrack: (track) =>
     set((state) => {
       insertTrackIntoJourney(state, track);
+      state.journeySegments = withGapCameraTransitions(state.journeySegments, state.tracks);
     }),
 
   addImportedTracks: (tracks, comparisonTracks) =>
@@ -124,6 +126,8 @@ export const createTracksSlice: AppSliceCreator<TracksSlice> = (set) => ({
       // journey/map recomputation while the rest of the import is still being
       // installed.
       tracks.forEach((track) => insertTrackIntoJourney(state, track));
+      // Routes that don't join up get a camera move between them by default.
+      state.journeySegments = withGapCameraTransitions(state.journeySegments, state.tracks);
       state.comparisonTracks.push(...comparisonTracks);
       reconcileComparisonMode(state);
     }),
