@@ -613,7 +613,8 @@ function App() {
     <MenuDesignContext.Provider value={menuDesign}>
     <PlaybackProvider>
       <div
-        className="app-container h-screen bg-[var(--canvas)] flex flex-col overflow-hidden"
+        className="app-container bg-[var(--canvas)] flex flex-col overflow-hidden"
+        data-menu-design={menuDesign}
         aria-busy={fileImportStatus !== null}
         style={{ '--font-family-overlay': overlayFontFamily(settings.trailStyle.overlayFont) } as CSSProperties}
       >
@@ -632,7 +633,7 @@ function App() {
         />
         
         {/* Main Content */}
-        <main className={`relative flex-1 flex overflow-hidden ${menuDesign === 'new' && !isExporting ? 'pb-[calc(3rem+env(safe-area-inset-bottom))] lg:pb-0' : ''}`}>
+        <main className={`relative min-h-0 flex-1 flex overflow-hidden ${menuDesign === 'new' && !isExporting ? 'pb-[calc(3rem+env(safe-area-inset-bottom))] lg:pb-0' : ''}`}>
           {/* Sidebar */}
           <ExportAwareSidebar open={showSidebar} exporting={isExporting}>
             <Suspense fallback={<SidebarFallback />}>
@@ -850,7 +851,7 @@ function App() {
             
             {/* Playback Controls */}
             {hasTracks && (
-              <div className={menuDesign === 'new' ? `absolute inset-x-2 z-40 rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)] shadow-lg transition-[bottom] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:static lg:inset-auto lg:shrink-0 lg:rounded-none lg:border-0 lg:border-t-2 lg:border-[var(--evergreen)] lg:shadow-none ${showSidebar ? 'bottom-[calc(3.5rem+env(safe-area-inset-bottom)+min(55vh,32rem))]' : 'bottom-[calc(3.5rem+env(safe-area-inset-bottom))]'}` : 'shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]'}>
+              <div className={menuDesign === 'new' ? `absolute inset-x-2 z-40 rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)] shadow-lg transition-[bottom] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:static lg:inset-auto lg:shrink-0 lg:rounded-none lg:border-0 lg:border-t-2 lg:border-[var(--evergreen)] lg:shadow-none ${showSidebar ? 'bottom-[calc(3.5rem+env(safe-area-inset-bottom)+var(--mobile-panel-height))]' : 'bottom-[calc(3.5rem+env(safe-area-inset-bottom))]'}` : 'shrink-0 bg-[var(--canvas)] border-t-2 border-[var(--evergreen)]'}>
                 {activePanel === 'pictures' && showSidebar && !isExporting && <MediaTimeline />}
                 <div className={menuDesign === 'new' ? 'h-12 lg:h-20' : 'h-20'}><PlaybackControls compactMobile={menuDesign === 'new'} /></div>
               </div>

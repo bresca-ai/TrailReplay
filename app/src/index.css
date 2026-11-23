@@ -39,6 +39,7 @@
   --input: 45 15% 85%;
   --ring: 24 61% 43%;
   --radius: 0.5rem;
+  --mobile-panel-height: min(55vh, 32rem);
 }
 
 /* Tailwind v4 places utilities in a cascade layer. Keep the legacy reset in
@@ -56,7 +57,28 @@ html, body {
   background: var(--canvas);
   color: var(--evergreen);
   min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
+}
+
+/* Reserve the space occupied by expanded mobile browser controls. The small
+   viewport is stable as those controls appear and disappear; vh is fallback. */
+.app-container {
+  height: 100vh;
+  height: 100svh;
+}
+
+@supports (height: 100svh) {
+  :root { --mobile-panel-height: min(55svh, 32rem); }
+}
+
+/* Continue the mobile navigation color into the space revealed when browser
+   controls retract, without changing the legacy menu or other pages. */
+@media (max-width: 1023px) {
+  html:has(.app-container[data-menu-design="new"]),
+  body:has(.app-container[data-menu-design="new"]) {
+    background: var(--evergreen);
+  }
 }
 
 /* Custom Scrollbar */
