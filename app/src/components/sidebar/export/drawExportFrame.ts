@@ -357,7 +357,10 @@ export function drawExportFrame({
         if (markerIcon.hasAttribute('data-runner-3d')) {
           const canvas = markerIcon.querySelector('canvas:not([data-marker-transition])') as (HTMLCanvasElement & { renderRunnerAt?: (time: number) => void }) | null;
           if (canvas?.renderRunnerAt) {
-            canvas.renderRunnerAt(markerTimeMs);
+            // The 3D renderer uses route time for steering and transition
+            // selection, just like the live preview. The encoded timestamp
+            // also includes the cover, intro and media holds.
+            canvas.renderRunnerAt(useAppStore.getState().playback.currentTime);
             const transitionCanvas = markerIcon.querySelector('canvas[data-marker-transition]:not([hidden])') as HTMLCanvasElement | null;
             context.drawImage(transitionCanvas ?? canvas, markerX - markerIconWidth, markerY - markerIconHeight * 1.65, markerIconWidth * 2, markerIconHeight * 2);
           }

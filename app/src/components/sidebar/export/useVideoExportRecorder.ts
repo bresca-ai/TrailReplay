@@ -1,4 +1,4 @@
-import { combineAnnotationAndMarkerHolds, markerTransitionHoldsForState } from '@/utils/markerTransitions';
+import { combineAnnotationAndMarkerHolds, computeMarkerTransitions, markerTransitionHoldsForState } from '@/utils/markerTransitions';
 import { mapGlobalRef } from '@/utils/mapRef';
 import { applyBasemapVisibility } from '@/components/map/basemapVisibility';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
@@ -15,7 +15,6 @@ import {
 } from '@/utils/analytics';
 import { getCameraUsageAnalyticsParams, trackConfigurationUsage } from '@/utils/configurationAnalytics';
 import {
-  annotationExportFrameStride,
   playbackTimeForRoute,
   routeTimeForPlayback,
 } from '@/utils/annotationTiming';
@@ -303,10 +302,9 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
 
       const currentTime = routeTimeForPlayback(Math.min(outputDurationMs, frameIndex * frameDurationMs), routeDurationMs, annotations, store.settings.annotationHoldDuration ?? 5000);
       const progress = routeDurationMs > 0 ? currentTime / routeDurationMs : 1;
-      const frameStride = Math.min(
-        frameCount - frameIndex + 1,
-        annotationExportFrameStride(currentTime, routeDurationMs, annotations, 2, store.settings.annotationHoldDuration ?? 5000),
-      );
+      // Even when a hold slows the map, markers and overlays can still be
+      // animated. Encode every frame to match the interactive playback.
+      const frameStride = 1;
       const coveredThroughFrame = frameIndex + frameStride - 1;
       setStudioMapTime(encodedDurationMs + frameDurationMs);
       useAppStore.getState().setPlayback({ currentTime, progress });
@@ -695,6 +693,21 @@ export function useVideoExportRecorder(options: UseVideoExportRecorderOptions = 
       applyStudioMapSettings();
 
       setExportStage(t('export.stagePreparing'));
+      const transitionState = useAppStore.getState();
+      const markerTransitions = computeMarkerTransitions({
+        segments: transitionState.journeySegments,
+        tracks: transitionState.tracks,
+        routeTimingMode: transitionState.playback.routeTimingMode,
+        markerType: transitionState.settings.trailStyle.markerType,
+        comparisonActive: transitionState.comparisonTracks.some((track) => track.visible),
+      }).filter((transition) => !transition.skipped);
+      if (markerTransitions.length) {
+        const [{ load3DModelModule }] = await Promise.all([
+          import('@/components/map/load3DMarker'),
+          import('@/components/map/markerTransition3d'),
+        ]);
+        await Promise.all([...new Set(markerTransitions.flatMap(({ fromIcon, toIcon }) => [fromIcon, toIcon]))].map(load3DModelModule));
+      }
       const exportMap = mapGlobalRef.current;
       if (exportMap) applyBasemapVisibility(exportMap, useAppStore.getState().settings.mapStyle);
       await preloadExportOpeningTiles();
