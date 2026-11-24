@@ -106,12 +106,9 @@ export function getCropRegion(
   return { cropX, cropY, cropW, cropH };
 }
 
-/** Use the available portrait area on phones, and the shared landscape composition on wide screens. */
+/** Maximize the selected aspect ratio within the available map viewport. */
 export function getVideoCropRegion(container: { width: number; height: number }, recordW: number, recordH: number): CropRegion {
-  if (container.width < container.height) return getCropRegion(container, recordW, recordH);
-  const base = getCropRegion(container, 16, 9);
-  const inner = getCropRegion({ width: base.cropW, height: base.cropH }, recordW, recordH);
-  return { cropX: base.cropX + inner.cropX, cropY: base.cropY + inner.cropY, cropW: inner.cropW, cropH: inner.cropH };
+  return getCropRegion(container, recordW, recordH);
 }
 
 export function getVideoCropPreviewMetrics(width: number, height: number, ratio: CropRatio): CropPreviewMetrics {

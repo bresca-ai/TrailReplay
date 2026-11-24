@@ -1,4 +1,4 @@
-import { markerTransitionHoldsForState } from '@/utils/markerTransitions';
+import { combineAnnotationAndMarkerHolds, markerTransitionHoldsForState } from '@/utils/markerTransitions';
 import { resolveSharedRouteMoments } from '@/utils/sharedRouteMoments';
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -148,7 +148,7 @@ export function PlaybackProvider({ children }: PlaybackProviderProps) {
       // animation into ~75s of wall-clock (and recording) time.
       const state = useAppStore.getState();
       const { currentTime, speed } = state.playback;
-      const annotations = [...resolveSharedRouteMoments(state.textAnnotations, state.journeySegments, state.tracks, state.playback.routeTimingMode), ...markerTransitionHoldsForState(state)];
+      const annotations = combineAnnotationAndMarkerHolds(resolveSharedRouteMoments(state.textAnnotations, state.journeySegments, state.tracks, state.playback.routeTimingMode), markerTransitionHoldsForState(state));
       const elapsed = playbackTimeForRoute(currentTime, totalDuration, annotations, state.settings.annotationHoldDuration ?? 5000) + deltaTime * speed;
       const newTime = routeTimeForPlayback(elapsed, totalDuration, annotations, state.settings.annotationHoldDuration ?? 5000);
 

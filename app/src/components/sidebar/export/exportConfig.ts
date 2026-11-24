@@ -70,8 +70,7 @@ export function getResolution(
 ): VideoExportSettings['resolution'] {
   const width = QUALITY_LONG_EDGE[quality] ?? QUALITY_LONG_EDGE.medium;
   const height = Math.round(width * 9 / 16);
-  // All formats are crops of the same 16:9 frame. H.264 encoders generally
-  // require even dimensions, so round the narrow edge to the nearest pair.
+  // Preserve the selected quality preset and use even dimensions required by H.264.
   const even = (value: number) => Math.round(value / 2) * 2;
   switch (aspectRatio) {
     case '16:9': return { width, height };

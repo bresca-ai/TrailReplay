@@ -99,12 +99,42 @@ describe('cover previews across export tabs', () => {
     expect(screen.getByRole('img', { name: 'Video cover' })).toHaveAttribute('src', 'data:image/png,La meva portada');
   });
 
-  it('restores the cover camera when returning to the editor', () => {
+  it('restores the cover camera when returning to the editor', async () => {
     const map = mapGlobalRef.current!;
     const { rerender } = renderHook(({ enabled }) => useSocialShareExport(enabled), { initialProps: { enabled: true } });
+    await waitFor(() => expect(useAppStore.getState().socialShareSettings.mapCamera).toBeDefined());
     rerender({ enabled: false });
     rerender({ enabled: true });
     expect(map.jumpTo).toHaveBeenCalledWith(expect.objectContaining({ center: [1, 42], zoom: 13, pitch: 75, bearing: 20 }));
+  });
+
+  it('restores a saved cover camera before generating a cover outside the editor', async () => {
+    const camera = { trackKey: '', center: [2, 43] as [number, number], zoom: 15, pitch: 35, bearing: 65 };
+    useAppStore.getState().setSocialShareSettings({ mapCamera: camera });
+    const map = mapGlobalRef.current!;
+    renderHook(() => useSocialShareExport(true, false, true));
+    await waitFor(() => expect(captureSocialMap).toHaveBeenCalled());
+    expect(map.jumpTo).toHaveBeenCalledWith(camera);
+    expect(vi.mocked(map.jumpTo).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(captureSocialMap).mock.invocationCallOrder[0]);
+  });
+
+  it('stores the adjusted cover camera while the editor is still open', async () => {
+    const container = document.createElement('div');
+    container.id = 'map-capture-container';
+    container.getBoundingClientRect = () => new DOMRect(0, 0, 1200, 800);
+    document.body.appendChild(container);
+    const map = mapGlobalRef.current!;
+    Object.assign(map, {
+      project: () => ({ x: 600, y: 400 }),
+      unproject: () => ({ lng: 2, lat: 43 }),
+      jumpTo: vi.fn(),
+    });
+    const { result } = renderHook(() => useSocialShareExport());
+    await waitFor(() => expect(result.current.previewUrl).not.toBeNull());
+    vi.spyOn(map, 'getCenter').mockReturnValue({ lng: 2, lat: 43 } as ReturnType<typeof map.getCenter>);
+    await act(async () => { await result.current.transformMapViewport({ type: 'move', deltaX: 0.1, deltaY: 0.1 }); });
+    expect(useAppStore.getState().socialShareSettings.mapCamera).toMatchObject({ center: [2, 43], zoom: 13, pitch: 75, bearing: 20 });
+    container.remove();
   });
 
   it('saves the latest edit when switching to Video before its tiles finish loading', async () => {

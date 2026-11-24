@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEv
 import { Image as ImageIcon, Video } from 'lucide-react';
 import * as maplibregl from 'maplibre-gl';
 import { mapGlobalRef } from '@/utils/mapRef';
-import { computeMarkerTransitions, markerTransitionHolds } from '@/utils/markerTransitions';
+import { combineAnnotationAndMarkerHolds, computeMarkerTransitions, markerTransitionHolds } from '@/utils/markerTransitions';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { ANNOTATION_DRAG_TYPE, importMediaAtPlacement, movePlacedMedia, moveTimelineAnnotation, PENDING_MEDIA_DRAG_TYPE, PLACED_MEDIA_DRAG_TYPE, placePendingMedia, placementAtProgress } from '@/utils/pendingMediaPlacement';
@@ -83,9 +83,9 @@ export function MediaTimeline() {
   const moments = useMemo(() => resolveSharedRouteMoments(annotations, segments, tracks, playback.routeTimingMode).map((annotation) => ({ ...annotation, holdDuration: annotation.holdDuration ?? defaultHold })), [annotations, segments, tracks, playback.routeTimingMode, defaultHold]);
   const markerType = useAppStore((state) => state.settings.trailStyle.markerType);
   const comparisonVisible = useAppStore((state) => state.comparisonTracks.some((track) => track.visible));
-  const timing = useMemo(() => [...moments, ...markerTransitionHolds(computeMarkerTransitions({
+  const timing = useMemo(() => combineAnnotationAndMarkerHolds(moments, markerTransitionHolds(computeMarkerTransitions({
     segments, tracks, routeTimingMode: playback.routeTimingMode, markerType, comparisonActive: comparisonVisible,
-  }))], [moments, segments, tracks, playback.routeTimingMode, markerType, comparisonVisible]);
+  }))), [moments, segments, tracks, playback.routeTimingMode, markerType, comparisonVisible]);
   const timeline = useMemo(() => buildMediaTimeline(routeDuration, timing, pictures, videos), [routeDuration, timing, pictures, videos]);
   const items = useMemo(() => [
     ...pictures.map((item) => ({ ...item, kind: 'picture' as const })),

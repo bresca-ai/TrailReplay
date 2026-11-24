@@ -53,6 +53,19 @@ describe('marker transitions', () => {
     expect(computeMarkerTransitions(input(apart))).toEqual([]);
   });
 
+  it('allows an explicitly selected animation across a gap for the intended segment pair', () => {
+    const segments: JourneySegment[] = [
+      { id: 'run', type: 'track', trackId: run.id, duration: 10000 },
+      { id: 'far', type: 'track', trackId: farRide.id, duration: 10000, markerTransitionFromSegmentId: 'run' },
+    ];
+    const transitions = computeMarkerTransitions(input(segments));
+    expect(transitions.map(t => [t.fromIcon, t.toIcon])).toEqual([['3d-runner', '3d-road-bike']]);
+    expect(markerTransitionHolds(transitions)).toHaveLength(1);
+    expect(transitions[0].anchor).toEqual([1.01, 42]);
+    const reordered = [{ ...segments[0], id: 'another-run' }, segments[1]];
+    expect(computeMarkerTransitions(input(reordered))).toEqual([]);
+  });
+
   it('holds playback for the clips unless switched off in the chronology', () => {
     const segments: JourneySegment[] = [
       { id: 'run', type: 'track', trackId: run.id, duration: 10000 },

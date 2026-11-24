@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useAppStore } from '@/store/useAppStore';
 import { AnnotationsPanel } from './AnnotationsPanel';
 
@@ -39,4 +39,19 @@ it('changes only the route chosen from its card', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Choose runner' }));
   expect(useAppStore.getState().tracks.find(item => item.id === 'first')?.activityIcon).toBe('svg-walking');
   expect(useAppStore.getState().tracks.find(item => item.id === 'second')?.activityIcon).toBe('3d-runner');
+});
+
+
+it('orders route style controls by the current journey and keeps unsequenced routes available', () => {
+  const track = { points: [], activityIcon: 'svg-walking', totalDistance: 1000, totalTime: 0, movingTime: 0, elevationGain: 100, elevationLoss: 100, maxElevation: 100, minElevation: 0, maxSpeed: 0, avgSpeed: 0, avgMovingSpeed: 0, bounds: { minLat: 0, maxLat: 1, minLon: 0, maxLon: 1 }, color: '#c1652f', visible: true };
+  for (const [id, name] of [['first', 'First route'], ['second', 'Second route'], ['third', 'Third route']]) {
+    useAppStore.getState().addTrack({ ...track, id, name });
+  }
+  const segments = useAppStore.getState().journeySegments.filter(segment => segment.type === 'track');
+  useAppStore.getState().reorderJourneySegments([segments[1], segments[0], segments[1]]);
+  render(<AnnotationsPanel />);
+  const names = () => screen.getAllByRole('button', { name: /^(First|Second|Third) route$/ }).map(button => button.textContent);
+  expect(names()).toEqual(['Second route', 'First route', 'Third route']);
+  act(() => useAppStore.getState().reorderJourneySegments([segments[0], segments[1]]));
+  expect(names()).toEqual(['First route', 'Second route', 'Third route']);
 });

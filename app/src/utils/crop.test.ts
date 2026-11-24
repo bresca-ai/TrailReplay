@@ -36,16 +36,26 @@ describe('crop utils', () => {
     expect(region.cropH).toBe(800);
   });
 
-  it.each(['4:5', '1:1', '9:16'] as const)('crops the %s preview from the same landscape frame used by video', (ratio) => {
-    const landscape = getVideoCropPreviewMetrics(1200, 800, '16:9');
-    const preview = getVideoCropPreviewMetrics(1200, 800, ratio);
-    const aspect = ratio === '4:5' ? 4 / 5 : ratio === '1:1' ? 1 : 9 / 16;
-    const output = getVideoCropRegion({ width: 1200, height: 800 }, aspect, 1);
-    expect(preview.frameTop).toBeCloseTo(landscape.frameTop);
-    expect(preview.frameHeight).toBeCloseTo(landscape.frameHeight);
-    expect(preview.frameLeft).toBeCloseTo(output.cropX);
-    expect(preview.frameWidth).toBeCloseTo(output.cropW);
-    expect(preview.frameHeight).toBeCloseTo(output.cropH);
+  it.each([
+    [1200, 800, '9:16', 9 / 16],
+    [1200, 800, '4:5', 4 / 5],
+    [1200, 800, '1:1', 1],
+    [390, 700, '9:16', 9 / 16],
+    [390, 700, '16:9', 16 / 9],
+    [1000, 400, '16:9', 16 / 9],
+  ] as const)('maximizes the %s × %s viewport for %s in preview and recording', (width, height, ratio, aspect) => {
+    const preview = getVideoCropPreviewMetrics(width, height, ratio);
+    const output = getVideoCropRegion({ width, height }, aspect, 1);
+    const expectedWidth = Math.min(width, height * aspect);
+    const expectedHeight = expectedWidth / aspect;
+    expect(preview.frameWidth).toBeCloseTo(expectedWidth);
+    expect(preview.frameHeight).toBeCloseTo(expectedHeight);
+    expect(preview.frameLeft).toBeCloseTo((width - expectedWidth) / 2);
+    expect(preview.frameTop).toBeCloseTo((height - expectedHeight) / 2);
+    expect(output.cropX).toBeCloseTo(preview.frameLeft);
+    expect(output.cropY).toBeCloseTo(preview.frameTop);
+    expect(output.cropW).toBeCloseTo(preview.frameWidth);
+    expect(output.cropH).toBeCloseTo(preview.frameHeight);
   });
 
   it('reserves the cropped bars when fitting a portrait export', () => {

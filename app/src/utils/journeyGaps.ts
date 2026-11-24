@@ -30,7 +30,8 @@ export function withGapCameraTransitions(segments: JourneySegment[], tracks: GPX
   segments.forEach((segment, index) => {
     const next = segments[index + 1];
     (result ??= []).push(segment);
-    if (!isUnjoinedTrackPair(segment, next, tracks) || segment.type !== 'track' || next?.type !== 'track') return;
+    if (!isUnjoinedTrackPair(segment, next, tracks) || segment.type !== 'track' || next?.type !== 'track'
+      || next.markerTransitionFromSegmentId === segment.id) return;
     const end = tracks.find((track) => track.id === segment.trackId)!.points.at(-1)!;
     const start = tracks.find((track) => track.id === next.trackId)!.points[0];
     result.push(createTransportSegment('camera', { lat: end.lat, lon: end.lon }, { lat: start.lat, lon: start.lon }));

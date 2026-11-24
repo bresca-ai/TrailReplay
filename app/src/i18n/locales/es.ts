@@ -662,7 +662,7 @@ annotationSize: 'Tamaño de las anotaciones', annotationMarkerSize: 'Tamaño del
     emptyTitle: 'No hay segmentos en el recorrido',
     emptySubtitle: 'Añade rutas y transiciones',
     cameraSettings: 'Ajustes de cámara', cameraAuto: 'Auto', cameraTransitionZoom: 'Zoom de transición', cameraZoomWide: 'Más lejos', cameraZoomClose: 'Más cerca', cameraTransitionPitch: 'Inclinación de transición', cameraPitchTopDown: 'Cenital', cameraPitchTilted: 'Inclinado',
-    markerTransition: 'Animación', markerTransitionDuration: 'Duración de la animación en segundos',
+    markerTransition: 'Animación', addTravelChoice: "Añadir transición de cámara o transporte", travelReplacesMarkerHint: "Añadir transporte sustituye la animación del marcador en este punto.", markerTransitionHeading: "Animación del marcador", travelChoiceHint: "Desplaza entre los extremos de las rutas con cámara o transporte.", markerChoiceHint: "Anima el cambio de marcador entre actividades.", sectionChoiceHint: "Muestra el nombre, la distancia y el desnivel de la ruta al inicio.", sectionManageHint: "Edita esta anotación en Multimedia.", removeSectionCard: "Eliminar anotación de tramo", addSectionCard: 'Añadir anotación de tramo', sectionCardAdded: 'Anotación de tramo añadida', sectionCardEyebrow: 'Siguiente tramo', addMarkerTransition: 'Añadir animación del marcador', markerTransitionDuration: 'Duración de la animación en segundos',
     addTransport: 'Añadir transición',
     runsSimultaneously: 'Se ejecutan simultáneamente',
     runsSimultaneouslyHint: 'Estas rutas se animan al mismo tiempo que tu recorrido principal, de inicio a fin.',

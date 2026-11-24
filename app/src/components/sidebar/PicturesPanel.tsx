@@ -51,6 +51,7 @@ export function PicturesPanel() {
   const pendingPhotos = useAppStore((state) => state.pendingPicturePlacements.filter((item) => item.mediaKind !== 'video').length);
   const updateAllPictureDurations = useAppStore((state) => state.updateAllPictureDurations);
   const annotationCount = useAppStore((state) => state.textAnnotations.length);
+  const annotationEditorTarget = useAppStore((state) => state.annotationEditorTarget);
   const removePicture = useAppStore((state) => state.removePicture);
   const removeVideo = useAppStore((state) => state.removeVideo);
   const updatePictureDuration = useAppStore((state) => state.updatePictureDuration);
@@ -67,7 +68,7 @@ export function PicturesPanel() {
   const isProcessing = isProcessingPhotos || isProcessingVideos;
 
   const [activeTab, setActiveTab] = useState<'pictures' | 'videos' | 'annotations'>(
-    () => annotationCount > 0 && pictures.length + pendingPhotos + videos.length === 0 ? 'annotations' : 'pictures',
+    () => annotationEditorTarget || (annotationCount > 0 && pictures.length + pendingPhotos + videos.length === 0) ? 'annotations' : 'pictures',
   );
   const [editingPicture, setEditingPicture] = useState<string | null>(null);
   const [durationValue, setDurationValue] = useState(3);

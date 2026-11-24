@@ -208,7 +208,7 @@ it('draws different animated marker frames at different video timestamps', () =>
 });
 
 
-it('renders the 3D marker at the video timestamp before compositing it', () => {
+it('renders the 3D marker at route time even when the encoded timestamp includes earlier holds', () => {
   const marker = document.createElement('div');
   marker.className = 'tr-marker';
   marker.getBoundingClientRect = () => new DOMRect(100, 200, 28, 28);
@@ -220,9 +220,29 @@ it('renders the 3D marker at the video timestamp before compositing it', () => {
   const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn() };
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
   options.markerTimeMs = 1250;
+  const playback = useAppStore.getState().playback;
+  useAppStore.getState().setPlayback({ currentTime: 420 });
   drawExportFrame(options);
-  expect(canvas.renderRunnerAt).toHaveBeenCalledWith(1250);
+  expect(canvas.renderRunnerAt).toHaveBeenCalledWith(420);
   expect(context.drawImage.mock.calls.some(([image]) => image === canvas)).toBe(true);
+  useAppStore.getState().setPlayback(playback);
+});
+
+it('composites the active 3D transition canvas instead of the regular marker', () => {
+  const marker = document.createElement('div');
+  marker.className = 'tr-marker';
+  marker.getBoundingClientRect = () => new DOMRect(100, 200, 28, 28);
+  marker.innerHTML = '<div data-marker-icon style="filter:none"><span data-runner-3d style="width:28px;height:28px"><canvas></canvas><canvas data-marker-transition hidden></canvas></span></div>';
+  document.body.appendChild(marker);
+  const canvas = marker.querySelector('canvas:not([data-marker-transition])')! as HTMLCanvasElement & { renderRunnerAt: (time: number) => void };
+  const transitionCanvas = marker.querySelector('canvas[data-marker-transition]')! as HTMLCanvasElement;
+  canvas.renderRunnerAt = vi.fn(() => { transitionCanvas.hidden = false; });
+  const { options } = frameOptions();
+  const context = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), save: vi.fn(), restore: vi.fn() };
+  options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
+  drawExportFrame(options);
+  expect(context.drawImage.mock.calls.some(([image]) => image === transitionCanvas)).toBe(true);
+  expect(context.drawImage.mock.calls.some(([image]) => image === canvas)).toBe(false);
 });
 
 it('uses uploaded animation frames for video export', async () => {

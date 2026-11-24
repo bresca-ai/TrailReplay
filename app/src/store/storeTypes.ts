@@ -101,6 +101,7 @@ export interface AppState {
   exportStage: string;
   isSidebarOpen: boolean;
   exploreMode: boolean;
+  annotationEditorTarget: string | null;
   activePanel: 'tracks' | 'journey' | 'annotations' | 'pictures' | 'export' | 'settings' | 'camera';
   isLoading: boolean;
   fileImportStatus: FileImportStatus | null;

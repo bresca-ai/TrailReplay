@@ -5,7 +5,7 @@ import type { JourneySegment } from '@/types';
 import { formatDistance, formatDuration } from '@/utils/units';
 import { renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
 import { ActivityIconPicker } from '../ActivityIconPicker';
-import { ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { automaticTransitionPeak, transitionSettings } from '@/utils/cameraTransition';
 import { TRANSPORT_MODES, renderJourneyTransportIcon, renderJourneyTransportPreview } from './journeyTransport';
 
@@ -125,14 +125,14 @@ export function TransportSegmentItem({
       ? <span className="ml-1 rounded bg-[var(--evergreen)]/10 px-1 text-[9px] font-normal text-[var(--evergreen-60)]">{t('journey.cameraAuto')}</span>
       : <button type="button" onClick={() => onCameraSettingChange?.(key, undefined)} className="ml-1 rounded px-1 text-[9px] font-normal text-[var(--trail-orange)] hover:bg-[var(--evergreen)]/10">{t('journey.cameraAuto')}</button>;
     return (
-      <div className="ml-4 overflow-hidden rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)]">
+      <div className="ml-7 overflow-hidden rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)]">
         <div className="flex items-center gap-2 px-3 py-2.5">
           <GripVertical className="h-3.5 w-3.5 shrink-0 text-[var(--evergreen-40)]" />
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--evergreen)]/10 text-[var(--evergreen)]">
             {renderJourneyTransportIcon(segment.mode, 17)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold text-[var(--evergreen)]">{modeLabel}</p>
+            <p className="flex items-center gap-1 text-[11px] font-semibold text-[var(--evergreen)]"><CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-green-600" />{modeLabel}</p>
             <button type="button" onClick={onEditDuration} className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
               <Clock className="h-3 w-3" />{formatDuration(durationSeconds)}<Edit3 className="h-2.5 w-2.5" />
             </button>
@@ -163,7 +163,7 @@ export function TransportSegmentItem({
   }
 
   return (
-    <div className="bg-[var(--evergreen)]/10 border-2 border-dashed border-[var(--evergreen)]/30 rounded-lg flex items-center gap-2 group cursor-move p-2 ml-4">
+    <div className="bg-[var(--evergreen)]/10 border-2 border-dashed border-[var(--evergreen)]/30 rounded-lg flex items-center gap-2 group cursor-move p-2 ml-7">
       <GripVertical className="w-4 h-4 text-[var(--evergreen-40)]" />
 
       <div className="w-6 h-6 rounded-full bg-[var(--evergreen)]/30 text-[var(--evergreen)] flex items-center justify-center text-xs font-bold flex-shrink-0">
@@ -178,8 +178,8 @@ export function TransportSegmentItem({
       </div>
 
       <div className="flex-1">
-        <p className="font-medium text-sm text-[var(--evergreen)]">
-          {t('journey.transportSegment', { mode: modeLabel })}
+        <p className="flex items-center gap-1 font-medium text-sm text-[var(--evergreen)]">
+          <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-green-600" />{t('journey.transportSegment', { mode: modeLabel })}
         </p>
 
         <button

@@ -662,7 +662,7 @@ annotationSize: 'Größe der Anmerkungen', annotationMarkerSize: 'Markierungsgr�
     emptyTitle: 'Keine Segmente in der Reise',
     emptySubtitle: 'Routen und Übergänge hinzufügen',
     cameraSettings: 'Kameraeinstellungen', cameraAuto: 'Auto', cameraTransitionZoom: 'Übergangszoom', cameraZoomWide: 'Weiter', cameraZoomClose: 'Näher', cameraTransitionPitch: 'Übergangsneigung', cameraPitchTopDown: 'Von oben', cameraPitchTilted: 'Geneigt',
-    markerTransition: 'Animation', markerTransitionDuration: 'Dauer der Animation in Sekunden',
+    markerTransition: 'Animation', addTravelChoice: "Kamera- oder Transportübergang hinzufügen", travelReplacesMarkerHint: "Ein Transport ersetzt hier die Markierungsanimation.", markerTransitionHeading: "Markierungsanimation", travelChoiceHint: "Verbindet Routenenden per Kamerafahrt oder Transport.", markerChoiceHint: "Animiert den Markierungswechsel zwischen Aktivitäten.", sectionChoiceHint: "Zeigt Name, Distanz und Höhenmeter zu Beginn der Route.", sectionManageHint: "Diese Anmerkung unter Medien bearbeiten.", removeSectionCard: "Abschnittsanmerkung entfernen", addSectionCard: 'Abschnittsanmerkung hinzufügen', sectionCardAdded: 'Abschnittsanmerkung hinzugefügt', sectionCardEyebrow: 'Nächster Abschnitt', addMarkerTransition: 'Markierungsanimation hinzufügen', markerTransitionDuration: 'Dauer der Animation in Sekunden',
     addTransport: 'Übergang hinzufügen',
     runsSimultaneously: 'Läuft gleichzeitig',
     runsSimultaneouslyHint: 'Diese Tracks sind gleichzeitig mit Deiner Hauptreise von Anfang bis Ende animiert.',

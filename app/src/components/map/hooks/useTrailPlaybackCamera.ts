@@ -100,6 +100,7 @@ interface UseTrailPlaybackCameraParams {
    */
   cinematicKeyframes?: PreparedCinematicKeyframe[];
   currentTimeMs: number;
+  markerTransitionAnchor?: [number, number] | null;
   completedCoordinates: number[][];
   computedJourney: { coordinates: Array<{ heartRate: number | null }> } | null;
   currentIcon: string;
@@ -254,6 +255,7 @@ export function useTrailPlaybackCamera({
   computedJourney,
   currentIcon,
   currentTimeMs,
+  markerTransitionAnchor,
   currentPosition,
   recordedElevationEnabled,
   currentSegment,
@@ -479,7 +481,7 @@ export function useTrailPlaybackCamera({
         const revision = ++trailRevisionRef.current;
         const start = completedCoordinates.at(-1);
         void completedTrailSource.setData(withPaintedTrailTip(
-          data, revision, start ? [start[0], start[1]] : null,
+          data, revision, markerTransitionAnchor ?? (start ? [start[0], start[1]] : null),
         ));
       };
 
@@ -967,6 +969,7 @@ export function useTrailPlaybackCamera({
     locationChapterCameraCue,
     mapRef,
     markerRef,
+    markerTransitionAnchor,
     playbackProgress,
     segmentTimings,
     setCameraPosition,

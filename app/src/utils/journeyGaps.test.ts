@@ -19,6 +19,11 @@ describe('withGapCameraTransitions', () => {
     expect(camera.type === 'transport' && [camera.from.lon, camera.to.lon]).toEqual([1.02, 1.05]);
   });
 
+  it('does not replace an explicitly selected marker animation when routes are reordered', () => {
+    const segments: JourneySegment[] = [seg('b', b.id), { id: 'c', type: 'track', trackId: c.id, duration: 10000, markerTransitionFromSegmentId: 'b' }];
+    expect(withGapCameraTransitions(segments, tracks)).toBe(segments);
+  });
+
   it('leaves routes that join, or already have something between them, alone', () => {
     const joined = [seg('a', a.id), seg('b', b.id)];
     expect(withGapCameraTransitions(joined, tracks)).toBe(joined);

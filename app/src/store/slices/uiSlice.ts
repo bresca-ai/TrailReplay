@@ -10,6 +10,7 @@ type UiSlice = Pick<
   | 'isSidebarOpen'
   | 'exploreMode'
   | 'activePanel'
+  | 'annotationEditorTarget'
   | 'comparisonMode'
   | 'comparisonSlowdown'
   | 'comparisonThresholdMeters'
@@ -37,6 +38,7 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   isSidebarOpen: defaultSidebarOpen,
   exploreMode: false,
   activePanel: 'tracks',
+  annotationEditorTarget: null,
   comparisonMode: 'time',
   comparisonSlowdown: 0.25,
   comparisonThresholdMeters: ROUTE_DIVERGENCE_THRESHOLD_METERS,

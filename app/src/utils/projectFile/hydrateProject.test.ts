@@ -19,6 +19,21 @@ const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 </gpx>`;
 
 describe('hydrateProject', () => {
+  it('preserves the cover map camera separately from the playback camera', async () => {
+    const source = createAppStore();
+    source.getState().addTrack(parseGPX(sampleGpx, 'ridge.gpx'));
+    const track = source.getState().tracks[0];
+    const mapCamera = { trackKey: `${track.id}:${track.points.length}`, center: [1.201, 42.1] as [number, number], zoom: 14.5, pitch: 40, bearing: 75 };
+    source.getState().setSocialShareSettings({ mapCamera });
+    const archive = await buildReplayArchive(source.getState());
+    const parsed = await parseReplayArchive(new File([archive], 'cover.replay'));
+    const target = createAppStore();
+    hydrateProject({ ...parsed, project: parsed.project! }, target.getState());
+    expect(target.getState().socialShareSettings.mapCamera).toEqual(mapCamera);
+    expect(target.getState().tracks[0].id).toBe(track.id);
+    expect(target.getState().tracks[0].points).toHaveLength(track.points.length);
+  });
+
   it('preserves an uploaded PNG marker when saving and reopening', async () => {
     const icon = 'data:image/png;base64,iVBORw0KGgo=';
     const source = createAppStore();

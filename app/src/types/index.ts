@@ -79,6 +79,8 @@ export interface TrackSegment {
   skipMarkerTransition?: boolean;
   /** Length of that animation in ms; defaults to the clips' natural length. */
   markerTransitionDuration?: number;
+  /** Explicitly animate from this preceding segment even when their GPX endpoints differ. */
+  markerTransitionFromSegmentId?: string;
 }
 
 export type JourneySegment = TrackSegment | TransportSegment;
@@ -190,6 +192,8 @@ export interface IconChange {
 
 export interface TextAnnotation {
   id: string;
+  /** A section card follows the start of this journey segment until moved. */
+  routeSectionSegmentId?: string;
   /** Show the same moment once on each nearby route in the journey. */
   showOnMatchingRoutes?: boolean;
   progress: number;
@@ -378,6 +382,8 @@ export interface SocialShareSettings {
   showStatsBackground?: boolean;
   statsScale: number;
   showElevationMiniChart: boolean;
+  /** Map camera used for this cover, separate from the replay camera. */
+  mapCamera?: { trackKey: string; center: [number, number]; zoom: number; pitch: number; bearing: number };
   routeTransform: SocialShareRouteTransform;
   photoTransform: SocialSharePhotoTransform;
   /** How far up the data panel (stats + elevation) is shifted from the bottom, as a fraction of poster height (0 = bottom). */

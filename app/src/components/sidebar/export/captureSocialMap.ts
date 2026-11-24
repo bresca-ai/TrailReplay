@@ -5,7 +5,7 @@ let captureQueue: Promise<unknown> = Promise.resolve();
 /** Capture all routes with their completed-replay styling, without advancing playback. */
 export function captureSocialMap(
   map: maplibregl.Map,
-  options: { waitForTiles?: boolean; showPlaces?: boolean } = {},
+  options: { waitForTiles?: boolean; showPlaces?: boolean; cleanCover?: boolean } = {},
 ): Promise<HTMLCanvasElement | null> {
   const capture = async (): Promise<HTMLCanvasElement | null> => {
     const paints: Array<{ id: string; property: Parameters<maplibregl.Map['getPaintProperty']>[1]; value: ReturnType<maplibregl.Map['getPaintProperty']> }> = [];
@@ -18,6 +18,8 @@ export function captureSocialMap(
         // opening beacon are MapLibre layers and must be hidden for capture.
         if (layer.id.startsWith('comparison-position-glow-')
           || layer.id.startsWith('comparison-track-label-')
+          || layer.id.startsWith('comparison-divergence-point-')
+          || layer.id.startsWith('route-annotations-')
           || layer.id.startsWith('location-start-cue-')) {
           visibility.push({ id: layer.id, value: map.getLayoutProperty(layer.id, 'visibility') as 'visible' | 'none' | undefined });
           map.setLayoutProperty(layer.id, 'visibility', 'none');
@@ -25,7 +27,8 @@ export function captureSocialMap(
         }
         if (['route-landmarks-icon', 'route-landmarks-emoji', 'route-landmarks-label', 'carto-labels'].includes(layer.id)) {
           visibility.push({ id: layer.id, value: map.getLayoutProperty(layer.id, 'visibility') as 'visible' | 'none' | undefined });
-          map.setLayoutProperty(layer.id, 'visibility', options.showPlaces ? 'visible' : 'none');
+          const show = options.showPlaces && !(options.cleanCover && layer.id.startsWith('route-landmarks-'));
+          map.setLayoutProperty(layer.id, 'visibility', show ? 'visible' : 'none');
         }
         if (layer.id !== 'trail-line' && !layer.id.startsWith('comparison-trail-line-')) continue;
         const completedId = layer.id.replace('trail-line', 'trail-completed');

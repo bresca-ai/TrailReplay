@@ -26,9 +26,6 @@ import { getSplitMapBox } from './socialShareSplit';
 
 const BRAND_ORANGE = '#C1652F';
 
-// Keep the cover camera separate from the playback camera across editor mounts.
-let savedCoverCamera: { trackKey: string; center: [number, number]; zoom: number; pitch: number; bearing: number } | null = null;
-
 export interface RouteBboxNorm {
   x: number; y: number; w: number; h: number;
 }
@@ -37,7 +34,7 @@ export type MapRouteGesture =
   | { type: 'move'; deltaX: number; deltaY: number }
   | { type: 'resize'; scaleFactor: number; anchorX: number; anchorY: number };
 
-export function useSocialShareExport(enabled = true, editorActive = enabled) {
+export function useSocialShareExport(enabled = true, editorActive = enabled, cleanCover = false) {
   const settings = useAppStore((s) => s.socialShareSettings);
   const setSocialShareSettings = useAppStore((s) => s.setSocialShareSettings);
   const tracks = useAppStore((s) => s.tracks);
@@ -70,18 +67,17 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
   const trackKey = tracks.filter((track) => track.visible && track.points.length > 0)
     .map((track) => `${track.id}:${track.points.length}`).join('|');
   useEffect(() => {
-    if (!editorActive) return;
+    if (!enabled) return;
     const map = mapGlobalRef.current;
     if (!map) return;
+    const savedCoverCamera = useAppStore.getState().socialShareSettings.mapCamera;
     if (savedCoverCamera?.trackKey === trackKey) {
       map.jumpTo(savedCoverCamera);
       lastMapFirstFitKeyRef.current = trackKey;
+    } else {
+      lastMapFirstFitKeyRef.current = null;
     }
-    return () => {
-      const center = map.getCenter();
-      savedCoverCamera = { trackKey, center: [center.lng, center.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
-    };
-  }, [editorActive, trackKey]);
+  }, [enabled, editorActive, trackKey]);
 
   const selectablePictures = pictures.filter((p) => !p.isPlaceholder);
   const selectedPicture = selectablePictures.find((p) => p.id === settings.selectedPictureId) ?? null;
@@ -232,50 +228,61 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
 
           if (options.fitMapFirstRoute && container && visibleTracks.length > 0
             && lastMapFirstFitKeyRef.current !== fitKey) {
-            const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
-            const rect = container.getBoundingClientRect();
-            const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH, settings.splitMapFrame) : null;
-            const crop = getCropRegion(rect, splitBox?.w ?? posterW, splitBox?.h ?? posterH);
-            const safeArea = splitBox
-              ? { x: 0.08, y: 0.08, w: 0.84, h: 0.84 }
-              : getMapFirstRouteSafeArea({
-                posterWidth: posterW,
-                posterHeight: posterH,
-                showLocation: settings.showLocation,
-                showStats: settings.showStats && visibleStatCount > 0,
-                statsRows,
-                showElevation: settings.showElevationMiniChart,
-              });
-            const padding = getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
-            let minLon = Infinity;
-            let maxLon = -Infinity;
-            let minLat = Infinity;
-            let maxLat = -Infinity;
-            for (const track of visibleTracks) {
-              for (const point of track.points) {
-                minLon = Math.min(minLon, point.lon);
-                maxLon = Math.max(maxLon, point.lon);
-                minLat = Math.min(minLat, point.lat);
-                maxLat = Math.max(maxLat, point.lat);
+            const savedCamera = useAppStore.getState().socialShareSettings.mapCamera;
+            if (savedCamera?.trackKey === fitKey) {
+              map.jumpTo(savedCamera);
+              lastMapFirstFitKeyRef.current = fitKey;
+            } else {
+              const { w: posterW, h: posterH } = getPosterSize(settings.aspectRatio);
+              const rect = container.getBoundingClientRect();
+              const splitBox = settings.template === 'split' ? getSplitMapBox(posterW, posterH, settings.splitMapFrame) : null;
+              const crop = getCropRegion(rect, splitBox?.w ?? posterW, splitBox?.h ?? posterH);
+              const safeArea = splitBox
+                ? { x: 0.08, y: 0.08, w: 0.84, h: 0.84 }
+                : getMapFirstRouteSafeArea({
+                  posterWidth: posterW,
+                  posterHeight: posterH,
+                  showLocation: settings.showLocation,
+                  showStats: settings.showStats && visibleStatCount > 0,
+                  statsRows,
+                  showElevation: settings.showElevationMiniChart,
+                });
+              const padding = getMapFirstFitPadding(rect.width, rect.height, crop, safeArea);
+              let minLon = Infinity;
+              let maxLon = -Infinity;
+              let minLat = Infinity;
+              let maxLat = -Infinity;
+              for (const track of visibleTracks) {
+                for (const point of track.points) {
+                  minLon = Math.min(minLon, point.lon);
+                  maxLon = Math.max(maxLon, point.lon);
+                  minLat = Math.min(minLat, point.lat);
+                  maxLat = Math.max(maxLat, point.lat);
+                }
               }
+              map.fitBounds(
+                [[minLon, minLat], [maxLon, maxLat]],
+                {
+                  padding,
+                  duration: 0,
+                  maxZoom: 15,
+                  bearing: map.getBearing(),
+                  pitch: map.getPitch(),
+                },
+              );
+              lastMapFirstFitKeyRef.current = fitKey;
             }
-            map.fitBounds(
-              [[minLon, minLat], [maxLon, maxLat]],
-              {
-                padding,
-                duration: 0,
-                maxZoom: 15,
-                bearing: map.getBearing(),
-                pitch: map.getPitch(),
-              },
-            );
-            lastMapFirstFitKeyRef.current = fitKey;
           }
 
           const center = map.getCenter();
+          const camera = { trackKey: fitKey, center: [center.lng, center.lat] as [number, number], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing() };
+          const savedCamera = useAppStore.getState().socialShareSettings.mapCamera;
+          if (JSON.stringify(savedCamera) !== JSON.stringify(camera)) {
+            useAppStore.getState().setSocialShareSettings({ mapCamera: camera });
+          }
           const snapshotKey = [
             settings.template, settings.routeGlow, settings.routeTransform.opacity,
-            settings.layoutPreset, settings.showMapPlaces, mapStyle,
+            settings.layoutPreset, settings.showMapPlaces, cleanCover, mapStyle,
             center.lng, center.lat, map.getZoom(), map.getPitch(), map.getBearing(),
             map.getCanvas().width, map.getCanvas().height,
             ...visibleTracks.map((track) => `${track.id}:${track.points.length}:${track.color}`),
@@ -286,6 +293,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
           } else {
             preCapuredMapCanvas = await captureSocialMap(map, {
               showPlaces: settings.showMapPlaces,
+              cleanCover,
               waitForTiles: !options.fastMapCapture,
             });
             if (preCapuredMapCanvas) lastMapSnapshotRef.current = { key: snapshotKey, canvas: preCapuredMapCanvas };
@@ -335,6 +343,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
   }, [
     buildInput,
     computeRouteBbox,
+    cleanCover,
     tracks,
     overlayFont,
     mapStyle,
@@ -458,7 +467,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
       if (settings.template !== 'photo-first' && !(settings.template === 'split' && settings.showSplitMap === false)) {
         const map = mapGlobalRef.current;
         if (map) {
-          preCapuredMapCanvas = await captureSocialMap(map, { showPlaces: settings.showMapPlaces });
+          preCapuredMapCanvas = await captureSocialMap(map, { showPlaces: settings.showMapPlaces, cleanCover });
         }
       }
       const [, brandLogo, assets] = await Promise.all([
@@ -483,7 +492,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
     } finally {
       setIsRendering(false);
     }
-  }, [buildInput, overlayFont, settings, tracks.length]);
+  }, [buildInput, cleanCover, overlayFont, settings, tracks.length]);
 
   // Normalized box for direct manipulation of stats (or elevation when stats are hidden).
   const dataPanelBboxNorm: RouteBboxNorm | null = (() => {
