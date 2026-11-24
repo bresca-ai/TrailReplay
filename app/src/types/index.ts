@@ -382,6 +382,8 @@ export interface SocialShareSettings {
   showStatsBackground?: boolean;
   statsScale: number;
   showElevationMiniChart: boolean;
+  /** Map camera used for this cover, separate from the replay camera. */
+  mapCamera?: { trackKey: string; center: [number, number]; zoom: number; pitch: number; bearing: number };
   routeTransform: SocialShareRouteTransform;
   photoTransform: SocialSharePhotoTransform;
   /** How far up the data panel (stats + elevation) is shifted from the bottom, as a fraction of poster height (0 = bottom). */
