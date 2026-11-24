@@ -2,6 +2,25 @@
 
 All notable user-facing changes are recorded here. TrailReplay follows [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] - 2026-11-24
+
+### Added
+
+- Animated 3D markers now cover more activities and transport, including kayaking. People get on and off when supported markers change between journey segments; adjust or disable each transition in Chronology.
+- Journey transitions can fly between separated routes with automatic framing and duration. Add route-section notes from Chronology, and explicitly add supported marker transitions across larger gaps.
+- Preview Instagram Reels interface guides, reposition elevation profiles in exports, and customize the stats overlay with improved layout, appearance and touch controls.
+
+### Improved
+
+- Desktop and mobile navigation is easier to use, with resizable desktop panels and mobile controls kept above browser bars. Landmark icon browsing, search and editing are clearer.
+- Cinematic shots better anticipate terrain, while route overviews, landmark colours and marker selection are more consistent. Playback can start while map preparation continues.
+- Video preview and export use more of the available frame, including portrait recording on mobile. Marker animations follow route timing in exports, and cover captures exclude playback overlays.
+- A public, localized release history is now available. Retaining recent deployed assets improves recovery for editors left open during a deployment. MapLibre and other dependencies were updated.
+
+### Fixed
+
+- Fixed CARTO label authentication and attribution, mobile export on constrained devices, and cover map camera persistence. Reduced duplicate map redraws during panel resizing.
+
 ## [1.5.0] - 2026-11-13
 
 Create richer route stories with place and border animations, a new media timeline, more flexible overlays, and sharper video exports.
@@ -167,3 +186,5 @@ Version 1.0.1 was prepared but never published as a release; its changes ship he
 [1.1.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.1.0
 [1.0.2]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.2
 [1.0.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.0.0
+
+[1.6.0]: https://github.com/bresca-ai/TrailReplay/releases/tag/v1.6.0
