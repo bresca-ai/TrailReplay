@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronLeft, ChevronRight, ImagePlus, X } from 'lucide-react';
 import { Marker3DPreview } from './Marker3DPreview';
 import { bytesToBase64, CUSTOM_ANIMATION_PREFIX, CUSTOM_MODEL_PREFIX, MAX_CUSTOM_GLB_BYTES, MAX_CUSTOM_SVG_BYTES, prepareCustomAnimation, validateCustomModel } from '@/utils/customMarker';
@@ -115,7 +116,7 @@ export function ActivityIconPicker({ value, color, onSelect, onClose }: {
     finally { setProcessing(false); }
   }
 
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10231b]/65 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="marker-picker-title">
+  return createPortal(<div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10231b]/65 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="marker-picker-title">
     <div className="flex max-h-[min(90vh,680px)] w-full max-w-[740px] flex-col overflow-hidden rounded-2xl border border-[var(--evergreen)]/20 bg-[var(--canvas)] shadow-[0_24px_80px_rgba(14,31,23,0.35)]">
       <header className="flex items-center justify-between gap-4 border-b border-[var(--evergreen)]/15 px-5 py-4 sm:px-7 sm:py-5">
         <div className="min-w-0">
@@ -181,5 +182,5 @@ export function ActivityIconPicker({ value, color, onSelect, onClose }: {
       </div>
       <footer className="flex justify-end gap-2 border-t border-[var(--evergreen)]/15 px-5 py-3 sm:px-7"><button type="button" onClick={onClose} className="tr-btn tr-btn-secondary text-sm">{t('common.cancel')}</button><button type="button" disabled={!canApply} onClick={() => onSelect(selected)} className="tr-btn tr-btn-primary text-sm disabled:opacity-40">{pickerLabels[0]}</button></footer>
     </div>
-  </div>;
+  </div>, document.body);
 }
