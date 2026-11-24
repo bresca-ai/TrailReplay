@@ -125,7 +125,7 @@ export function TransportSegmentItem({
       ? <span className="ml-1 rounded bg-[var(--evergreen)]/10 px-1 text-[9px] font-normal text-[var(--evergreen-60)]">{t('journey.cameraAuto')}</span>
       : <button type="button" onClick={() => onCameraSettingChange?.(key, undefined)} className="ml-1 rounded px-1 text-[9px] font-normal text-[var(--trail-orange)] hover:bg-[var(--evergreen)]/10">{t('journey.cameraAuto')}</button>;
     return (
-      <div className="ml-4 overflow-hidden rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)]">
+      <div className="ml-7 overflow-hidden rounded-xl border border-[var(--evergreen)]/15 bg-[var(--canvas)]">
         <div className="flex items-center gap-2 px-3 py-2.5">
           <GripVertical className="h-3.5 w-3.5 shrink-0 text-[var(--evergreen-40)]" />
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--evergreen)]/10 text-[var(--evergreen)]">
@@ -163,7 +163,7 @@ export function TransportSegmentItem({
   }
 
   return (
-    <div className="bg-[var(--evergreen)]/10 border-2 border-dashed border-[var(--evergreen)]/30 rounded-lg flex items-center gap-2 group cursor-move p-2 ml-4">
+    <div className="bg-[var(--evergreen)]/10 border-2 border-dashed border-[var(--evergreen)]/30 rounded-lg flex items-center gap-2 group cursor-move p-2 ml-7">
       <GripVertical className="w-4 h-4 text-[var(--evergreen-40)]" />
 
       <div className="w-6 h-6 rounded-full bg-[var(--evergreen)]/30 text-[var(--evergreen)] flex items-center justify-center text-xs font-bold flex-shrink-0">

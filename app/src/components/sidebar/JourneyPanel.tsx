@@ -1,3 +1,4 @@
+import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { createRouteSectionAnnotation } from '@/utils/routeSectionAnnotations';
 import { withGapCameraTransitions } from '@/utils/journeyGaps';
 import { useState } from 'react';
@@ -22,16 +23,20 @@ import {
   Library,
   Route,
   GitCompareArrows,
+  MessageSquareText,
+  Sparkles,
+  Trash2,
 } from 'lucide-react';
 
 const DEFAULT_TRACK_SEGMENT_DURATION_MS = 30_000;
 const VIDEO_DURATION_OPTIONS = [15, 30, 60, 90] as const;
 
 export function JourneyPanel() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const tracks = useAppStore((state) => state.tracks);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
   const addTextAnnotation = useAppStore((state) => state.addTextAnnotation);
+  const removeTextAnnotation = useAppStore((state) => state.removeTextAnnotation);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
   const addJourneySegment = useAppStore((state) => state.addJourneySegment);
@@ -238,58 +243,65 @@ export function JourneyPanel() {
               <p className="mt-1 text-[10px]">{t('journey.emptySubtitle')}</p>
             </div>
           ) : <div className="space-y-2">
-            {journeySegments.map((segment, index) => (
+            {journeySegments.map((segment, index) => {
+              const previous = journeySegments[index - 1];
+              const transition = markerTransitions.get(segment.id);
+              const section = textAnnotations.find(annotation => annotation.routeSectionSegmentId === segment.id);
+              const sectionCopy = section ? localizedAnnotation(section, language) : null;
+              const canAddSection = segment.type === 'track' && Boolean(tracks.find(track => track.id === segment.trackId)?.points.length);
+              const adjacentTracks = previous?.type === 'track' && segment.type === 'track';
+              const canAddMarker = adjacentTracks && !comparisonTracks.some(track => track.visible)
+                && !transition && canAddManualMarkerTransition(previous, segment, tracks);
+              const canAddTravel = adjacentTracks;
+              return (
               <div key={segment.id} className={draggedIndex === index ? 'opacity-50' : ''} draggable
                 onDragStart={() => handleDragStart(index)} onDragOver={(event) => handleDragOver(event, index)} onDragEnd={handleDragEnd}>
-                {markerTransitions.has(segment.id) && <MarkerTransitionRow transition={markerTransitions.get(segment.id)!}
-                  onChange={({ skip, durationMs }) => reorderJourneySegments(journeySegments.map((item) => item.id !== segment.id ? item : {
-                    ...item,
-                    ...(skip !== undefined ? { skipMarkerTransition: skip || undefined } : {}),
-                    ...(durationMs !== undefined ? { markerTransitionDuration: durationMs === markerTransitions.get(segment.id)!.defaultDuration ? undefined : durationMs } : {}),
-                  }))} />}
+                {(transition || canAddSection || canAddTravel || canAddMarker) && <div className="ml-4 space-y-1.5 border-l border-[var(--evergreen)]/20 py-2 pl-3" draggable={false}
+                  onPointerDown={event => event.stopPropagation()} onDragStart={event => { event.preventDefault(); event.stopPropagation(); }}>
+                  {canAddTravel && <button type="button" onClick={() => { setSelectedTransportIndex(index - 1); setShowTransportMenu(true); }}
+                    className="flex w-full items-start gap-2 rounded-lg border border-dashed border-[var(--evergreen)]/25 px-2 py-2 text-left text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]">
+                    <Plus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span><span className="block text-[10px] font-bold">{t('journey.addTravelChoice')}</span><span className="mt-0.5 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t(transition && !transition.skipped ? 'journey.travelReplacesMarkerHint' : 'journey.travelChoiceHint')}</span></span>
+                  </button>}
+                  {canAddMarker && <button type="button" onClick={() => {
+                    reorderJourneySegments(journeySegments.map(item => item.id === segment.id && item.type === 'track'
+                      ? { ...item, markerTransitionFromSegmentId: previous.id, skipMarkerTransition: undefined } : item));
+                    if (markerType !== 'icon' || !settings.trailStyle.showMarker) setTrailStyle({ markerType: 'icon', showMarker: true });
+                  }} className="flex w-full items-start gap-2 rounded-lg border border-dashed border-[var(--evergreen)]/25 px-2 py-2 text-left text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]">
+                    <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span><span className="block text-[10px] font-bold">{t('journey.addMarkerTransition')}</span><span className="mt-0.5 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t('journey.markerChoiceHint')}</span></span>
+                  </button>}
+                  {transition && <MarkerTransitionRow transition={transition}
+                    onChange={({ skip, durationMs }) => reorderJourneySegments(journeySegments.map(item => item.id !== segment.id ? item : {
+                      ...item,
+                      ...(skip !== undefined ? { skipMarkerTransition: skip || undefined } : {}),
+                      ...(durationMs !== undefined ? { markerTransitionDuration: durationMs === transition.defaultDuration ? undefined : durationMs } : {}),
+                    }))} />}
+                  {canAddSection && (section && sectionCopy ? <div className="flex w-full items-start gap-2 rounded-lg border border-[var(--evergreen)]/20 bg-white/40 px-2 py-2 text-[var(--evergreen)]">
+                    <MessageSquareText aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--trail-orange)]" />
+                    <div className="min-w-0 flex-1"><span className="block text-[10px] font-bold">{t('journey.sectionCardAdded')}</span><span className="mt-0.5 block break-words text-[10px] leading-snug text-[var(--evergreen-60)]">{sectionCopy.title}{sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''}</span><span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{t('journey.sectionManageHint')}</span></div>
+                    <button type="button" onClick={() => removeTextAnnotation(section.id)} aria-label={t('journey.removeSectionCard')} className="rounded p-1 text-[var(--evergreen-60)] hover:bg-red-100 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div> : <button type="button" onClick={() => {
+                    const annotation = createRouteSectionAnnotation({ id: createId('annotation'), segmentId: segment.id,
+                      segments: journeySegments, tracks, mode: routeTimingMode, unitSystem: settings.unitSystem,
+                      eyebrow: t('journey.sectionCardEyebrow') });
+                    if (annotation) addTextAnnotation(annotation);
+                  }} className="flex w-full items-start gap-2 rounded-lg border border-dashed border-[var(--evergreen)]/25 px-2 py-2 text-left text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]">
+                    <MessageSquareText className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span><span className="block text-[10px] font-bold">{t('journey.addSectionCard')}</span><span className="mt-0.5 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t('journey.sectionChoiceHint')}</span></span>
+                  </button>)}
+                </div>}
                 {segment.type === 'track' ? <TrackSegmentItem segment={segment} index={index}
                   onRemove={() => removeJourneySegment(segment.id)}
                   onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 30000) / 1000); }}
                   onSeek={() => seekToProgress(getSegmentProgress(index))} /> :
                   <TransportSegmentItem segment={segment} index={index}
-                    onCameraSettingChange={(key, value) => reorderJourneySegments(journeySegments.map((item) => item.id === segment.id ? { ...item, [key]: value } : item))}
+                    onCameraSettingChange={(key, value) => reorderJourneySegments(journeySegments.map(item => item.id === segment.id ? { ...item, [key]: value } : item))}
                     onRemove={() => removeJourneySegment(segment.id)}
                     onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 5000) / 1000); }}
                     onSeek={() => seekToProgress(getSegmentProgress(index))} />}
-                {segment.type === 'track' && tracks.find(track => track.id === segment.trackId)?.points.length ? (
-                  <button type="button" disabled={textAnnotations.some(annotation => annotation.routeSectionSegmentId === segment.id)}
-                    onClick={() => {
-                      const annotation = createRouteSectionAnnotation({ id: createId('annotation'), segmentId: segment.id,
-                        segments: journeySegments, tracks, mode: routeTimingMode, unitSystem: settings.unitSystem,
-                        eyebrow: t('journey.sectionCardEyebrow') });
-                      if (annotation) addTextAnnotation(annotation);
-                    }}
-                    className="ml-6 mt-1 flex items-center gap-1.5 px-1 py-1 text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)] disabled:opacity-50">
-                    <Plus className="h-3.5 w-3.5 rounded-full border border-current p-0.5" />
-                    {t(textAnnotations.some(annotation => annotation.routeSectionSegmentId === segment.id) ? 'journey.sectionCardAdded' : 'journey.addSectionCard')}
-                  </button>
-                ) : null}
-                {index < journeySegments.length - 1 && segment.type === 'track' && journeySegments[index + 1].type === 'track' && (
-                  <div className="ml-6 border-l border-[var(--evergreen)]/20 py-2 pl-4">
-                    <button type="button" onClick={() => { setSelectedTransportIndex(index); setShowTransportMenu(true); }}
-                      className="flex items-center gap-1.5 text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
-                      <Plus className="h-3.5 w-3.5 rounded-full border border-current p-0.5" />{t('journey.addTransport')}
-                    </button>
-                    {!comparisonTracks.some((track) => track.visible) && !markerTransitions.has(journeySegments[index + 1].id)
-                      && canAddManualMarkerTransition(segment, journeySegments[index + 1], tracks) && (
-                      <button type="button" onClick={() => {
-                        const next = journeySegments[index + 1];
-                        reorderJourneySegments(journeySegments.map((item) => item.id === next.id && item.type === 'track'
-                          ? { ...item, markerTransitionFromSegmentId: segment.id, skipMarkerTransition: undefined } : item));
-                        if (markerType !== 'icon' || !settings.trailStyle.showMarker) setTrailStyle({ markerType: 'icon', showMarker: true });
-                      }} className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
-                        <Plus className="h-3.5 w-3.5 rounded-full border border-current p-0.5" />{t('journey.addMarkerTransition')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+              </div>);
+            })}
           </div>}
           <div className="mt-3 flex items-center justify-between gap-2">
             <button type="button" onClick={addAllTracksToJourney} className="flex items-center gap-1.5 rounded-lg border border-[var(--evergreen)]/20 px-2.5 py-2 text-[10px] font-semibold text-[var(--evergreen)] hover:bg-[var(--evergreen)]/5"><Plus className="h-3 w-3" />{t('journey.addAllTracks')}</button>

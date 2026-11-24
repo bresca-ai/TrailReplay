@@ -673,7 +673,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     emptyTitle: 'No segments in journey',
     emptySubtitle: 'Add routes and transitions',
     cameraSettings: 'Camera settings', cameraAuto: 'Auto', cameraTransitionZoom: 'Transition zoom', cameraZoomWide: 'Wider', cameraZoomClose: 'Closer', cameraTransitionPitch: 'Transition tilt', cameraPitchTopDown: 'Top down', cameraPitchTilted: 'Tilted',
-    markerTransition: 'Animation', addSectionCard: 'Add section annotation', sectionCardAdded: 'Section annotation added', sectionCardEyebrow: 'Next section', addMarkerTransition: 'Add marker animation', markerTransitionDuration: 'Animation length in seconds',
+    markerTransition: 'Animation', addTravelChoice: "Add travel or camera transition", travelReplacesMarkerHint: "Adding travel replaces the marker animation at this boundary.", markerTransitionHeading: "Marker animation", travelChoiceHint: "Moves between route endpoints by camera or transport.", markerChoiceHint: "Animates the marker changing from one activity to the next.", sectionChoiceHint: "Shows this route’s name, distance and elevation at its start.", sectionManageHint: "Edit this annotation in Media.", removeSectionCard: "Remove section annotation", addSectionCard: 'Add section annotation', sectionCardAdded: 'Section annotation added', sectionCardEyebrow: 'Next section', addMarkerTransition: 'Add marker animation', markerTransitionDuration: 'Animation length in seconds',
     addTransport: 'Add Transition',
     runsSimultaneously: 'Runs Simultaneously',
     runsSimultaneouslyHint: 'These tracks animate at the same time as your main journey, from start to finish.',

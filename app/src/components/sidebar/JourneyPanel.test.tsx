@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { parseGPX } from '@/utils/gpxParser';
@@ -26,14 +26,18 @@ describe('Timeline editor', () => {
 
   it('creates a section card with route details and allows it to be managed as an annotation', () => {
     render(<JourneyPanel />);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add section annotation' })[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Add section annotation/ })[1]);
     const state = useAppStore.getState();
     expect(state.textAnnotations).toHaveLength(1);
     expect(state.textAnnotations[0]).toMatchObject({ routeSectionSegmentId: state.journeySegments[1].id, title: 'Valley walk', presentation: 'side-panel' });
     expect(state.textAnnotations[0].meta).toMatch(/km.*↑/);
-    expect(screen.getByRole('button', { name: 'Section annotation added' })).toBeDisabled();
-    act(() => state.removeTextAnnotation(state.textAnnotations[0].id));
-    expect(screen.getAllByRole('button', { name: 'Add section annotation' })).toHaveLength(2);
+    expect(screen.getByText('Section annotation added')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove section annotation' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Add section annotation/ })).toHaveLength(1);
+    expect(screen.getByText('Valley walk · ' + state.textAnnotations[0].meta)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove section annotation' }));
+    expect(useAppStore.getState().textAnnotations).toHaveLength(0);
+    expect(screen.getAllByRole('button', { name: /Add section annotation/ })).toHaveLength(2);
   });
 
   it('offers and enables a marker animation after a camera transition is removed', () => {
@@ -41,11 +45,14 @@ describe('Timeline editor', () => {
     useAppStore.getState().updateTrackIcon(tracks[0].id, '3d-runner');
     useAppStore.getState().updateTrackIcon(tracks[1].id, '3d-road-bike');
     render(<JourneyPanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add marker animation' }));
+    fireEvent.click(screen.getByRole('button', { name: /Add marker animation/ }));
     expect(useAppStore.getState().journeySegments[1]).toMatchObject({ markerTransitionFromSegmentId: journeySegments[0].id });
     expect(useAppStore.getState().settings.trailStyle.markerType).toBe('icon');
     expect(screen.getByRole('switch', { name: 'Animation' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('spinbutton', { name: 'Animation length in seconds' })).toBeInTheDocument();
+    expect(screen.getByText('Marker animation')).toBeInTheDocument();
+    expect(screen.getByText('Adding travel replaces the marker animation at this boundary.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Add marker animation/ })).not.toBeInTheDocument();
   });
 
   it('compares already loaded routes and returns them to their original sequence', () => {
@@ -108,7 +115,7 @@ describe('Timeline editor', () => {
     fireEvent.change(screen.getByLabelText('Duration (seconds)'), { target: { value: '27' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(useAppStore.getState().journeySegments[0].duration).toBe(27_000);
-    fireEvent.click(screen.getByRole('button', { name: 'Add Transition' }));
+    fireEvent.click(screen.getByRole('button', { name: /Add travel or camera transition/ }));
     for (const name of ['Driving', 'Bus', 'Train', 'Flying', 'Cycling', 'Walking', 'Ferry', 'Camera transition']) {
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
     }
@@ -118,7 +125,7 @@ describe('Timeline editor', () => {
   });
   it('adds an editable camera transition between routes', () => {
     render(<JourneyPanel />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add Transition' }));
+    fireEvent.click(screen.getByRole('button', { name: /Add travel or camera transition/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Camera transition' }));
     expect(useAppStore.getState().journeySegments[1]).toMatchObject({ type: 'transport', mode: 'camera', duration: 3000, distance: 0 });
     expect(screen.getByText('Camera transition')).toBeInTheDocument();
