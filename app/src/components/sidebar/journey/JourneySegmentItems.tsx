@@ -5,7 +5,7 @@ import type { JourneySegment } from '@/types';
 import { formatDistance, formatDuration } from '@/utils/units';
 import { renderActivityIcon, resolvePlaybackMarkerColor } from '@/utils/activityIcons';
 import { ActivityIconPicker } from '../ActivityIconPicker';
-import { ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Clock, Edit3, GripVertical, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { automaticTransitionPeak, transitionSettings } from '@/utils/cameraTransition';
 import { TRANSPORT_MODES, renderJourneyTransportIcon, renderJourneyTransportPreview } from './journeyTransport';
 
@@ -132,7 +132,7 @@ export function TransportSegmentItem({
             {renderJourneyTransportIcon(segment.mode, 17)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold text-[var(--evergreen)]">{modeLabel}</p>
+            <p className="flex items-center gap-1 text-[11px] font-semibold text-[var(--evergreen)]"><CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-green-600" />{modeLabel}</p>
             <button type="button" onClick={onEditDuration} className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
               <Clock className="h-3 w-3" />{formatDuration(durationSeconds)}<Edit3 className="h-2.5 w-2.5" />
             </button>
@@ -178,8 +178,8 @@ export function TransportSegmentItem({
       </div>
 
       <div className="flex-1">
-        <p className="font-medium text-sm text-[var(--evergreen)]">
-          {t('journey.transportSegment', { mode: modeLabel })}
+        <p className="flex items-center gap-1 font-medium text-sm text-[var(--evergreen)]">
+          <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-green-600" />{t('journey.transportSegment', { mode: modeLabel })}
         </p>
 
         <button

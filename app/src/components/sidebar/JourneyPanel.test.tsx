@@ -51,7 +51,7 @@ describe('Timeline editor', () => {
     expect(screen.getByRole('switch', { name: 'Animation' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('spinbutton', { name: 'Animation length in seconds' })).toBeInTheDocument();
     expect(screen.getByText('Marker animation')).toBeInTheDocument();
-    expect(screen.getByText('Adding travel replaces the marker animation at this boundary.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add travel or camera transition/ })).toHaveAttribute('title', 'Adding travel replaces the marker animation at this boundary.');
     expect(screen.queryByRole('button', { name: /Add marker animation/ })).not.toBeInTheDocument();
   });
 

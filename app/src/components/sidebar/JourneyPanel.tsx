@@ -23,8 +23,7 @@ import {
   Library,
   Route,
   GitCompareArrows,
-  MessageSquareText,
-  Sparkles,
+  CheckCircle2,
   Trash2,
 } from 'lucide-react';
 
@@ -256,20 +255,21 @@ export function JourneyPanel() {
               return (
               <div key={segment.id} className={draggedIndex === index ? 'opacity-50' : ''} draggable
                 onDragStart={() => handleDragStart(index)} onDragOver={(event) => handleDragOver(event, index)} onDragEnd={handleDragEnd}>
-                {(transition || canAddSection || canAddTravel || canAddMarker) && <div className="ml-4 space-y-1.5 border-l border-[var(--evergreen)]/20 py-2 pl-3" draggable={false}
+                {(transition || canAddSection || canAddTravel || canAddMarker) && <div className="ml-4 space-y-0.5 border-l border-[var(--evergreen)]/20 py-1 pl-3" draggable={false}
                   onPointerDown={event => event.stopPropagation()} onDragStart={event => { event.preventDefault(); event.stopPropagation(); }}>
                   {canAddTravel && <button type="button" onClick={() => { setSelectedTransportIndex(index - 1); setShowTransportMenu(true); }}
-                    className="flex w-full items-start gap-2 rounded-lg border border-dashed border-[var(--evergreen)]/25 px-2 py-2 text-left text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]">
-                    <Plus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span><span className="block text-[10px] font-bold">{t('journey.addTravelChoice')}</span><span className="mt-0.5 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t(transition && !transition.skipped ? 'journey.travelReplacesMarkerHint' : 'journey.travelChoiceHint')}</span></span>
+                    title={t(transition && !transition.skipped ? 'journey.travelReplacesMarkerHint' : 'journey.travelChoiceHint')}
+                    className="flex min-h-6 w-full items-center gap-1.5 text-left text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
+                    <Plus className="h-3.5 w-3.5 shrink-0 rounded-full border border-current p-0.5" />
+                    {t('journey.addTravelChoice')}
                   </button>}
                   {canAddMarker && <button type="button" onClick={() => {
                     reorderJourneySegments(journeySegments.map(item => item.id === segment.id && item.type === 'track'
                       ? { ...item, markerTransitionFromSegmentId: previous.id, skipMarkerTransition: undefined } : item));
                     if (markerType !== 'icon' || !settings.trailStyle.showMarker) setTrailStyle({ markerType: 'icon', showMarker: true });
-                  }} className="flex w-full items-start gap-2 rounded-lg border border-dashed border-[var(--evergreen)]/25 px-2 py-2 text-left text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]">
-                    <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span><span className="block text-[10px] font-bold">{t('journey.addMarkerTransition')}</span><span className="mt-0.5 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t('journey.markerChoiceHint')}</span></span>
+                  }} title={t('journey.markerChoiceHint')} className="flex min-h-6 w-full items-center gap-1.5 text-left text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
+                    <Plus className="h-3.5 w-3.5 shrink-0 rounded-full border border-current p-0.5" />
+                    {t('journey.addMarkerTransition')}
                   </button>}
                   {transition && <MarkerTransitionRow transition={transition}
                     onChange={({ skip, durationMs }) => reorderJourneySegments(journeySegments.map(item => item.id !== segment.id ? item : {
@@ -277,18 +277,19 @@ export function JourneyPanel() {
                       ...(skip !== undefined ? { skipMarkerTransition: skip || undefined } : {}),
                       ...(durationMs !== undefined ? { markerTransitionDuration: durationMs === transition.defaultDuration ? undefined : durationMs } : {}),
                     }))} />}
-                  {canAddSection && (section && sectionCopy ? <div className="flex w-full items-start gap-2 rounded-lg border border-[var(--evergreen)]/20 bg-white/40 px-2 py-2 text-[var(--evergreen)]">
-                    <MessageSquareText aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--trail-orange)]" />
-                    <div className="min-w-0 flex-1"><span className="block text-[10px] font-bold">{t('journey.sectionCardAdded')}</span><span className="mt-0.5 block break-words text-[10px] leading-snug text-[var(--evergreen-60)]">{sectionCopy.title}{sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''}</span><span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{t('journey.sectionManageHint')}</span></div>
-                    <button type="button" onClick={() => removeTextAnnotation(section.id)} aria-label={t('journey.removeSectionCard')} className="rounded p-1 text-[var(--evergreen-60)] hover:bg-red-100 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                  {canAddSection && (section && sectionCopy ? <div className="flex min-h-6 w-full items-center gap-1.5 text-[10px] text-[var(--evergreen)]" title={`${sectionCopy.title}${sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''} · ${t('journey.sectionManageHint')}`}>
+                    <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                    <span className="shrink-0 font-semibold">{t('journey.sectionCardAdded')}</span>
+                    <span className="min-w-0 flex-1 truncate text-[var(--evergreen-60)]">{sectionCopy.title}{sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''}</span>
+                    <button type="button" onClick={() => removeTextAnnotation(section.id)} aria-label={t('journey.removeSectionCard')} className="rounded p-1 text-[var(--evergreen-60)] hover:bg-red-100 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                   </div> : <button type="button" onClick={() => {
                     const annotation = createRouteSectionAnnotation({ id: createId('annotation'), segmentId: segment.id,
                       segments: journeySegments, tracks, mode: routeTimingMode, unitSystem: settings.unitSystem,
                       eyebrow: t('journey.sectionCardEyebrow') });
                     if (annotation) addTextAnnotation(annotation);
-                  }} className="flex w-full items-start gap-2 rounded-lg border border-dashed border-[var(--evergreen)]/25 px-2 py-2 text-left text-[var(--evergreen)] hover:border-[var(--trail-orange)] hover:bg-[var(--trail-orange-15)]">
-                    <MessageSquareText className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span><span className="block text-[10px] font-bold">{t('journey.addSectionCard')}</span><span className="mt-0.5 block text-[10px] leading-snug text-[var(--evergreen-60)]">{t('journey.sectionChoiceHint')}</span></span>
+                  }} title={t('journey.sectionChoiceHint')} className="flex min-h-6 w-full items-center gap-1.5 text-left text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
+                    <Plus className="h-3.5 w-3.5 shrink-0 rounded-full border border-current p-0.5" />
+                    {t('journey.addSectionCard')}
                   </button>)}
                 </div>}
                 {segment.type === 'track' ? <TrackSegmentItem segment={segment} index={index}

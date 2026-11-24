@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { useI18n } from '@/i18n/useI18n';
 import { clampTransitionDuration, MARKER_TRANSITION_MAX_MS, MARKER_TRANSITION_MIN_MS, type MarkerTransition } from '@/utils/markerTransitions';
 
@@ -21,9 +22,10 @@ export function MarkerTransitionRow({ transition, onChange }: {
     if (ms !== transition.holdDuration) onChange({ durationMs: ms });
   };
   return (
-    <div className="flex w-full items-center gap-2 rounded-lg border border-[var(--evergreen)]/20 bg-white/40 px-2 py-2"
+    <div className="flex min-h-6 w-full items-center gap-1.5" title={t('journey.markerChoiceHint')}
       onPointerDown={(event) => event.stopPropagation()} draggable={false} onDragStart={(event) => { event.preventDefault(); event.stopPropagation(); }}>
-      <span className={`min-w-0 flex-1 text-[10px] font-semibold ${on ? 'text-[var(--evergreen)]' : 'text-[var(--evergreen-60)]'}`}><span className="block">{t('journey.markerTransitionHeading')}</span><span className="mt-0.5 block font-normal leading-snug text-[var(--evergreen-60)]">{t('journey.markerChoiceHint')}</span></span>
+      <CheckCircle2 aria-hidden="true" className={`h-3.5 w-3.5 shrink-0 ${on ? 'text-green-600' : 'text-[var(--evergreen-40)]'}`} />
+      <span className={`min-w-0 flex-1 text-[10px] font-semibold ${on ? 'text-[var(--evergreen)]' : 'text-[var(--evergreen-60)]'}`}>{t('journey.markerTransitionHeading')}</span>
       <label className={`flex items-center gap-0.5 rounded-md border border-[var(--evergreen)]/15 bg-[var(--canvas)] px-1.5 py-0.5 text-[10px] text-[var(--evergreen)] ${on ? '' : 'opacity-40'}`}>
         <input type="number" inputMode="decimal" min={MARKER_TRANSITION_MIN_MS / 1000} max={MARKER_TRANSITION_MAX_MS / 1000} step="0.5"
           value={draft ?? seconds(transition.holdDuration)} disabled={!on} aria-label={t('journey.markerTransitionDuration')}
