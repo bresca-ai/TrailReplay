@@ -1,3 +1,4 @@
+import { getFrameAdornmentScale } from '@/utils/crop';
 import { useEffect, useMemo, useRef } from 'react';
 import type { Feature, LineString } from 'geojson';
 import * as maplibregl from 'maplibre-gl';
@@ -408,9 +409,10 @@ export function useTrailPlaybackCamera({
         currentTrackColor,
       );
       let markerHtml = '';
+      const markerScale = getFrameAdornmentScale(exportFrame?.frameWidth ?? mapRef.current.getCanvas().clientWidth);
 
       if (trailStyle.showMarker && shouldUseDotForPlaybackMarker(trailStyle.markerType, isInTransport && transportModelsEnabled, icon)) {
-        const dotSize = Math.round(14 * trailStyle.markerSize);
+        const dotSize = Math.round(14 * trailStyle.markerSize * markerScale);
         const dotColors = [markerColor, ...(sharedComparisonColors ?? [])];
         const dotFill = dotColors.length === 1 ? markerColor : `conic-gradient(${dotColors.map((color, index) =>
           `${color} ${index * 100 / dotColors.length}% ${(index + 1) * 100 / dotColors.length}%`).join(', ')})`;
@@ -424,7 +426,7 @@ export function useTrailPlaybackCamera({
           flex-shrink: 0;
         "></div>`;
       } else if (trailStyle.showMarker) {
-        const fontSize = 28 * trailStyle.markerSize;
+        const fontSize = 28 * trailStyle.markerSize * markerScale;
         const iconColor = markerColor;
         const iconHtml = getActivityIconMarkerHtml(icon, fontSize, iconColor);
         // Keep showCircle as the saved setting for recipe/project compatibility.
@@ -955,6 +957,7 @@ export function useTrailPlaybackCamera({
     currentTrackColor,
     currentTrackName,
     elevationData,
+    exportFrame,
     followBehindZoomLevel,
     followBehindPitch,
     isInTransport,

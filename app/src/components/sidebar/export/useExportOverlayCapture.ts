@@ -875,6 +875,7 @@ export function useExportOverlayCapture({
     const sectionEnd = svg.dataset.exportElevationEnd;
     const sectionDistance = svg.dataset.exportElevationDistance;
     const sectionKind = svg.dataset.exportElevationSectionKind;
+    const labelScale = Number(svg.dataset.exportElevationLabelScale) || 1;
     const hasSectionMetrics = dynamicElevation
       && Boolean(sectionChange && sectionStart && sectionEnd && sectionDistance)
       && (sectionKind === 'climb' || sectionKind === 'descent');
@@ -903,15 +904,15 @@ export function useExportOverlayCapture({
         const journeySegment = state.journeySegments[currentSegmentIndex];
         const mode = journeySegment?.type === 'transport' ? journeySegment.mode : 'car';
         const icon = mode === 'camera' ? '' : TRANSPORT_ICONS[mode] || '🚗';
-        context.font = `${(isCompact ? 12 : 18) * elementScaleY}px sans-serif`;
+        context.font = `${(isCompact ? 12 : 18) * labelScale * elementScaleY}px sans-serif`;
         context.textAlign = 'center';
         context.fillText(icon, centerX, baselineY);
       } else {
         const elevation = getElevationAtProgress(currentSegment.points, progress);
         const value = String(Math.round(convertElevation(elevation, unitSystem)));
         const unit = unitSystem === 'metric' ? 'M' : 'FT';
-        const valueSize = (isCompact ? 14 : 22) * elementScaleY;
-        const unitSize = (isCompact ? 9 : 14) * elementScaleY;
+        const valueSize = (isCompact ? 14 : 22) * labelScale * elementScaleY;
+        const unitSize = (isCompact ? 9 : 14) * labelScale * elementScaleY;
         const gap = (isCompact ? 4 : 6) * elementScaleX;
         const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
 
@@ -933,9 +934,9 @@ export function useExportOverlayCapture({
 
     if (hasSectionMetrics) {
       const family = overlayCanvasFontFamily(state.settings.trailStyle.overlayFont);
-      const endpointSize = (isCompact ? 14 : 20) * elementScaleY;
-      const changeSize = (isCompact ? 13 : 18) * elementScaleY;
-      const distanceSize = (isCompact ? 12 : 17) * elementScaleY;
+      const endpointSize = (isCompact ? 14 : 20) * labelScale * elementScaleY;
+      const changeSize = (isCompact ? 13 : 18) * labelScale * elementScaleY;
+      const distanceSize = (isCompact ? 12 : 17) * labelScale * elementScaleY;
       const insetX = 4 * elementScaleX;
       const insetY = 2 * elementScaleY;
       context.save();

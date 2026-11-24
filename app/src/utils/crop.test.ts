@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { constrainOverlayToFrame, getCropPreviewMetrics, getCropRegion, getExportFrameFitPadding, getVideoCropRegion, getVideoCropPreviewMetrics } from './crop';
 
 describe('crop utils', () => {
+  it('uses the available portrait frame for phone video', () => {
+    const preview = getVideoCropPreviewMetrics(390, 700, '9:16');
+    const output = getVideoCropRegion({ width: 390, height: 700 }, 9, 16);
+    expect(preview.frameWidth).toBeCloseTo(390);
+    expect(preview.frameHeight).toBeCloseTo(390 * 16 / 9);
+    expect(output.cropW).toBeCloseTo(preview.frameWidth);
+    expect(output.cropH).toBeCloseTo(preview.frameHeight);
+  });
+
   it('keeps saved stats positions inside the selected video crop', () => {
     const frame = getVideoCropPreviewMetrics(960, 664, '1:1');
     expect(constrainOverlayToFrame({ x: 0, y: 0 }, { width: 960, height: 664 }, frame, { width: 100, height: 50 }))

@@ -95,10 +95,10 @@ export function getCropRegion(
   let cropW = containerRect.width;
   let cropH = containerRect.height;
 
-  if (targetAspect < containerAspect - 0.01) {
+  if (targetAspect < containerAspect - 1e-6) {
     cropW = containerRect.height * targetAspect;
     cropX = (containerRect.width - cropW) / 2;
-  } else if (targetAspect > containerAspect + 0.01) {
+  } else if (targetAspect > containerAspect + 1e-6) {
     cropH = containerRect.width / targetAspect;
     cropY = (containerRect.height - cropH) / 2;
   }
@@ -106,8 +106,9 @@ export function getCropRegion(
   return { cropX, cropY, cropW, cropH };
 }
 
-/** Crop each video format inside the same centered landscape composition. */
+/** Use the available portrait area on phones, and the shared landscape composition on wide screens. */
 export function getVideoCropRegion(container: { width: number; height: number }, recordW: number, recordH: number): CropRegion {
+  if (container.width < container.height) return getCropRegion(container, recordW, recordH);
   const base = getCropRegion(container, 16, 9);
   const inner = getCropRegion({ width: base.cropW, height: base.cropH }, recordW, recordH);
   return { cropX: base.cropX + inner.cropX, cropY: base.cropY + inner.cropY, cropW: inner.cropW, cropH: inner.cropH };
@@ -141,4 +142,9 @@ export function getExportFrameFitPadding(
     bottom: exportFrame.bottom + safeMargin,
     left: exportFrame.left + safeMargin,
   };
+}
+
+/** Keep map adornments proportional to narrow preview and export frames. */
+export function getFrameAdornmentScale(width: number): number {
+  return Math.max(0.5, Math.min(1, width / 600));
 }

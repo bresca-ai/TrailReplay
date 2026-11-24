@@ -165,8 +165,7 @@ it('copies the screen annotation into the exported video frame', () => {
   };
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
   drawExportFrame(options);
-  const scale = 1920 / 607.5;
-  expect(context.drawImage).toHaveBeenCalledWith(note, (400 - 369.140625) * scale, (700 - 656.25) * scale, 200 * scale, 40 * scale);
+  expect(context.drawImage).toHaveBeenCalledWith(note, 400, 700, 200, 40);
 });
 
 it('copies the live route overview to its position in the export', () => {
@@ -184,8 +183,7 @@ it('copies the live route overview to its position in the export', () => {
   };
   options.recordingContextRef.current = context as unknown as CanvasRenderingContext2D;
   drawExportFrame(options);
-  const scale = 1920 / 607.5;
-  expect(context.drawImage).toHaveBeenCalledWith(overview, (420 - 369.140625) * scale, (720 - 656.25) * scale, 200 * scale, 144 * scale);
+  expect(context.drawImage).toHaveBeenCalledWith(overview, 420, 720, 200, 144);
 });
 
 it('draws different animated marker frames at different video timestamps', () => {
