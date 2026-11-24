@@ -6,6 +6,7 @@ import {
   routeDistanceForSegmentAnchor,
   segmentAnchorForRouteDistance,
 } from '@/utils/journeyUtils';
+import { routeSectionStart } from '@/utils/routeSectionAnnotations';
 import { projectCoordinateToJourney } from '@/utils/routeProjection';
 
 /**
@@ -146,6 +147,13 @@ export function usePictureRouteSync() {
     };
 
     store.textAnnotations.forEach((annotation) => {
+      if (annotation.routeSectionSegmentId) {
+        const start = routeSectionStart(store.journeySegments, store.tracks, routeTimingMode, annotation.routeSectionSegmentId);
+        if (start && (Math.abs(start.progress - annotation.progress) > TOLERANCE || start.routeDistance !== annotation.routeDistance)) {
+          store.updateTextAnnotation(annotation.id, start);
+        }
+        return;
+      }
       // Projects saved before route actions had distance anchors still contain
       // the annotation's map coordinate. Resolve it once and persist the
       // missing anchor; otherwise switching to Constant Pace silently leaves

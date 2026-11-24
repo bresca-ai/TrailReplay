@@ -662,7 +662,7 @@ annotationSize: 'Mida de les anotacions', annotationMarkerSize: 'Mida del marcad
     emptyTitle: 'Cap segment al viatge',
     emptySubtitle: 'Afegeix rutes i transicions',
     cameraSettings: 'Ajustos de càmera', cameraAuto: 'Auto', cameraTransitionZoom: 'Zoom de transició', cameraZoomWide: 'Més lluny', cameraZoomClose: 'Més a prop', cameraTransitionPitch: 'Inclinació de transició', cameraPitchTopDown: 'Zenital', cameraPitchTilted: 'Inclinat',
-    markerTransition: 'Animació', markerTransitionDuration: 'Durada de l\'animació en segons',
+    markerTransition: 'Animació', addSectionCard: 'Afegeix una anotació de tram', sectionCardAdded: 'Anotació de tram afegida', sectionCardEyebrow: 'Tram següent', addMarkerTransition: 'Afegeix animació del marcador', markerTransitionDuration: 'Durada de l\'animació en segons',
     addTransport: 'Afegeix transició',
     runsSimultaneously: 'S\'executen simultàniament',
     runsSimultaneouslyHint: 'Aquestes rutes s\'animen al mateix temps que el teu viatge principal, de principi a fi.',

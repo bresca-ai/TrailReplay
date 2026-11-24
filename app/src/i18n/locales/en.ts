@@ -673,7 +673,7 @@ annotationSize: 'Annotation size', annotationMarkerSize: 'Marker size', annotati
     emptyTitle: 'No segments in journey',
     emptySubtitle: 'Add routes and transitions',
     cameraSettings: 'Camera settings', cameraAuto: 'Auto', cameraTransitionZoom: 'Transition zoom', cameraZoomWide: 'Wider', cameraZoomClose: 'Closer', cameraTransitionPitch: 'Transition tilt', cameraPitchTopDown: 'Top down', cameraPitchTilted: 'Tilted',
-    markerTransition: 'Animation', markerTransitionDuration: 'Animation length in seconds',
+    markerTransition: 'Animation', addSectionCard: 'Add section annotation', sectionCardAdded: 'Section annotation added', sectionCardEyebrow: 'Next section', addMarkerTransition: 'Add marker animation', markerTransitionDuration: 'Animation length in seconds',
     addTransport: 'Add Transition',
     runsSimultaneously: 'Runs Simultaneously',
     runsSimultaneouslyHint: 'These tracks animate at the same time as your main journey, from start to finish.',

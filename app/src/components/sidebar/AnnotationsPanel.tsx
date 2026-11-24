@@ -10,7 +10,7 @@ import { createId } from '@/utils/id';
 import { trackEvent } from '@/utils/analytics';
 import { TIME_DEPENDENT_STATS, isStatAvailable } from '@/utils/statAvailability';
 import { useAvailableStats } from '@/hooks/useAvailableStats';
-import { ChevronDown, ChevronRight, Footprints, Map, Palette, Pencil, BarChart3, Type, Trash2, ArrowUp, Clock, Heart, Mountain, Route, Timer, TimerReset, Zap } from 'lucide-react';
+import { ChevronDown, ChevronRight, Footprints, Map as MapIcon, Palette, Pencil, BarChart3, Type, Trash2, ArrowUp, Clock, Heart, Mountain, Route, Timer, TimerReset, Zap } from 'lucide-react';
 import { OverlayFontPicker } from './OverlayFontPicker';
 import { ComparisonLeaderboardSettings } from './ComparisonLeaderboardSettings';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
@@ -191,6 +191,17 @@ export function AnnotationsPanel() {
   const setTrailStyle = useAppStore((state) => state.setTrailStyle);
 
   const tracks = useAppStore((state) => state.tracks);
+  const journeySegments = useAppStore((state) => state.journeySegments);
+  const orderedTracks = useMemo(() => {
+    const byId = new Map(tracks.map((track) => [track.id, track]));
+    const ordered: typeof tracks = [];
+    for (const segment of journeySegments) {
+      if (segment.type !== 'track') continue;
+      const track = byId.get(segment.trackId);
+      if (track) { ordered.push(track); byId.delete(track.id); }
+    }
+    return [...ordered, ...tracks.filter((track) => byId.has(track.id))];
+  }, [tracks, journeySegments]);
   const { availability, visibleStats: availableStats } = useAvailableStats();
   const activeTrackId = useAppStore((state) => state.activeTrackId);
   const updateTrackColor = useAppStore((state) => state.updateTrackColor);
@@ -238,7 +249,7 @@ export function AnnotationsPanel() {
     <div className="space-y-5">
       <details open className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-[11px] font-bold text-[var(--evergreen)] transition-colors hover:text-[var(--trail-orange)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--trail-orange)]">
-          <Map className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <MapIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="flex-1">{hasMultiple ? t('annotations.tracksTitle') : t('annotations.trailTitle')}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden="true" />
         </summary>
@@ -263,7 +274,7 @@ export function AnnotationsPanel() {
         )}
 
         {/* Main tracks */}
-        {tracks.map((track, i) => (
+        {orderedTracks.map((track, i) => (
           <TrackStyleSection
             key={track.id}
             showLabel={hasMultiple}

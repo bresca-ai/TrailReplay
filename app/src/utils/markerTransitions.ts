@@ -70,6 +70,8 @@ export interface MarkerTransition {
   enterSeconds: number;
   /** Set when the user switched this transition off in the chronology. */
   skipped: boolean;
+  /** Keep a manually requested gap animation at the outgoing track endpoint. */
+  anchor?: [number, number];
 }
 
 export interface MarkerTransitionInput {
@@ -84,6 +86,14 @@ function segmentIcon(segment: JourneySegment, tracks: GPXTrack[], markerType: 'i
   if (segment.type === 'transport') return segment.mode === 'camera' ? null : TRANSPORT_MARKERS[segment.mode] ?? null;
   if (markerType !== 'icon') return null;
   return tracks.find((track) => track.id === segment.trackId)?.activityIcon ?? null;
+}
+
+/** Whether two adjacent tracks have different supported models for a manual transition. */
+export function canAddManualMarkerTransition(from: JourneySegment | undefined, to: JourneySegment | undefined, tracks: GPXTrack[]): boolean {
+  if (from?.type !== 'track' || to?.type !== 'track' || !isUnjoinedTrackPair(from, to, tracks)) return false;
+  const fromIcon = segmentIcon(from, tracks, 'icon');
+  const toIcon = segmentIcon(to, tracks, 'icon');
+  return supportsMarkerTransition(fromIcon) && supportsMarkerTransition(toIcon) && fromIcon !== toIcon;
 }
 
 let cache: { key: MarkerTransitionInput; result: MarkerTransition[] } | null = null;
@@ -112,12 +122,18 @@ function buildTransitions({ segments, tracks, routeTimingMode, markerType, compa
   segments.forEach((segment, index) => {
     // A camera move between routes, or a jump between routes that don't join up, swaps the marker without an animation.
     if (segment.type === 'transport' && segment.mode === 'camera') { previous = null; return; }
-    if (isUnjoinedTrackPair(segments[index - 1], segment, tracks)) previous = null;
+    if (isUnjoinedTrackPair(segments[index - 1], segment, tracks)
+      && !(segment.type === 'track' && segment.markerTransitionFromSegmentId === segments[index - 1]?.id)) previous = null;
     const icon = segmentIcon(segment, tracks, markerType);
     const timing = journey.segmentTimings.find((entry) => entry.segmentId === segment.id);
     if (previous && icon && timing && previous !== icon && supportsMarkerTransition(previous) && supportsMarkerTransition(icon)) {
       const exit = markerClipDurations(previous).exit, enter = markerClipDurations(icon).enter;
+      const fromSegment = segments[index - 1];
+      const isManualGap = segment.type === 'track' && segment.markerTransitionFromSegmentId === fromSegment?.id
+        && isUnjoinedTrackPair(fromSegment, segment, tracks);
+      const endpoint = isManualGap && fromSegment?.type === 'track' ? tracks.find(track => track.id === fromSegment.trackId)?.points.at(-1) : undefined;
       transitions.push({
+        ...(endpoint ? { anchor: [endpoint.lon, endpoint.lat] as [number, number] } : {}),
         id: `marker-transition:${segment.id}`,
         segmentId: segment.id,
         fromIcon: previous,
@@ -144,6 +160,13 @@ export function markerTransitionHolds(transitions: MarkerTransition[]): TextAnno
     lat: 0, lon: 0, title: '', color: '',
     presentation: 'side-panel',
   } as unknown as TextAnnotation));
+}
+
+/** A section card and its marker choreography share one slowdown interval. */
+export function combineAnnotationAndMarkerHolds(annotations: TextAnnotation[], holds: TextAnnotation[]): TextAnnotation[] {
+  const transitionIds = new Set(holds.map(hold => hold.id));
+  return [...annotations.map(annotation => annotation.routeSectionSegmentId && transitionIds.has(`marker-transition:${annotation.routeSectionSegmentId}`)
+    ? { ...annotation, holdDuration: 0 } : annotation), ...holds];
 }
 
 /** Read the transition holds straight from the store state (playback loop, export). */

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useAppStore } from '@/store/useAppStore';
 import { parseGPX } from '@/utils/gpxParser';
@@ -23,6 +23,30 @@ describe('Timeline editor', () => {
     expect(useAppStore.getState().journeySegments.map((segment) => segment.type === 'transport' ? segment.mode : 'track')).toEqual(['track', 'camera', 'track']);
   });
   afterEach(cleanup);
+
+  it('creates a section card with route details and allows it to be managed as an annotation', () => {
+    render(<JourneyPanel />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add section annotation' })[1]);
+    const state = useAppStore.getState();
+    expect(state.textAnnotations).toHaveLength(1);
+    expect(state.textAnnotations[0]).toMatchObject({ routeSectionSegmentId: state.journeySegments[1].id, title: 'Valley walk', presentation: 'side-panel' });
+    expect(state.textAnnotations[0].meta).toMatch(/km.*↑/);
+    expect(screen.getByRole('button', { name: 'Section annotation added' })).toBeDisabled();
+    act(() => state.removeTextAnnotation(state.textAnnotations[0].id));
+    expect(screen.getAllByRole('button', { name: 'Add section annotation' })).toHaveLength(2);
+  });
+
+  it('offers and enables a marker animation after a camera transition is removed', () => {
+    const { tracks, journeySegments } = useAppStore.getState();
+    useAppStore.getState().updateTrackIcon(tracks[0].id, '3d-runner');
+    useAppStore.getState().updateTrackIcon(tracks[1].id, '3d-road-bike');
+    render(<JourneyPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add marker animation' }));
+    expect(useAppStore.getState().journeySegments[1]).toMatchObject({ markerTransitionFromSegmentId: journeySegments[0].id });
+    expect(useAppStore.getState().settings.trailStyle.markerType).toBe('icon');
+    expect(screen.getByRole('switch', { name: 'Animation' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('spinbutton', { name: 'Animation length in seconds' })).toBeInTheDocument();
+  });
 
   it('compares already loaded routes and returns them to their original sequence', () => {
     const original = useAppStore.getState().journeySegments;

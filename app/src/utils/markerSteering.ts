@@ -1,6 +1,8 @@
 /** Heading is measured clockwise from north, and time is in replay milliseconds. */
 export interface MarkerSteeringState { heading: number; timeMs: number }
-export const MARKER_TURN_RATE_DEGREES_PER_SECOND = 150;
+// A quarter turn takes 0.3 s of replay time, keeping the marker aligned on
+// sharp bends while retaining the deadband that filters small GPS jitter.
+export const MARKER_TURN_RATE_DEGREES_PER_SECOND = 300;
 const HEADING_DEADBAND_DEGREES = 2;
 const SEEK_RESET_MS = 2000;
 

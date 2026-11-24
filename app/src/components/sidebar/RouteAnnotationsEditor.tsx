@@ -67,6 +67,7 @@ export function RouteAnnotationsEditor() {
   const moveToPlayhead = (annotation: TextAnnotation) => {
     if (!currentPosition) return;
     updateTextAnnotation(annotation.id, {
+      routeSectionSegmentId: undefined,
       progress: playback.progress,
       routeDistance,
       lat: currentPosition.lat,
@@ -306,7 +307,7 @@ export function RouteAnnotationsEditor() {
                     <textarea value={description} onChange={(e) => updateWording(annotation, { description: e.target.value })} maxLength={600} className="mt-1 w-full min-h-20 rounded-lg border border-[var(--evergreen)]/20 bg-[var(--canvas)] px-3 py-2 text-sm" />
                   </label>
                   <label className="flex items-start gap-2 text-xs text-[var(--evergreen)]">
-                    <input type="checkbox" checked={annotation.showOnMatchingRoutes ?? false} onChange={(event) => updateTextAnnotation(annotation.id, { showOnMatchingRoutes: event.target.checked })} className="mt-0.5 accent-[var(--trail-orange)]" />
+                    <input type="checkbox" checked={annotation.showOnMatchingRoutes ?? false} onChange={(event) => updateTextAnnotation(annotation.id, { showOnMatchingRoutes: event.target.checked, ...(event.target.checked ? { routeSectionSegmentId: undefined } : {}) })} className="mt-0.5 accent-[var(--trail-orange)]" />
                     <span>{t('annotations.showOnMatchingRoutes')}<span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{t('annotations.showOnMatchingRoutesHint')}</span></span>
                   </label>
                   <div className="flex flex-wrap gap-2 text-xs text-[var(--evergreen)]">

@@ -1,3 +1,4 @@
+import { createRouteSectionAnnotation } from '@/utils/routeSectionAnnotations';
 import { withGapCameraTransitions } from '@/utils/journeyGaps';
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
@@ -7,7 +8,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { createId } from '@/utils/id';
 import { TrackSegmentItem, TransportSegmentItem } from './journey/JourneySegmentItems';
 import { MarkerTransitionRow } from './journey/MarkerTransitionRow';
-import { computeMarkerTransitions } from '@/utils/markerTransitions';
+import { canAddManualMarkerTransition, computeMarkerTransitions } from '@/utils/markerTransitions';
 import { TRANSPORT_MODES, renderJourneyTransportPreview } from './journey/journeyTransport';
 import { createTransportSegment } from './journey/createTransportSegment';
 import { trackEvent } from '@/utils/analytics';
@@ -29,6 +30,8 @@ const VIDEO_DURATION_OPTIONS = [15, 30, 60, 90] as const;
 export function JourneyPanel() {
   const { t } = useI18n();
   const tracks = useAppStore((state) => state.tracks);
+  const textAnnotations = useAppStore((state) => state.textAnnotations);
+  const addTextAnnotation = useAppStore((state) => state.addTextAnnotation);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
   const addJourneySegment = useAppStore((state) => state.addJourneySegment);
@@ -38,6 +41,7 @@ export function JourneyPanel() {
   const clearJourney = useAppStore((state) => state.clearJourney);
   const settings = useAppStore((state) => state.settings);
   const setSettings = useAppStore((state) => state.setSettings);
+  const setTrailStyle = useAppStore((state) => state.setTrailStyle);
   const routeTimingMode = useAppStore((state) => state.playback.routeTimingMode);
   const setRouteTimingMode = useAppStore((state) => state.setRouteTimingMode);
   const seekToProgress = useAppStore((state) => state.seekToProgress);
@@ -252,12 +256,36 @@ export function JourneyPanel() {
                     onRemove={() => removeJourneySegment(segment.id)}
                     onEditDuration={() => { setEditingSegment(segment.id); setCustomDuration((segment.duration || 5000) / 1000); }}
                     onSeek={() => seekToProgress(getSegmentProgress(index))} />}
+                {segment.type === 'track' && tracks.find(track => track.id === segment.trackId)?.points.length ? (
+                  <button type="button" disabled={textAnnotations.some(annotation => annotation.routeSectionSegmentId === segment.id)}
+                    onClick={() => {
+                      const annotation = createRouteSectionAnnotation({ id: createId('annotation'), segmentId: segment.id,
+                        segments: journeySegments, tracks, mode: routeTimingMode, unitSystem: settings.unitSystem,
+                        eyebrow: t('journey.sectionCardEyebrow') });
+                      if (annotation) addTextAnnotation(annotation);
+                    }}
+                    className="ml-6 mt-1 flex items-center gap-1.5 px-1 py-1 text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)] disabled:opacity-50">
+                    <Plus className="h-3.5 w-3.5 rounded-full border border-current p-0.5" />
+                    {t(textAnnotations.some(annotation => annotation.routeSectionSegmentId === segment.id) ? 'journey.sectionCardAdded' : 'journey.addSectionCard')}
+                  </button>
+                ) : null}
                 {index < journeySegments.length - 1 && segment.type === 'track' && journeySegments[index + 1].type === 'track' && (
                   <div className="ml-6 border-l border-[var(--evergreen)]/20 py-2 pl-4">
                     <button type="button" onClick={() => { setSelectedTransportIndex(index); setShowTransportMenu(true); }}
                       className="flex items-center gap-1.5 text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
                       <Plus className="h-3.5 w-3.5 rounded-full border border-current p-0.5" />{t('journey.addTransport')}
                     </button>
+                    {!comparisonTracks.some((track) => track.visible) && !markerTransitions.has(journeySegments[index + 1].id)
+                      && canAddManualMarkerTransition(segment, journeySegments[index + 1], tracks) && (
+                      <button type="button" onClick={() => {
+                        const next = journeySegments[index + 1];
+                        reorderJourneySegments(journeySegments.map((item) => item.id === next.id && item.type === 'track'
+                          ? { ...item, markerTransitionFromSegmentId: segment.id, skipMarkerTransition: undefined } : item));
+                        if (markerType !== 'icon' || !settings.trailStyle.showMarker) setTrailStyle({ markerType: 'icon', showMarker: true });
+                      }} className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-[var(--evergreen-60)] hover:text-[var(--trail-orange)]">
+                        <Plus className="h-3.5 w-3.5 rounded-full border border-current p-0.5" />{t('journey.addMarkerTransition')}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

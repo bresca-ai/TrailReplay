@@ -79,6 +79,8 @@ export interface TrackSegment {
   skipMarkerTransition?: boolean;
   /** Length of that animation in ms; defaults to the clips' natural length. */
   markerTransitionDuration?: number;
+  /** Explicitly animate from this preceding segment even when their GPX endpoints differ. */
+  markerTransitionFromSegmentId?: string;
 }
 
 export type JourneySegment = TrackSegment | TransportSegment;
@@ -190,6 +192,8 @@ export interface IconChange {
 
 export interface TextAnnotation {
   id: string;
+  /** A section card follows the start of this journey segment until moved. */
+  routeSectionSegmentId?: string;
   /** Show the same moment once on each nearby route in the journey. */
   showOnMatchingRoutes?: boolean;
   progress: number;

@@ -88,5 +88,5 @@ export async function importMediaAtPlacement(files: File[], placement: MediaRout
 }
 
 export function moveTimelineAnnotation(id: string, placement: MediaRoutePlacement) {
-  useAppStore.getState().updateTextAnnotation(id, { progress: placement.progress, routeDistance: placement.routeDistance, lat: placement.lat, lon: placement.lon, elevation: placement.elevation });
+  useAppStore.getState().updateTextAnnotation(id, { routeSectionSegmentId: undefined, progress: placement.progress, routeDistance: placement.routeDistance, lat: placement.lat, lon: placement.lon, elevation: placement.elevation });
 }

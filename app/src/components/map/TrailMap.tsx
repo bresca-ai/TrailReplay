@@ -42,7 +42,7 @@ import { useRecordedElevationLayer } from './hooks/useRecordedElevationLayer';
 import { useTrailLayerData } from './hooks/useTrailLayerData';
 import { useTrailPlaybackCamera } from './hooks/useTrailPlaybackCamera';
 import { useRunner3D } from './hooks/useRunner3D';
-import { computeMarkerTransitions } from '@/utils/markerTransitions';
+import { activeMarkerTransition, computeMarkerTransitions } from '@/utils/markerTransitions';
 import { useCameraTerrainClearance } from './hooks/useCameraTerrainClearance';
 import { useTilePreload } from './hooks/useTilePreload';
 import { useReplayTileWarmup } from './hooks/useReplayTileWarmup';
@@ -358,6 +358,17 @@ export function TrailMap(_props: TrailMapProps) {
   useLocationStartCue(map, isMapLoaded, animationPhase, allCoordinates[0], settings.locationChapters?.color ?? '#ffbd66', locationChapter.introStages.length > 0);
   const introStageOverrides = useMemo(() => locationChapter.introStages.flatMap(stage => stage.camera ? [stage.camera] : []), [locationChapter.introStages]);
 
+  const markerTransitions = useMemo(() => computeMarkerTransitions({
+    segments: annotationJourneySegments, tracks, routeTimingMode: playback.routeTimingMode,
+    markerType: trailStyle.markerType, comparisonActive: comparisonTracks.some((track) => track.visible),
+  }).filter((transition) => !transition.skipped), [annotationJourneySegments, tracks, playback.routeTimingMode, trailStyle.markerType, comparisonTracks]);
+  const activeMarker = animationPhase === 'playing'
+    ? activeMarkerTransition(markerTransitions, playback.currentTime, playback.totalDuration)?.transition ?? null
+    : null;
+  const markerTransitionAnchor = activeMarker?.anchor ?? null;
+  const activeSectionCard = activeMarker && textAnnotations.find(annotation => annotation.id === _props.activeTextAnnotationId
+    && annotation.presentation === 'side-panel' && annotation.routeSectionSegmentId === activeMarker.segmentId);
+
   useTrailPlaybackCamera({
     activeTrack,
     introStartOverride: locationChapter.introCamera,
@@ -365,7 +376,7 @@ export function TrailMap(_props: TrailMapProps) {
     introStageOverrides,
     locationChapters: settings.locationChapters,
     locationChapterCameraCue: locationChapter.cameraCueRef,
-    activeTextAnnotationId: _props.activeTextAnnotationId ?? null,
+    activeTextAnnotationId: activeSectionCard ? null : _props.activeTextAnnotationId ?? null,
     allCoordinates,
     cameraCoordinates: cameraPathCoordinates,
     aerialTerrainPlan: matchingTerrainPlan?.plan ?? null,
@@ -394,6 +405,7 @@ export function TrailMap(_props: TrailMapProps) {
     isMapLoaded,
     mapRef: map,
     markerRef,
+    markerTransitionAnchor,
     playbackProgress: routeComparisonActive ? routeProgress : playback.progress,
     segmentTimings,
     setCameraPosition,
@@ -415,10 +427,6 @@ export function TrailMap(_props: TrailMapProps) {
     },
   });
 
-  const markerTransitions = useMemo(() => computeMarkerTransitions({
-    segments: annotationJourneySegments, tracks, routeTimingMode: playback.routeTimingMode,
-    markerType: trailStyle.markerType, comparisonActive: comparisonTracks.some((track) => track.visible),
-  }).filter((transition) => !transition.skipped), [annotationJourneySegments, tracks, playback.routeTimingMode, trailStyle.markerType, comparisonTracks]);
   useRunner3D({ mapRef: map, markerRef, icon: comparisonActive || (!isInTransport && trailStyle.markerType !== 'icon') ? '' : currentIcon,
     coordinates: cameraPathCoordinates, completedCoordinates, progress: routeComparisonActive ? routeProgress : playback.progress,
     timeMs: playback.currentTime, color: resolvePlaybackMarkerColor(trailStyle.markerColor, activeTrack?.color, currentTrackColor), isExporting,

@@ -1,5 +1,6 @@
 import type { GPXTrack, JourneySegment, RouteTimingMode, TextAnnotation } from '@/types';
 import { buildComputedJourney, progressForRouteDistance, uniformJourneyWithCameraTransitions, uniformJourneyWithTransportDurations } from './journeyUtils';
+import { routeSectionStart } from './routeSectionAnnotations';
 import { projectCoordinateToTrack } from './routeProjection';
 
 /** Matches within 50 m accommodate ordinary GPS variation without matching distant routes. */
@@ -9,7 +10,7 @@ let cache: { annotations: TextAnnotation[]; segments: JourneySegment[]; tracks: 
 
 /** Expand a single editable moment into timeline appearances, one per route segment. */
 export function resolveSharedRouteMoments(annotations: TextAnnotation[], segments: JourneySegment[], tracks: GPXTrack[], mode: RouteTimingMode): TextAnnotation[] {
-  if (!annotations.some((annotation) => annotation.showOnMatchingRoutes)) return annotations;
+  if (!annotations.some((annotation) => annotation.showOnMatchingRoutes || annotation.routeSectionSegmentId)) return annotations;
   if (cache && cache.annotations === annotations && cache.segments === segments && cache.tracks === tracks && cache.mode === mode) return cache.result;
   const journey = buildComputedJourney(segments, tracks);
   if (!journey) return annotations;
@@ -19,6 +20,10 @@ export function resolveSharedRouteMoments(annotations: TextAnnotation[], segment
   const projectionMode = mode === 'uniform' && (hasTransport || hasTransition) ? 'recorded' : mode;
   const routes = adjusted.segmentTimings.filter((segment) => segment.type === 'track');
   const result = annotations.flatMap((annotation) => {
+    if (annotation.routeSectionSegmentId) {
+      const start = routeSectionStart(segments, tracks, mode, annotation.routeSectionSegmentId);
+      return [start ? { ...annotation, ...start } : annotation];
+    }
     if (!annotation.showOnMatchingRoutes) return [annotation];
     const appearances = routes.flatMap((segment) => {
       const track = tracks.find((item) => item.id === segment.trackId);
