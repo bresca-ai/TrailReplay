@@ -11,8 +11,6 @@ type UiSlice = Pick<
   | 'exploreMode'
   | 'activePanel'
   | 'annotationEditorTarget'
-  | 'openAnnotationEditor'
-  | 'clearAnnotationEditorTarget'
   | 'comparisonMode'
   | 'comparisonSlowdown'
   | 'comparisonThresholdMeters'
@@ -41,13 +39,6 @@ export const createUiSlice: AppSliceCreator<UiSlice> = (set) => ({
   exploreMode: false,
   activePanel: 'tracks',
   annotationEditorTarget: null,
-  openAnnotationEditor: (id) => set((state) => {
-    if (state.isExporting || !state.textAnnotations.some(annotation => annotation.id === id)) return;
-    state.annotationEditorTarget = id;
-    state.activePanel = 'pictures';
-    state.isSidebarOpen = true;
-  }),
-  clearAnnotationEditorTarget: () => set((state) => { state.annotationEditorTarget = null; }),
   comparisonMode: 'time',
   comparisonSlowdown: 0.25,
   comparisonThresholdMeters: ROUTE_DIVERGENCE_THRESHOLD_METERS,

@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { convertElevation, formatDistance } from '@/utils/units';
+import { clearAnnotationEditorTarget } from '@/utils/annotationEditorNavigation';
 import { ANNOTATION_DRAG_TYPE } from '@/utils/pendingMediaPlacement';
 import { annotationPlacementAtDistance } from '@/utils/annotationPlacement';
 import { mapGlobalRef } from '@/utils/mapRef';
@@ -25,7 +26,6 @@ export function RouteAnnotationsEditor() {
   const unitSystem = useAppStore((state) => state.settings.unitSystem);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
   const annotationEditorTarget = useAppStore((state) => state.annotationEditorTarget);
-  const clearAnnotationEditorTarget = useAppStore((state) => state.clearAnnotationEditorTarget);
   const requestedAnnotationRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     if (!annotationEditorTarget) return;
@@ -35,7 +35,7 @@ export function RouteAnnotationsEditor() {
       details.scrollIntoView?.({ block: 'nearest' });
     }
     clearAnnotationEditorTarget();
-  }, [annotationEditorTarget, clearAnnotationEditorTarget]);
+  }, [annotationEditorTarget]);
   const addTextAnnotation = useAppStore((state) => state.addTextAnnotation);
   const updateTextAnnotation = useAppStore((state) => state.updateTextAnnotation);
   const removeTextAnnotation = useAppStore((state) => state.removeTextAnnotation);

@@ -217,8 +217,6 @@ export interface AppState {
   setSidebarOpen: (isOpen: boolean) => void;
   setExploreMode: (enabled: boolean) => void;
   setActivePanel: (panel: AppState['activePanel']) => void;
-  openAnnotationEditor: (id: string) => void;
-  clearAnnotationEditorTarget: () => void;
   setLoading: (isLoading: boolean) => void;
   setFileImportStatus: (status: FileImportStatus | null) => void;
   setError: (error: string | null) => void;

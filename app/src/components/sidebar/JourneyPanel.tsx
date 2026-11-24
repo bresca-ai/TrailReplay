@@ -1,3 +1,4 @@
+import { openAnnotationEditor } from '@/utils/annotationEditorNavigation';
 import { localizedAnnotation } from '@/utils/annotationTranslations';
 import { createRouteSectionAnnotation } from '@/utils/routeSectionAnnotations';
 import { withGapCameraTransitions } from '@/utils/journeyGaps';
@@ -36,7 +37,6 @@ export function JourneyPanel() {
   const textAnnotations = useAppStore((state) => state.textAnnotations);
   const addTextAnnotation = useAppStore((state) => state.addTextAnnotation);
   const removeTextAnnotation = useAppStore((state) => state.removeTextAnnotation);
-  const openAnnotationEditor = useAppStore((state) => state.openAnnotationEditor);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
   const addJourneySegment = useAppStore((state) => state.addJourneySegment);

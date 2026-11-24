@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { openAnnotationEditor } from '@/utils/annotationEditorNavigation';
 import { useAppStore } from '@/store/useAppStore';
 import { RouteAnnotationsEditor } from './RouteAnnotationsEditor';
 
@@ -168,7 +169,7 @@ it('opens and scrolls to the requested annotation, leaving the others closed', (
   const make = (id: string, title: string) => ({ id, title, progress: 0.5, lat: 42, lon: 1, color: '#c1652f', displayDuration: 4000, presentation: 'side-panel' as const });
   useAppStore.getState().addTextAnnotation(make('first', 'First'));
   useAppStore.getState().addTextAnnotation(make('second', 'Second'));
-  useAppStore.getState().openAnnotationEditor('second');
+  openAnnotationEditor('second');
   const scroll = vi.fn();
   const original = HTMLElement.prototype.scrollIntoView;
   HTMLElement.prototype.scrollIntoView = scroll;

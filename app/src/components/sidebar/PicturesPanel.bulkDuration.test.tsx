@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
+import { openAnnotationEditor } from '@/utils/annotationEditorNavigation';
 import { useAppStore } from '@/store/useAppStore';
 import { PicturesPanel } from './PicturesPanel';
 
@@ -26,7 +27,7 @@ it('opens the requested annotation even when photos are present', () => {
   useAppStore.getState().setSettings({ language: 'en' });
   useAppStore.getState().addPicture({ id: 'photo', file: null, originalFileName: 'photo.jpg', url: '', isPlaceholder: true, progress: 0.2, position: 0.2, displayDuration: 3000 });
   useAppStore.getState().addTextAnnotation({ id: 'note', title: 'Bike section', progress: 0.5, lat: 42, lon: 1, color: '#c1652f', displayDuration: 4000, presentation: 'side-panel' });
-  useAppStore.getState().openAnnotationEditor('note');
+  openAnnotationEditor('note');
   render(<PicturesPanel />);
   expect(screen.getByText('Bike section').closest('details')).toHaveAttribute('open');
 });
