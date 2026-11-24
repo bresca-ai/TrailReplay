@@ -83,5 +83,13 @@
   "Public release, contribution, security, and maintenance practices for the project.": "專案的公開發布、貢獻、安全和維護實踐。",
   "Updated MapLibre and other dependencies to resolve known advisories. MapLibre 6 now requires WebGL2 for map rendering.": "更新了 MapLibre 和其他依賴項以解決已知的建議。 MapLibre 6 現在需要 WebGL2 進行地圖渲染。",
   "Licensing": "授權",
-  "TrailReplay remains available under its existing attribution license. Apps using the software must display the attribution described in `LICENSE`.": "TrailReplay 仍依現有的姓名標示授權提供。使用此軟體的應用程式必須顯示 `LICENSE` 中所述的姓名標示。"
+  "TrailReplay remains available under its existing attribution license. Apps using the software must display the attribution described in `LICENSE`.": "TrailReplay 仍依現有的姓名標示授權提供。使用此軟體的應用程式必須顯示 `LICENSE` 中所述的姓名標示。",
+  "Animated 3D markers now cover more activities and transport, including kayaking. People get on and off when supported markers change between journey segments; adjust or disable each transition in Chronology.": "動畫 3D 標記支援更多活動與交通方式，包括獨木舟。行程路段切換支援的標記時，人物會上下交通工具；可在時間軸調整或停用各轉場。",
+  "Journey transitions can fly between separated routes with automatic framing and duration. Add route-section notes from Chronology, and explicitly add supported marker transitions across larger gaps.": "行程轉場可自動決定構圖與時間，在分離的路線間飛行。可從時間軸新增路段註記，並在較大間距間手動加入支援的標記轉場。",
+  "Preview Instagram Reels interface guides, reposition elevation profiles in exports, and customize the stats overlay with improved layout, appearance and touch controls.": "預覽 Instagram Reels 介面參考線、調整匯出影片中高度剖面的位置，並以改良的版面、外觀與觸控操作自訂統計資訊。",
+  "Desktop and mobile navigation is easier to use, with resizable desktop panels and mobile controls kept above browser bars. Landmark icon browsing, search and editing are clearer.": "桌面與行動裝置導覽更易使用：桌面面板可調整寬度，行動控制項保持在瀏覽器工具列上方。地標圖示的瀏覽、搜尋與編輯也更清楚。",
+  "Cinematic shots better anticipate terrain, while route overviews, landmark colours and marker selection are more consistent. Playback can start while map preparation continues.": "電影鏡頭能更早因應地形，路線總覽、地標顏色與標記選擇也更一致。地圖準備期間即可開始播放。",
+  "Video preview and export use more of the available frame, including portrait recording on mobile. Marker animations follow route timing in exports, and cover captures exclude playback overlays.": "影片預覽與匯出更充分利用可用畫面，包括手機直式錄影。匯出的標記動畫會配合路線時間，封面擷取也不含播放圖層。",
+  "Fixed CARTO label authentication and attribution, mobile export on constrained devices, and cover map camera persistence. Reduced duplicate map redraws during panel resizing.": "修正 CARTO 標籤驗證與版權標示、資源受限裝置的行動匯出，以及封面地圖鏡頭的保存問題。調整面板大小時也減少重複重繪地圖。",
+  "A public, localized release history is now available. Retaining recent deployed assets improves recovery for editors left open during a deployment. MapLibre and other dependencies were updated.": "現已提供多語言公開版本歷史。暫時保留已部署的資源，可改善部署期間保持開啟的編輯器之復原能力。MapLibre 與其他套件也已更新。"
 }
