@@ -7,6 +7,12 @@ vi.mock('./Marker3DPreview', () => ({ Marker3DPreview: ({ value }: { value: stri
 afterEach(cleanup);
 
 describe('character picker', () => {
+  it('renders the dialog outside the sidebar stacking context', () => {
+    const view = render(<ActivityIconPicker value="svg-walking" color="#c1652f" onSelect={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog').parentElement).toBe(document.body);
+    expect(view.container.contains(screen.getByRole('dialog'))).toBe(false);
+  });
+
   it('previews a model and applies it only after confirmation', () => {
     const onSelect = vi.fn(), onClose = vi.fn();
     render(<ActivityIconPicker value="svg-walking" color="#c1652f" onSelect={onSelect} onClose={onClose} />);

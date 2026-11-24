@@ -4,6 +4,8 @@ import { METERS_PER_PIXEL_AT_ZOOM_0 } from './followBehindCamera';
 import { TERRAIN_SAMPLE_INDEX_OFFSETS } from '@/components/map/cameraUtils';
 
 type Point = [number, number];
+/** Bearings remain an array for existing consumers; pitch limits travel with the same plan. */
+type TerrainBearingPlan = number[] & { pitchCaps?: number[] };
 type Elevation = (point: Point) => number | null;
 type CameraGeometry = { elevationData: Array<{ elevation: number; progress?: number }>; viewportHeight: number; durationSeconds?: number };
 const ZOOM = 12;
@@ -367,7 +369,60 @@ export function buildTerrainCameraPlan(coordinates: number[][], elevation: Eleva
     const rawBearing = Math.atan2(east, north) * 180 / Math.PI;
     bearings.push(smoothed[i] + aerialBearingDifference(rawBearing, smoothed[i]));
   }
-  return bearings;
+  // Recheck the final, smoothed bearings rather than only the discrete search
+  // candidates. A ridge can reappear after the path is interpolated. Plan a
+  // pitch ceiling from the same DEM before playback, then spread each needed
+  // adjustment across neighbouring seconds instead of correcting per frame.
+  const rawCaps = bearings.map((bearing, i) => {
+    const progress = i / (COUNT - 1);
+    const pose = getPlaybackCameraPose({ cameraMode: 'aerial-follow', coordinates, elevationData: geometry.elevationData, followBehindZoomLevel: 1, progress });
+    if (!pose) return 85;
+    const view = views[i], anchor = anchors[i];
+    const clear = (pitch: number) => {
+      const dimensions = aerialCameraDimensions(anchor[1], pose.zoom, pitch, geometry.viewportHeight);
+      const radians = bearing * Math.PI / 180;
+      const camera = offset(anchor, -Math.sin(radians) * dimensions.radius, -Math.cos(radians) * dimensions.radius);
+      return view.targets.every(target => {
+        const obstruction = aerialSightlineObstruction(target.point, target.height * exaggeration, camera, view.targetHeight + dimensions.height, elevation, exaggeration);
+        return obstruction !== null && obstruction <= 0;
+      });
+    };
+    if (clear(pose.pitch)) return 85;
+    for (let pitch = Math.max(0, pose.pitch - 3); pitch > 0; pitch = Math.max(0, pitch - 3)) {
+      if (clear(pitch)) return Math.max(0, pitch - 3);
+    }
+    return 0;
+  });
+  const planned = bearings as TerrainBearingPlan;
+  planned.pitchCaps = smoothTerrainPitchCaps(rawCaps, geometry.durationSeconds ?? 60);
+  return planned;
+}
+
+/** Anticipate obstructions and recover slowly, without oscillating at DEM edges. */
+export function smoothTerrainPitchCaps(caps: number[], durationSeconds: number): number[] {
+  if (!caps.length) return [];
+  const secondsPerSample = Math.max(1, durationSeconds) / Math.max(1, caps.length - 1);
+  const horizon = Math.max(1, Math.ceil(1.5 / secondsPerSample));
+  const conservative = caps.map((_, i) => Math.min(...caps.slice(Math.max(0, i - horizon), Math.min(caps.length, i + horizon + 1))));
+  const limited = limitGlideWeights(conservative, 6 * secondsPerSample);
+  // A symmetric moving average removes sharp corners. Shift down just enough
+  // to keep the curve below all sampled safety ceilings.
+  const radius = Math.max(1, Math.ceil(0.8 / secondsPerSample));
+  const smooth = limited.map((_, i) => {
+    let sum = 0, weight = 0;
+    for (let j = Math.max(0, i - radius); j <= Math.min(limited.length - 1, i + radius); j++) {
+      const w = radius + 1 - Math.abs(j - i); sum += limited[j] * w; weight += w;
+    }
+    return sum / weight;
+  });
+  const overshoot = Math.max(0, ...smooth.map((value, i) => value - conservative[i]));
+  return smooth.map(value => Math.max(0, value - overshoot));
+}
+
+/** Interpolate the preplanned pitch ceiling with continuous angular velocity. */
+export function terrainPlanPitch(plan: number[], progress: number, pitch: number): number {
+  const caps = (plan as TerrainBearingPlan).pitchCaps;
+  return caps?.length ? Math.min(pitch, terrainPlanBearing(caps, progress)) : pitch;
 }
 
 /** Ease into restricted sections without exceeding any sampled safety limit. */
