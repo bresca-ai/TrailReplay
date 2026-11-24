@@ -12,6 +12,9 @@ function harness(fail = false) {
     { id: 'places', type: 'symbol', paint: {} },
     { id: 'comparison-position-glow-yellow', type: 'circle', paint: {} },
     { id: 'comparison-track-label-yellow', type: 'symbol', paint: {} },
+    { id: 'comparison-divergence-point-yellow', type: 'circle', paint: {} },
+    { id: 'route-annotations-upcoming-pins', type: 'symbol', paint: {} },
+    { id: 'route-annotations-card', type: 'symbol', paint: {} },
     { id: 'location-start-cue-dot', type: 'circle', paint: {} },
     { id: 'location-start-cue-ring', type: 'circle', paint: {} },
     { id: 'location-start-cue-halo', type: 'circle', paint: {} },
@@ -74,7 +77,7 @@ describe('finished replay map capture', () => {
       expect(snapshot.layouts.get(complete)).toBe('none');
     }
     expect(snapshot.layouts.get('places')).toBeUndefined();
-    for (const id of ['comparison-position-glow-yellow', 'comparison-track-label-yellow', 'location-start-cue-dot', 'location-start-cue-ring', 'location-start-cue-halo']) {
+    for (const id of ['comparison-position-glow-yellow', 'comparison-track-label-yellow', 'comparison-divergence-point-yellow', 'route-annotations-upcoming-pins', 'route-annotations-card', 'location-start-cue-dot', 'location-start-cue-ring', 'location-start-cue-halo']) {
       expect(snapshot.layouts.get(id)).toBe('none');
     }
     expect(JSON.stringify([...h.paints])).toBe(h.initialPaint);
@@ -95,6 +98,16 @@ describe('finished replay map capture', () => {
     for (const id of ['route-landmarks-icon', 'route-landmarks-emoji', 'route-landmarks-label', 'carto-labels']) {
       expect(h.captured()!.layouts.get(id)).toBe(showPlaces ? 'visible' : 'none');
     }
+    expect(JSON.stringify([...h.layouts])).toBe(h.initialLayout);
+  });
+
+  it('keeps map labels but excludes landmark markers from a cover', async () => {
+    const h = harness();
+    await captureSocialMap(h.map, { showPlaces: true, cleanCover: true });
+    for (const id of ['route-landmarks-icon', 'route-landmarks-emoji', 'route-landmarks-label']) {
+      expect(h.captured()!.layouts.get(id)).toBe('none');
+    }
+    expect(h.captured()!.layouts.get('carto-labels')).toBe('visible');
     expect(JSON.stringify([...h.layouts])).toBe(h.initialLayout);
   });
 });

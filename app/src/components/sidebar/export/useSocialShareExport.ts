@@ -37,7 +37,7 @@ export type MapRouteGesture =
   | { type: 'move'; deltaX: number; deltaY: number }
   | { type: 'resize'; scaleFactor: number; anchorX: number; anchorY: number };
 
-export function useSocialShareExport(enabled = true, editorActive = enabled) {
+export function useSocialShareExport(enabled = true, editorActive = enabled, cleanCover = false) {
   const settings = useAppStore((s) => s.socialShareSettings);
   const setSocialShareSettings = useAppStore((s) => s.setSocialShareSettings);
   const tracks = useAppStore((s) => s.tracks);
@@ -275,7 +275,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
           const center = map.getCenter();
           const snapshotKey = [
             settings.template, settings.routeGlow, settings.routeTransform.opacity,
-            settings.layoutPreset, settings.showMapPlaces, mapStyle,
+            settings.layoutPreset, settings.showMapPlaces, cleanCover, mapStyle,
             center.lng, center.lat, map.getZoom(), map.getPitch(), map.getBearing(),
             map.getCanvas().width, map.getCanvas().height,
             ...visibleTracks.map((track) => `${track.id}:${track.points.length}:${track.color}`),
@@ -286,6 +286,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
           } else {
             preCapuredMapCanvas = await captureSocialMap(map, {
               showPlaces: settings.showMapPlaces,
+              cleanCover,
               waitForTiles: !options.fastMapCapture,
             });
             if (preCapuredMapCanvas) lastMapSnapshotRef.current = { key: snapshotKey, canvas: preCapuredMapCanvas };
@@ -335,6 +336,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
   }, [
     buildInput,
     computeRouteBbox,
+    cleanCover,
     tracks,
     overlayFont,
     mapStyle,
@@ -458,7 +460,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
       if (settings.template !== 'photo-first' && !(settings.template === 'split' && settings.showSplitMap === false)) {
         const map = mapGlobalRef.current;
         if (map) {
-          preCapuredMapCanvas = await captureSocialMap(map, { showPlaces: settings.showMapPlaces });
+          preCapuredMapCanvas = await captureSocialMap(map, { showPlaces: settings.showMapPlaces, cleanCover });
         }
       }
       const [, brandLogo, assets] = await Promise.all([
@@ -483,7 +485,7 @@ export function useSocialShareExport(enabled = true, editorActive = enabled) {
     } finally {
       setIsRendering(false);
     }
-  }, [buildInput, overlayFont, settings, tracks.length]);
+  }, [buildInput, cleanCover, overlayFont, settings, tracks.length]);
 
   // Normalized box for direct manipulation of stats (or elevation when stats are hidden).
   const dataPanelBboxNorm: RouteBboxNorm | null = (() => {

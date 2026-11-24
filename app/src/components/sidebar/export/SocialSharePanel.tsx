@@ -1032,7 +1032,7 @@ export function SocialSharePanel({ exportController, coverMode = false, aspectRa
           logoBboxNorm={logoBboxNorm}
           coverMode={!!onUseCover}
           inline
-        /> : <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#101916] text-sm text-white/70">
+        /> : <div className="absolute inset-0 z-[300] flex items-center justify-center bg-[#101916] text-sm text-white/70">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('imageExport.rendering')}
         </div>,
         editorHost,
