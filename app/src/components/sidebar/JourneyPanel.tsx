@@ -36,6 +36,7 @@ export function JourneyPanel() {
   const textAnnotations = useAppStore((state) => state.textAnnotations);
   const addTextAnnotation = useAppStore((state) => state.addTextAnnotation);
   const removeTextAnnotation = useAppStore((state) => state.removeTextAnnotation);
+  const openAnnotationEditor = useAppStore((state) => state.openAnnotationEditor);
   const journeySegments = useAppStore((state) => state.journeySegments);
   const comparisonTracks = useAppStore((state) => state.comparisonTracks);
   const addJourneySegment = useAppStore((state) => state.addJourneySegment);
@@ -277,12 +278,15 @@ export function JourneyPanel() {
                       ...(skip !== undefined ? { skipMarkerTransition: skip || undefined } : {}),
                       ...(durationMs !== undefined ? { markerTransitionDuration: durationMs === transition.defaultDuration ? undefined : durationMs } : {}),
                     }))} />}
-                  {canAddSection && (section && sectionCopy ? <div className="flex min-h-6 w-full items-center gap-1.5 text-[10px] text-[var(--evergreen)]" title={`${sectionCopy.title}${sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''} · ${t('journey.sectionManageHint')}`}>
-                    <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                    <span className="shrink-0 font-semibold">{t('journey.sectionCardAdded')}</span>
-                    <span className="min-w-0 flex-1 truncate text-[var(--evergreen-60)]">{sectionCopy.title}{sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''}</span>
-                    <button type="button" onClick={() => removeTextAnnotation(section.id)} aria-label={t('journey.removeSectionCard')} className="rounded p-1 text-[var(--evergreen-60)] hover:bg-red-100 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
-                  </div> : <button type="button" onClick={() => {
+                  {canAddSection && (section && sectionCopy ? <div className="flex min-h-6 w-full items-center gap-1.5 text-[10px] text-[var(--evergreen)]">
+                    <button type="button" onClick={() => openAnnotationEditor(section.id)}
+                      title={`${sectionCopy.title}${sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''} · ${t('journey.sectionManageHint')}`}
+                      className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-[var(--trail-orange)]">
+                      <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                      <span className="shrink-0 font-semibold">{t('journey.sectionCardAdded')}</span>
+                      <span className="min-w-0 flex-1 truncate text-[var(--evergreen-60)]">{sectionCopy.title}{sectionCopy.meta ? ` · ${sectionCopy.meta}` : ''}</span>
+                    </button>
+                    <button type="button" onClick={() => removeTextAnnotation(section.id)} aria-label={t('journey.removeSectionCard')} className="rounded p-1 text-[var(--evergreen-60)] hover:bg-red-100 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>                  </div> : <button type="button" onClick={() => {
                     const annotation = createRouteSectionAnnotation({ id: createId('annotation'), segmentId: segment.id,
                       segments: journeySegments, tracks, mode: routeTimingMode, unitSystem: settings.unitSystem,
                       eyebrow: t('journey.sectionCardEyebrow') });

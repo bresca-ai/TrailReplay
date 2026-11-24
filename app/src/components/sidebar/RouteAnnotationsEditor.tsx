@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '@/i18n/useI18n';
@@ -24,6 +24,18 @@ export function RouteAnnotationsEditor() {
   const playback = useAppStore((state) => state.playback);
   const unitSystem = useAppStore((state) => state.settings.unitSystem);
   const textAnnotations = useAppStore((state) => state.textAnnotations);
+  const annotationEditorTarget = useAppStore((state) => state.annotationEditorTarget);
+  const clearAnnotationEditorTarget = useAppStore((state) => state.clearAnnotationEditorTarget);
+  const requestedAnnotationRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (!annotationEditorTarget) return;
+    const details = requestedAnnotationRef.current;
+    if (details) {
+      details.open = true;
+      details.scrollIntoView?.({ block: 'nearest' });
+    }
+    clearAnnotationEditorTarget();
+  }, [annotationEditorTarget, clearAnnotationEditorTarget]);
   const addTextAnnotation = useAppStore((state) => state.addTextAnnotation);
   const updateTextAnnotation = useAppStore((state) => state.updateTextAnnotation);
   const removeTextAnnotation = useAppStore((state) => state.removeTextAnnotation);
@@ -279,7 +291,7 @@ export function RouteAnnotationsEditor() {
                 : null;
 
               return (
-                <details key={annotation.id} className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
+                <details key={annotation.id} ref={annotation.id === annotationEditorTarget ? requestedAnnotationRef : undefined} className="group rounded-xl border border-[var(--evergreen)]/15 bg-white/20">
                   <summary draggable onDragStart={(event) => { event.dataTransfer.setData(ANNOTATION_DRAG_TYPE, annotation.id); event.dataTransfer.effectAllowed = 'move'; }} className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-left text-[var(--evergreen)]">
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: annotation.color }} />
                     <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{content.title || t('annotations.routeAnnotationTitlePlaceholder')}</span><span className="mt-0.5 block text-[10px] text-[var(--evergreen-60)]">{annotation.routeDistance !== undefined ? formatDistance(annotation.routeDistance, unitSystem) : t('annotations.routeAnnotationProgress', { percent: (annotation.progress * 100).toFixed(0) })} · {t(isSidePanel ? 'annotations.presentationSidePanel' : 'annotations.presentationMapCard')}</span></span>

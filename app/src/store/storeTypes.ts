@@ -101,6 +101,7 @@ export interface AppState {
   exportStage: string;
   isSidebarOpen: boolean;
   exploreMode: boolean;
+  annotationEditorTarget: string | null;
   activePanel: 'tracks' | 'journey' | 'annotations' | 'pictures' | 'export' | 'settings' | 'camera';
   isLoading: boolean;
   fileImportStatus: FileImportStatus | null;
@@ -216,6 +217,8 @@ export interface AppState {
   setSidebarOpen: (isOpen: boolean) => void;
   setExploreMode: (enabled: boolean) => void;
   setActivePanel: (panel: AppState['activePanel']) => void;
+  openAnnotationEditor: (id: string) => void;
+  clearAnnotationEditorTarget: () => void;
   setLoading: (isLoading: boolean) => void;
   setFileImportStatus: (status: FileImportStatus | null) => void;
   setError: (error: string | null) => void;

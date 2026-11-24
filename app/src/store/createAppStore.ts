@@ -81,6 +81,7 @@ export function createAppStore() {
           state.cameraPosition = null;
           state.exploreMode = false;
           state.activePanel = 'tracks';
+          state.annotationEditorTarget = null;
         }),
 
       hydrateState: (partial) =>

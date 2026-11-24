@@ -19,3 +19,14 @@ it('sets one duration for placed and unplaced photos from the Pictures tab', () 
   expect(useAppStore.getState().pendingPicturePlacements[0].displayDuration).toBe(2000);
   expect(useAppStore.getState().selectedPendingMediaIds).toEqual([]);
 });
+
+
+it('opens the requested annotation even when photos are present', () => {
+  useAppStore.getState().reset();
+  useAppStore.getState().setSettings({ language: 'en' });
+  useAppStore.getState().addPicture({ id: 'photo', file: null, originalFileName: 'photo.jpg', url: '', isPlaceholder: true, progress: 0.2, position: 0.2, displayDuration: 3000 });
+  useAppStore.getState().addTextAnnotation({ id: 'note', title: 'Bike section', progress: 0.5, lat: 42, lon: 1, color: '#c1652f', displayDuration: 4000, presentation: 'side-panel' });
+  useAppStore.getState().openAnnotationEditor('note');
+  render(<PicturesPanel />);
+  expect(screen.getByText('Bike section').closest('details')).toHaveAttribute('open');
+});

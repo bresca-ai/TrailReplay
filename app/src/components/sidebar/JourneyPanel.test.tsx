@@ -40,6 +40,15 @@ describe('Timeline editor', () => {
     expect(screen.getAllByRole('button', { name: /Add section annotation/ })).toHaveLength(2);
   });
 
+  it('opens the selected section annotation in Media without deleting it', () => {
+    render(<JourneyPanel />);
+    fireEvent.click(screen.getAllByRole('button', { name: /Add section annotation/ })[1]);
+    const annotation = useAppStore.getState().textAnnotations[0];
+    fireEvent.click(screen.getByRole('button', { name: /Section annotation added.*Valley walk/ }));
+    expect(useAppStore.getState()).toMatchObject({ activePanel: 'pictures', annotationEditorTarget: annotation.id });
+    expect(useAppStore.getState().textAnnotations).toHaveLength(1);
+  });
+
   it('offers and enables a marker animation after a camera transition is removed', () => {
     const { tracks, journeySegments } = useAppStore.getState();
     useAppStore.getState().updateTrackIcon(tracks[0].id, '3d-runner');
