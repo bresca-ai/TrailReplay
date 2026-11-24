@@ -4,7 +4,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { useAppStore } from '@/store/useAppStore';
 import { useComputedJourney } from '@/hooks/useComputedJourney';
 import { convertElevation, formatDistance, formatElevation } from '@/utils/units';
-import type { CropPreviewMetrics } from '@/utils/crop';
+import { getFrameAdornmentScale, type CropPreviewMetrics } from '@/utils/crop';
 import { getDynamicElevationViewport } from './dynamicElevationViewport';
 import { getElevationAtProgress } from './elevationProfile';
 import { detectElevationFocusSections } from './elevationSections';
@@ -345,6 +345,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           routeTimingMode={routeTimingMode}
           dynamic={dynamicSections || settings.elevationProfilePerRoute}
           tall={isNonWideExportPreview}
+          labelScale={exportFrame ? getFrameAdornmentScale(exportFrame.frameWidth) : 1}
           heightScale={profileHeightScale}
           filled={settings.elevationProfileFilled ?? true}
         />
@@ -379,6 +380,7 @@ export function MapElevationProfile({ className = '', exportFrame = null }: MapE
           elevationUnit={elevUnit}
           transportMode={isInTransport ? currentSegment?.segment.transportMode ?? null : null}
           tall={isNonWideExportPreview}
+          scale={exportFrame ? getFrameAdornmentScale(exportFrame.frameWidth) : 1}
         />
         {/* Segment labels (small indicators at top) */}
         {!dynamicSections && !settings.elevationProfilePerRoute && segmentTimings.length > 1 && (

@@ -30,6 +30,7 @@ interface ElevationProfileChartProps {
   dynamic: boolean;
   tall: boolean;
   heightScale?: number;
+  labelScale?: number;
   filled?: boolean;
 }
 
@@ -47,6 +48,7 @@ export function ElevationProfileChart({
   dynamic,
   tall,
   heightScale = 1,
+  labelScale = 1,
   filled = true,
 }: ElevationProfileChartProps) {
   const { svgWidth, svgHeight, segmentPaths } = geometry;
@@ -65,6 +67,7 @@ export function ElevationProfileChart({
       data-export-elevation-end={sectionMetrics?.end}
       data-export-elevation-distance={sectionMetrics?.distance}
       data-export-elevation-section-kind={sectionMetrics?.kind}
+      data-export-elevation-label-scale={labelScale}
       data-export-elevation-filled={filled ? 'true' : 'false'}
       data-export-elevation-dynamic-profile={dynamic ? 'true' : undefined}
     >

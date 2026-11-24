@@ -9,6 +9,7 @@ interface ElevationProfileLabelsProps {
   elevationUnit: string;
   transportMode: string | null;
   tall: boolean;
+  scale?: number;
 }
 
 const transportIcons: Record<string, string> = {
@@ -30,6 +31,7 @@ export function ElevationProfileLabels({
   elevationUnit,
   transportMode,
   tall,
+  scale = 1,
 }: ElevationProfileLabelsProps) {
   if (sectionMetrics) {
     return (
@@ -41,7 +43,7 @@ export function ElevationProfileLabels({
         <span
           data-export-elevation-change-label
           className={`absolute left-1/2 top-0.5 -translate-x-1/2 font-bold tabular-nums ${tall ? 'text-[18px]' : 'text-[13px]'}`}
-          style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
+          style={{ fontSize: (tall ? 18 : 13) * scale, textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
         >
           {sectionMetrics.change}
         </span>
@@ -50,7 +52,7 @@ export function ElevationProfileLabels({
           className={`absolute left-1 font-bold tabular-nums ${
             sectionMetrics.kind === 'climb' ? 'bottom-0' : 'top-0'
           } ${tall ? 'text-[20px]' : 'text-[14px]'}`}
-          style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
+          style={{ fontSize: (tall ? 20 : 14) * scale, textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
         >
           {sectionMetrics.start}
         </span>
@@ -59,14 +61,14 @@ export function ElevationProfileLabels({
           className={`absolute right-1 font-bold tabular-nums ${
             sectionMetrics.kind === 'climb' ? 'top-0' : 'bottom-0'
           } ${tall ? 'text-[20px]' : 'text-[14px]'}`}
-          style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
+          style={{ fontSize: (tall ? 20 : 14) * scale, textShadow: '0 2px 6px rgba(0, 0, 0, 0.95)' }}
         >
           {sectionMetrics.end}
         </span>
         <span
           data-export-elevation-distance-label
           className={`absolute bottom-0 left-1/2 -translate-x-1/2 font-bold tabular-nums ${tall ? 'text-[17px]' : 'text-[12px]'}`}
-          style={{ textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
+          style={{ fontSize: (tall ? 17 : 12) * scale, textShadow: '0 2px 7px rgba(0, 0, 0, 0.9)' }}
         >
           {sectionMetrics.distance}
         </span>
@@ -88,15 +90,15 @@ export function ElevationProfileLabels({
       }}
     >
       {transportMode ? (
-        <span className={`block text-white ${tall ? 'text-[18px]' : 'text-[12px]'} leading-none`}>
+        <span style={{ fontSize: (tall ? 18 : 12) * scale }} className={`block text-white ${tall ? 'text-[18px]' : 'text-[12px]'} leading-none`}>
           {transportIcons[transportMode]}
         </span>
       ) : (
         <span className={`inline-flex items-baseline font-bold text-white ${tall ? 'gap-1.5' : 'gap-1'}`}>
-          <span className={tall ? 'text-[22px] leading-none tracking-[-0.03em]' : 'text-[14px] leading-none'}>
+          <span style={{ fontSize: (tall ? 22 : 14) * scale }} className={tall ? 'text-[22px] leading-none tracking-[-0.03em]' : 'text-[14px] leading-none'}>
             {currentElevation}
           </span>
-          <span className={`font-semibold uppercase ${tall ? 'text-[14px]' : 'text-[9px]'} leading-none`}>
+          <span style={{ fontSize: (tall ? 14 : 9) * scale }} className={`font-semibold uppercase ${tall ? 'text-[14px]' : 'text-[9px]'} leading-none`}>
             {elevationUnit}
           </span>
         </span>

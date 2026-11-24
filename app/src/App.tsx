@@ -103,6 +103,7 @@ function App() {
   const statsDragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number } | null>(null);
   const statsResizeStartRef = useRef<StatsResizeStart | null>(null);
   const [isDraggingStats, setIsDraggingStats] = useState(false);
+  const [statsSelected, setStatsSelected] = useState(false);
   const [statsDragFrame, setStatsDragFrame] = useState<{
     frameLeft: number; frameTop: number; frameWidth: number; frameHeight: number;
   } | null>(null);
@@ -416,7 +417,10 @@ function App() {
     } satisfies CSSProperties;
   })();
 
-  const handleStatsDragStart = useCallback((e: React.MouseEvent) => {
+  const handleStatsDragStart = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    setStatsSelected(true);
     e.preventDefault();
     const container = mapContainerRef.current;
     if (!container) return;
@@ -432,7 +436,8 @@ function App() {
     setIsDraggingStats(true);
   }, [activeExportCropMetrics, settings.statsPosition]);
 
-  const handleStatsResizeStart = useCallback((e: React.MouseEvent, corner: StatsResizeCorner) => {
+  const handleStatsResizeStart = useCallback((e: React.PointerEvent, corner: StatsResizeCorner) => {
+    if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     const wrapper = statsScaleWrapperRef.current;
@@ -470,8 +475,17 @@ function App() {
   }, [setSettings, settings.statsScale]);
 
   useEffect(() => {
+    if (!statsSelected) return;
+    const deselect = (event: PointerEvent) => {
+      if (!statsScaleWrapperRef.current?.contains(event.target as Node)) setStatsSelected(false);
+    };
+    window.addEventListener('pointerdown', deselect);
+    return () => window.removeEventListener('pointerdown', deselect);
+  }, [statsSelected]);
+
+  useEffect(() => {
     if (!isDraggingStats) return;
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       const container = mapContainerRef.current;
       if (!container || !statsDragStartRef.current) return;
       const rect = container.getBoundingClientRect();
@@ -513,14 +527,15 @@ function App() {
       setStatsDragFrame(null);
       setStatsCenterSnap({ x: false, y: false });
     };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp); };
   }, [activeExportCropMetrics, isDraggingStats, setSettings]);
 
   useEffect(() => {
     if (!isResizingStats) return;
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       const container = mapContainerRef.current;
       const start = statsResizeStartRef.current;
       if (!container || !start) return;
@@ -553,11 +568,12 @@ function App() {
       setStatsResizeGuide(null);
       setIsResizingStats(false);
     };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onUp);
     };
   }, [availableStats.length, isResizingStats, setSettings]);
 
@@ -685,8 +701,9 @@ function App() {
                     ...statsOverlayStyle,
                     cursor: isDraggingStats ? 'grabbing' : isResizingStats ? 'default' : 'grab',
                     userSelect: 'none',
+                    touchAction: 'none',
                   }}
-                  onMouseDown={handleStatsDragStart}
+                  onPointerDown={handleStatsDragStart}
                 >
                   <div
                     ref={statsScaleWrapperRef}
@@ -728,8 +745,8 @@ function App() {
                       variant={activeExportCropMetrics ? 'export' : 'default'}
                     />
                     {!isExporting && (['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const).map((corner) => {
-                      const vertical = corner.startsWith('top') ? 'top-[-5px]' : 'bottom-[-5px]';
-                      const horizontal = corner.endsWith('left') ? 'left-[-5px]' : 'right-[-5px]';
+                      const vertical = corner.startsWith('top') ? 'top-[-8px]' : 'bottom-[-8px]';
+                      const horizontal = corner.endsWith('left') ? 'left-[-8px]' : 'right-[-8px]';
                       const cursor = corner === 'top-left' || corner === 'bottom-right'
                         ? 'cursor-nwse-resize'
                         : 'cursor-nesw-resize';
@@ -738,12 +755,12 @@ function App() {
                           key={corner}
                           type="button"
                           aria-label="Resize stats"
-                          className={`absolute ${vertical} ${horizontal} ${cursor} z-20 h-3 w-3 rounded-full border-2 border-white bg-[var(--evergreen)] shadow-md transition-opacity ${
-                            isResizingStats ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          className={`absolute ${vertical} ${horizontal} ${cursor} z-20 h-5 w-5 rounded-sm border-2 border-white bg-[var(--evergreen)] shadow-md transition-opacity ${
+                            isResizingStats || statsSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                           }`}
                           // Refs are read by the handler on mouse-down, never during render.
                           // eslint-disable-next-line react-hooks/refs
-                          onMouseDown={(event) => handleStatsResizeStart(event, corner)}
+                          onPointerDown={(event) => handleStatsResizeStart(event, corner)}
                         />
                       );
                     })}
