@@ -42,7 +42,7 @@ import {
 } from '@/utils/replayCameraPlan';
 import { getLocalShotHeading } from '@/utils/localShotHeading';
 import { getCinematicCenterElevation, settleCinematicElevation } from '@/utils/cinematicCameraElevation';
-import { terrainPlanBearing } from '@/utils/aerialTerrainPlan';
+import { terrainPlanBearing, terrainPlanPitch } from '@/utils/aerialTerrainPlan';
 import { applyLocalCinematicShots, getCinematicCameraPose, getLocalShotTimings, localShotInfluence } from '@/utils/cinematicCameraPlan';
 import { getDeterministicIntroStartPose } from '@/utils/replayCameraWarmupPlan';
 import type { PreparedCinematicKeyframe } from '@/utils/cinematicCameraPlan';
@@ -669,6 +669,7 @@ export function useTrailPlaybackCamera({
       if (!targetPose) return;
       if (cameraMode === 'aerial-follow' && aerialTerrainPlan?.length) {
         targetPose.bearing = terrainPlanBearing(aerialTerrainPlan, playbackProgress);
+        targetPose.pitch = terrainPlanPitch(aerialTerrainPlan, playbackProgress, targetPose.pitch);
       }
 
       // Cinematic mode's pose is already smooth by construction (it comes
@@ -1018,6 +1019,7 @@ export function useTrailPlaybackCamera({
 
     if (introPose && cameraMode === 'aerial-follow' && aerialTerrainPlan?.length) {
       introPose.bearing = terrainPlanBearing(aerialTerrainPlan, 0);
+      introPose.pitch = terrainPlanPitch(aerialTerrainPlan, 0, introPose.pitch);
     }
 
     if (introPose && (cameraMode === 'aerial-follow' || cameraMode === 'cinematic')) {

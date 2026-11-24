@@ -1,9 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { aerialBearingDifference, aerialCameraDimensions, aerialLookAheadPoint, aerialSightlineObstruction, buildTerrainCameraPlan, getReadyAerialTerrainPlan, limitGlideWeights, trailingFlightBearing, planAerialBearingIndices, registerAerialTerrainPlan, terrainPlanBearing, terrainTileCoverage, unregisterAerialTerrainPlan, waitForAerialTerrainPlan } from './aerialTerrainPlan';
+import { aerialBearingDifference, aerialCameraDimensions, aerialLookAheadPoint, aerialSightlineObstruction, buildTerrainCameraPlan, getReadyAerialTerrainPlan, limitGlideWeights, trailingFlightBearing, planAerialBearingIndices, registerAerialTerrainPlan, terrainPlanBearing, terrainPlanPitch, smoothTerrainPitchCaps, terrainTileCoverage, unregisterAerialTerrainPlan, waitForAerialTerrainPlan } from './aerialTerrainPlan';
 import { getAerialFollowBearing } from './replayCameraPlan';
 import { effectiveTerrainExaggeration } from './terrainExaggeration';
 
 describe('route-wide aerial terrain plan', () => {
+  it('anticipates a ridge and eases back without exceeding its safe pitch', () => {
+    const caps = Array.from({ length: 101 }, (_, i) => i >= 48 && i <= 52 ? 40 : 85);
+    const smooth = smoothTerrainPitchCaps(caps, 60);
+    expect(smooth[44]).toBeLessThan(85);
+    expect(smooth[48]).toBeLessThanOrEqual(40);
+    expect(smooth[56]).toBeLessThan(85);
+    for (let i = 1; i < smooth.length; i++) expect(Math.abs(smooth[i] - smooth[i - 1])).toBeLessThanOrEqual(3.61);
+    const plan = [0, 0, 0] as number[] & { pitchCaps?: number[] };
+    plan.pitchCaps = [70, 40, 70];
+    expect(terrainPlanPitch(plan, 0.5, 75)).toBe(40);
+    expect(terrainPlanPitch(plan, 0.5, 30)).toBe(30);
+    expect(terrainPlanPitch([0, 0], 0.5, 75)).toBe(75);
+  });
+  it('plans a smooth lower pitch when every opening view crosses high terrain', () => {
+    const path = Array.from({ length: 101 }, (_, i) => [0, i * 0.0001]);
+    const geometry = { elevationData: path.map(() => ({ elevation: 0 })), viewportHeight: 720, durationSeconds: 60 };
+    const elevation = ([lon, lat]: [number, number]) => Math.abs(lon) > 0.002 || lat < -0.002 || lat > 0.012 ? 1000 : 0;
+    const plan = buildTerrainCameraPlan(path, elevation, 1, 0, geometry)!;
+    const caps = (plan as number[] & { pitchCaps: number[] }).pitchCaps;
+    expect(caps).toHaveLength(101);
+    expect(Math.min(...caps)).toBeLessThan(60);
+    for (let i = 1; i < caps.length; i++) expect(Math.abs(caps[i] - caps[i - 1])).toBeLessThanOrEqual(3.61);
+  });
   it('uses the same terrain scale as the renderer for recorded elevation and unusual settings', () => {
     expect(effectiveTerrainExaggeration({ show3DTerrain: true })).toBe(1);
     expect(effectiveTerrainExaggeration({ show3DTerrain: true, recordedElevationPrototype: true, terrainExaggeration: 2 })).toBe(1);
