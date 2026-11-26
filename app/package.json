@@ -46,7 +46,7 @@
     "react-dropzone": "^20.2.0",
     "saxes": "^6.0.0",
     "sonner": "^2.0.8",
-    "tailwind-merge": "^3.7.0",
+    "tailwind-merge": "^3.7.1",
     "three": "^0.160.1",
     "web-vitals": "^6.2.3",
     "zustand": "^5.1.0"
